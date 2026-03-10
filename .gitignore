@@ -1,0 +1,117 @@
+######################################################################
+# Build Tools (Java 后端)
+######################################################################
+.gradle
+/build/
+!gradle/wrapper/gradle-wrapper.jar
+
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+######################################################################
+# IDE (通用)
+######################################################################
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+out/  # IDEA 编译输出目录
+
+### JRebel ###
+rebel.xml
+
+### NetBeans ###
+nbproject/private/
+build/*
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+### VS Code ###
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+######################################################################
+# Frontend (前端通用)
+######################################################################
+# 依赖目录 (npm/yarn/pnpm)
+node_modules/
+.pnpm-store/
+yarn-cache/
+.npm/
+
+# 构建产物
+dist/
+build/
+dist-ssr/
+*.local
+
+# 缓存文件
+.DS_Store
+.eslintcache
+*.swp
+*.swo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# 环境变量文件 (包含敏感信息)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Vue 相关
+.vuepress/dist
+.vue/cache
+
+# React 相关
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+coverage/
+*.manifest.json
+
+# TypeScript 编译产物
+*.tsbuildinfo
+lib/
+es/
+
+# 打包工具临时文件
+.parcel-cache/
+.cache/
+.turbo/
+
+# 其他前端临时文件
+tmp/
+temp/
+*.bak
+*.log
+
+######################################################################
+# Others (通用)
+######################################################################
+*.log
+*.xml.versionsBackup
+*.swp
+
+!*/build/*.java
+!*/build/*.html
+!*/build/*.xml
