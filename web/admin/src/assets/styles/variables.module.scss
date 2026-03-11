@@ -1,42 +1,42 @@
 // base color
-$blue: #324157;
-$light-blue: #333c46;
-$red: #C03639;
-$pink: #E65D6E;
-$green: #30B08F;
-$tiffany: #4AB7BD;
-$yellow: #FEC171;
-$panGreen: #30B08F;
+$blue: #006eff;
+$light-blue: #4a99ff;
+$red: #dc4242;
+$pink: #fc625e;
+$green: #13a750;
+$tiffany: #49c36c;
+$yellow: #f06900;
+$panGreen: #13a750;
 
 // 默认主题变量
-$menuText: #bfcbd9;
-$menuActiveText: #409eff;
-$menuBg: #304156;
-$menuHover: #263445;
+$menuText: #d7e3f7;
+$menuActiveText: #ffffff;
+$menuBg: #0f1f39;
+$menuHover: rgba(255, 255, 255, 0.08);
 
 // 浅色主题theme-light
 $menuLightBg: #ffffff;
-$menuLightHover: #f0f1f5;
-$menuLightText: #303133;
-$menuLightActiveText: #409EFF;
+$menuLightHover: #eef4ff;
+$menuLightText: #1f2d3d;
+$menuLightActiveText: #006eff;
 
 // 基础变量
-$base-sidebar-width: 200px;
-$sideBarWidth: 200px;
+$base-sidebar-width: 220px;
+$sideBarWidth: 220px;
 
 // 菜单暗色变量
-$base-menu-color: #bfcbd9;
-$base-menu-color-active: #f4f4f5;
-$base-menu-background: #304156;
-$base-sub-menu-background: #1f2d3d;
-$base-sub-menu-hover: #001528;
+$base-menu-color: #d7e3f7;
+$base-menu-color-active: #ffffff;
+$base-menu-background: #0f1f39;
+$base-sub-menu-background: #122748;
+$base-sub-menu-hover: rgba(255, 255, 255, 0.08);
 
 // 组件变量
-$--color-primary: #409EFF;
-$--color-success: #67C23A;
-$--color-warning: #E6A23C;
-$--color-danger: #F56C6C;
-$--color-info: #909399;
+$--color-primary: #006eff;
+$--color-success: #13a750;
+$--color-warning: #f06900;
+$--color-danger: #dc4242;
+$--color-info: #737d89;
 
 :export {
   menuText: $menuText;
@@ -48,7 +48,6 @@ $--color-info: #909399;
   menuLightText: $menuLightText;
   menuLightActiveText: $menuLightActiveText;
   sideBarWidth: $sideBarWidth;
-  // 导出基础颜色
   blue: $blue;
   lightBlue: $light-blue;
   red: $red;
@@ -57,7 +56,6 @@ $--color-info: #909399;
   tiffany: $tiffany;
   yellow: $yellow;
   panGreen: $panGreen;
-  // 导出组件颜色
   colorPrimary: $--color-primary;
   colorSuccess: $--color-success;
   colorWarning: $--color-warning;
@@ -65,207 +63,98 @@ $--color-info: #909399;
   colorInfo: $--color-info;
 }
 
-// CSS变量定义
 :root {
-  /* 亮色模式变量 */
-  --sidebar-bg: #{$menuBg};
-  --sidebar-text: #{$menuText};
-  --menu-hover: #{$menuHover};
-  
-  --navbar-bg: #ffffff;
-  --navbar-text: #303133;
-  
-  /* splitpanes default-theme 变量 */
-  --splitpanes-default-bg: #ffffff;
+  --td-brand-color-1: #d5e7ff;
+  --td-brand-color-2: #aacfff;
+  --td-brand-color-3: #7fb7ff;
+  --td-brand-color-4: #559eff;
+  --td-brand-color-5: #2a86ff;
+  --td-brand-color-6: #006eff;
+  --td-brand-color-7: #0058df;
+  --td-brand-color-8: #0042bf;
+  --td-brand-color-9: #002da0;
+  --td-brand-color-10: #001780;
+  --td-warning-color-6: #c45500;
+  --td-error-color-6: #dc4242;
+  --td-success-color-6: #00893c;
+  --td-gray-color-1: #ebf4ff;
+  --td-gray-color-2: #e0eaf8;
+  --td-gray-color-3: #d0dae7;
+  --td-gray-color-10: #4f5964;
+  --td-gray-color-12: #303a44;
+  --td-gray-color-14: #17202a;
 
+  --el-color-primary: #006eff;
+  --el-color-primary-light-3: #7fb7ff;
+  --el-color-primary-light-5: #aacfff;
+  --el-color-primary-light-8: #d5e7ff;
+  --el-color-primary-dark-2: #0058df;
+  --el-color-success: #00893c;
+  --el-color-warning: #c45500;
+  --el-color-danger: #dc4242;
+  --el-bg-color-page: #ebeef2;
+  --el-bg-color: #ffffff;
+  --el-bg-color-overlay: #ffffff;
+  --el-fill-color-light: #f4f8ff;
+  --el-fill-color-extra-light: #f8fbff;
+  --el-border-color-light: #dfe7f3;
+  --el-border-color-lighter: #ebf1f8;
+  --el-text-color-primary: rgba(0, 0, 0, .9);
+  --el-text-color-regular: rgba(0, 0, 0, .6);
+  --el-text-color-secondary: rgba(0, 0, 0, .4);
+
+  --sidebar-bg: linear-gradient(180deg, #11284c 0%, #0d1d36 100%);
+  --sidebar-text: #d7e3f7;
+  --menu-hover: rgba(255, 255, 255, 0.08);
+  --menu-active-bg: linear-gradient(90deg, #006eff 0%, #2a86ff 100%);
+  --menu-active-shadow: 0 10px 20px rgba(0, 110, 255, 0.22);
+
+  --navbar-bg: rgba(255, 255, 255, 0.86);
+  --navbar-text: #1f2d3d;
+  --navbar-hover: #eef4ff;
+
+  --tags-bg: rgba(255, 255, 255, 0.86);
+  --tags-item-bg: rgba(255, 255, 255, 0.96);
+  --tags-item-border: #dfe7f3;
+  --tags-item-text: #4f5964;
+  --tags-item-hover: #eef4ff;
+  --tags-close-hover: #98a2af;
 }
 
-// 暗黑模式变量
 html.dark {
-  /* 默认通用 */
-  --el-bg-color: #141414;
-  --el-bg-color-overlay: #1d1e1f;
-  --el-text-color-primary: #ffffff;
-  --el-text-color-regular: #d0d0d0;
-  --el-border-color: #434343;
-  --el-border-color-light: #434343;
-  
-  /* primary */
-  --primary-bg: #18212b;
+  --el-color-primary: #4a99ff;
+  --el-color-primary-light-3: #6eadff;
+  --el-color-primary-light-5: #92c2ff;
+  --el-color-primary-light-8: #b7d6ff;
+  --el-color-primary-dark-2: #2684ff;
+  --el-color-success: #13a750;
+  --el-color-warning: #f06900;
+  --el-color-danger: #fc625e;
+  --el-bg-color-page: #17202a;
+  --el-bg-color: #222c36;
+  --el-bg-color-overlay: #222c36;
+  --el-fill-color-light: #2a3440;
+  --el-fill-color-extra-light: #24303c;
+  --el-border-color-light: #303a44;
+  --el-border-color-lighter: #3a4653;
+  --el-text-color-primary: rgba(255, 255, 255, .9);
+  --el-text-color-regular: rgba(255, 255, 255, .72);
+  --el-text-color-secondary: rgba(255, 255, 255, .5);
 
-  /* 侧边栏 */
-  --sidebar-bg: #141414;
-  --sidebar-text: #ffffff;
-  --menu-hover: #2d2d2d;
-  --menu-active-text: #{$menuActiveText};
+  --sidebar-bg: linear-gradient(180deg, #0f1724 0%, #0b1320 100%);
+  --sidebar-text: rgba(255, 255, 255, .84);
+  --menu-hover: rgba(255, 255, 255, 0.06);
+  --menu-active-bg: linear-gradient(90deg, #2684ff 0%, #4a99ff 100%);
+  --menu-active-shadow: 0 10px 20px rgba(38, 132, 255, 0.26);
 
-  /* 顶部导航栏 */
-  --navbar-bg: #141414;
-  --navbar-text: #ffffff;
-  --navbar-hover: #141414;
+  --navbar-bg: rgba(23, 32, 42, 0.86);
+  --navbar-text: rgba(255, 255, 255, .9);
+  --navbar-hover: #24303c;
 
-  /* 标签栏 */
-  --tags-bg: #141414;
-  --tags-item-bg: #1d1e1f;
-  --tags-item-border: #303030;
-  --tags-item-text: #d0d0d0;
-  --tags-item-hover: #2d2d2d;
-  --tags-close-hover: #64666a;
-
-  /* splitpanes 组件暗黑模式变量 */
-  --splitpanes-bg: #141414;
-  --splitpanes-border: #303030;
-  --splitpanes-splitter-bg: #1d1e1f;
-  --splitpanes-splitter-hover-bg: #2d2d2d;
-
-  /* blockquote 暗黑模式变量 */
-  --blockquote-bg: #1d1e1f;
-  --blockquote-border: #303030;
-  --blockquote-text: #d0d0d0;
-  
-  /* Cron 时间表达式 模式变量 */
-  --cron-border: #303030;
-
-  /* splitpanes default-theme 暗黑模式变量 */
-  --splitpanes-default-bg: #141414;
-
-  /* 侧边栏菜单覆盖 */
-  .sidebar-container {
-    .el-menu-item:not(.is-active), .menu-title {
-      color: var(--el-text-color-regular);
-    }
-    & .theme-dark .nest-menu .el-sub-menu>.el-sub-menu__title,
-    & .theme-dark .el-sub-menu .el-menu-item {
-      background-color: var(--el-bg-color) !important;
-    }
-  }
-
-  .topmenu-container {
-    .el-menu-item,
-    .el-sub-menu .el-sub-menu__title {
-      color: var(--el-text-color-regular) !important;
-    }
-  }
-
-  .topbar-menu.el-menu--horizontal > .el-sub-menu .el-sub-menu__title{
-    color: var(--el-text-color-regular) !important;
-  }
-
-  /* 顶部栏栏菜单覆盖 */
-  .el-menu--horizontal {
-    .el-menu-item, .el-sub-menu {
-      &:not(.is-disabled) {
-        &:hover,
-        &:focus {
-          background-color: var(--navbar-hover) !important;
-          .el-sub-menu__title {
-            background-color: var(--navbar-hover) !important;
-          }
-        }
-      }
-    }
-  }
-
-  /* 分割窗格覆盖 */
-  .splitpanes {
-    background-color: var(--splitpanes-bg);
-
-    .splitpanes__pane {
-      background-color: var(--splitpanes-bg);
-      border-color: var(--splitpanes-border);
-    }
-
-    .splitpanes__splitter {
-      background-color: var(--splitpanes-splitter-bg);
-      border-color: var(--splitpanes-border);
-
-      &:hover {
-        background-color: var(--splitpanes-splitter-hover-bg);
-      }
-
-      &:before,
-      &:after {
-        background-color: var(--splitpanes-border);
-      }
-    }
-  }
-
-  /* 按钮样式覆盖 */
-  .el-button--primary.is-plain {
-    background-color: var(--primary-bg);
-    border: 1px solid var(--el-color-primary-light-2);
-    color: var(--el-color-primary-light-2);
-
-    &:hover {
-      background-color: var(--el-button-hover-bg-color);
-      border-color: var(--el-button-hover-border-color);
-      color: var(--el-button-hover-text-color);
-    }
-
-    &.is-disabled {
-      background-color: var(--link-active-bg-color);
-      border-color: var(--el-color-primary-light-3);
-      color: var(--el-color-primary-light-3);
-      opacity: 0.5;
-    }
-  }
-
-  /* primary tag 样式覆盖 */
-  .el-tag--primary {
-    background-color: var(--primary-bg);
-    border: 1px solid var(--el-border-color-light);
-    color: var(--el-color-primary);
-  }
-
-  /* 表格样式覆盖 */
-  .el-table {
-    --el-table-header-bg-color: var(--el-bg-color-overlay) !important;
-    --el-table-header-text-color: var(--el-text-color-regular) !important;
-    --el-table-border-color: var(--el-border-color-light) !important;
-    --el-table-row-hover-bg-color: var(--el-bg-color-overlay) !important;
-
-    .el-table__header-wrapper, .el-table__fixed-header-wrapper {
-      th {
-        background-color: var(--el-bg-color-overlay, #f8f8f9) !important;
-        color: var(--el-text-color-regular, #515a6e);
-      }
-    }
-  }
-
-  /* 树组件高亮样式覆盖 */
-  .el-tree {
-    .el-tree-node.is-current > .el-tree-node__content {
-      background-color: var(--el-bg-color-overlay) !important;
-      color: var(--el-color-primary);
-    }
-
-    .el-tree-node__content:hover {
-      background-color: var(--el-bg-color-overlay);
-    }
-  }
-  
-  /* 下拉菜单样式覆盖 */
-  .el-dropdown-menu__item:not(.is-disabled):focus, .el-dropdown-menu__item:not(.is-disabled):hover{
-    background-color: var(--navbar-hover) !important;
-  }
-
-  /* blockquote样式覆盖 */
-  blockquote {
-    background-color: var(--blockquote-bg) !important;
-    border-left-color: var(--blockquote-border) !important;
-    color: var(--blockquote-text) !important;
-  }
-  
-  /* 时间表达式标题样式覆盖 */
-  .popup-result .title {
-    background: var(--cron-border);
-  }
-
-  /* 底部版权样式覆盖 */
-  .copyright {
-    background-color: var(--el-bg-color) !important;
-    color: var(--el-text-color-regular) !important;
-    border-top: 1px solid var(--el-bg-color) !important;
-  }
+  --tags-bg: rgba(23, 32, 42, 0.9);
+  --tags-item-bg: rgba(34, 44, 54, 0.96);
+  --tags-item-border: #3a4653;
+  --tags-item-text: rgba(255, 255, 255, 0.82);
+  --tags-item-hover: #24303c;
+  --tags-close-hover: #5a6470;
 }
-

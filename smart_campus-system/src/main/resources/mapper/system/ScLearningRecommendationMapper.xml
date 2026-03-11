@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScLearningRecommendationMapper">
+    <resultMap type="ScLearningRecommendation" id="ScLearningRecommendationResult">
+        <id property="recommendId" column="recommend_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="bizType" column="biz_type"/>
+        <result property="bizId" column="biz_id"/>
+        <result property="recommendReason" column="recommend_reason"/>
+        <result property="recommendScore" column="recommend_score"/>
+        <result property="sourceType" column="source_type"/>
+        <result property="sceneCode" column="scene_code"/>
+        <result property="exposeStatus" column="expose_status"/>
+        <result property="clickStatus" column="click_status"/>
+        <result property="feedbackStatus" column="feedback_status"/>
+        <result property="expireTime" column="expire_time"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+    <sql id="selectScLearningRecommendationVo">
+        select recommend_id, user_id, biz_type, biz_id, recommend_reason, recommend_score, source_type, scene_code, expose_status, click_status, feedback_status, expire_time, create_time from sc_learning_recommendation
+    </sql>
+    <select id="selectScLearningRecommendationByRecommendId" parameterType="Long" resultMap="ScLearningRecommendationResult"><include refid="selectScLearningRecommendationVo"/> where recommend_id = #{recommendId}</select>
+    <select id="selectScLearningRecommendationList" parameterType="ScLearningRecommendation" resultMap="ScLearningRecommendationResult">
+        <include refid="selectScLearningRecommendationVo"/>
+        <where>
+            <if test="userId != null">and user_id = #{userId}</if>
+            <if test="bizType != null and bizType != ''">and biz_type = #{bizType}</if>
+            <if test="sceneCode != null and sceneCode != ''">and scene_code = #{sceneCode}</if>
+            <if test="sourceType != null and sourceType != ''">and source_type = #{sourceType}</if>
+        </where>
+        order by recommend_id desc
+    </select>
+    <insert id="insertScLearningRecommendation" parameterType="ScLearningRecommendation" useGeneratedKeys="true" keyProperty="recommendId">
+        insert into sc_learning_recommendation(user_id, biz_type, biz_id, recommend_reason, recommend_score, source_type, scene_code, expose_status, click_status, feedback_status, expire_time, create_time)
+        values(#{userId}, #{bizType}, #{bizId}, #{recommendReason}, #{recommendScore}, #{sourceType}, #{sceneCode}, #{exposeStatus}, #{clickStatus}, #{feedbackStatus}, #{expireTime}, sysdate())
+    </insert>
+    <update id="updateScLearningRecommendation" parameterType="ScLearningRecommendation">
+        update sc_learning_recommendation
+        <set>
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="bizType != null">biz_type = #{bizType},</if>
+            <if test="bizId != null">biz_id = #{bizId},</if>
+            <if test="recommendReason != null">recommend_reason = #{recommendReason},</if>
+            <if test="recommendScore != null">recommend_score = #{recommendScore},</if>
+            <if test="sourceType != null">source_type = #{sourceType},</if>
+            <if test="sceneCode != null">scene_code = #{sceneCode},</if>
+            <if test="exposeStatus != null">expose_status = #{exposeStatus},</if>
+            <if test="clickStatus != null">click_status = #{clickStatus},</if>
+            <if test="feedbackStatus != null">feedback_status = #{feedbackStatus},</if>
+            <if test="expireTime != null">expire_time = #{expireTime},</if>
+        </set>
+        where recommend_id = #{recommendId}
+    </update>
+    <delete id="deleteScLearningRecommendationByRecommendId" parameterType="Long">delete from sc_learning_recommendation where recommend_id = #{recommendId}</delete>
+    <delete id="deleteScLearningRecommendationByRecommendIds" parameterType="Long">delete from sc_learning_recommendation where recommend_id in <foreach item="recommendId" collection="array" open="(" separator="," close=")">#{recommendId}</foreach></delete>
+</mapper>

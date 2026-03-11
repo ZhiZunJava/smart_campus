@@ -11,15 +11,6 @@
     <div class="right-menu">
       <template v-if="appStore.device !== 'mobile'">
         <header-search id="header-search" class="right-menu-item" />
-
-        <el-tooltip content="源码地址" effect="dark" placement="bottom">
-          <ruo-yi-git id="ruoyi-git" class="right-menu-item hover-effect" />
-        </el-tooltip>
-
-        <el-tooltip content="文档地址" effect="dark" placement="bottom">
-          <ruo-yi-doc id="ruoyi-doc" class="right-menu-item hover-effect" />
-        </el-tooltip>
-
         <screenfull id="screenfull" class="right-menu-item hover-effect" />
 
         <el-tooltip content="主题模式" effect="dark" placement="bottom">
@@ -37,16 +28,16 @@
       <el-dropdown @command="handleCommand" class="avatar-container right-menu-item hover-effect" trigger="hover">
         <div class="avatar-wrapper">
           <img :src="userStore.avatar" class="user-avatar" />
-          <span class="user-nickname"> {{ userStore.nickName }} </span>
+          <span class="user-nickname">{{ userStore.nickName }}</span>
         </div>
         <template #dropdown>
           <el-dropdown-menu>
             <router-link to="/user/profile">
               <el-dropdown-item>个人中心</el-dropdown-item>
             </router-link>
-            <el-dropdown-item command="setLayout" v-if="settingsStore.showSettings">
-                <span>布局设置</span>
-              </el-dropdown-item>
+            <el-dropdown-item v-if="settingsStore.showSettings" command="setLayout">
+              <span>布局设置</span>
+            </el-dropdown-item>
             <el-dropdown-item divided command="logout">
               <span>退出登录</span>
             </el-dropdown-item>
@@ -67,8 +58,6 @@ import Hamburger from '@/components/Hamburger/index.vue'
 import Screenfull from '@/components/Screenfull/index.vue'
 import SizeSelect from '@/components/SizeSelect/index.vue'
 import HeaderSearch from '@/components/HeaderSearch/index.vue'
-import RuoYiGit from '@/components/RuoYi/Git/index.vue'
-import RuoYiDoc from '@/components/RuoYi/Doc/index.vue'
 import useAppStore from '@/store/modules/app'
 import useUserStore from '@/store/modules/user'
 import useSettingsStore from '@/store/modules/settings'
@@ -83,10 +72,10 @@ function toggleSideBar(): void {
 
 function handleCommand(command: string): void {
   switch (command) {
-    case "setLayout":
+    case 'setLayout':
       setLayout()
       break
-    case "logout":
+    case 'logout':
       logout()
       break
     default:
@@ -103,7 +92,7 @@ function logout(): void {
     userStore.logOut().then(() => {
       location.href = '/index'
     })
-  }).catch(() => { })
+  }).catch(() => {})
 }
 
 const emits = defineEmits(['setLayout'])
@@ -116,7 +105,7 @@ async function toggleTheme(event?: MouseEvent): Promise<void> {
   const y = event?.clientY || window.innerHeight / 2
   const wasDark = settingsStore.isDark
 
-  const isReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  const isReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const isSupported = typeof (document as any).startViewTransition === 'function' && !isReducedMotion
 
   if (!isSupported) {
@@ -139,14 +128,14 @@ async function toggleTheme(event?: MouseEvent): Promise<void> {
         clipPath: !wasDark ? [...clipPath].reverse() : clipPath
       }, {
         duration: 650,
-        easing: "cubic-bezier(0.4, 0, 0.2, 1)",
-        fill: "forwards",
-        pseudoElement: !wasDark ? "::view-transition-old(root)" : "::view-transition-new(root)"
+        easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+        fill: 'forwards',
+        pseudoElement: !wasDark ? '::view-transition-old(root)' : '::view-transition-new(root)'
       }
     )
     await transition.finished
   } catch (error) {
-    console.warn("View transition failed, falling back to immediate toggle:", error)
+    console.warn('View transition failed, falling back to immediate toggle:', error)
     settingsStore.toggleTheme()
   }
 }
@@ -160,29 +149,33 @@ async function toggleTheme(event?: MouseEvent): Promise<void> {
 }
 
 .navbar {
-  height: 50px;
+  height: 58px;
   overflow: hidden;
   position: relative;
   background: var(--navbar-bg);
-  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+  border-bottom: 1px solid var(--el-border-color-lighter);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
   display: flex;
   align-items: center;
-  // padding: 0 8px;
+  padding: 0 12px 0 8px;
   box-sizing: border-box;
 
   .hamburger-container {
     line-height: 46px;
-    height: 100%;
+    height: 42px;
+    width: 42px;
+    border-radius: 12px;
     cursor: pointer;
-    transition: background 0.3s;
+    transition: all 0.3s;
     -webkit-tap-highlight-color: transparent;
     display: flex;
     align-items: center;
+    justify-content: center;
     flex-shrink: 0;
     margin-right: 8px;
 
     &:hover {
-      background: rgba(0, 0, 0, 0.025);
+      background: var(--el-fill-color-light);
     }
   }
 
@@ -192,7 +185,7 @@ async function toggleTheme(event?: MouseEvent): Promise<void> {
 
   .topmenu-container {
     position: absolute;
-    left: 50px;
+    left: 58px;
   }
 
   .topbar-container {
@@ -204,85 +197,71 @@ async function toggleTheme(event?: MouseEvent): Promise<void> {
     margin-left: 8px;
   }
 
-  .errLog-container {
-    display: inline-block;
-    vertical-align: top;
-  }
-
   .right-menu {
     height: 100%;
-    line-height: 50px;
     display: flex;
     align-items: center;
     margin-left: auto;
+    gap: 4px;
 
     &:focus {
       outline: none;
     }
 
     .right-menu-item {
-      display: inline-block;
-      padding: 0 8px;
-      height: 100%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 10px;
+      min-width: 42px;
+      height: 42px;
+      border-radius: 12px;
       font-size: 18px;
-      color: #5a5e66;
-      vertical-align: text-bottom;
+      color: var(--el-text-color-regular);
 
       &.hover-effect {
         cursor: pointer;
-        transition: background 0.3s;
+        transition: all 0.3s;
 
         &:hover {
-          background: rgba(0, 0, 0, 0.025);
+          background: var(--el-fill-color-light);
+          color: var(--el-color-primary);
         }
       }
 
       &.theme-switch-wrapper {
-        display: flex;
-        align-items: center;
-
         svg {
           transition: transform 0.3s;
-          
+
           &:hover {
-            transform: scale(1.15);
+            transform: scale(1.1);
           }
         }
       }
     }
 
     .avatar-container {
-      margin-right: 0px;
-      padding-right: 0px;
+      padding: 0 8px 0 10px;
+      width: auto;
 
       .avatar-wrapper {
-        margin-top: 10px;
-        right: 8px;
-        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
 
-        .user-avatar {
-          cursor: pointer;
-          width: 30px;
-          height: 30px;
-          margin-right: 8px;
-          border-radius: 50%;
-        }
+      .user-avatar {
+        cursor: pointer;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: 2px solid rgba(0, 110, 255, 0.15);
+      }
 
-        .user-nickname{
-          position: relative;
-          left: 0px;
-          bottom: 10px;
-          font-size: 14px;
-          font-weight: bold;
-        }
-
-        i {
-          cursor: pointer;
-          position: absolute;
-          right: -20px;
-          top: 25px;
-          font-size: 12px;
-        }
+      .user-nickname {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--el-text-color-primary);
       }
     }
   }

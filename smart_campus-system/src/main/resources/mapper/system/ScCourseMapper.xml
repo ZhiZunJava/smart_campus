@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScCourseMapper">
+    <resultMap type="ScCourse" id="ScCourseResult">
+        <id property="courseId" column="course_id"/>
+        <result property="courseName" column="course_name"/>
+        <result property="courseCode" column="course_code"/>
+        <result property="subjectType" column="subject_type"/>
+        <result property="teacherId" column="teacher_id"/>
+        <result property="gradeId" column="grade_id"/>
+        <result property="coverUrl" column="cover_url"/>
+        <result property="intro" column="intro"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+    <sql id="selectScCourseVo">
+        select course_id, course_name, course_code, subject_type, teacher_id, grade_id, cover_url, intro, status, create_by, create_time, update_by, update_time, remark from sc_course
+    </sql>
+    <select id="selectScCourseByCourseId" parameterType="Long" resultMap="ScCourseResult">
+        <include refid="selectScCourseVo"/> where course_id = #{courseId}
+    </select>
+    <select id="selectScCourseList" parameterType="ScCourse" resultMap="ScCourseResult">
+        <include refid="selectScCourseVo"/>
+        <where>
+            <if test="courseName != null and courseName != ''">and course_name like concat('%', #{courseName}, '%')</if>
+            <if test="courseCode != null and courseCode != ''">and course_code like concat('%', #{courseCode}, '%')</if>
+            <if test="subjectType != null and subjectType != ''">and subject_type = #{subjectType}</if>
+            <if test="teacherId != null">and teacher_id = #{teacherId}</if>
+            <if test="gradeId != null">and grade_id = #{gradeId}</if>
+            <if test="status != null and status != ''">and status = #{status}</if>
+        </where>
+        order by course_id desc
+    </select>
+    <insert id="insertScCourse" parameterType="ScCourse" useGeneratedKeys="true" keyProperty="courseId">
+        insert into sc_course(course_name, course_code, subject_type, teacher_id, grade_id, cover_url, intro, status, create_by, create_time, remark)
+        values(#{courseName}, #{courseCode}, #{subjectType}, #{teacherId}, #{gradeId}, #{coverUrl}, #{intro}, #{status}, #{createBy}, sysdate(), #{remark})
+    </insert>
+    <update id="updateScCourse" parameterType="ScCourse">
+        update sc_course
+        <set>
+            <if test="courseName != null">course_name = #{courseName},</if>
+            <if test="courseCode != null">course_code = #{courseCode},</if>
+            <if test="subjectType != null">subject_type = #{subjectType},</if>
+            <if test="teacherId != null">teacher_id = #{teacherId},</if>
+            <if test="gradeId != null">grade_id = #{gradeId},</if>
+            <if test="coverUrl != null">cover_url = #{coverUrl},</if>
+            <if test="intro != null">intro = #{intro},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            update_time = sysdate()
+        </set>
+        where course_id = #{courseId}
+    </update>
+    <delete id="deleteScCourseByCourseId" parameterType="Long">delete from sc_course where course_id = #{courseId}</delete>
+    <delete id="deleteScCourseByCourseIds" parameterType="Long">delete from sc_course where course_id in <foreach item="courseId" collection="array" open="(" separator="," close=")">#{courseId}</foreach></delete>
+</mapper>

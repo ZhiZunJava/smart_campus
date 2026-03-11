@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScLearningReportMapper">
+  <resultMap type="ScLearningReport" id="ScLearningReportResult"><id property="reportId" column="report_id"/><result property="userId" column="user_id"/><result property="reportType" column="report_type"/><result property="reportContent" column="report_content"/><result property="reportJson" column="report_json"/><result property="generateTime" column="generate_time"/></resultMap>
+  <sql id="selectScLearningReportVo">select report_id, user_id, report_type, report_content, report_json, generate_time from sc_learning_report</sql>
+  <select id="selectScLearningReportByReportId" parameterType="Long" resultMap="ScLearningReportResult"><include refid="selectScLearningReportVo"/> where report_id = #{reportId}</select>
+  <select id="selectScLearningReportList" parameterType="ScLearningReport" resultMap="ScLearningReportResult"><include refid="selectScLearningReportVo"/><where><if test="userId != null">and user_id = #{userId}</if><if test="reportType != null and reportType != ''">and report_type = #{reportType}</if></where> order by report_id desc</select>
+  <insert id="insertScLearningReport" parameterType="ScLearningReport" useGeneratedKeys="true" keyProperty="reportId">insert into sc_learning_report(user_id, report_type, report_content, report_json, generate_time) values(#{userId}, #{reportType}, #{reportContent}, #{reportJson}, sysdate())</insert>
+  <update id="updateScLearningReport" parameterType="ScLearningReport">update sc_learning_report <set><if test="reportType != null">report_type = #{reportType},</if><if test="reportContent != null">report_content = #{reportContent},</if><if test="reportJson != null">report_json = #{reportJson},</if><if test="generateTime != null">generate_time = #{generateTime},</if></set> where report_id = #{reportId}</update>
+  <delete id="deleteScLearningReportByReportId" parameterType="Long">delete from sc_learning_report where report_id = #{reportId}</delete>
+  <delete id="deleteScLearningReportByReportIds" parameterType="Long">delete from sc_learning_report where report_id in <foreach item="reportId" collection="array" open="(" separator="," close=")">#{reportId}</foreach></delete>
+</mapper>

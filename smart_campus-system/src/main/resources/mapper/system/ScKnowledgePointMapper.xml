@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScKnowledgePointMapper">
+    <resultMap type="ScKnowledgePoint" id="ScKnowledgePointResult">
+        <id property="knowledgePointId" column="knowledge_point_id"/>
+        <result property="courseId" column="course_id"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="knowledgeName" column="knowledge_name"/>
+        <result property="difficultyLevel" column="difficulty_level"/>
+        <result property="keyword" column="keyword"/>
+        <result property="description" column="description"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+    <sql id="selectScKnowledgePointVo">
+        select knowledge_point_id, course_id, parent_id, knowledge_name, difficulty_level, keyword, description, status, create_by, create_time, update_by, update_time, remark from sc_knowledge_point
+    </sql>
+    <select id="selectScKnowledgePointByKnowledgePointId" parameterType="Long" resultMap="ScKnowledgePointResult">
+        <include refid="selectScKnowledgePointVo"/> where knowledge_point_id = #{knowledgePointId}
+    </select>
+    <select id="selectScKnowledgePointList" parameterType="ScKnowledgePoint" resultMap="ScKnowledgePointResult">
+        <include refid="selectScKnowledgePointVo"/>
+        <where>
+            <if test="courseId != null">and course_id = #{courseId}</if>
+            <if test="parentId != null">and parent_id = #{parentId}</if>
+            <if test="knowledgeName != null and knowledgeName != ''">and knowledge_name like concat('%', #{knowledgeName}, '%')</if>
+            <if test="status != null and status != ''">and status = #{status}</if>
+        </where>
+        order by knowledge_point_id desc
+    </select>
+    <insert id="insertScKnowledgePoint" parameterType="ScKnowledgePoint" useGeneratedKeys="true" keyProperty="knowledgePointId">
+        insert into sc_knowledge_point(course_id, parent_id, knowledge_name, difficulty_level, keyword, description, status, create_by, create_time, remark)
+        values(#{courseId}, #{parentId}, #{knowledgeName}, #{difficultyLevel}, #{keyword}, #{description}, #{status}, #{createBy}, sysdate(), #{remark})
+    </insert>
+    <update id="updateScKnowledgePoint" parameterType="ScKnowledgePoint">
+        update sc_knowledge_point
+        <set>
+            <if test="courseId != null">course_id = #{courseId},</if>
+            <if test="parentId != null">parent_id = #{parentId},</if>
+            <if test="knowledgeName != null">knowledge_name = #{knowledgeName},</if>
+            <if test="difficultyLevel != null">difficulty_level = #{difficultyLevel},</if>
+            <if test="keyword != null">keyword = #{keyword},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            update_time = sysdate()
+        </set>
+        where knowledge_point_id = #{knowledgePointId}
+    </update>
+    <delete id="deleteScKnowledgePointByKnowledgePointId" parameterType="Long">delete from sc_knowledge_point where knowledge_point_id = #{knowledgePointId}</delete>
+    <delete id="deleteScKnowledgePointByKnowledgePointIds" parameterType="Long">delete from sc_knowledge_point where knowledge_point_id in <foreach item="knowledgePointId" collection="array" open="(" separator="," close=")">#{knowledgePointId}</foreach></delete>
+</mapper>

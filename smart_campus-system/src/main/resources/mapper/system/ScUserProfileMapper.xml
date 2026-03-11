@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScUserProfileMapper">
+
+    <resultMap type="ScUserProfile" id="ScUserProfileResult">
+        <id property="profileId" column="profile_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="userType" column="user_type"/>
+        <result property="studentNo" column="student_no"/>
+        <result property="teacherNo" column="teacher_no"/>
+        <result property="realName" column="real_name"/>
+        <result property="gender" column="gender"/>
+        <result property="gradeId" column="grade_id"/>
+        <result property="classId" column="class_id"/>
+        <result property="major" column="major"/>
+        <result property="admissionYear" column="admission_year"/>
+        <result property="learningGoal" column="learning_goal"/>
+        <result property="interestTags" column="interest_tags"/>
+        <result property="learningStyle" column="learning_style"/>
+        <result property="avatarUrl" column="avatar_url"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <sql id="selectScUserProfileVo">
+        select profile_id, user_id, user_type, student_no, teacher_no, real_name, gender, grade_id, class_id,
+               major, admission_year, learning_goal, interest_tags, learning_style, avatar_url, status,
+               create_by, create_time, update_by, update_time, remark
+        from sc_user_profile
+    </sql>
+
+    <select id="selectScUserProfileByProfileId" parameterType="Long" resultMap="ScUserProfileResult">
+        <include refid="selectScUserProfileVo"/>
+        where profile_id = #{profileId}
+    </select>
+
+    <select id="selectScUserProfileList" parameterType="ScUserProfile" resultMap="ScUserProfileResult">
+        <include refid="selectScUserProfileVo"/>
+        <where>
+            <if test="userId != null">and user_id = #{userId}</if>
+            <if test="userType != null and userType != ''">and user_type = #{userType}</if>
+            <if test="studentNo != null and studentNo != ''">and student_no like concat('%', #{studentNo}, '%')</if>
+            <if test="teacherNo != null and teacherNo != ''">and teacher_no like concat('%', #{teacherNo}, '%')</if>
+            <if test="realName != null and realName != ''">and real_name like concat('%', #{realName}, '%')</if>
+            <if test="gradeId != null">and grade_id = #{gradeId}</if>
+            <if test="classId != null">and class_id = #{classId}</if>
+            <if test="status != null and status != ''">and status = #{status}</if>
+        </where>
+        order by profile_id desc
+    </select>
+
+    <insert id="insertScUserProfile" parameterType="ScUserProfile" useGeneratedKeys="true" keyProperty="profileId">
+        insert into sc_user_profile
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="userType != null and userType != ''">user_type,</if>
+            <if test="studentNo != null">student_no,</if>
+            <if test="teacherNo != null">teacher_no,</if>
+            <if test="realName != null">real_name,</if>
+            <if test="gender != null">gender,</if>
+            <if test="gradeId != null">grade_id,</if>
+            <if test="classId != null">class_id,</if>
+            <if test="major != null">major,</if>
+            <if test="admissionYear != null">admission_year,</if>
+            <if test="learningGoal != null">learning_goal,</if>
+            <if test="interestTags != null">interest_tags,</if>
+            <if test="learningStyle != null">learning_style,</if>
+            <if test="avatarUrl != null">avatar_url,</if>
+            <if test="status != null">status,</if>
+            <if test="createBy != null and createBy != ''">create_by,</if>
+            <if test="remark != null">remark,</if>
+            create_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="userType != null and userType != ''">#{userType},</if>
+            <if test="studentNo != null">#{studentNo},</if>
+            <if test="teacherNo != null">#{teacherNo},</if>
+            <if test="realName != null">#{realName},</if>
+            <if test="gender != null">#{gender},</if>
+            <if test="gradeId != null">#{gradeId},</if>
+            <if test="classId != null">#{classId},</if>
+            <if test="major != null">#{major},</if>
+            <if test="admissionYear != null">#{admissionYear},</if>
+            <if test="learningGoal != null">#{learningGoal},</if>
+            <if test="interestTags != null">#{interestTags},</if>
+            <if test="learningStyle != null">#{learningStyle},</if>
+            <if test="avatarUrl != null">#{avatarUrl},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createBy != null and createBy != ''">#{createBy},</if>
+            <if test="remark != null">#{remark},</if>
+            sysdate()
+        </trim>
+    </insert>
+
+    <update id="updateScUserProfile" parameterType="ScUserProfile">
+        update sc_user_profile
+        <set>
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="userType != null and userType != ''">user_type = #{userType},</if>
+            <if test="studentNo != null">student_no = #{studentNo},</if>
+            <if test="teacherNo != null">teacher_no = #{teacherNo},</if>
+            <if test="realName != null">real_name = #{realName},</if>
+            <if test="gender != null">gender = #{gender},</if>
+            <if test="gradeId != null">grade_id = #{gradeId},</if>
+            <if test="classId != null">class_id = #{classId},</if>
+            <if test="major != null">major = #{major},</if>
+            <if test="admissionYear != null">admission_year = #{admissionYear},</if>
+            <if test="learningGoal != null">learning_goal = #{learningGoal},</if>
+            <if test="interestTags != null">interest_tags = #{interestTags},</if>
+            <if test="learningStyle != null">learning_style = #{learningStyle},</if>
+            <if test="avatarUrl != null">avatar_url = #{avatarUrl},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            update_time = sysdate()
+        </set>
+        where profile_id = #{profileId}
+    </update>
+
+    <delete id="deleteScUserProfileByProfileId" parameterType="Long">
+        delete from sc_user_profile where profile_id = #{profileId}
+    </delete>
+
+    <delete id="deleteScUserProfileByProfileIds" parameterType="Long">
+        delete from sc_user_profile where profile_id in
+        <foreach item="profileId" collection="array" open="(" separator="," close=")">
+            #{profileId}
+        </foreach>
+    </delete>
+</mapper>

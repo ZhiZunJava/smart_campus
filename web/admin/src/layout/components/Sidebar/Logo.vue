@@ -2,19 +2,16 @@
   <div class="sidebar-logo-container" :class="{ 'collapse': collapse }">
     <transition name="sidebarLogoFade">
       <router-link v-if="collapse" key="collapse" class="sidebar-logo-link" to="/">
-        <img v-if="logo" :src="logo" class="sidebar-logo" />
-        <h1 v-else class="sidebar-title">{{ title }}</h1>
+        <h1 class="sidebar-title sidebar-title--collapse">{{ collapsedTitle }}</h1>
       </router-link>
       <router-link v-else key="expand" class="sidebar-logo-link" to="/">
-        <img v-if="logo" :src="logo" class="sidebar-logo" />
-        <h1 class="sidebar-title">{{ title }}</h1>
+        <h1 class="sidebar-title">{{ displayTitle }}</h1>
       </router-link>
     </transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import logo from '@/assets/logo/logo.png'
 import useSettingsStore from '@/store/modules/settings'
 import variables from '@/assets/styles/variables.module.scss'
 
@@ -25,9 +22,10 @@ defineProps({
   }
 })
 
-const title = import.meta.env.VITE_APP_TITLE
 const settingsStore = useSettingsStore()
 const sideTheme = computed(() => settingsStore.sideTheme)
+const displayTitle = computed(() => '智慧校园')
+const collapsedTitle = computed(() => '校园')
 
 // 获取Logo背景色
 const getLogoBackground = computed(() => {
@@ -64,38 +62,43 @@ const getLogoTextColor = computed(() => {
 
 .sidebar-logo-container {
   position: relative;
-  height: 50px;
-  line-height: 50px;
+  height: 58px;
+  line-height: 58px;
   background: v-bind(getLogoBackground);
   text-align: center;
   overflow: hidden;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 
   & .sidebar-logo-link {
     height: 100%;
     width: 100%;
 
-    & .sidebar-logo {
-      width: 32px;
-      height: 32px;
-      vertical-align: middle;
-      margin-right: 12px;
-    }
-
     & .sidebar-title {
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 58px;
       margin: 0;
       color: v-bind(getLogoTextColor);
-      font-weight: 600;
-      line-height: 50px;
-      font-size: 14px;
-      font-family: Avenir, Helvetica Neue, Arial, Helvetica, sans-serif;
+      font-weight: 700;
+      line-height: 1;
+      font-size: 18px;
+      letter-spacing: 1px;
+      font-family: PingFang SC, Microsoft YaHei, Arial, sans-serif;
       vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    & .sidebar-title--collapse {
+      font-size: 16px;
+      letter-spacing: 0.5px;
     }
   }
 
   &.collapse {
-    .sidebar-logo {
-      margin-right: 0px;
+    .sidebar-logo-link {
+      justify-content: center;
     }
   }
 }

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScQuestionBankMapper">
+  <resultMap type="ScQuestionBank" id="ScQuestionBankResult">
+    <id property="questionId" column="question_id"/>
+    <result property="courseId" column="course_id"/>
+    <result property="chapterId" column="chapter_id"/>
+    <result property="knowledgePointId" column="knowledge_point_id"/>
+    <result property="questionType" column="question_type"/>
+    <result property="difficultyLevel" column="difficulty_level"/>
+    <result property="stem" column="stem"/>
+    <result property="answer" column="answer"/>
+    <result property="analysis" column="analysis"/>
+    <result property="source" column="source"/>
+    <result property="qualityScore" column="quality_score"/>
+    <result property="status" column="status"/>
+  </resultMap>
+  <sql id="selectScQuestionBankVo">select question_id, course_id, chapter_id, knowledge_point_id, question_type, difficulty_level, stem, answer, analysis, source, quality_score, status from sc_question_bank</sql>
+  <select id="selectScQuestionBankByQuestionId" parameterType="Long" resultMap="ScQuestionBankResult"><include refid="selectScQuestionBankVo"/> where question_id = #{questionId}</select>
+  <select id="selectScQuestionBankList" parameterType="ScQuestionBank" resultMap="ScQuestionBankResult"><include refid="selectScQuestionBankVo"/><where><if test="courseId != null">and course_id = #{courseId}</if><if test="chapterId != null">and chapter_id = #{chapterId}</if><if test="knowledgePointId != null">and knowledge_point_id = #{knowledgePointId}</if><if test="questionType != null and questionType != ''">and question_type = #{questionType}</if><if test="status != null and status != ''">and status = #{status}</if></where> order by question_id desc</select>
+  <insert id="insertScQuestionBank" parameterType="ScQuestionBank" useGeneratedKeys="true" keyProperty="questionId">insert into sc_question_bank(course_id, chapter_id, knowledge_point_id, question_type, difficulty_level, stem, answer, analysis, source, quality_score, status, create_by, create_time, remark) values(#{courseId}, #{chapterId}, #{knowledgePointId}, #{questionType}, #{difficultyLevel}, #{stem}, #{answer}, #{analysis}, #{source}, #{qualityScore}, #{status}, #{createBy}, sysdate(), #{remark})</insert>
+  <update id="updateScQuestionBank" parameterType="ScQuestionBank">update sc_question_bank <set><if test="courseId != null">course_id = #{courseId},</if><if test="chapterId != null">chapter_id = #{chapterId},</if><if test="knowledgePointId != null">knowledge_point_id = #{knowledgePointId},</if><if test="questionType != null">question_type = #{questionType},</if><if test="difficultyLevel != null">difficulty_level = #{difficultyLevel},</if><if test="stem != null">stem = #{stem},</if><if test="answer != null">answer = #{answer},</if><if test="analysis != null">analysis = #{analysis},</if><if test="source != null">source = #{source},</if><if test="qualityScore != null">quality_score = #{qualityScore},</if><if test="status != null">status = #{status},</if><if test="updateBy != null">update_by = #{updateBy},</if><if test="remark != null">remark = #{remark},</if>update_time = sysdate()</set> where question_id = #{questionId}</update>
+  <delete id="deleteScQuestionBankByQuestionId" parameterType="Long">delete from sc_question_bank where question_id = #{questionId}</delete>
+  <delete id="deleteScQuestionBankByQuestionIds" parameterType="Long">delete from sc_question_bank where question_id in <foreach item="questionId" collection="array" open="(" separator="," close=")">#{questionId}</foreach></delete>
+</mapper>

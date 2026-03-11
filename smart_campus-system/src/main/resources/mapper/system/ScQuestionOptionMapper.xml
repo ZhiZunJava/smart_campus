@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScQuestionOptionMapper">
+  <resultMap type="ScQuestionOption" id="ScQuestionOptionResult">
+    <id property="optionId" column="option_id"/>
+    <result property="questionId" column="question_id"/>
+    <result property="optionKey" column="option_key"/>
+    <result property="optionContent" column="option_content"/>
+    <result property="isRight" column="is_right"/>
+  </resultMap>
+  <sql id="selectScQuestionOptionVo">select option_id, question_id, option_key, option_content, is_right from sc_question_option</sql>
+  <select id="selectScQuestionOptionByOptionId" parameterType="Long" resultMap="ScQuestionOptionResult"><include refid="selectScQuestionOptionVo"/> where option_id = #{optionId}</select>
+  <select id="selectScQuestionOptionList" parameterType="ScQuestionOption" resultMap="ScQuestionOptionResult"><include refid="selectScQuestionOptionVo"/><where><if test="questionId != null">and question_id = #{questionId}</if></where> order by option_id asc</select>
+  <select id="selectScQuestionOptionByQuestionId" parameterType="Long" resultMap="ScQuestionOptionResult"><include refid="selectScQuestionOptionVo"/> where question_id = #{questionId} order by option_id asc</select>
+  <insert id="insertScQuestionOption" parameterType="ScQuestionOption" useGeneratedKeys="true" keyProperty="optionId">insert into sc_question_option(question_id, option_key, option_content, is_right) values(#{questionId}, #{optionKey}, #{optionContent}, #{isRight})</insert>
+  <update id="updateScQuestionOption" parameterType="ScQuestionOption">update sc_question_option <set><if test="questionId != null">question_id = #{questionId},</if><if test="optionKey != null">option_key = #{optionKey},</if><if test="optionContent != null">option_content = #{optionContent},</if><if test="isRight != null">is_right = #{isRight},</if></set> where option_id = #{optionId}</update>
+  <delete id="deleteScQuestionOptionByOptionId" parameterType="Long">delete from sc_question_option where option_id = #{optionId}</delete>
+  <delete id="deleteScQuestionOptionByOptionIds" parameterType="Long">delete from sc_question_option where option_id in <foreach item="optionId" collection="array" open="(" separator="," close=")">#{optionId}</foreach></delete>
+  <delete id="deleteScQuestionOptionByQuestionId" parameterType="Long">delete from sc_question_option where question_id = #{questionId}</delete>
+</mapper>

@@ -233,19 +233,18 @@ function toLastView(visitedViews: any[], view?: any): void {
 }
 
 function openMenu(tag: any, e: MouseEvent): void {
-  const menuMinWidth = 105
-  const offsetLeft = proxy.$el.getBoundingClientRect().left // container margin left
-  const offsetWidth = proxy.$el.offsetWidth // container width
-  const maxLeft = offsetWidth - menuMinWidth // left boundary
-  const l = e.clientX - offsetLeft + 15 // 15: margin right
+  const menuMinWidth = 132
+  const menuMinHeight = 220
+  const containerRect = proxy.$el.getBoundingClientRect()
+  const offsetWidth = proxy.$el.offsetWidth
+  const offsetHeight = proxy.$el.offsetHeight
+  const maxLeft = Math.max(offsetWidth - menuMinWidth - 8, 0)
+  const maxTop = Math.max(offsetHeight - menuMinHeight - 8, 0)
+  const l = e.clientX - containerRect.left + 12
+  const t = e.clientY - containerRect.top + 12
 
-  if (l > maxLeft) {
-    left.value = maxLeft
-  } else {
-    left.value = l
-  }
-
-  top.value = e.clientY
+  left.value = l > maxLeft ? maxLeft : l
+  top.value = t > maxTop ? maxTop : t
   visible.value = true
   selectedTag.value = tag
 }
@@ -261,49 +260,59 @@ function handleScroll(): void {
 
 <style lang="scss" scoped>
 .tags-view-container {
-  height: 34px;
-  width: 100%;
-  background: var(--tags-bg, #fff);
-  border-bottom: 1px solid var(--tags-item-border, #d8dce5);
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, .12), 0 0 3px 0 rgba(0, 0, 0, .04);
+height: 40px;
+width: 100%;
+background: var(--tags-bg, rgba(255, 255, 255, 0.84));
+border-bottom: 1px solid var(--tags-item-border, #d8dce5);
+box-shadow: 0 8px 16px rgba(15, 23, 42, 0.04);
+backdrop-filter: blur(10px);
 
   .tags-view-wrapper {
     .tags-view-item {
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
       position: relative;
       cursor: pointer;
-      height: 26px;
-      line-height: 26px;
+      height: 30px;
+      line-height: 30px;
       border: 1px solid var(--tags-item-border, #d8dce5);
       color: var(--tags-item-text, #495060);
       background: var(--tags-item-bg, #fff);
-      padding: 0 8px;
+      padding: 0 12px;
       font-size: 12px;
-      margin-left: 5px;
-      margin-top: 4px;
+      border-radius: 10px;
+      margin-left: 6px;
+      margin-top: 5px;
+      transition: all 0.2s ease;
 
       &:first-of-type {
-        margin-left: 15px;
+        margin-left: 12px;
       }
 
       &:last-of-type {
-        margin-right: 15px;
+        margin-right: 12px;
+      }
+
+      &:hover {
+        background: var(--tags-item-hover, #f4f8ff);
+        border-color: #cfe0ff;
       }
 
       &.active {
-        background-color: #42b983;
+        background: linear-gradient(90deg, #006eff 0%, #2a86ff 100%);
         color: #fff;
-        border-color: #42b983;
+        border-color: transparent;
+        box-shadow: 0 10px 20px rgba(0, 110, 255, 0.18);
 
         &::before {
           content: '';
-          background: #fff;
+          background: rgba(255, 255, 255, 0.95);
           display: inline-block;
-          width: 8px;
-          height: 8px;
+          width: 6px;
+          height: 6px;
           border-radius: 50%;
           position: relative;
-          margin-right: 5px;
+          margin-right: 6px;
         }
       }
     }
@@ -315,25 +324,45 @@ function handleScroll(): void {
 
   .contextmenu {
     margin: 0;
-    background: var(--el-bg-color-overlay, #fff);
+    min-width: 132px;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(10px);
     z-index: 3000;
     position: absolute;
     list-style-type: none;
-    padding: 5px 0;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 400;
+    padding: 6px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 500;
     color: var(--tags-item-text, #333);
-    box-shadow: 2px 2px 3px 0 rgba(0, 0, 0, .3);
-    border: 1px solid var(--el-border-color-light, #e4e7ed);
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+    border: 1px solid var(--el-border-color-lighter, #e4e7ed);
 
     li {
+      display: flex;
+      align-items: center;
+      gap: 8px;
       margin: 0;
-      padding: 7px 16px;
+      padding: 9px 12px;
+      border-radius: 8px;
       cursor: pointer;
+      line-height: 1;
+      transition: all 0.2s ease;
+
+      svg {
+        flex-shrink: 0;
+        width: 14px;
+        height: 14px;
+        color: var(--el-text-color-regular);
+      }
 
       &:hover {
-        background: var(--tags-item-hover, #eee);
+        background: var(--tags-item-hover, #f4f8ff);
+        color: var(--el-color-primary);
+
+        svg {
+          color: var(--el-color-primary);
+        }
       }
     }
   }
@@ -364,6 +393,35 @@ function handleScroll(): void {
         color: #fff;
         width: 12px !important;
         height: 12px !important;
+      }
+    }
+  }
+}
+
+html.dark {
+  .tags-view-container {
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.16);
+
+    .contextmenu {
+      background: rgba(34, 44, 54, 0.94);
+      border-color: #3a4653;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+
+      li {
+        color: rgba(255, 255, 255, 0.86);
+
+        svg {
+          color: rgba(255, 255, 255, 0.6);
+        }
+
+        &:hover {
+          background: #24303c;
+          color: #6eadff;
+
+          svg {
+            color: #6eadff;
+          }
+        }
       }
     }
   }

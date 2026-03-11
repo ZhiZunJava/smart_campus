@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScCourseStudentMapper">
+  <resultMap type="ScCourseStudent" id="ScCourseStudentResult">
+    <id property="id" column="id"/>
+    <result property="courseId" column="course_id"/>
+    <result property="studentUserId" column="student_user_id"/>
+    <result property="classId" column="class_id"/>
+    <result property="joinTime" column="join_time"/>
+    <result property="status" column="status"/>
+    <result property="remark" column="remark"/>
+  </resultMap>
+  <sql id="selectScCourseStudentVo">select id, course_id, student_user_id, class_id, join_time, status, remark from sc_course_student</sql>
+  <select id="selectScCourseStudentById" parameterType="Long" resultMap="ScCourseStudentResult"><include refid="selectScCourseStudentVo"/> where id = #{id}</select>
+  <select id="selectScCourseStudentList" parameterType="ScCourseStudent" resultMap="ScCourseStudentResult"><include refid="selectScCourseStudentVo"/><where><if test="courseId != null">and course_id = #{courseId}</if><if test="studentUserId != null">and student_user_id = #{studentUserId}</if><if test="classId != null">and class_id = #{classId}</if><if test="status != null and status != ''">and status = #{status}</if></where> order by id desc</select>
+  <insert id="insertScCourseStudent" parameterType="ScCourseStudent" useGeneratedKeys="true" keyProperty="id">insert into sc_course_student(course_id, student_user_id, class_id, join_time, status, remark) values(#{courseId}, #{studentUserId}, #{classId}, #{joinTime}, #{status}, #{remark})</insert>
+  <update id="updateScCourseStudent" parameterType="ScCourseStudent">update sc_course_student <set><if test="courseId != null">course_id = #{courseId},</if><if test="studentUserId != null">student_user_id = #{studentUserId},</if><if test="classId != null">class_id = #{classId},</if><if test="joinTime != null">join_time = #{joinTime},</if><if test="status != null">status = #{status},</if><if test="remark != null">remark = #{remark},</if></set> where id = #{id}</update>
+  <delete id="deleteScCourseStudentById" parameterType="Long">delete from sc_course_student where id = #{id}</delete>
+  <delete id="deleteScCourseStudentByIds" parameterType="Long">delete from sc_course_student where id in <foreach item="id" collection="array" open="(" separator="," close=")">#{id}</foreach></delete>
+</mapper>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScStudyRecordMapper">
+    <resultMap type="ScStudyRecord" id="ScStudyRecordResult">
+        <id property="recordId" column="record_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="courseId" column="course_id"/>
+        <result property="chapterId" column="chapter_id"/>
+        <result property="resourceId" column="resource_id"/>
+        <result property="behaviorType" column="behavior_type"/>
+        <result property="durationSeconds" column="duration_seconds"/>
+        <result property="progressRate" column="progress_rate"/>
+        <result property="deviceType" column="device_type"/>
+        <result property="sourcePage" column="source_page"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+    <sql id="selectScStudyRecordVo">
+        select record_id, user_id, course_id, chapter_id, resource_id, behavior_type, duration_seconds, progress_rate, device_type, source_page, create_time from sc_study_record
+    </sql>
+    <select id="selectScStudyRecordByRecordId" parameterType="Long" resultMap="ScStudyRecordResult"><include refid="selectScStudyRecordVo"/> where record_id = #{recordId}</select>
+    <select id="selectScStudyRecordList" parameterType="ScStudyRecord" resultMap="ScStudyRecordResult">
+        <include refid="selectScStudyRecordVo"/>
+        <where>
+            <if test="userId != null">and user_id = #{userId}</if>
+            <if test="courseId != null">and course_id = #{courseId}</if>
+            <if test="chapterId != null">and chapter_id = #{chapterId}</if>
+            <if test="resourceId != null">and resource_id = #{resourceId}</if>
+            <if test="behaviorType != null and behaviorType != ''">and behavior_type = #{behaviorType}</if>
+        </where>
+        order by record_id desc
+    </select>
+    <insert id="insertScStudyRecord" parameterType="ScStudyRecord" useGeneratedKeys="true" keyProperty="recordId">
+        insert into sc_study_record(user_id, course_id, chapter_id, resource_id, behavior_type, duration_seconds, progress_rate, device_type, source_page, create_time)
+        values(#{userId}, #{courseId}, #{chapterId}, #{resourceId}, #{behaviorType}, #{durationSeconds}, #{progressRate}, #{deviceType}, #{sourcePage}, sysdate())
+    </insert>
+    <update id="updateScStudyRecord" parameterType="ScStudyRecord">
+        update sc_study_record
+        <set>
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="courseId != null">course_id = #{courseId},</if>
+            <if test="chapterId != null">chapter_id = #{chapterId},</if>
+            <if test="resourceId != null">resource_id = #{resourceId},</if>
+            <if test="behaviorType != null">behavior_type = #{behaviorType},</if>
+            <if test="durationSeconds != null">duration_seconds = #{durationSeconds},</if>
+            <if test="progressRate != null">progress_rate = #{progressRate},</if>
+            <if test="deviceType != null">device_type = #{deviceType},</if>
+            <if test="sourcePage != null">source_page = #{sourcePage},</if>
+        </set>
+        where record_id = #{recordId}
+    </update>
+    <delete id="deleteScStudyRecordByRecordId" parameterType="Long">delete from sc_study_record where record_id = #{recordId}</delete>
+    <delete id="deleteScStudyRecordByRecordIds" parameterType="Long">delete from sc_study_record where record_id in <foreach item="recordId" collection="array" open="(" separator="," close=")">#{recordId}</foreach></delete>
+</mapper>
