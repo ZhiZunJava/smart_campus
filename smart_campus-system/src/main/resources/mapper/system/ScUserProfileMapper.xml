@@ -40,6 +40,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         where profile_id = #{profileId}
     </select>
 
+    <select id="selectScUserProfileByUserId" parameterType="Long" resultMap="ScUserProfileResult">
+        <include refid="selectScUserProfileVo"/>
+        where user_id = #{userId}
+        limit 1
+    </select>
+
     <select id="selectScUserProfileList" parameterType="ScUserProfile" resultMap="ScUserProfileResult">
         <include refid="selectScUserProfileVo"/>
         <where>
@@ -132,6 +138,17 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         delete from sc_user_profile where profile_id in
         <foreach item="profileId" collection="array" open="(" separator="," close=")">
             #{profileId}
+        </foreach>
+    </delete>
+
+    <delete id="deleteScUserProfileByUserId" parameterType="Long">
+        delete from sc_user_profile where user_id = #{userId}
+    </delete>
+
+    <delete id="deleteScUserProfileByUserIds" parameterType="Long">
+        delete from sc_user_profile where user_id in
+        <foreach item="userId" collection="array" open="(" separator="," close=")">
+            #{userId}
         </foreach>
     </delete>
 </mapper>

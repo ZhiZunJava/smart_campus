@@ -9,6 +9,7 @@ function resolveHome(role: string) {
 const routes = [
   { path: '/', redirect: '/student/dashboard' },
   { path: '/login', component: () => import('@/views/auth/Login.vue'), meta: { public: true, title: '门户登录' } },
+  { path: '/register', component: () => import('@/views/auth/Register.vue'), meta: { public: true, title: '门户注册' } },
   {
     path: '/student',
     component: PortalLayout,
@@ -17,7 +18,7 @@ const routes = [
       { path: 'dashboard', component: () => import('@/views/student/Dashboard.vue'), meta: { title: '学习首页' } },
       { path: 'resources', component: () => import('@/views/student/Resources.vue'), meta: { title: '资源中心' } },
       { path: 'recommendations', component: () => import('@/views/student/Recommendations.vue'), meta: { title: '个性推荐' } },
-      { path: 'qa', component: () => import('@/views/student/Qa.vue'), meta: { title: '智能问答' } },
+      { path: 'qa', component: () => import('@/views/student/Qa.vue'), meta: { title: '智能问答', hideBanner: true } },
       { path: 'exams', component: () => import('@/views/student/Exams.vue'), meta: { title: '我的考试' } },
       { path: 'wrongbook', component: () => import('@/views/student/wrongbook/index.vue'), meta: { title: '我的错题本' } }
     ]

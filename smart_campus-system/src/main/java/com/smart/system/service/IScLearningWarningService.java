@@ -12,4 +12,5 @@ public interface IScLearningWarningService
     int deleteScLearningWarningByWarningIds(Long[] warningIds);
     int deleteScLearningWarningByWarningId(Long warningId);
     ScLearningWarning buildWarning(Long userId, Long courseId);
+    int processWarning(Long warningId, String processStatus);
 }

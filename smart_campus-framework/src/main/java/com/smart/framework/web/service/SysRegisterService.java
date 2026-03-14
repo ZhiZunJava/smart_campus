@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import com.smart.common.constant.CacheConstants;
 import com.smart.common.constant.Constants;
 import com.smart.common.constant.UserConstants;
+import com.smart.common.core.domain.entity.SysRole;
 import com.smart.common.core.domain.entity.SysUser;
 import com.smart.common.core.domain.model.RegisterBody;
 import com.smart.common.core.redis.RedisCache;
@@ -16,6 +17,7 @@ import com.smart.common.utils.SecurityUtils;
 import com.smart.common.utils.StringUtils;
 import com.smart.framework.manager.AsyncManager;
 import com.smart.framework.manager.factory.AsyncFactory;
+import com.smart.system.mapper.SysRoleMapper;
 import com.smart.system.service.ISysConfigService;
 import com.smart.system.service.ISysUserService;
 
@@ -36,16 +38,21 @@ public class SysRegisterService
     @Autowired
     private RedisCache redisCache;
 
+    @Autowired
+    private SysRoleMapper roleMapper;
+
     /**
      * 注册
      */
     public String register(RegisterBody registerBody)
     {
-        String msg = "", username = registerBody.getUsername(), password = registerBody.getPassword();
+        String msg = "";
+        String username = registerBody.getUsername();
+        String password = registerBody.getPassword();
+        String userType = normalizeUserType(registerBody.getUserType());
         SysUser sysUser = new SysUser();
         sysUser.setUserName(username);
 
-        // 验证码开关
         boolean captchaEnabled = configService.selectCaptchaEnabled();
         if (captchaEnabled)
         {
@@ -76,20 +83,104 @@ public class SysRegisterService
         }
         else
         {
-            sysUser.setNickName(username);
-            sysUser.setPwdUpdateDate(DateUtils.getNowDate());
-            sysUser.setPassword(SecurityUtils.encryptPassword(password));
-            boolean regFlag = userService.registerUser(sysUser);
-            if (!regFlag)
+            msg = validateRoleForm(registerBody, userType);
+        }
+
+        if (StringUtils.isNotEmpty(msg))
+        {
+            return msg;
+        }
+
+        sysUser.setNickName(StringUtils.isEmpty(registerBody.getRealName()) ? username : registerBody.getRealName());
+        sysUser.setPhonenumber(registerBody.getPhonenumber());
+        sysUser.setEmail(registerBody.getEmail());
+        sysUser.setSex(StringUtils.isEmpty(registerBody.getSex()) ? "2" : registerBody.getSex());
+        sysUser.setUserType(userType);
+        sysUser.setRealName(registerBody.getRealName());
+        sysUser.setStudentNo(registerBody.getStudentNo());
+        sysUser.setTeacherNo(registerBody.getTeacherNo());
+        sysUser.setAdmissionYear(registerBody.getAdmissionYear());
+        sysUser.setLearningGoal(registerBody.getLearningGoal());
+        sysUser.setMajor(registerBody.getMajor());
+        sysUser.setStatus("0");
+        attachRole(sysUser, userType);
+        sysUser.setPwdUpdateDate(DateUtils.getNowDate());
+        sysUser.setPassword(SecurityUtils.encryptPassword(password));
+        boolean regFlag = userService.registerUser(sysUser);
+        if (!regFlag)
+        {
+            return "注册失败,请联系系统管理人员";
+        }
+        AsyncManager.me().execute(AsyncFactory.recordLogininfor(username, Constants.REGISTER, MessageUtils.message("user.register.success")));
+        return "";
+    }
+
+    private String validateRoleForm(RegisterBody registerBody, String userType)
+    {
+        if (StringUtils.isEmpty(registerBody.getRealName()))
+        {
+            return "姓名不能为空";
+        }
+        if (StringUtils.isEmpty(registerBody.getPhonenumber()))
+        {
+            return "手机号不能为空";
+        }
+        if (StringUtils.isNotEmpty(registerBody.getPhonenumber()) && registerBody.getPhonenumber().length() != 11)
+        {
+            return "手机号长度必须为11位";
+        }
+        if ("student".equals(userType))
+        {
+            if (StringUtils.isEmpty(registerBody.getStudentNo()))
             {
-                msg = "注册失败,请联系系统管理人员";
+                return "学生注册必须填写学号";
             }
-            else
+            if (registerBody.getAdmissionYear() == null)
             {
-                AsyncManager.me().execute(AsyncFactory.recordLogininfor(username, Constants.REGISTER, MessageUtils.message("user.register.success")));
+                return "学生注册必须填写入学年份";
             }
         }
-        return msg;
+        else if ("teacher".equals(userType))
+        {
+            if (StringUtils.isEmpty(registerBody.getTeacherNo()))
+            {
+                return "教师注册必须填写工号";
+            }
+            if (StringUtils.isEmpty(registerBody.getMajor()))
+            {
+                return "教师注册必须填写任教学科/专业方向";
+            }
+        }
+        else if ("parent".equals(userType))
+        {
+            if (StringUtils.isEmpty(registerBody.getStudentNo()))
+            {
+                return "家长注册必须填写关联学生学号";
+            }
+        }
+        else
+        {
+            return "仅支持学生、教师、家长三类用户注册";
+        }
+        return "";
+    }
+
+    private void attachRole(SysUser sysUser, String userType)
+    {
+        SysRole role = roleMapper.checkRoleKeyUnique(userType);
+        if (role != null && role.getRoleId() != null)
+        {
+            sysUser.setRoleIds(new Long[] { role.getRoleId() });
+        }
+    }
+
+    private String normalizeUserType(String userType)
+    {
+        if (StringUtils.isEmpty(userType))
+        {
+            return "student";
+        }
+        return userType.trim().toLowerCase();
     }
 
     /**

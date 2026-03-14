@@ -1,6 +1,7 @@
 package com.smart.system.service;
 
 import java.util.List;
+import com.smart.common.core.domain.entity.SysUser;
 import com.smart.system.domain.ScUserProfile;
 
 /**
@@ -21,4 +22,14 @@ public interface IScUserProfileService
     int deleteScUserProfileByProfileIds(Long[] profileIds);
 
     int deleteScUserProfileByProfileId(Long profileId);
+
+    ScUserProfile selectScUserProfileByUserId(Long userId);
+
+    int deleteScUserProfileByUserId(Long userId);
+
+    int deleteScUserProfileByUserIds(Long[] userIds);
+
+    ScUserProfile syncUserProfile(SysUser user);
+
+    void fillUserProfile(SysUser user);
 }

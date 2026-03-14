@@ -28,6 +28,10 @@ const usePortalUserStore = defineStore('portal-user', {
   getters: {
     availablePortalRoles(state): string[] {
       const roles = state.roles || []
+      const isAdmin = roles.includes('admin') || roles.includes('ROLE_admin')
+      if (isAdmin) {
+        return ['student', 'teacher', 'parent']
+      }
       const result: string[] = []
       if (roles.includes('student') || roles.includes('ROLE_student')) result.push('student')
       if (roles.includes('teacher') || roles.includes('ROLE_teacher')) result.push('teacher')

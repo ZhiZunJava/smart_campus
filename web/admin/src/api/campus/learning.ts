@@ -31,3 +31,19 @@ export function generateLearningRecommendation(params: any) {
     params,
   })
 }
+
+export function listActiveLearningRecommendation(query: any) {
+  return request({
+    url: '/campus/learningRecommendation/active',
+    method: 'get',
+    params: query,
+  })
+}
+
+export function feedbackLearningRecommendation(data: any) {
+  return request({
+    url: '/campus/learningRecommendation/feedback',
+    method: 'post',
+    data,
+  })
+}

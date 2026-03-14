@@ -7,6 +7,14 @@ import type { PageDomain, AjaxResult, BaseEntity } from "../common";
 export interface UserQueryParams extends PageDomain {
   /** 用户名称 */
   userName?: string;
+  /** 真实姓名 */
+  realName?: string;
+  /** 用户类型 */
+  userType?: 'student' | 'teacher' | 'parent' | 'admin';
+  /** 学号 */
+  studentNo?: string;
+  /** 工号 */
+  teacherNo?: string;
   /** 手机号码 */
   phonenumber?: string;
   /** 状态（0正常 1停用） */
@@ -32,6 +40,8 @@ export interface SysUser extends BaseEntity {
   userId?: number;
   /** 部门ID */
   deptId?: number;
+  /** 档案ID */
+  profileId?: number;
   /** 用户账号 */
   userName?: string;
   /** 用户昵称 */
@@ -56,6 +66,28 @@ export interface SysUser extends BaseEntity {
   roleIds?: number[];
   /** 岗位组 */
   postIds?: number[];
+  /** 用户类型 */
+  userType?: 'student' | 'teacher' | 'parent' | 'admin';
+  /** 学号 */
+  studentNo?: string;
+  /** 工号 */
+  teacherNo?: string;
+  /** 真实姓名 */
+  realName?: string;
+  /** 年级ID */
+  gradeId?: number;
+  /** 班级ID */
+  classId?: number;
+  /** 专业/方向 */
+  major?: string;
+  /** 入学年份 */
+  admissionYear?: number;
+  /** 学习目标 */
+  learningGoal?: string;
+  /** 兴趣标签 */
+  interestTags?: string;
+  /** 学习风格 */
+  learningStyle?: string;
 }
 
 /** 注册信息 */
@@ -64,6 +96,26 @@ export interface SysRegister {
   userName?: string;
   /** 密码 */
   password?: string;
+  /** 用户类型 */
+  userType?: 'student' | 'teacher' | 'parent';
+  /** 真实姓名 */
+  realName?: string;
+  /** 手机号 */
+  phonenumber?: string;
+  /** 邮箱 */
+  email?: string;
+  /** 学号 */
+  studentNo?: string;
+  /** 工号 */
+  teacherNo?: string;
+  /** 入学年份 */
+  admissionYear?: number;
+  /** 学习目标 */
+  learningGoal?: string;
+  /** 专业/方向 */
+  major?: string;
+  /** 性别 */
+  sex?: '0' | '1' | '2';
   /** 验证码 */
   code?: string;
   /** 唯一标识 */

@@ -1,5 +1,6 @@
 package com.smart.framework.config;
 
+import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -99,8 +100,10 @@ public class SecurityConfig
             // 注解标记允许匿名访问的url
             .authorizeHttpRequests((requests) -> {
                 permitAllUrl.getUrls().forEach(url -> requests.requestMatchers(url).permitAll());
-                // 对于登录login 注册register 验证码captchaImage 允许匿名访问
-                requests.requestMatchers("/login", "/register", "/captchaImage").permitAll()
+                // 允许异步与错误派发，避免SSE/流式接口在异步阶段被重复鉴权拦截
+                requests.dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()
+                    // 对于登录login 注册register 验证码captchaImage 允许匿名访问
+                    .requestMatchers("/login", "/register", "/captchaImage").permitAll()
                     // 静态资源，可匿名访问
                     .requestMatchers(HttpMethod.GET, "/", "/*.html", "/**.html", "/**.css", "/**.js", "/profile/**").permitAll()
                     .requestMatchers("/swagger-ui.html", "/v3/api-docs/**", "/swagger-ui/**", "/druid/**").permitAll()

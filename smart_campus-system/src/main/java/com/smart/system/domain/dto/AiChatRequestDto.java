@@ -1,5 +1,7 @@
 package com.smart.system.domain.dto;
 
+import java.util.List;
+
 /**
  * AI 对话请求 DTO
  *
@@ -8,8 +10,12 @@ package com.smart.system.domain.dto;
 public class AiChatRequestDto
 {
     private Long modelId;
+    private String bizType;
     private String systemPrompt;
     private String userPrompt;
+    private Boolean stream;
+    private Boolean deepThinking;
+    private List<AiImageInputDto> images;
 
     public Long getModelId()
     {
@@ -19,6 +25,16 @@ public class AiChatRequestDto
     public void setModelId(Long modelId)
     {
         this.modelId = modelId;
+    }
+
+    public String getBizType()
+    {
+        return bizType;
+    }
+
+    public void setBizType(String bizType)
+    {
+        this.bizType = bizType;
     }
 
     public String getSystemPrompt()
@@ -39,5 +55,35 @@ public class AiChatRequestDto
     public void setUserPrompt(String userPrompt)
     {
         this.userPrompt = userPrompt;
+    }
+
+    public Boolean getStream()
+    {
+        return stream;
+    }
+
+    public void setStream(Boolean stream)
+    {
+        this.stream = stream;
+    }
+
+    public Boolean getDeepThinking()
+    {
+        return deepThinking;
+    }
+
+    public void setDeepThinking(Boolean deepThinking)
+    {
+        this.deepThinking = deepThinking;
+    }
+
+    public List<AiImageInputDto> getImages()
+    {
+        return images;
+    }
+
+    public void setImages(List<AiImageInputDto> images)
+    {
+        this.images = images;
     }
 }

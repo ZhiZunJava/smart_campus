@@ -1,6 +1,7 @@
 package com.smart.system.service.impl;
 
 import java.math.BigDecimal;
+import java.util.Date;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -41,10 +42,28 @@ public class ScLearningWarningServiceImpl implements IScLearningWarningService
             return null;
         }
 
+        String warningType = profile.getRiskScore().compareTo(BigDecimal.valueOf(70)) >= 0 ? "high_risk" : "low_active";
+        ScLearningWarning warningQuery = new ScLearningWarning();
+        warningQuery.setUserId(userId);
+        warningQuery.setCourseId(courseId);
+        warningQuery.setWarningType(warningType);
+        warningQuery.setProcessStatus("PENDING");
+        List<ScLearningWarning> existingWarnings = scLearningWarningMapper.selectScLearningWarningList(warningQuery);
+        if (!existingWarnings.isEmpty())
+        {
+            ScLearningWarning existingWarning = existingWarnings.get(0);
+            existingWarning.setWarningLevel(profile.getRiskScore().compareTo(BigDecimal.valueOf(70)) >= 0 ? "HIGH" : "MEDIUM");
+            existingWarning.setWarningContent(buildContent(profile.getRiskScore()));
+            existingWarning.setSuggestion(buildSuggestion(profile.getRiskScore()));
+            existingWarning.setProcessTime(null);
+            scLearningWarningMapper.updateScLearningWarning(existingWarning);
+            return existingWarning;
+        }
+
         ScLearningWarning warning = new ScLearningWarning();
         warning.setUserId(userId);
         warning.setCourseId(courseId);
-        warning.setWarningType(profile.getRiskScore().compareTo(BigDecimal.valueOf(70)) >= 0 ? "high_risk" : "low_active");
+        warning.setWarningType(warningType);
         warning.setWarningLevel(profile.getRiskScore().compareTo(BigDecimal.valueOf(70)) >= 0 ? "HIGH" : "MEDIUM");
         warning.setWarningContent(buildContent(profile.getRiskScore()));
         warning.setSuggestion(buildSuggestion(profile.getRiskScore()));
@@ -52,6 +71,19 @@ public class ScLearningWarningServiceImpl implements IScLearningWarningService
         warning.setSourceType("rule");
         scLearningWarningMapper.insertScLearningWarning(warning);
         return warning;
+    }
+
+    @Override
+    public int processWarning(Long warningId, String processStatus)
+    {
+        ScLearningWarning warning = scLearningWarningMapper.selectScLearningWarningByWarningId(warningId);
+        if (warning == null)
+        {
+            return 0;
+        }
+        warning.setProcessStatus(processStatus == null || processStatus.trim().isEmpty() ? "PROCESSED" : processStatus.trim());
+        warning.setProcessTime(new Date());
+        return scLearningWarningMapper.updateScLearningWarning(warning);
     }
 
     private String buildContent(BigDecimal riskScore)

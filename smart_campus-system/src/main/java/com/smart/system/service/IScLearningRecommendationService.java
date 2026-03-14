@@ -13,5 +13,6 @@ public interface IScLearningRecommendationService
     int deleteScLearningRecommendationByRecommendIds(Long[] recommendIds);
     int deleteScLearningRecommendationByRecommendId(Long recommendId);
     List<ScLearningRecommendation> generateRecommendations(Long userId, String sceneCode, Integer limit);
+    List<ScLearningRecommendation> listActiveRecommendations(Long userId, String sceneCode, Integer limit);
     int feedbackRecommendation(RecommendationFeedbackDto feedbackDto);
 }

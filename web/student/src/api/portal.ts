@@ -16,6 +16,18 @@ export function getParentDashboard(params: any) {
   return request({ url: '/campus/portal/parent/dashboard', method: 'get', params })
 }
 
+export function getLearningDiagnosis(params: any) {
+  return request({ url: '/campus/analysis/diagnosis', method: 'get', params })
+}
+
+export function getLearningWorkbench(params: any) {
+  return request({ url: '/campus/analysis/workbench', method: 'get', params })
+}
+
+export function getAnalysisMeta() {
+  return request({ url: '/campus/analysis/meta', method: 'get' })
+}
+
 export function listResource(query: any) {
   return request({ url: '/campus/resource/list', method: 'get', params: query })
 }
@@ -32,6 +44,10 @@ export function listRecommendation(query: any) {
   return request({ url: '/campus/learningRecommendation/list', method: 'get', params: query })
 }
 
+export function listActiveRecommendation(query: any) {
+  return request({ url: '/campus/learningRecommendation/active', method: 'get', params: query })
+}
+
 export function feedbackRecommendation(data: any) {
   return request({ url: '/campus/learningRecommendation/feedback', method: 'post', data })
 }
@@ -44,6 +60,14 @@ export function addQaSession(data: any) {
   return request({ url: '/campus/qa/session', method: 'post', data })
 }
 
+export function updateQaSession(data: any) {
+  return request({ url: '/campus/qa/session/update', method: 'post', data })
+}
+
+export function deleteQaSession(sessionId: number) {
+  return request({ url: `/campus/qa/session/delete/${sessionId}`, method: 'post' })
+}
+
 export function listQaMessage(query: any) {
   return request({ url: '/campus/qa/message/list', method: 'get', params: query })
 }
@@ -54,6 +78,10 @@ export function addQaMessage(data: any) {
 
 export function askQa(data: any) {
   return request({ url: '/campus/qa/ask', method: 'post', data })
+}
+
+export function listQaModelOptions() {
+  return request({ url: '/campus/qa/model/options', method: 'get' })
 }
 
 export function addQaFeedback(data: any) {

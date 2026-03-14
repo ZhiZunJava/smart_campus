@@ -128,6 +128,7 @@ public class ScAiController extends BaseController
         }
         AiChatRequestDto requestDto = new AiChatRequestDto();
         requestDto.setModelId(testDto.getModelId());
+        requestDto.setBizType(template.getBizType());
         requestDto.setSystemPrompt(template.getPromptContent());
         requestDto.setUserPrompt(testDto.getUserPrompt());
         return success(aiGatewayService.chat(requestDto));

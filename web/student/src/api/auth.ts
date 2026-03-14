@@ -9,6 +9,15 @@ export function login(data: { username: string; password: string; code: string; 
   })
 }
 
+export function register(data: Record<string, any>) {
+  return request({
+    url: '/register',
+    method: 'post',
+    headers: { isToken: false },
+    data,
+  })
+}
+
 export function getInfo() {
   return request({ url: '/getInfo', method: 'get' })
 }

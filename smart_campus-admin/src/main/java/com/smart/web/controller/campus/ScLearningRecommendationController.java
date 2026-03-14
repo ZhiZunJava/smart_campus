@@ -62,6 +62,15 @@ public class ScLearningRecommendationController extends BaseController
         return success(scLearningRecommendationService.generateRecommendations(userId, sceneCode, limit));
     }
 
+    @PreAuthorize("@ss.hasPermi('campus:learningRecommendation:list')")
+    @GetMapping("/active")
+    public AjaxResult active(Long userId,
+                             @RequestParam(required = false) String sceneCode,
+                             @RequestParam(required = false) Integer limit)
+    {
+        return success(scLearningRecommendationService.listActiveRecommendations(userId, sceneCode, limit));
+    }
+
     @PostMapping("/feedback")
     public AjaxResult feedback(@RequestBody RecommendationFeedbackDto feedbackDto)
     {

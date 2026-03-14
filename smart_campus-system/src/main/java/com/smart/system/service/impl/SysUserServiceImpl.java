@@ -28,6 +28,7 @@ import com.smart.system.mapper.SysRoleMapper;
 import com.smart.system.mapper.SysUserMapper;
 import com.smart.system.mapper.SysUserPostMapper;
 import com.smart.system.mapper.SysUserRoleMapper;
+import com.smart.system.service.IScUserProfileService;
 import com.smart.system.service.ISysConfigService;
 import com.smart.system.service.ISysDeptService;
 import com.smart.system.service.ISysUserService;
@@ -62,6 +63,9 @@ public class SysUserServiceImpl implements ISysUserService
 
     @Autowired
     private ISysDeptService deptService;
+
+    @Autowired
+    private IScUserProfileService scUserProfileService;
 
     @Autowired
     protected Validator validator;
@@ -261,12 +265,10 @@ public class SysUserServiceImpl implements ISysUserService
     @Transactional
     public int insertUser(SysUser user)
     {
-        // 新增用户信息
         int rows = userMapper.insertUser(user);
-        // 新增用户岗位关联
         insertUserPost(user);
-        // 新增用户与角色管理
         insertUserRole(user);
+        scUserProfileService.syncUserProfile(user);
         return rows;
     }
 
@@ -277,9 +279,16 @@ public class SysUserServiceImpl implements ISysUserService
      * @return 结果
      */
     @Override
+    @Transactional
     public boolean registerUser(SysUser user)
     {
-        return userMapper.insertUser(user) > 0;
+        boolean success = userMapper.insertUser(user) > 0;
+        if (success)
+        {
+            insertUserRole(user);
+            scUserProfileService.syncUserProfile(user);
+        }
+        return success;
     }
 
     /**
@@ -293,15 +302,13 @@ public class SysUserServiceImpl implements ISysUserService
     public int updateUser(SysUser user)
     {
         Long userId = user.getUserId();
-        // 删除用户与角色关联
         userRoleMapper.deleteUserRoleByUserId(userId);
-        // 新增用户与角色管理
         insertUserRole(user);
-        // 删除用户与岗位关联
         userPostMapper.deleteUserPostByUserId(userId);
-        // 新增用户与岗位管理
         insertUserPost(user);
-        return userMapper.updateUser(user);
+        int rows = userMapper.updateUser(user);
+        scUserProfileService.syncUserProfile(user);
+        return rows;
     }
 
     /**
@@ -327,7 +334,9 @@ public class SysUserServiceImpl implements ISysUserService
     @Override
     public int updateUserStatus(SysUser user)
     {
-        return userMapper.updateUserStatus(user.getUserId(), user.getStatus());
+        int rows = userMapper.updateUserStatus(user.getUserId(), user.getStatus());
+        scUserProfileService.syncUserProfile(selectUserById(user.getUserId()));
+        return rows;
     }
 
     /**
@@ -339,7 +348,9 @@ public class SysUserServiceImpl implements ISysUserService
     @Override
     public int updateUserProfile(SysUser user)
     {
-        return userMapper.updateUser(user);
+        int rows = userMapper.updateUser(user);
+        scUserProfileService.syncUserProfile(selectUserById(user.getUserId()));
+        return rows;
     }
 
     /**
@@ -352,7 +363,12 @@ public class SysUserServiceImpl implements ISysUserService
     @Override
     public boolean updateUserAvatar(Long userId, String avatar)
     {
-        return userMapper.updateUserAvatar(userId, avatar) > 0;
+        boolean success = userMapper.updateUserAvatar(userId, avatar) > 0;
+        if (success)
+        {
+            scUserProfileService.syncUserProfile(selectUserById(userId));
+        }
+        return success;
     }
 
     /**
@@ -459,10 +475,9 @@ public class SysUserServiceImpl implements ISysUserService
     @Transactional
     public int deleteUserById(Long userId)
     {
-        // 删除用户与角色关联
         userRoleMapper.deleteUserRoleByUserId(userId);
-        // 删除用户与岗位表
         userPostMapper.deleteUserPostByUserId(userId);
+        scUserProfileService.deleteScUserProfileByUserId(userId);
         return userMapper.deleteUserById(userId);
     }
 
@@ -481,10 +496,9 @@ public class SysUserServiceImpl implements ISysUserService
             checkUserAllowed(new SysUser(userId));
             checkUserDataScope(userId);
         }
-        // 删除用户与角色关联
         userRoleMapper.deleteUserRole(userIds);
-        // 删除用户与岗位关联
         userPostMapper.deleteUserPost(userIds);
+        scUserProfileService.deleteScUserProfileByUserIds(userIds);
         return userMapper.deleteUserByIds(userIds);
     }
 
@@ -521,6 +535,7 @@ public class SysUserServiceImpl implements ISysUserService
                     user.setPassword(SecurityUtils.encryptPassword(password));
                     user.setCreateBy(operName);
                     userMapper.insertUser(user);
+                    scUserProfileService.syncUserProfile(user);
                     successNum++;
                     successMsg.append("<br/>" + successNum + "、账号 " + user.getUserName() + " 导入成功");
                 }
@@ -534,6 +549,7 @@ public class SysUserServiceImpl implements ISysUserService
                     user.setDeptId(u.getDeptId());
                     user.setUpdateBy(operName);
                     userMapper.updateUser(user);
+                    scUserProfileService.syncUserProfile(user);
                     successNum++;
                     successMsg.append("<br/>" + successNum + "、账号 " + user.getUserName() + " 更新成功");
                 }

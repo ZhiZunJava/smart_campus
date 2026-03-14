@@ -94,6 +94,42 @@ public class SysUser extends BaseEntity
     /** 角色ID */
     private Long roleId;
 
+    /** 用户档案ID */
+    private Long profileId;
+
+    /** 用户类型 */
+    private String userType;
+
+    /** 学号 */
+    private String studentNo;
+
+    /** 工号 */
+    private String teacherNo;
+
+    /** 真实姓名 */
+    private String realName;
+
+    /** 年级ID */
+    private Long gradeId;
+
+    /** 班级ID */
+    private Long classId;
+
+    /** 专业 */
+    private String major;
+
+    /** 入学年份 */
+    private Integer admissionYear;
+
+    /** 学习目标 */
+    private String learningGoal;
+
+    /** 兴趣标签 */
+    private String interestTags;
+
+    /** 学习风格 */
+    private String learningStyle;
+
     public SysUser()
     {
 
@@ -308,6 +344,126 @@ public class SysUser extends BaseEntity
         this.roleId = roleId;
     }
 
+    public Long getProfileId()
+    {
+        return profileId;
+    }
+
+    public void setProfileId(Long profileId)
+    {
+        this.profileId = profileId;
+    }
+
+    public String getUserType()
+    {
+        return userType;
+    }
+
+    public void setUserType(String userType)
+    {
+        this.userType = userType;
+    }
+
+    public String getStudentNo()
+    {
+        return studentNo;
+    }
+
+    public void setStudentNo(String studentNo)
+    {
+        this.studentNo = studentNo;
+    }
+
+    public String getTeacherNo()
+    {
+        return teacherNo;
+    }
+
+    public void setTeacherNo(String teacherNo)
+    {
+        this.teacherNo = teacherNo;
+    }
+
+    public String getRealName()
+    {
+        return realName;
+    }
+
+    public void setRealName(String realName)
+    {
+        this.realName = realName;
+    }
+
+    public Long getGradeId()
+    {
+        return gradeId;
+    }
+
+    public void setGradeId(Long gradeId)
+    {
+        this.gradeId = gradeId;
+    }
+
+    public Long getClassId()
+    {
+        return classId;
+    }
+
+    public void setClassId(Long classId)
+    {
+        this.classId = classId;
+    }
+
+    public String getMajor()
+    {
+        return major;
+    }
+
+    public void setMajor(String major)
+    {
+        this.major = major;
+    }
+
+    public Integer getAdmissionYear()
+    {
+        return admissionYear;
+    }
+
+    public void setAdmissionYear(Integer admissionYear)
+    {
+        this.admissionYear = admissionYear;
+    }
+
+    public String getLearningGoal()
+    {
+        return learningGoal;
+    }
+
+    public void setLearningGoal(String learningGoal)
+    {
+        this.learningGoal = learningGoal;
+    }
+
+    public String getInterestTags()
+    {
+        return interestTags;
+    }
+
+    public void setInterestTags(String interestTags)
+    {
+        this.interestTags = interestTags;
+    }
+
+    public String getLearningStyle()
+    {
+        return learningStyle;
+    }
+
+    public void setLearningStyle(String learningStyle)
+    {
+        this.learningStyle = learningStyle;
+    }
+
     @Override
     public String toString() {
         return new ToStringBuilder(this,ToStringStyle.MULTI_LINE_STYLE)
@@ -331,6 +487,18 @@ public class SysUser extends BaseEntity
             .append("updateTime", getUpdateTime())
             .append("remark", getRemark())
             .append("dept", getDept())
+            .append("profileId", getProfileId())
+            .append("userType", getUserType())
+            .append("studentNo", getStudentNo())
+            .append("teacherNo", getTeacherNo())
+            .append("realName", getRealName())
+            .append("gradeId", getGradeId())
+            .append("classId", getClassId())
+            .append("major", getMajor())
+            .append("admissionYear", getAdmissionYear())
+            .append("learningGoal", getLearningGoal())
+            .append("interestTags", getInterestTags())
+            .append("learningStyle", getLearningStyle())
             .toString();
     }
 }

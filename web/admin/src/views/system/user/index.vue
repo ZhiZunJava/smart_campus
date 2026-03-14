@@ -18,7 +18,15 @@
           <el-col>
             <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="68px">
               <el-form-item label="用户名称" prop="userName">
-                <el-input v-model="queryParams.userName" placeholder="请输入用户名称" clearable style="width: 240px" @keyup.enter="handleQuery" />
+                <el-input v-model="queryParams.userName" placeholder="请输入用户名称" clearable style="width: 220px" @keyup.enter="handleQuery" />
+              </el-form-item>
+              <el-form-item label="真实姓名" prop="realName">
+                <el-input v-model="queryParams.realName" placeholder="请输入真实姓名" clearable style="width: 220px" @keyup.enter="handleQuery" />
+              </el-form-item>
+              <el-form-item label="用户类型" prop="userType">
+                <el-select v-model="queryParams.userType" placeholder="请选择用户类型" clearable style="width: 180px">
+                  <el-option v-for="item in userTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
+                </el-select>
               </el-form-item>
               <el-form-item label="手机号码" prop="phonenumber">
                 <el-input v-model="queryParams.phonenumber" placeholder="请输入手机号码" clearable style="width: 240px" @keyup.enter="handleQuery" />
@@ -61,6 +69,17 @@
               <el-table-column label="用户编号" align="center" key="userId" prop="userId" v-if="columns.userId.visible" />
               <el-table-column label="用户名称" align="center" key="userName" prop="userName" v-if="columns.userName.visible" :show-overflow-tooltip="true" />
               <el-table-column label="用户昵称" align="center" key="nickName" prop="nickName" v-if="columns.nickName.visible" :show-overflow-tooltip="true" />
+              <el-table-column label="真实姓名" align="center" key="realName" prop="realName" min-width="110" />
+              <el-table-column label="用户类型" align="center" key="userType" width="100">
+                <template #default="scope">
+                  <el-tag>{{ userTypeLabel(scope.row.userType) }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="学号/工号" align="center" min-width="130">
+                <template #default="scope">
+                  <span>{{ scope.row.studentNo || scope.row.teacherNo || '-' }}</span>
+                </template>
+              </el-table-column>
               <el-table-column label="部门" align="center" key="deptName" prop="dept.deptName" v-if="columns.deptName.visible" :show-overflow-tooltip="true" />
               <el-table-column label="手机号码" align="center" key="phonenumber" prop="phonenumber" v-if="columns.phonenumber.visible" width="120" />
               <el-table-column label="状态" align="center" key="status" v-if="columns.status.visible">
@@ -142,6 +161,20 @@
         </el-row>
         <el-row>
           <el-col :span="12">
+            <el-form-item label="真实姓名" prop="realName">
+              <el-input v-model="form.realName" placeholder="请输入真实姓名" maxlength="30" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="用户类型" prop="userType">
+              <el-select v-model="form.userType" placeholder="请选择用户类型">
+                <el-option v-for="item in userTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="12">
             <el-form-item label="用户性别">
               <el-select v-model="form.sex" placeholder="请选择">
                 <el-option v-for="dict in sys_user_sex" :key="dict.value" :label="dict.label" :value="dict.value"></el-option>
@@ -153,6 +186,31 @@
               <el-radio-group v-model="form.status">
                 <el-radio v-for="dict in sys_normal_disable" :key="dict.value" :value="dict.value">{{ dict.label }}</el-radio>
               </el-radio-group>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="12">
+            <el-form-item label="学号" prop="studentNo" v-if="form.userType === 'student' || form.userType === 'parent'">
+              <el-input v-model="form.studentNo" placeholder="请输入学号" maxlength="32" />
+            </el-form-item>
+            <el-form-item label="工号" prop="teacherNo" v-else-if="form.userType === 'teacher'">
+              <el-input v-model="form.teacherNo" placeholder="请输入工号" maxlength="32" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="入学年份" prop="admissionYear" v-if="form.userType === 'student'">
+              <el-input-number v-model="form.admissionYear" :min="2000" :max="2099" controls-position="right" style="width: 100%" />
+            </el-form-item>
+            <el-form-item label="专业方向" prop="major" v-else-if="form.userType === 'teacher'">
+              <el-input v-model="form.major" placeholder="请输入任教学科/专业方向" maxlength="50" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row v-if="form.userType === 'student' || form.userType === 'teacher'">
+          <el-col :span="24">
+            <el-form-item label="学习目标" prop="learningGoal">
+              <el-input v-model="form.learningGoal" type="textarea" :rows="3" placeholder="请输入学习目标或培养方向" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -245,6 +303,12 @@ const enabledDeptOptions = ref<TreeSelect[] | undefined>(undefined)
 const initPassword = ref<string | undefined>(undefined)
 const postOptions = ref<SysPost[]>([])
 const roleOptions = ref<SysRole[]>([])
+const userTypeOptions = [
+  { label: '学生', value: 'student' },
+  { label: '教师', value: 'teacher' },
+  { label: '家长', value: 'parent' },
+  { label: '管理员', value: 'admin' },
+]
 /*** 用户导入参数 */
 const upload = reactive({
   // 是否显示弹出层（用户导入）
@@ -277,6 +341,10 @@ const data = reactive({
     pageNum: 1,
     pageSize: 10,
     userName: undefined,
+    realName: undefined,
+    userType: undefined,
+    studentNo: undefined,
+    teacherNo: undefined,
     phonenumber: undefined,
     status: undefined,
     deptId: undefined
@@ -284,9 +352,13 @@ const data = reactive({
   rules: {
     userName: [{ required: true, message: "用户名称不能为空", trigger: "blur" }, { min: 2, max: 20, message: "用户名称长度必须介于 2 和 20 之间", trigger: "blur" }],
     nickName: [{ required: true, message: "用户昵称不能为空", trigger: "blur" }],
+    realName: [{ required: true, message: "真实姓名不能为空", trigger: "blur" }],
+    userType: [{ required: true, message: "用户类型不能为空", trigger: "change" }],
     password: [{ required: true, message: "用户密码不能为空", trigger: "blur" }, { min: 5, max: 20, message: "用户密码长度必须介于 5 和 20 之间", trigger: "blur" }, { pattern: /^[^<>"'|\\]+$/, message: "不能包含非法字符：< > \" ' \\\ |", trigger: "blur" }],
     email: [{ type: "email", message: "请输入正确的邮箱地址", trigger: ["blur", "change"] }],
-    phonenumber: [{ pattern: /^1[3|4|5|6|7|8|9][0-9]\d{8}$/, message: "请输入正确的手机号码", trigger: "blur" }]
+    phonenumber: [{ pattern: /^1[3|4|5|6|7|8|9][0-9]\d{8}$/, message: "请输入正确的手机号码", trigger: "blur" }],
+    studentNo: [{ required: true, message: "请输入学号", trigger: "blur" }],
+    teacherNo: [{ required: true, message: "请输入工号", trigger: "blur" }],
   }
 })
 
@@ -461,6 +533,29 @@ const handleFileRemove = (file: any, fileList: any[]) => {
   upload.selectedFile = null
 }
 
+function userTypeLabel(userType?: string) {
+  return userTypeOptions.find((item) => item.value === userType)?.label || userType || '-'
+}
+
+function normalizeProfileFields() {
+  if (form.value.realName && !form.value.nickName) {
+    form.value.nickName = form.value.realName
+  }
+  if (form.value.userType !== 'teacher') {
+    form.value.teacherNo = undefined
+    form.value.major = undefined
+  }
+  if (form.value.userType !== 'student') {
+    form.value.admissionYear = undefined
+  }
+  if (form.value.userType !== 'student' && form.value.userType !== 'parent') {
+    form.value.studentNo = undefined
+  }
+  if (form.value.userType !== 'student' && form.value.userType !== 'teacher') {
+    form.value.learningGoal = undefined
+  }
+}
+
 /** 文件上传成功处理 */
 const handleFileSuccess = (response: AjaxResult, file: any, fileList: any[]) => {
   upload.open = false
@@ -484,9 +579,17 @@ function submitFileForm() {
 function reset() {
   form.value = {
     userId: undefined,
+    profileId: undefined,
     deptId: undefined,
     userName: undefined,
     nickName: undefined,
+    realName: undefined,
+    userType: 'student',
+    studentNo: undefined,
+    teacherNo: undefined,
+    admissionYear: undefined,
+    major: undefined,
+    learningGoal: undefined,
     password: undefined,
     phonenumber: undefined,
     email: undefined,
@@ -535,6 +638,7 @@ function handleUpdate(row?: SysUser) {
 
 /** 提交按钮 */
 function submitForm() {
+  normalizeProfileFields()
   proxy.$refs["userRef"].validate((valid: boolean) => {
     if (valid) {
       if (form.value.userId != undefined) {

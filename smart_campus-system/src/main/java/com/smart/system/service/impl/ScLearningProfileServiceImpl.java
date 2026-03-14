@@ -47,6 +47,19 @@ public class ScLearningProfileServiceImpl implements IScLearningProfileService
         query.setCourseId(courseId);
         List<ScStudyRecord> records = scStudyRecordMapper.selectScStudyRecordList(query);
 
+        Long resolvedCourseId = courseId;
+        if (resolvedCourseId == null)
+        {
+            for (ScStudyRecord record : records)
+            {
+                if (record.getCourseId() != null)
+                {
+                    resolvedCourseId = record.getCourseId();
+                    break;
+                }
+            }
+        }
+
         int totalCount = records.size();
         int totalDuration = 0;
         BigDecimal totalProgress = BigDecimal.ZERO;
@@ -84,12 +97,12 @@ public class ScLearningProfileServiceImpl implements IScLearningProfileService
 
         ScLearningProfile existsQuery = new ScLearningProfile();
         existsQuery.setUserId(userId);
-        existsQuery.setCourseId(courseId);
+        existsQuery.setCourseId(resolvedCourseId);
         List<ScLearningProfile> existsList = scLearningProfileMapper.selectScLearningProfileList(existsQuery);
 
         ScLearningProfile profile = existsList.isEmpty() ? new ScLearningProfile() : existsList.get(0);
         profile.setUserId(userId);
-        profile.setCourseId(courseId);
+        profile.setCourseId(resolvedCourseId);
         profile.setAbilityLevel(abilityLevel);
         profile.setActiveScore(activeScore.setScale(2, RoundingMode.HALF_UP));
         profile.setConcentrationScore(concentrationScore);

@@ -17,6 +17,7 @@ public class ScAiTaskLog extends BaseEntity
     private String bizType;
     private Long bizId;
     private Long modelId;
+    private String modelName;
     private String requestPayload;
     private String responsePayload;
     private Integer tokenUsed;
@@ -32,6 +33,8 @@ public class ScAiTaskLog extends BaseEntity
     public void setBizId(Long bizId) { this.bizId = bizId; }
     public Long getModelId() { return modelId; }
     public void setModelId(Long modelId) { this.modelId = modelId; }
+    public String getModelName() { return modelName; }
+    public void setModelName(String modelName) { this.modelName = modelName; }
     public String getRequestPayload() { return requestPayload; }
     public void setRequestPayload(String requestPayload) { this.requestPayload = requestPayload; }
     public String getResponsePayload() { return responsePayload; }
@@ -53,6 +56,7 @@ public class ScAiTaskLog extends BaseEntity
             .append("bizType", getBizType())
             .append("bizId", getBizId())
             .append("modelId", getModelId())
+            .append("modelName", getModelName())
             .append("tokenUsed", getTokenUsed())
             .append("taskStatus", getTaskStatus())
             .append("durationMs", getDurationMs())

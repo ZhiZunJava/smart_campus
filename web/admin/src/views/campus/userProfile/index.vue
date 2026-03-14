@@ -20,13 +20,7 @@
 
     <el-row :gutter="10" class="mb16">
       <el-col :span="1.5">
-        <el-button type="primary" plain icon="Plus" @click="handleAdd">新增</el-button>
-      </el-col>
-      <el-col :span="1.5">
-        <el-button type="success" plain icon="Edit" :disabled="single" @click="handleUpdate()">修改</el-button>
-      </el-col>
-      <el-col :span="1.5">
-        <el-button type="danger" plain icon="Delete" :disabled="multiple" @click="handleDelete()">删除</el-button>
+        <el-button type="success" plain icon="Edit" :disabled="single" @click="handleUpdate()">档案配置</el-button>
       </el-col>
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />
     </el-row>
@@ -51,8 +45,7 @@
       </el-table-column>
       <el-table-column label="操作" width="150" fixed="right">
         <template #default="scope">
-          <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)">修改</el-button>
-          <el-button link type="danger" icon="Delete" @click="handleDelete(scope.row)">删除</el-button>
+          <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)">档案配置</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -83,8 +76,8 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { addUserProfile, delUserProfile, getUserProfile, listUserProfile, updateUserProfile } from '@/api/campus/userProfile'
+import { ElMessage } from 'element-plus'
+import { addUserProfile, getUserProfile, listUserProfile, updateUserProfile } from '@/api/campus/userProfile'
 import { fetchClassOptions, fetchGradeOptions, fetchUserOptions } from '@/api/campus/options'
 
 const loading = ref(false)
@@ -128,12 +121,6 @@ function handleSelectionChange(selection: any[]) {
   multiple.value = !selection.length
 }
 
-function handleAdd() {
-  resetFormData()
-  open.value = true
-  title.value = '新增用户档案'
-}
-
 async function handleUpdate(row?: any) {
   resetFormData()
   const profileId = row?.profileId || ids.value[0]
@@ -153,15 +140,6 @@ async function submitForm() {
     ElMessage.success('新增成功')
   }
   open.value = false
-  getList()
-}
-
-async function handleDelete(row?: any) {
-  const profileIds = row?.profileId || ids.value
-  if (!profileIds || (Array.isArray(profileIds) && profileIds.length === 0)) return
-  await ElMessageBox.confirm('确认删除选中的用户档案吗？', '提示', { type: 'warning' })
-  await delUserProfile(profileIds)
-  ElMessage.success('删除成功')
   getList()
 }
 

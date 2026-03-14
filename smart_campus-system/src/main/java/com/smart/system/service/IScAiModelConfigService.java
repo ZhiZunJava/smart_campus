@@ -11,4 +11,5 @@ public interface IScAiModelConfigService
     int updateScAiModelConfig(ScAiModelConfig scAiModelConfig);
     int deleteScAiModelConfigByModelIds(Long[] modelIds);
     int deleteScAiModelConfigByModelId(Long modelId);
+    ScAiModelConfig resolveModel(String modelType, String bizType, Long modelId);
 }

@@ -8,16 +8,21 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.smart.system.domain.ScExamAnswer;
+import com.smart.system.domain.ScExamPaper;
 import com.smart.system.domain.ScExamPaperQuestion;
 import com.smart.system.domain.ScExamRecord;
 import com.smart.system.domain.ScQuestionBank;
 import com.smart.system.domain.ScWrongQuestionBook;
 import com.smart.system.mapper.ScExamAnswerMapper;
+import com.smart.system.mapper.ScExamPaperMapper;
 import com.smart.system.mapper.ScExamPaperQuestionMapper;
 import com.smart.system.mapper.ScExamRecordMapper;
 import com.smart.system.mapper.ScQuestionBankMapper;
 import com.smart.system.mapper.ScWrongQuestionBookMapper;
 import com.smart.system.service.IScExamRecordService;
+import com.smart.system.service.IScLearningProfileService;
+import com.smart.system.service.IScLearningReportService;
+import com.smart.system.service.IScLearningWarningService;
 
 @Service
 public class ScExamRecordServiceImpl implements IScExamRecordService
@@ -32,6 +37,14 @@ public class ScExamRecordServiceImpl implements IScExamRecordService
     private ScExamAnswerMapper scExamAnswerMapper;
     @Autowired
     private ScWrongQuestionBookMapper scWrongQuestionBookMapper;
+    @Autowired
+    private ScExamPaperMapper scExamPaperMapper;
+    @Autowired
+    private IScLearningProfileService scLearningProfileService;
+    @Autowired
+    private IScLearningWarningService scLearningWarningService;
+    @Autowired
+    private IScLearningReportService scLearningReportService;
 
     @Override
     public ScExamRecord selectScExamRecordByRecordId(Long recordId) { return scExamRecordMapper.selectScExamRecordByRecordId(recordId); }
@@ -115,6 +128,15 @@ public class ScExamRecordServiceImpl implements IScExamRecordService
         record.setExamStatus("SUBMITTED");
         record.setAnalysisJson(buildAnalysisJson(paperQuestions.size(), correctCount, totalScore));
         scExamRecordMapper.updateScExamRecord(record);
+
+        ScExamPaper paper = scExamPaperMapper.selectScExamPaperByPaperId(record.getPaperId());
+        Long courseId = paper == null ? null : paper.getCourseId();
+        if (courseId != null)
+        {
+            scLearningProfileService.rebuildProfile(record.getUserId(), courseId);
+            scLearningWarningService.buildWarning(record.getUserId(), courseId);
+        }
+        scLearningReportService.generateReport(record.getUserId(), "exam_after_submit");
         return record;
     }
 

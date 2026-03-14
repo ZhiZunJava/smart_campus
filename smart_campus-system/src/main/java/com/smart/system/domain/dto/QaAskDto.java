@@ -1,5 +1,7 @@
 package com.smart.system.domain.dto;
 
+import java.util.List;
+
 /**
  * 问答提问 DTO
  *
@@ -13,6 +15,9 @@ public class QaAskDto
     private Long modelId;
     private String sessionTitle;
     private String question;
+    private Boolean stream;
+    private Boolean deepThinking;
+    private List<AiImageInputDto> images;
 
     public Long getSessionId()
     {
@@ -72,5 +77,35 @@ public class QaAskDto
     public void setQuestion(String question)
     {
         this.question = question;
+    }
+
+    public Boolean getStream()
+    {
+        return stream;
+    }
+
+    public void setStream(Boolean stream)
+    {
+        this.stream = stream;
+    }
+
+    public Boolean getDeepThinking()
+    {
+        return deepThinking;
+    }
+
+    public void setDeepThinking(Boolean deepThinking)
+    {
+        this.deepThinking = deepThinking;
+    }
+
+    public List<AiImageInputDto> getImages()
+    {
+        return images;
+    }
+
+    public void setImages(List<AiImageInputDto> images)
+    {
+        this.images = images;
     }
 }

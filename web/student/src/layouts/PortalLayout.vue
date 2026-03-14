@@ -1,80 +1,89 @@
 <template>
-  <el-container class="portal-shell">
-    <el-aside width="248px" class="portal-aside">
-      <div class="portal-logo">智慧校园学习门户</div>
-      <div class="portal-subtitle">AI 赋能自主学习生态</div>
-      <el-menu router :default-active="route.path" class="portal-menu">
-        <template v-for="item in menuItems" :key="item.path">
-          <el-menu-item :index="item.path">{{ item.title }}</el-menu-item>
-        </template>
-      </el-menu>
-    </el-aside>
-    <el-container>
-      <el-header class="portal-header">
-        <div class="portal-header__left">
-          <div class="title">{{ currentRoleTitle }}</div>
-          <div class="subtitle">围绕资源、行为、画像、问答与考试构建学习闭环</div>
+  <div class="portal-shell">
+    <PortalTopBar
+      :menu-items="menuItems"
+      :active-path="route.path"
+      :selected-role="activeRole"
+      :show-menu="true"
+      :show-role-switch="true"
+      :show-auth-action="false"
+      :show-user-panel="true"
+      @role-change="handleRoleChange"
+      @logout="handleLogout"
+    />
+
+    <section v-if="showBanner" class="portal-banner">
+      <div class="portal-banner__inner">
+        <div class="portal-banner__content">
+          <div class="portal-banner__tag">{{ currentRoleTitle }}</div>
+          <h1>{{ currentRouteTitle }}</h1>
+          <p>{{ currentRouteDesc }}</p>
         </div>
-        <div class="portal-header__right">
-          <div class="user-info">{{ userStore.user?.nickName || userStore.user?.userName || '学习用户' }}</div>
-          <el-segmented v-model="activeRole" :options="roleOptions" @change="handleRoleChange" />
-          <el-button text type="danger" @click="handleLogout">退出登录</el-button>
-        </div>
-      </el-header>
-      <el-main class="portal-main">
-        <router-view />
-      </el-main>
-    </el-container>
-  </el-container>
+      </div>
+    </section>
+
+    <main class="portal-main" :class="{ 'portal-main--compact': !showBanner }">
+      <router-view />
+    </main>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
+import PortalTopBar from '@/components/PortalTopBar.vue'
 import usePortalUserStore from '@/store/user'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = usePortalUserStore()
 
-const roleOptions = computed(() => {
-  const roleMap: Record<string, string> = { student: '学生端', teacher: '教师端', parent: '家长端' }
-  return userStore.availablePortalRoles.map((role) => ({ label: roleMap[role] || role, value: role }))
-})
-
-const menus: Record<string, Array<{ title: string; path: string }>> = {
+const menus: Record<string, Array<{ title: string; path: string; desc: string }>> = {
   student: [
-    { title: '学习首页', path: '/student/dashboard' },
-    { title: '资源中心', path: '/student/resources' },
-    { title: '个性推荐', path: '/student/recommendations' },
-    { title: '智能问答', path: '/student/qa' },
-    { title: '我的考试', path: '/student/exams' },
-    { title: '我的错题本', path: '/student/wrongbook' },
+    { title: '学习首页', path: '/student/dashboard', desc: '诊断、工作台与关键指标' },
+    { title: '资源中心', path: '/student/resources', desc: '筛选资源并记录学习行为' },
+    { title: '个性推荐', path: '/student/recommendations', desc: '主动反馈推荐结果' },
+    { title: '智能问答', path: '/student/qa', desc: '基于课程与学习问题问答' },
+    { title: '我的考试', path: '/student/exams', desc: '考试、记录与错题闭环' },
+    { title: '我的错题本', path: '/student/wrongbook', desc: '错题回顾与复盘' },
   ],
   teacher: [
-    { title: '教学概览', path: '/teacher/dashboard' },
-    { title: '课程管理', path: '/teacher/courses' },
-    { title: '教学资源', path: '/teacher/resources' },
-    { title: '学情预警', path: '/teacher/warnings' },
+    { title: '教学概览', path: '/teacher/dashboard', desc: '课程、预警与教学建议' },
+    { title: '课程管理', path: '/teacher/courses', desc: '查看课程与学生分布' },
+    { title: '教学资源', path: '/teacher/resources', desc: '资源查看与更新' },
+    { title: '学情预警', path: '/teacher/warnings', desc: '跟进学生预警与干预' },
   ],
   parent: [
-    { title: '孩子概览', path: '/parent/dashboard' },
-    { title: '预警提醒', path: '/parent/warnings' },
-    { title: '学习报告', path: '/parent/reports' },
+    { title: '孩子概览', path: '/parent/dashboard', desc: '孩子学情、建议与提醒' },
+    { title: '预警提醒', path: '/parent/warnings', desc: '查看近期风险与干预建议' },
+    { title: '学习报告', path: '/parent/reports', desc: '查看阶段学习报告' },
   ],
 }
 
+const roleTitleMap: Record<string, string> = {
+  student: '学生端',
+  teacher: '教师端',
+  parent: '家长端',
+}
+
 const activeRole = ref(route.path.split('/')[1] || 'student')
-watch(() => route.path, (path) => {
-  activeRole.value = path.split('/')[1] || userStore.preferredPortalRole
-}, { immediate: true })
+watch(
+  () => route.path,
+  (path) => {
+    activeRole.value = path.split('/')[1] || userStore.preferredPortalRole
+  },
+  { immediate: true }
+)
 
 const menuItems = computed(() => menus[activeRole.value] || menus.student)
-const currentRoleTitle = computed(() => roleOptions.value.find((item) => item.value === activeRole.value)?.label || '学习门户')
+const currentRoleTitle = computed(() => roleTitleMap[activeRole.value] || '学习门户')
+const currentMenu = computed(() => menuItems.value.find((item) => item.path === route.path) || menuItems.value[0])
+const currentRouteTitle = computed(() => currentMenu.value?.title || currentRoleTitle.value)
+const currentRouteDesc = computed(() => currentMenu.value?.desc || '围绕资源、行为、画像、问答与考试构建学习闭环')
+const showBanner = computed(() => route.meta.hideBanner !== true)
 
-function handleRoleChange(value: string | number) {
-  const role = String(value)
+function handleRoleChange(role: string) {
   userStore.setPreferredPortalRole(role)
   const first = menus[role]?.[0]
   if (first) {
@@ -90,18 +99,9 @@ async function handleLogout() {
 </script>
 
 <style scoped>
-.portal-shell { height: 100vh; }
-.portal-aside { background: linear-gradient(180deg, #11284c 0%, #0d1d36 100%); color: #fff; padding: 0 12px; }
-.portal-logo { height: 64px; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,.08); }
-.portal-subtitle { padding: 14px 12px 6px; font-size: 12px; color: rgba(255,255,255,.62); }
-.portal-menu { border-right: none; background: transparent; }
-.portal-menu :deep(.el-menu-item) { color: rgba(255,255,255,.85); border-radius: 12px; margin-bottom: 8px; }
-.portal-menu :deep(.el-menu-item:hover) { background: rgba(255,255,255,.06); }
-.portal-menu :deep(.el-menu-item.is-active) { background: linear-gradient(90deg, #006eff 0%, #2a86ff 100%); color: #fff; }
-.portal-header { display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,.86); border-bottom: 1px solid #e5edf7; backdrop-filter: blur(10px); }
-.portal-header__left .title { font-size: 22px; font-weight: 700; color: #1f2d3d; }
-.portal-header__left .subtitle { margin-top: 4px; font-size: 13px; color: #6b7280; }
-.portal-header__right{display:flex;align-items:center;gap:12px}
-.user-info{color:#4b5563;font-weight:600}
-.portal-main { background: linear-gradient(180deg, #eef3f9 0%, #f7f9fc 100%); }
+.portal-shell{min-height:100vh;background:var(--portal-bg)}
+.portal-banner{padding:22px 24px 0}.portal-banner__inner{max-width:1600px;margin:0 auto;border-radius:24px;overflow:hidden;background:linear-gradient(100deg,#f3f7fc 0%,#eef4fb 36%,#e8f0fb 60%,#f5f9ff 100%);border:1px solid #e7eef7;position:relative}.portal-banner__inner::after{content:'';position:absolute;right:0;top:0;bottom:0;width:34%;background:linear-gradient(135deg,rgba(44,134,255,.07) 0%,rgba(93,176,255,.17) 100%)}
+.portal-banner__content{position:relative;z-index:1;padding:34px 40px;max-width:760px}.portal-banner__tag{display:inline-flex;padding:6px 12px;border-radius:999px;background:#e8f2ff;color:#2c86ff;font-size:12px;font-weight:700}.portal-banner h1{margin:14px 0 10px;font-size:36px;color:#152642}.portal-banner p{margin:0;color:#6e7d92;line-height:1.9;font-size:14px}
+.portal-main{max-width:1600px;margin:0 auto;padding-bottom:28px}.portal-main--compact{padding-top:18px}
+@media (max-width: 1200px){.portal-banner{padding:16px 16px 0}.portal-banner__content{padding:26px 22px}.portal-banner h1{font-size:28px}}
 </style>

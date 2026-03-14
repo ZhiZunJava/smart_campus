@@ -12,6 +12,8 @@ public interface ScUserProfileMapper
 {
     ScUserProfile selectScUserProfileByProfileId(Long profileId);
 
+    ScUserProfile selectScUserProfileByUserId(Long userId);
+
     List<ScUserProfile> selectScUserProfileList(ScUserProfile scUserProfile);
 
     int insertScUserProfile(ScUserProfile scUserProfile);
@@ -21,4 +23,8 @@ public interface ScUserProfileMapper
     int deleteScUserProfileByProfileId(Long profileId);
 
     int deleteScUserProfileByProfileIds(Long[] profileIds);
+
+    int deleteScUserProfileByUserId(Long userId);
+
+    int deleteScUserProfileByUserIds(Long[] userIds);
 }

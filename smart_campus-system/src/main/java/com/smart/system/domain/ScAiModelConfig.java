@@ -20,6 +20,15 @@ public class ScAiModelConfig extends BaseEntity
     private String apiKey;
     private String modelType;
     private String status;
+    private String isDefault;
+    private Integer priority;
+    private String bizTypes;
+    private String modelCode;
+    private String reasoningModelCode;
+    private String visionModelCode;
+    private String supportStream;
+    private String supportReasoning;
+    private String supportVision;
 
     public Long getModelId() { return modelId; }
     public void setModelId(Long modelId) { this.modelId = modelId; }
@@ -35,6 +44,24 @@ public class ScAiModelConfig extends BaseEntity
     public void setModelType(String modelType) { this.modelType = modelType; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public String getIsDefault() { return isDefault; }
+    public void setIsDefault(String isDefault) { this.isDefault = isDefault; }
+    public Integer getPriority() { return priority; }
+    public void setPriority(Integer priority) { this.priority = priority; }
+    public String getBizTypes() { return bizTypes; }
+    public void setBizTypes(String bizTypes) { this.bizTypes = bizTypes; }
+    public String getModelCode() { return modelCode; }
+    public void setModelCode(String modelCode) { this.modelCode = modelCode; }
+    public String getReasoningModelCode() { return reasoningModelCode; }
+    public void setReasoningModelCode(String reasoningModelCode) { this.reasoningModelCode = reasoningModelCode; }
+    public String getVisionModelCode() { return visionModelCode; }
+    public void setVisionModelCode(String visionModelCode) { this.visionModelCode = visionModelCode; }
+    public String getSupportStream() { return supportStream; }
+    public void setSupportStream(String supportStream) { this.supportStream = supportStream; }
+    public String getSupportReasoning() { return supportReasoning; }
+    public void setSupportReasoning(String supportReasoning) { this.supportReasoning = supportReasoning; }
+    public String getSupportVision() { return supportVision; }
+    public void setSupportVision(String supportVision) { this.supportVision = supportVision; }
 
     @Override
     public String toString()
@@ -44,8 +71,17 @@ public class ScAiModelConfig extends BaseEntity
             .append("modelName", getModelName())
             .append("provider", getProvider())
             .append("baseUrl", getBaseUrl())
+            .append("modelCode", getModelCode())
+            .append("reasoningModelCode", getReasoningModelCode())
+            .append("visionModelCode", getVisionModelCode())
             .append("modelType", getModelType())
             .append("status", getStatus())
+            .append("isDefault", getIsDefault())
+            .append("priority", getPriority())
+            .append("bizTypes", getBizTypes())
+            .append("supportStream", getSupportStream())
+            .append("supportReasoning", getSupportReasoning())
+            .append("supportVision", getSupportVision())
             .toString();
     }
 }
