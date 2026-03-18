@@ -23,19 +23,17 @@ import com.smart.system.service.IScUserProfileService;
 /**
  * 智慧校园用户扩展档案 Controller
  *
- * @author Codex
+ * @author can
  */
 @RestController
 @RequestMapping("/campus/userProfile")
-public class ScUserProfileController extends BaseController
-{
+public class ScUserProfileController extends BaseController {
     @Autowired
     private IScUserProfileService scUserProfileService;
 
     @PreAuthorize("@ss.hasPermi('campus:userProfile:list')")
     @GetMapping("/list")
-    public TableDataInfo list(ScUserProfile scUserProfile)
-    {
+    public TableDataInfo list(ScUserProfile scUserProfile) {
         startPage();
         List<ScUserProfile> list = scUserProfileService.selectScUserProfileList(scUserProfile);
         return getDataTable(list);
@@ -43,16 +41,14 @@ public class ScUserProfileController extends BaseController
 
     @PreAuthorize("@ss.hasPermi('campus:userProfile:query')")
     @GetMapping(value = "/{profileId}")
-    public AjaxResult getInfo(@PathVariable Long profileId)
-    {
+    public AjaxResult getInfo(@PathVariable Long profileId) {
         return success(scUserProfileService.selectScUserProfileByProfileId(profileId));
     }
 
     @PreAuthorize("@ss.hasPermi('campus:userProfile:add')")
     @Log(title = "用户扩展档案", businessType = BusinessType.INSERT)
     @PostMapping
-    public AjaxResult add(@Validated @RequestBody ScUserProfile scUserProfile)
-    {
+    public AjaxResult add(@Validated @RequestBody ScUserProfile scUserProfile) {
         scUserProfile.setCreateBy(getUsername());
         return toAjax(scUserProfileService.insertScUserProfile(scUserProfile));
     }
@@ -60,8 +56,7 @@ public class ScUserProfileController extends BaseController
     @PreAuthorize("@ss.hasPermi('campus:userProfile:edit')")
     @Log(title = "用户扩展档案", businessType = BusinessType.UPDATE)
     @PutMapping
-    public AjaxResult edit(@Validated @RequestBody ScUserProfile scUserProfile)
-    {
+    public AjaxResult edit(@Validated @RequestBody ScUserProfile scUserProfile) {
         scUserProfile.setUpdateBy(getUsername());
         return toAjax(scUserProfileService.updateScUserProfile(scUserProfile));
     }
@@ -69,8 +64,7 @@ public class ScUserProfileController extends BaseController
     @PreAuthorize("@ss.hasPermi('campus:userProfile:remove')")
     @Log(title = "用户扩展档案", businessType = BusinessType.DELETE)
     @DeleteMapping("/{profileIds}")
-    public AjaxResult remove(@PathVariable Long[] profileIds)
-    {
+    public AjaxResult remove(@PathVariable Long[] profileIds) {
         return toAjax(scUserProfileService.deleteScUserProfileByProfileIds(profileIds));
     }
 }

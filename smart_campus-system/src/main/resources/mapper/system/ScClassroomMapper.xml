@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScClassroomMapper">
+  <resultMap type="ScClassroom" id="ScClassroomResult">
+    <id property="classroomId" column="classroom_id" />
+    <result property="classroomName" column="classroom_name" />
+    <result property="buildingName" column="building_name" />
+    <result property="deptId" column="dept_id" />
+    <result property="deptName" column="dept_name" />
+    <result property="campusName" column="campus_name" />
+    <result property="capacity" column="capacity" />
+    <result property="roomType" column="room_type" />
+    <result property="sortOrder" column="sort_order" />
+    <result property="status" column="status" />
+    <result property="createBy" column="create_by" />
+    <result property="createTime" column="create_time" />
+    <result property="updateBy" column="update_by" />
+    <result property="updateTime" column="update_time" />
+    <result property="remark" column="remark" />
+  </resultMap>
+  <sql id="selectScClassroomVo"> select c.classroom_id, c.classroom_name, c.building_name,
+    c.dept_id, d.dept_name, c.campus_name, c.capacity, c.room_type, c.sort_order, c.status,
+    c.create_by, c.create_time, c.update_by, c.update_time, c.remark from sc_classroom c left join
+    sys_dept d on d.dept_id = c.dept_id </sql>
+  <select id="selectScClassroomByClassroomId" parameterType="Long" resultMap="ScClassroomResult"><include
+      refid="selectScClassroomVo" /> where c.classroom_id = #{classroomId}</select>
+  <select id="selectScClassroomList" parameterType="ScClassroom" resultMap="ScClassroomResult">
+    <include refid="selectScClassroomVo" />
+    <where>
+      <if test="classroomName != null and classroomName != ''">and c.classroom_name like concat('%',
+    #{classroomName}, '%')</if>
+      <if test="buildingName != null and buildingName != ''">and
+    c.building_name like concat('%', #{buildingName}, '%')</if>
+      <if test="deptId != null">and
+    c.dept_id = #{deptId}</if>
+      <if test="campusName != null and campusName != ''">and c.campus_name =
+    #{campusName}</if>
+      <if test="roomType != null and roomType != ''">and c.room_type = #{roomType}</if>
+      <if
+        test="status != null and status != ''">and c.status = #{status}</if>
+    </where> order by
+    c.sort_order asc, c.classroom_id desc </select>
+  <insert id="insertScClassroom" parameterType="ScClassroom" useGeneratedKeys="true"
+    keyProperty="classroomId">insert into sc_classroom(classroom_name, building_name, dept_id,
+    campus_name, capacity, room_type, sort_order, status, create_by, create_time, remark)
+    values(#{classroomName}, #{buildingName}, #{deptId}, #{campusName}, #{capacity}, #{roomType},
+    #{sortOrder}, #{status}, #{createBy}, sysdate(), #{remark})</insert>
+  <update id="updateScClassroom" parameterType="ScClassroom">update sc_classroom <set><if
+        test="classroomName != null">classroom_name = #{classroomName},</if><if
+        test="buildingName != null">building_name = #{buildingName},</if><if test="deptId != null">dept_id
+    = #{deptId},</if><if test="campusName != null">campus_name = #{campusName},</if><if
+        test="capacity != null">capacity = #{capacity},</if><if test="roomType != null">room_type =
+    #{roomType},</if><if test="sortOrder != null">sort_order = #{sortOrder},</if><if
+        test="status != null">status = #{status},</if><if test="updateBy != null">update_by =
+    #{updateBy},</if><if test="remark != null">remark = #{remark},</if>update_time = sysdate()</set>
+    where classroom_id = #{classroomId}</update>
+  <delete id="deleteScClassroomByClassroomId" parameterType="Long">delete from sc_classroom where
+    classroom_id = #{classroomId}</delete>
+  <delete id="deleteScClassroomByClassroomIds" parameterType="Long">delete from sc_classroom where
+    classroom_id in <foreach item="classroomId" collection="array" open="(" separator="," close=")">
+    #{classroomId}</foreach></delete>
+</mapper>

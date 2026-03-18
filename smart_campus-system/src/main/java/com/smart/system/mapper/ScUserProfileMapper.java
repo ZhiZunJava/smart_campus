@@ -6,10 +6,9 @@ import com.smart.system.domain.ScUserProfile;
 /**
  * 智慧校园用户扩展档案 Mapper
  *
- * @author Codex
+ * @author can
  */
-public interface ScUserProfileMapper
-{
+public interface ScUserProfileMapper {
     ScUserProfile selectScUserProfileByProfileId(Long profileId);
 
     ScUserProfile selectScUserProfileByUserId(Long userId);

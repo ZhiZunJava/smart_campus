@@ -479,11 +479,16 @@ CREATE TABLE `sc_qa_session` (
   `session_title`        varchar(200) DEFAULT NULL COMMENT '会话标题',
   `source_type`          varchar(30) DEFAULT 'course' COMMENT '场景类型(general/course/wrong_question)',
   `status`               char(1) DEFAULT '0' COMMENT '状态(0正常 1结束)',
+  `message_count`        int DEFAULT 0 COMMENT '消息数量',
+  `last_message_preview` varchar(255) DEFAULT NULL COMMENT '最后一条消息摘要',
+  `last_message_time`    datetime DEFAULT NULL COMMENT '最后消息时间',
+  `context_summary`      varchar(1000) DEFAULT NULL COMMENT '会话上下文摘要',
   `create_time`          datetime DEFAULT NULL COMMENT '创建时间',
   `update_time`          datetime DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (`session_id`),
   KEY `idx_sc_qa_session_user_id` (`user_id`),
-  KEY `idx_sc_qa_session_course_id` (`course_id`)
+  KEY `idx_sc_qa_session_course_id` (`course_id`),
+  KEY `idx_sc_qa_session_last_message_time` (`last_message_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='智慧校园-问答会话表';
 
 -- ----------------------------
@@ -494,14 +499,20 @@ CREATE TABLE `sc_qa_message` (
   `message_id`           bigint NOT NULL AUTO_INCREMENT COMMENT '消息ID',
   `session_id`           bigint NOT NULL COMMENT '会话ID',
   `role_type`            varchar(20) NOT NULL COMMENT '角色(user/assistant/system)',
+  `content_type`         varchar(20) DEFAULT 'text' COMMENT '内容类型(text/markdown/image/mixed)',
   `content`              longtext COMMENT '消息内容',
   `reference_source`     varchar(1000) DEFAULT NULL COMMENT '引用来源',
+  `attachment_json`      longtext COMMENT '附件元数据JSON',
+  `reply_to_message_id`  bigint DEFAULT NULL COMMENT '回复的消息ID',
+  `model_name`           varchar(100) DEFAULT NULL COMMENT '回答使用模型名',
+  `reasoning_content`    longtext COMMENT '思考过程内容',
   `token_count`          int DEFAULT 0 COMMENT 'token使用量',
   `latency_ms`           int DEFAULT 0 COMMENT '响应耗时',
   `sensitive_flag`       char(1) DEFAULT '0' COMMENT '敏感标记(0否 1是)',
   `create_time`          datetime DEFAULT NULL COMMENT '创建时间',
   PRIMARY KEY (`message_id`),
-  KEY `idx_sc_qa_message_session_time` (`session_id`, `create_time`)
+  KEY `idx_sc_qa_message_session_time` (`session_id`, `create_time`),
+  KEY `idx_sc_qa_message_reply_to` (`reply_to_message_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='智慧校园-问答消息表';
 
 -- ----------------------------
@@ -513,6 +524,8 @@ CREATE TABLE `sc_qa_feedback` (
   `message_id`           bigint NOT NULL COMMENT '消息ID',
   `user_id`              bigint NOT NULL COMMENT '用户ID',
   `feedback_type`        varchar(20) NOT NULL COMMENT '反馈类型(helpful/unhelpful)',
+  `feedback_score`       tinyint DEFAULT NULL COMMENT '评分(1-5)',
+  `issue_tags`           varchar(255) DEFAULT NULL COMMENT '问题标签',
   `feedback_content`     varchar(500) DEFAULT NULL COMMENT '反馈内容',
   `create_time`          datetime DEFAULT NULL COMMENT '创建时间',
   PRIMARY KEY (`id`),
@@ -521,7 +534,36 @@ CREATE TABLE `sc_qa_feedback` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='智慧校园-问答反馈表';
 
 -- ----------------------------
--- 26. 题库表
+-- 26. 问答附件表
+-- ----------------------------
+DROP TABLE IF EXISTS `sc_qa_attachment`;
+CREATE TABLE `sc_qa_attachment` (
+  `attachment_id`        bigint NOT NULL AUTO_INCREMENT COMMENT '附件ID',
+  `session_id`           bigint DEFAULT NULL COMMENT '会话ID',
+  `message_id`           bigint DEFAULT NULL COMMENT '消息ID',
+  `user_id`              bigint NOT NULL COMMENT '用户ID',
+  `file_name`            varchar(255) NOT NULL COMMENT '系统文件名',
+  `original_name`        varchar(255) DEFAULT NULL COMMENT '原始文件名',
+  `file_url`             varchar(500) NOT NULL COMMENT '文件访问地址',
+  `mime_type`            varchar(100) DEFAULT NULL COMMENT '文件类型',
+  `file_size`            bigint DEFAULT 0 COMMENT '文件大小',
+  `storage_type`         varchar(20) DEFAULT 'local' COMMENT '存储类型(local/oss)',
+  `status`               char(1) DEFAULT '0' COMMENT '状态(0正常 1删除)',
+  `delete_time`          datetime DEFAULT NULL COMMENT '删除时间',
+  `create_by`            varchar(64) DEFAULT '' COMMENT '创建者',
+  `create_time`          datetime DEFAULT NULL COMMENT '创建时间',
+  `update_by`            varchar(64) DEFAULT '' COMMENT '更新者',
+  `update_time`          datetime DEFAULT NULL COMMENT '更新时间',
+  `remark`               varchar(500) DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (`attachment_id`),
+  KEY `idx_sc_qa_attachment_session_id` (`session_id`),
+  KEY `idx_sc_qa_attachment_message_id` (`message_id`),
+  KEY `idx_sc_qa_attachment_user_id` (`user_id`),
+  KEY `idx_sc_qa_attachment_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='智慧校园-问答附件表';
+
+-- ----------------------------
+-- 27. 题库表
 -- ----------------------------
 DROP TABLE IF EXISTS `sc_question_bank`;
 CREATE TABLE `sc_question_bank` (
@@ -548,7 +590,7 @@ CREATE TABLE `sc_question_bank` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='智慧校园-题库表';
 
 -- ----------------------------
--- 27. 题目选项表
+-- 28. 题目选项表
 -- ----------------------------
 DROP TABLE IF EXISTS `sc_question_option`;
 CREATE TABLE `sc_question_option` (
@@ -562,7 +604,7 @@ CREATE TABLE `sc_question_option` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='智慧校园-题目选项表';
 
 -- ----------------------------
--- 28. 试卷表
+-- 29. 试卷表
 -- ----------------------------
 DROP TABLE IF EXISTS `sc_exam_paper`;
 CREATE TABLE `sc_exam_paper` (
@@ -583,7 +625,7 @@ CREATE TABLE `sc_exam_paper` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='智慧校园-试卷表';
 
 -- ----------------------------
--- 29. 试卷题目关系表
+-- 30. 试卷题目关系表
 -- ----------------------------
 DROP TABLE IF EXISTS `sc_exam_paper_question`;
 CREATE TABLE `sc_exam_paper_question` (
@@ -598,7 +640,7 @@ CREATE TABLE `sc_exam_paper_question` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='智慧校园-试卷题目关系表';
 
 -- ----------------------------
--- 30. 考试记录表
+-- 31. 考试记录表
 -- ----------------------------
 DROP TABLE IF EXISTS `sc_exam_record`;
 CREATE TABLE `sc_exam_record` (
@@ -618,7 +660,7 @@ CREATE TABLE `sc_exam_record` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='智慧校园-考试记录表';
 
 -- ----------------------------
--- 31. 作答明细表
+-- 32. 作答明细表
 -- ----------------------------
 DROP TABLE IF EXISTS `sc_exam_answer`;
 CREATE TABLE `sc_exam_answer` (
@@ -635,7 +677,7 @@ CREATE TABLE `sc_exam_answer` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='智慧校园-作答明细表';
 
 -- ----------------------------
--- 32. 错题本表
+-- 33. 错题本表
 -- ----------------------------
 DROP TABLE IF EXISTS `sc_wrong_question_book`;
 CREATE TABLE `sc_wrong_question_book` (
@@ -652,7 +694,7 @@ CREATE TABLE `sc_wrong_question_book` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='智慧校园-错题本表';
 
 -- ----------------------------
--- 33. 自适应规则表
+-- 34. 自适应规则表
 -- ----------------------------
 DROP TABLE IF EXISTS `sc_adaptive_rule`;
 CREATE TABLE `sc_adaptive_rule` (
@@ -672,7 +714,7 @@ CREATE TABLE `sc_adaptive_rule` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='智慧校园-自适应规则表';
 
 -- ----------------------------
--- 34. AI模型配置表
+-- 35. AI模型配置表
 -- ----------------------------
 DROP TABLE IF EXISTS `sc_ai_model_config`;
 CREATE TABLE `sc_ai_model_config` (
@@ -692,7 +734,7 @@ CREATE TABLE `sc_ai_model_config` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='智慧校园-AI模型配置表';
 
 -- ----------------------------
--- 35. Prompt模板表
+-- 36. Prompt模板表
 -- ----------------------------
 DROP TABLE IF EXISTS `sc_ai_prompt_template`;
 CREATE TABLE `sc_ai_prompt_template` (
@@ -713,7 +755,7 @@ CREATE TABLE `sc_ai_prompt_template` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='智慧校园-Prompt模板表';
 
 -- ----------------------------
--- 36. AI任务日志表
+-- 37. AI任务日志表
 -- ----------------------------
 DROP TABLE IF EXISTS `sc_ai_task_log`;
 CREATE TABLE `sc_ai_task_log` (

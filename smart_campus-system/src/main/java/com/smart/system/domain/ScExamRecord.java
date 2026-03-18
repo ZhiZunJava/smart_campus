@@ -10,10 +10,9 @@ import com.smart.common.core.domain.BaseEntity;
 /**
  * 考试记录对象 sc_exam_record
  *
- * @author Codex
+ * @author can
  */
-public class ScExamRecord extends BaseEntity
-{
+public class ScExamRecord extends BaseEntity {
     private static final long serialVersionUID = 1L;
 
     private Long recordId;
@@ -29,41 +28,99 @@ public class ScExamRecord extends BaseEntity
     private String cheatFlag;
     private String analysisJson;
 
-    public Long getRecordId() { return recordId; }
-    public void setRecordId(Long recordId) { this.recordId = recordId; }
-    public Long getPaperId() { return paperId; }
-    public void setPaperId(Long paperId) { this.paperId = paperId; }
-    public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
-    public Date getStartTime() { return startTime; }
-    public void setStartTime(Date startTime) { this.startTime = startTime; }
-    public Date getSubmitTime() { return submitTime; }
-    public void setSubmitTime(Date submitTime) { this.submitTime = submitTime; }
-    public BigDecimal getScore() { return score; }
-    public void setScore(BigDecimal score) { this.score = score; }
-    public BigDecimal getCorrectRate() { return correctRate; }
-    public void setCorrectRate(BigDecimal correctRate) { this.correctRate = correctRate; }
-    public String getExamStatus() { return examStatus; }
-    public void setExamStatus(String examStatus) { this.examStatus = examStatus; }
-    public String getCheatFlag() { return cheatFlag; }
-    public void setCheatFlag(String cheatFlag) { this.cheatFlag = cheatFlag; }
-    public String getAnalysisJson() { return analysisJson; }
-    public void setAnalysisJson(String analysisJson) { this.analysisJson = analysisJson; }
+    public Long getRecordId() {
+        return recordId;
+    }
+
+    public void setRecordId(Long recordId) {
+        this.recordId = recordId;
+    }
+
+    public Long getPaperId() {
+        return paperId;
+    }
+
+    public void setPaperId(Long paperId) {
+        this.paperId = paperId;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
+    public Date getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(Date startTime) {
+        this.startTime = startTime;
+    }
+
+    public Date getSubmitTime() {
+        return submitTime;
+    }
+
+    public void setSubmitTime(Date submitTime) {
+        this.submitTime = submitTime;
+    }
+
+    public BigDecimal getScore() {
+        return score;
+    }
+
+    public void setScore(BigDecimal score) {
+        this.score = score;
+    }
+
+    public BigDecimal getCorrectRate() {
+        return correctRate;
+    }
+
+    public void setCorrectRate(BigDecimal correctRate) {
+        this.correctRate = correctRate;
+    }
+
+    public String getExamStatus() {
+        return examStatus;
+    }
+
+    public void setExamStatus(String examStatus) {
+        this.examStatus = examStatus;
+    }
+
+    public String getCheatFlag() {
+        return cheatFlag;
+    }
+
+    public void setCheatFlag(String cheatFlag) {
+        this.cheatFlag = cheatFlag;
+    }
+
+    public String getAnalysisJson() {
+        return analysisJson;
+    }
+
+    public void setAnalysisJson(String analysisJson) {
+        this.analysisJson = analysisJson;
+    }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         return new ToStringBuilder(this, ToStringStyle.MULTI_LINE_STYLE)
-            .append("recordId", getRecordId())
-            .append("paperId", getPaperId())
-            .append("userId", getUserId())
-            .append("startTime", getStartTime())
-            .append("submitTime", getSubmitTime())
-            .append("score", getScore())
-            .append("correctRate", getCorrectRate())
-            .append("examStatus", getExamStatus())
-            .append("cheatFlag", getCheatFlag())
-            .append("analysisJson", getAnalysisJson())
-            .toString();
+                .append("recordId", getRecordId())
+                .append("paperId", getPaperId())
+                .append("userId", getUserId())
+                .append("startTime", getStartTime())
+                .append("submitTime", getSubmitTime())
+                .append("score", getScore())
+                .append("correctRate", getCorrectRate())
+                .append("examStatus", getExamStatus())
+                .append("cheatFlag", getCheatFlag())
+                .append("analysisJson", getAnalysisJson())
+                .toString();
     }
 }

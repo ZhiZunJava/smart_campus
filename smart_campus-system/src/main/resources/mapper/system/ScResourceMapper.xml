@@ -1,81 +1,101 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper
-PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.smart.system.mapper.ScResourceMapper">
     <resultMap type="ScResource" id="ScResourceResult">
-        <id property="resourceId" column="resource_id"/>
-        <result property="resourceName" column="resource_name"/>
-        <result property="resourceType" column="resource_type"/>
-        <result property="courseId" column="course_id"/>
-        <result property="chapterId" column="chapter_id"/>
-        <result property="uploaderId" column="uploader_id"/>
-        <result property="fileUrl" column="file_url"/>
-        <result property="coverUrl" column="cover_url"/>
-        <result property="contentText" column="content_text"/>
-        <result property="summary" column="summary"/>
-        <result property="auditStatus" column="audit_status"/>
-        <result property="viewCount" column="view_count"/>
-        <result property="downloadCount" column="download_count"/>
-        <result property="favoriteCount" column="favorite_count"/>
-        <result property="qualityScore" column="quality_score"/>
-        <result property="status" column="status"/>
-        <result property="createBy" column="create_by"/>
-        <result property="createTime" column="create_time"/>
-        <result property="updateBy" column="update_by"/>
-        <result property="updateTime" column="update_time"/>
-        <result property="remark" column="remark"/>
+        <id property="resourceId" column="resource_id" />
+        <result property="resourceName" column="resource_name" />
+        <result property="resourceType" column="resource_type" />
+        <result property="courseId" column="course_id" />
+        <result property="chapterId" column="chapter_id" />
+        <result property="uploaderId" column="uploader_id" />
+        <result property="fileUrl" column="file_url" />
+        <result property="coverUrl" column="cover_url" />
+        <result property="contentText" column="content_text" />
+        <result property="summary" column="summary" />
+        <result property="auditStatus" column="audit_status" />
+        <result property="viewCount" column="view_count" />
+        <result property="downloadCount" column="download_count" />
+        <result property="favoriteCount" column="favorite_count" />
+        <result property="qualityScore" column="quality_score" />
+        <result property="status" column="status" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+        <result property="remark" column="remark" />
     </resultMap>
-    <sql id="selectScResourceVo">
-        select resource_id, resource_name, resource_type, course_id, chapter_id, uploader_id, file_url, cover_url, content_text, summary,
-               audit_status, view_count, download_count, favorite_count, quality_score, status, create_by, create_time, update_by, update_time, remark
-        from sc_resource
-    </sql>
-    <select id="selectScResourceByResourceId" parameterType="Long" resultMap="ScResourceResult"><include refid="selectScResourceVo"/> where resource_id = #{resourceId}</select>
+    <sql id="selectScResourceVo"> select resource_id, resource_name, resource_type, course_id,
+        chapter_id, uploader_id, file_url, cover_url, content_text, summary, audit_status,
+        view_count, download_count, favorite_count, quality_score, status, create_by, create_time,
+        update_by, update_time, remark from sc_resource </sql>
+    <select id="selectScResourceByResourceId" parameterType="Long" resultMap="ScResourceResult"><include
+            refid="selectScResourceVo" /> where resource_id = #{resourceId}</select>
     <select id="selectScResourceList" parameterType="ScResource" resultMap="ScResourceResult">
-        <include refid="selectScResourceVo"/>
+        <include refid="selectScResourceVo" />
         <where>
-            <if test="resourceName != null and resourceName != ''">and resource_name like concat('%', #{resourceName}, '%')</if>
-            <if test="resourceType != null and resourceType != ''">and resource_type = #{resourceType}</if>
+            <if test="resourceName != null and resourceName != ''">and resource_name like
+        concat('%', #{resourceName}, '%')</if>
+            <if test="resourceType != null and resourceType != ''">and
+        resource_type = #{resourceType}</if>
             <if test="courseId != null">and course_id = #{courseId}</if>
-            <if test="chapterId != null">and chapter_id = #{chapterId}</if>
-            <if test="uploaderId != null">and uploader_id = #{uploaderId}</if>
-            <if test="auditStatus != null and auditStatus != ''">and audit_status = #{auditStatus}</if>
-            <if test="status != null and status != ''">and status = #{status}</if>
+            <if
+                test="chapterId != null">and chapter_id = #{chapterId}</if>
+            <if
+                test="uploaderId != null">and uploader_id = #{uploaderId}</if>
+            <if
+                test="auditStatus != null and auditStatus != ''">and audit_status = #{auditStatus}</if>
+            <if
+                test="status != null and status != ''">and status = #{status}</if>
         </where>
-        order by quality_score desc, resource_id desc
-    </select>
-    <insert id="insertScResource" parameterType="ScResource" useGeneratedKeys="true" keyProperty="resourceId">
-        insert into sc_resource(resource_name, resource_type, course_id, chapter_id, uploader_id, file_url, cover_url, content_text, summary, audit_status, view_count, download_count, favorite_count, quality_score, status, create_by, create_time, remark)
-        values(#{resourceName}, #{resourceType}, #{courseId}, #{chapterId}, #{uploaderId}, #{fileUrl}, #{coverUrl}, #{contentText}, #{summary}, #{auditStatus}, #{viewCount}, #{downloadCount}, #{favoriteCount}, #{qualityScore}, #{status}, #{createBy}, sysdate(), #{remark})
-    </insert>
-    <update id="updateScResource" parameterType="ScResource">
-        update sc_resource
-        <set>
+        order by quality_score desc, resource_id desc </select>
+    <insert id="insertScResource" parameterType="ScResource" useGeneratedKeys="true"
+        keyProperty="resourceId"> insert into sc_resource(resource_name, resource_type, course_id,
+        chapter_id, uploader_id, file_url, cover_url, content_text, summary, audit_status,
+        view_count, download_count, favorite_count, quality_score, status, create_by, create_time,
+        remark) values(#{resourceName}, #{resourceType}, #{courseId}, #{chapterId}, #{uploaderId},
+        #{fileUrl}, #{coverUrl}, #{contentText}, #{summary}, #{auditStatus}, #{viewCount},
+        #{downloadCount}, #{favoriteCount}, #{qualityScore}, #{status}, #{createBy}, sysdate(),
+        #{remark}) </insert>
+    <update id="updateScResource" parameterType="ScResource"> update sc_resource <set>
             <if test="resourceName != null">resource_name = #{resourceName},</if>
-            <if test="resourceType != null">resource_type = #{resourceType},</if>
-            <if test="courseId != null">course_id = #{courseId},</if>
-            <if test="chapterId != null">chapter_id = #{chapterId},</if>
+            <if
+                test="resourceType != null">resource_type = #{resourceType},</if>
+            <if
+                test="courseId != null">course_id = #{courseId},</if>
+            <if test="chapterId != null">chapter_id
+        = #{chapterId},</if>
             <if test="uploaderId != null">uploader_id = #{uploaderId},</if>
-            <if test="fileUrl != null">file_url = #{fileUrl},</if>
-            <if test="coverUrl != null">cover_url = #{coverUrl},</if>
+            <if
+                test="fileUrl != null">file_url = #{fileUrl},</if>
+            <if test="coverUrl != null">cover_url
+        = #{coverUrl},</if>
             <if test="contentText != null">content_text = #{contentText},</if>
-            <if test="summary != null">summary = #{summary},</if>
-            <if test="auditStatus != null">audit_status = #{auditStatus},</if>
+            <if
+                test="summary != null">summary = #{summary},</if>
+            <if test="auditStatus != null">audit_status
+        = #{auditStatus},</if>
             <if test="viewCount != null">view_count = #{viewCount},</if>
-            <if test="downloadCount != null">download_count = #{downloadCount},</if>
-            <if test="favoriteCount != null">favorite_count = #{favoriteCount},</if>
-            <if test="qualityScore != null">quality_score = #{qualityScore},</if>
-            <if test="status != null">status = #{status},</if>
-            <if test="updateBy != null">update_by = #{updateBy},</if>
-            <if test="remark != null">remark = #{remark},</if>
-            update_time = sysdate()
-        </set>
-        where resource_id = #{resourceId}
-    </update>
-    <delete id="deleteScResourceByResourceId" parameterType="Long">delete from sc_resource where resource_id = #{resourceId}</delete>
-    <delete id="deleteScResourceByResourceIds" parameterType="Long">delete from sc_resource where resource_id in <foreach item="resourceId" collection="array" open="(" separator="," close=")">#{resourceId}</foreach></delete>
-    <update id="increaseViewCount" parameterType="Long">update sc_resource set view_count = ifnull(view_count, 0) + 1 where resource_id = #{resourceId}</update>
-    <update id="increaseDownloadCount" parameterType="Long">update sc_resource set download_count = ifnull(download_count, 0) + 1 where resource_id = #{resourceId}</update>
-    <update id="increaseFavoriteCount" parameterType="Long">update sc_resource set favorite_count = ifnull(favorite_count, 0) + 1 where resource_id = #{resourceId}</update>
+            <if
+                test="downloadCount != null">download_count = #{downloadCount},</if>
+            <if
+                test="favoriteCount != null">favorite_count = #{favoriteCount},</if>
+            <if
+                test="qualityScore != null">quality_score = #{qualityScore},</if>
+            <if
+                test="status != null">status = #{status},</if>
+            <if test="updateBy != null">update_by
+        = #{updateBy},</if>
+            <if test="remark != null">remark = #{remark},</if> update_time =
+        sysdate() </set> where resource_id = #{resourceId} </update>
+    <delete id="deleteScResourceByResourceId" parameterType="Long">delete from sc_resource where
+        resource_id = #{resourceId}</delete>
+    <delete id="deleteScResourceByResourceIds" parameterType="Long">delete from sc_resource where
+        resource_id in <foreach item="resourceId" collection="array" open="(" separator=","
+            close=")">#{resourceId}</foreach></delete>
+    <update id="increaseViewCount" parameterType="Long">update sc_resource set view_count =
+        ifnull(view_count, 0) + 1 where resource_id = #{resourceId}</update>
+    <update id="increaseDownloadCount" parameterType="Long">update sc_resource set download_count =
+        ifnull(download_count, 0) + 1 where resource_id = #{resourceId}</update>
+    <update id="increaseFavoriteCount" parameterType="Long">update sc_resource set favorite_count =
+        ifnull(favorite_count, 0) + 1 where resource_id = #{resourceId}</update>
 </mapper>

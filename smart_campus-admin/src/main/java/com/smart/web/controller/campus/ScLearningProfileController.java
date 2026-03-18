@@ -15,15 +15,13 @@ import com.smart.system.service.IScLearningProfileService;
 
 @RestController
 @RequestMapping("/campus/learningProfile")
-public class ScLearningProfileController extends BaseController
-{
+public class ScLearningProfileController extends BaseController {
     @Autowired
     private IScLearningProfileService scLearningProfileService;
 
     @PreAuthorize("@ss.hasPermi('campus:learningProfile:list')")
     @GetMapping("/list")
-    public TableDataInfo list(ScLearningProfile scLearningProfile)
-    {
+    public TableDataInfo list(ScLearningProfile scLearningProfile) {
         startPage();
         List<ScLearningProfile> list = scLearningProfileService.selectScLearningProfileList(scLearningProfile);
         return getDataTable(list);
@@ -31,16 +29,14 @@ public class ScLearningProfileController extends BaseController
 
     @PreAuthorize("@ss.hasPermi('campus:learningProfile:query')")
     @GetMapping(value = "/{profileId}")
-    public AjaxResult getInfo(@PathVariable Long profileId)
-    {
+    public AjaxResult getInfo(@PathVariable Long profileId) {
         return success(scLearningProfileService.selectScLearningProfileByProfileId(profileId));
     }
 
     @PreAuthorize("@ss.hasPermi('campus:learningProfile:add')")
     @Log(title = "学习画像", businessType = BusinessType.INSERT)
     @PostMapping
-    public AjaxResult add(@Validated @RequestBody ScLearningProfile scLearningProfile)
-    {
+    public AjaxResult add(@Validated @RequestBody ScLearningProfile scLearningProfile) {
         scLearningProfile.setCreateBy(getUsername());
         return toAjax(scLearningProfileService.insertScLearningProfile(scLearningProfile));
     }
@@ -48,24 +44,21 @@ public class ScLearningProfileController extends BaseController
     @PreAuthorize("@ss.hasPermi('campus:learningProfile:edit')")
     @Log(title = "学习画像", businessType = BusinessType.UPDATE)
     @PutMapping
-    public AjaxResult edit(@Validated @RequestBody ScLearningProfile scLearningProfile)
-    {
+    public AjaxResult edit(@Validated @RequestBody ScLearningProfile scLearningProfile) {
         scLearningProfile.setUpdateBy(getUsername());
         return toAjax(scLearningProfileService.updateScLearningProfile(scLearningProfile));
     }
 
     @PreAuthorize("@ss.hasPermi('campus:learningProfile:edit')")
     @PostMapping("/rebuild")
-    public AjaxResult rebuildProfile(Long userId, Long courseId)
-    {
+    public AjaxResult rebuildProfile(Long userId, Long courseId) {
         return success(scLearningProfileService.rebuildProfile(userId, courseId));
     }
 
     @PreAuthorize("@ss.hasPermi('campus:learningProfile:remove')")
     @Log(title = "学习画像", businessType = BusinessType.DELETE)
     @DeleteMapping("/{profileIds}")
-    public AjaxResult remove(@PathVariable Long[] profileIds)
-    {
+    public AjaxResult remove(@PathVariable Long[] profileIds) {
         return toAjax(scLearningProfileService.deleteScLearningProfileByProfileIds(profileIds));
     }
 }

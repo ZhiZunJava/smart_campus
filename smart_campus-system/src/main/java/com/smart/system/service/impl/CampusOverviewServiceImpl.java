@@ -6,7 +6,7 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.smart.common.exception.ServiceException;
-import com.smart.system.domain.ScCourse;
+import com.smart.system.domain.ScClassCourse;
 import com.smart.system.domain.ScExamRecord;
 import com.smart.system.domain.ScLearningProfile;
 import com.smart.system.domain.ScLearningRecommendation;
@@ -22,6 +22,7 @@ import com.smart.system.domain.campusvo.RecommendationItemVo;
 import com.smart.system.domain.campusvo.StudentDashboardVo;
 import com.smart.system.domain.campusvo.TeacherDashboardVo;
 import com.smart.system.service.ICampusOverviewService;
+import com.smart.system.service.IScClassCourseService;
 import com.smart.system.service.IScCourseService;
 import com.smart.system.service.IScExamRecordService;
 import com.smart.system.service.IScLearningProfileService;
@@ -33,21 +34,30 @@ import com.smart.system.service.IScResourceService;
 import com.smart.system.service.IScStudyRecordService;
 
 @Service
-public class CampusOverviewServiceImpl implements ICampusOverviewService
-{
-    @Autowired private IScResourceService scResourceService;
-    @Autowired private IScStudyRecordService scStudyRecordService;
-    @Autowired private IScLearningProfileService scLearningProfileService;
-    @Autowired private IScLearningRecommendationService scLearningRecommendationService;
-    @Autowired private IScLearningWarningService scLearningWarningService;
-    @Autowired private IScExamRecordService scExamRecordService;
-    @Autowired private IScCourseService scCourseService;
-    @Autowired private IScQuestionBankService scQuestionBankService;
-    @Autowired private IScParentStudentRelService scParentStudentRelService;
+public class CampusOverviewServiceImpl implements ICampusOverviewService {
+    @Autowired
+    private IScResourceService scResourceService;
+    @Autowired
+    private IScStudyRecordService scStudyRecordService;
+    @Autowired
+    private IScLearningProfileService scLearningProfileService;
+    @Autowired
+    private IScLearningRecommendationService scLearningRecommendationService;
+    @Autowired
+    private IScLearningWarningService scLearningWarningService;
+    @Autowired
+    private IScExamRecordService scExamRecordService;
+    @Autowired
+    private IScClassCourseService scClassCourseService;
+    @Autowired
+    private IScCourseService scCourseService;
+    @Autowired
+    private IScQuestionBankService scQuestionBankService;
+    @Autowired
+    private IScParentStudentRelService scParentStudentRelService;
 
     @Override
-    public CampusDashboardVo getDashboard(Long userId, Long courseId, Integer recommendLimit)
-    {
+    public CampusDashboardVo getDashboard(Long userId, Long courseId, Integer recommendLimit) {
         CampusDashboardVo vo = new CampusDashboardVo();
         vo.setUserId(userId);
 
@@ -75,16 +85,17 @@ public class CampusOverviewServiceImpl implements ICampusOverviewService
         warningQuery.setCourseId(courseId);
         List<ScLearningWarning> warnings = scLearningWarningService.selectScLearningWarningList(warningQuery);
         vo.setWarningCount(warnings.size());
-        vo.setWarnings(warnings.isEmpty() ? Collections.emptyList() : warnings.subList(0, Math.min(warnings.size(), 5)));
+        vo.setWarnings(
+                warnings.isEmpty() ? Collections.emptyList() : warnings.subList(0, Math.min(warnings.size(), 5)));
 
-        List<ScLearningRecommendation> recommendations = scLearningRecommendationService.generateRecommendations(userId, "home", recommendLimit == null ? 5 : recommendLimit);
+        List<ScLearningRecommendation> recommendations = scLearningRecommendationService.generateRecommendations(userId,
+                "home", recommendLimit == null ? 5 : recommendLimit);
         vo.setRecommendations(recommendations.stream().map(this::toRecommendationVo).collect(Collectors.toList()));
         return vo;
     }
 
     @Override
-    public StudentDashboardVo getStudentDashboard(Long userId, Long courseId, Integer recommendLimit)
-    {
+    public StudentDashboardVo getStudentDashboard(Long userId, Long courseId, Integer recommendLimit) {
         CampusDashboardVo dashboard = getDashboard(userId, courseId, recommendLimit);
         StudentDashboardVo vo = new StudentDashboardVo();
         vo.setUserId(userId);
@@ -99,15 +110,16 @@ public class CampusOverviewServiceImpl implements ICampusOverviewService
     }
 
     @Override
-    public TeacherDashboardVo getTeacherDashboard(Long teacherId)
-    {
+    public TeacherDashboardVo getTeacherDashboard(Long teacherId) {
         TeacherDashboardVo vo = new TeacherDashboardVo();
         vo.setTeacherId(teacherId);
 
-        ScCourse courseQuery = new ScCourse();
-        courseQuery.setTeacherId(teacherId);
-        List<ScCourse> courses = scCourseService.selectScCourseList(courseQuery);
-        vo.setCourseCount(courses.size());
+        ScClassCourse classCourseQuery = new ScClassCourse();
+        classCourseQuery.setTeacherId(teacherId);
+        classCourseQuery.setStatus("0");
+        List<ScClassCourse> classCourses = scClassCourseService.selectScClassCourseList(classCourseQuery);
+        vo.setCourseCount((int) classCourses.stream().map(ScClassCourse::getCourseId).filter(java.util.Objects::nonNull)
+                .distinct().count());
 
         ScResource resourceQuery = new ScResource();
         resourceQuery.setUploaderId(teacherId);
@@ -116,31 +128,28 @@ public class CampusOverviewServiceImpl implements ICampusOverviewService
         ScQuestionBank questionQuery = new ScQuestionBank();
         int questionCount = 0;
         int warningCount = 0;
-        for (ScCourse course : courses)
-        {
-            questionQuery.setCourseId(course.getCourseId());
+        for (ScClassCourse classCourse : classCourses) {
+            questionQuery.setCourseId(classCourse.getCourseId());
             questionCount += scQuestionBankService.selectScQuestionBankList(questionQuery).size();
 
             ScLearningWarning warningQuery = new ScLearningWarning();
-            warningQuery.setCourseId(course.getCourseId());
+            warningQuery.setCourseId(classCourse.getCourseId());
             warningCount += scLearningWarningService.selectScLearningWarningList(warningQuery).size();
         }
         vo.setQuestionCount(questionCount);
         vo.setWarningCount(warningCount);
-        vo.setClassCount(courses.size());
+        vo.setClassCount((int) classCourses.stream().map(ScClassCourse::getClassId).filter(java.util.Objects::nonNull)
+                .distinct().count());
         return vo;
     }
 
     @Override
-    public ParentDashboardVo getParentDashboard(Long parentUserId, Long studentUserId, Long courseId)
-    {
-        if (studentUserId == null)
-        {
+    public ParentDashboardVo getParentDashboard(Long parentUserId, Long studentUserId, Long courseId) {
+        if (studentUserId == null) {
             ScParentStudentRel relQuery = new ScParentStudentRel();
             relQuery.setParentUserId(parentUserId);
             List<ScParentStudentRel> rels = scParentStudentRelService.selectScParentStudentRelList(relQuery);
-            if (!rels.isEmpty())
-            {
+            if (!rels.isEmpty()) {
                 studentUserId = rels.get(0).getStudentUserId();
             }
         }
@@ -148,8 +157,7 @@ public class CampusOverviewServiceImpl implements ICampusOverviewService
         ParentDashboardVo vo = new ParentDashboardVo();
         vo.setParentUserId(parentUserId);
         vo.setStudentUserId(studentUserId);
-        if (studentUserId == null)
-        {
+        if (studentUserId == null) {
             throw new ServiceException("当前家长未绑定学生，无法获取孩子概览信息");
         }
 
@@ -167,19 +175,18 @@ public class CampusOverviewServiceImpl implements ICampusOverviewService
         warningQuery.setCourseId(courseId);
         List<ScLearningWarning> warnings = scLearningWarningService.selectScLearningWarningList(warningQuery);
         vo.setWarningCount(warnings.size());
-        vo.setWarnings(warnings.isEmpty() ? Collections.emptyList() : warnings.subList(0, Math.min(warnings.size(), 5)));
+        vo.setWarnings(
+                warnings.isEmpty() ? Collections.emptyList() : warnings.subList(0, Math.min(warnings.size(), 5)));
         vo.setProfile(buildProfileOverview(studentUserId, courseId));
         return vo;
     }
 
-    private LearningProfileOverviewVo buildProfileOverview(Long userId, Long courseId)
-    {
+    private LearningProfileOverviewVo buildProfileOverview(Long userId, Long courseId) {
         ScLearningProfile profileQuery = new ScLearningProfile();
         profileQuery.setUserId(userId);
         profileQuery.setCourseId(courseId);
         List<ScLearningProfile> profiles = scLearningProfileService.selectScLearningProfileList(profileQuery);
-        if (profiles.isEmpty())
-        {
+        if (profiles.isEmpty()) {
             return null;
         }
         ScLearningProfile profile = profiles.get(0);
@@ -195,8 +202,7 @@ public class CampusOverviewServiceImpl implements ICampusOverviewService
         return profileVo;
     }
 
-    private RecommendationItemVo toRecommendationVo(ScLearningRecommendation recommendation)
-    {
+    private RecommendationItemVo toRecommendationVo(ScLearningRecommendation recommendation) {
         RecommendationItemVo vo = new RecommendationItemVo();
         vo.setRecommendId(recommendation.getRecommendId());
         vo.setBizId(recommendation.getBizId());
@@ -206,11 +212,9 @@ public class CampusOverviewServiceImpl implements ICampusOverviewService
         vo.setSceneCode(recommendation.getSceneCode());
         vo.setExpireTime(recommendation.getExpireTime());
 
-        if ("resource".equalsIgnoreCase(recommendation.getBizType()) && recommendation.getBizId() != null)
-        {
+        if ("resource".equalsIgnoreCase(recommendation.getBizType()) && recommendation.getBizId() != null) {
             ScResource resource = scResourceService.selectScResourceByResourceId(recommendation.getBizId());
-            if (resource != null)
-            {
+            if (resource != null) {
                 vo.setTitle(resource.getResourceName());
                 vo.setResourceType(resource.getResourceType());
                 vo.setSummary(resource.getSummary());

@@ -8,10 +8,9 @@ import com.smart.system.domain.campusvo.TeacherDashboardVo;
 /**
  * 校园概览聚合服务
  *
- * @author Codex
+ * @author can
  */
-public interface ICampusOverviewService
-{
+public interface ICampusOverviewService {
     CampusDashboardVo getDashboard(Long userId, Long courseId, Integer recommendLimit);
 
     StudentDashboardVo getStudentDashboard(Long userId, Long courseId, Integer recommendLimit);

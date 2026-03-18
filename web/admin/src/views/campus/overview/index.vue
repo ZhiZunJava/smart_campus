@@ -146,12 +146,28 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.mb16 { margin-bottom: 16px; }
+.campus-overview-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mb16 { margin-bottom: 0; }
 .mt16 { margin-top: 16px; }
-.overview-card .card-label { color: var(--el-text-color-secondary); margin-bottom: 10px; }
+
+.campus-overview-page :deep(.el-form) {
+  padding: 18px 20px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--el-border-color-lighter);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.04);
+}
+
+.overview-card .card-label { color: var(--el-text-color-secondary); margin-bottom: 10px; font-size: 13px; }
 .overview-card .card-value { font-size: 28px; font-weight: 700; color: var(--el-color-primary); }
 .overview-card .card-value.warning { color: var(--el-color-warning); }
 .profile-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.profile-grid > div { padding: 16px; border-radius: 14px; background: var(--el-fill-color-extra-light); border: 1px solid var(--el-border-color-lighter); }
 .section-subtitle { font-weight: 600; color: var(--el-text-color-primary); }
 .tag-list { display: flex; flex-wrap: wrap; gap: 8px; }
 .simple-list { margin: 0; padding-left: 18px; line-height: 1.9; }

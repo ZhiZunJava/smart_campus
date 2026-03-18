@@ -16,32 +16,29 @@ import com.smart.system.service.IScLearningRecommendationService;
 
 @RestController
 @RequestMapping("/campus/learningRecommendation")
-public class ScLearningRecommendationController extends BaseController
-{
+public class ScLearningRecommendationController extends BaseController {
     @Autowired
     private IScLearningRecommendationService scLearningRecommendationService;
 
-    @PreAuthorize("@ss.hasPermi('campus:learningRecommendation:list')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/list")
-    public TableDataInfo list(ScLearningRecommendation scLearningRecommendation)
-    {
+    public TableDataInfo list(ScLearningRecommendation scLearningRecommendation) {
         startPage();
-        List<ScLearningRecommendation> list = scLearningRecommendationService.selectScLearningRecommendationList(scLearningRecommendation);
+        List<ScLearningRecommendation> list = scLearningRecommendationService
+                .selectScLearningRecommendationList(scLearningRecommendation);
         return getDataTable(list);
     }
 
     @PreAuthorize("@ss.hasPermi('campus:learningRecommendation:query')")
     @GetMapping(value = "/{recommendId}")
-    public AjaxResult getInfo(@PathVariable Long recommendId)
-    {
+    public AjaxResult getInfo(@PathVariable Long recommendId) {
         return success(scLearningRecommendationService.selectScLearningRecommendationByRecommendId(recommendId));
     }
 
     @PreAuthorize("@ss.hasPermi('campus:learningRecommendation:add')")
     @Log(title = "个性化推荐", businessType = BusinessType.INSERT)
     @PostMapping
-    public AjaxResult add(@Validated @RequestBody ScLearningRecommendation scLearningRecommendation)
-    {
+    public AjaxResult add(@Validated @RequestBody ScLearningRecommendation scLearningRecommendation) {
         scLearningRecommendation.setCreateBy(getUsername());
         return toAjax(scLearningRecommendationService.insertScLearningRecommendation(scLearningRecommendation));
     }
@@ -49,39 +46,34 @@ public class ScLearningRecommendationController extends BaseController
     @PreAuthorize("@ss.hasPermi('campus:learningRecommendation:edit')")
     @Log(title = "个性化推荐", businessType = BusinessType.UPDATE)
     @PutMapping
-    public AjaxResult edit(@Validated @RequestBody ScLearningRecommendation scLearningRecommendation)
-    {
+    public AjaxResult edit(@Validated @RequestBody ScLearningRecommendation scLearningRecommendation) {
         scLearningRecommendation.setUpdateBy(getUsername());
         return toAjax(scLearningRecommendationService.updateScLearningRecommendation(scLearningRecommendation));
     }
 
     @PreAuthorize("@ss.hasPermi('campus:learningRecommendation:add')")
     @PostMapping("/generate")
-    public AjaxResult generateRecommendations(Long userId, String sceneCode, Integer limit)
-    {
+    public AjaxResult generateRecommendations(Long userId, String sceneCode, Integer limit) {
         return success(scLearningRecommendationService.generateRecommendations(userId, sceneCode, limit));
     }
 
-    @PreAuthorize("@ss.hasPermi('campus:learningRecommendation:list')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/active")
     public AjaxResult active(Long userId,
-                             @RequestParam(required = false) String sceneCode,
-                             @RequestParam(required = false) Integer limit)
-    {
+            @RequestParam(required = false) String sceneCode,
+            @RequestParam(required = false) Integer limit) {
         return success(scLearningRecommendationService.listActiveRecommendations(userId, sceneCode, limit));
     }
 
     @PostMapping("/feedback")
-    public AjaxResult feedback(@RequestBody RecommendationFeedbackDto feedbackDto)
-    {
+    public AjaxResult feedback(@RequestBody RecommendationFeedbackDto feedbackDto) {
         return toAjax(scLearningRecommendationService.feedbackRecommendation(feedbackDto));
     }
 
     @PreAuthorize("@ss.hasPermi('campus:learningRecommendation:remove')")
     @Log(title = "个性化推荐", businessType = BusinessType.DELETE)
     @DeleteMapping("/{recommendIds}")
-    public AjaxResult remove(@PathVariable Long[] recommendIds)
-    {
+    public AjaxResult remove(@PathVariable Long[] recommendIds) {
         return toAjax(scLearningRecommendationService.deleteScLearningRecommendationByRecommendIds(recommendIds));
     }
 }

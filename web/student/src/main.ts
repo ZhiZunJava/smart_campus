@@ -8,9 +8,12 @@ import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import App from './App.vue'
 import router from './router'
 import '@/styles/index.scss'
+import usePortalThemeStore from './store/theme'
 
+const pinia = createPinia()
 const app = createApp(App)
-app.use(createPinia())
+app.use(pinia)
 app.use(router)
 app.use(ElementPlus, { locale: zhCn })
+usePortalThemeStore(pinia).initTheme()
 app.mount('#app')

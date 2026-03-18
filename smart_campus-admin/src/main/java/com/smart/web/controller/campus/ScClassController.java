@@ -22,15 +22,13 @@ import com.smart.system.service.IScClassService;
 
 @RestController
 @RequestMapping("/campus/class")
-public class ScClassController extends BaseController
-{
+public class ScClassController extends BaseController {
     @Autowired
     private IScClassService scClassService;
 
     @PreAuthorize("@ss.hasPermi('campus:class:list')")
     @GetMapping("/list")
-    public TableDataInfo list(ScClass scClass)
-    {
+    public TableDataInfo list(ScClass scClass) {
         startPage();
         List<ScClass> list = scClassService.selectScClassList(scClass);
         return getDataTable(list);
@@ -38,16 +36,14 @@ public class ScClassController extends BaseController
 
     @PreAuthorize("@ss.hasPermi('campus:class:query')")
     @GetMapping(value = "/{classId}")
-    public AjaxResult getInfo(@PathVariable Long classId)
-    {
+    public AjaxResult getInfo(@PathVariable Long classId) {
         return success(scClassService.selectScClassByClassId(classId));
     }
 
     @PreAuthorize("@ss.hasPermi('campus:class:add')")
     @Log(title = "班级管理", businessType = BusinessType.INSERT)
     @PostMapping
-    public AjaxResult add(@Validated @RequestBody ScClass scClass)
-    {
+    public AjaxResult add(@Validated @RequestBody ScClass scClass) {
         scClass.setCreateBy(getUsername());
         return toAjax(scClassService.insertScClass(scClass));
     }
@@ -55,8 +51,7 @@ public class ScClassController extends BaseController
     @PreAuthorize("@ss.hasPermi('campus:class:edit')")
     @Log(title = "班级管理", businessType = BusinessType.UPDATE)
     @PutMapping
-    public AjaxResult edit(@Validated @RequestBody ScClass scClass)
-    {
+    public AjaxResult edit(@Validated @RequestBody ScClass scClass) {
         scClass.setUpdateBy(getUsername());
         return toAjax(scClassService.updateScClass(scClass));
     }
@@ -64,8 +59,7 @@ public class ScClassController extends BaseController
     @PreAuthorize("@ss.hasPermi('campus:class:remove')")
     @Log(title = "班级管理", businessType = BusinessType.DELETE)
     @DeleteMapping("/{classIds}")
-    public AjaxResult remove(@PathVariable Long[] classIds)
-    {
+    public AjaxResult remove(@PathVariable Long[] classIds) {
         return toAjax(scClassService.deleteScClassByClassIds(classIds));
     }
 }

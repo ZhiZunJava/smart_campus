@@ -42,6 +42,7 @@ function addIframe(): void {
   width: 100%;
   position: relative;
   overflow: hidden;
+  background: transparent;
 }
 
 .fixed-header + .app-main {
@@ -113,11 +114,11 @@ function addIframe(): void {
 }
 
 ::-webkit-scrollbar-track {
-  background-color: #f1f1f1;
+  background-color: #eef3f8;
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: #c0c0c0;
+  background-color: #c5d0dc;
   border-radius: 3px;
 }
 </style>

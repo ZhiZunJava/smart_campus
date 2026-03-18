@@ -3,8 +3,7 @@ package com.smart.system.mapper;
 import java.util.List;
 import com.smart.system.domain.ScCourse;
 
-public interface ScCourseMapper
-{
+public interface ScCourseMapper {
     ScCourse selectScCourseByCourseId(Long courseId);
 
     List<ScCourse> selectScCourseList(ScCourse scCourse);

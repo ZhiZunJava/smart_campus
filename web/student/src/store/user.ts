@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import Cookies from 'js-cookie'
 import { getCodeImg, getInfo, login, logout } from '@/api/auth'
 
-const TokenKey = 'Admin-Token'
+const TokenKey = 'Student-Token'
 const LastPortalRoleKey = 'Portal-Last-Role'
 
 interface PortalUserState {
@@ -59,8 +59,11 @@ const usePortalUserStore = defineStore('portal-user', {
     },
     async loginAction(form: { username: string; password: string; code: string }) {
       const res = await login({ username: form.username.trim(), password: form.password, code: form.code, uuid: this.uuid })
-      this.token = res.token
-      Cookies.set(TokenKey, res.token)
+      this.acceptToken(res.token)
+    },
+    acceptToken(token: string) {
+      this.token = token
+      Cookies.set(TokenKey, token)
     },
     async loadUserInfo() {
       const res = await getInfo()
@@ -71,6 +74,9 @@ const usePortalUserStore = defineStore('portal-user', {
         this.setPreferredPortalRole(this.availablePortalRoles[0] || 'student')
       }
       return res
+    },
+    async refreshUserInfo() {
+      return this.loadUserInfo()
     },
     async logoutAction() {
       await logout()

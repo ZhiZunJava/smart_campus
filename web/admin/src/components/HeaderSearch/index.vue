@@ -24,7 +24,7 @@
 
       <div class="result-wrap">
         <el-scrollbar>
-          <div class="search-item" tabindex="1" v-for="(item, index) in options" :key="item.path" :style="activeStyle(index)" @mouseenter="activeIndex = index" @mouseleave="activeIndex = -1">
+          <div class="search-item" :class="{ 'is-active': index === activeIndex }" tabindex="1" v-for="(item, index) in options" :key="item.path" :style="activeStyle(index)" @mouseenter="activeIndex = index" @mouseleave="activeIndex = -1">
             <div class="left">
               <svg-icon class="menu-icon" :icon-class="item.icon" />
             </div>
@@ -168,8 +168,7 @@ function querySearch(query: string): void {
 function activeStyle(index: number): Record<string, string> {
   if (index !== activeIndex.value) return {}
   return {
-    "background-color": theme.value,
-    "color": "#fff"
+    "background-color": theme.value
   }
 }
 
@@ -213,7 +212,10 @@ watch(searchPool, (list: SearchItem[]) => {
     display: flex;
     height: 48px;
     align-items: center;
+    border-radius: 10px;
     padding-right: 10px;
+    color: var(--el-text-color-primary);
+    transition: background-color .2s ease, color .2s ease;
 
     .left {
       width: 60px;
@@ -239,9 +241,18 @@ watch(searchPool, (list: SearchItem[]) => {
         height: 20px;
       }
       .menu-path {
-        color: #ccc;
+        color: var(--el-text-color-secondary);
         font-size: 10px;
       }
+    }
+  }
+
+  .search-item.is-active {
+    color: #ffffff;
+
+    .menu-path,
+    .menu-icon {
+      color: rgba(255, 255, 255, 0.82);
     }
   }
 

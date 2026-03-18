@@ -3,7 +3,7 @@
     <template v-if="hasOneShowingChild(item.children, item) && (!onlyOneChild.children || onlyOneChild.noShowingChildren) && !item.alwaysShow">
       <app-link v-if="onlyOneChild.meta" :to="resolvePath(onlyOneChild.path, onlyOneChild.query)">
         <el-menu-item :index="resolvePath(onlyOneChild.path)" :class="{ 'submenu-title-noDropdown': !isNest }">
-          <svg-icon :icon-class="onlyOneChild.meta.icon || (item.meta && item.meta.icon)"/>
+          <svg-icon v-if="getMenuIcon(onlyOneChild, item)" :icon-class="getMenuIcon(onlyOneChild, item)"/>
           <template #title><span class="menu-title" :title="hasTitle(onlyOneChild.meta.title)">{{ onlyOneChild.meta.title }}</span></template>
         </el-menu-item>
       </app-link>
@@ -11,7 +11,7 @@
 
     <el-sub-menu v-else ref="subMenu" :index="resolvePath(item.path)" teleported>
       <template v-if="item.meta" #title>
-        <svg-icon :icon-class="item.meta && item.meta.icon" />
+        <svg-icon v-if="getMenuIcon(item)" :icon-class="getMenuIcon(item)" />
         <span class="menu-title" :title="hasTitle(item.meta.title)">{{ item.meta.title }}</span>
       </template>
 
@@ -96,5 +96,24 @@ function hasTitle(title: string): string {
   } else {
     return ""
   }
+}
+
+function getMenuIcon(route: any, fallbackRoute?: any): string {
+  const routeIcon = route?.meta?.icon
+  if (routeIcon && routeIcon !== '#') {
+    return routeIcon
+  }
+  if (route?.children?.length) {
+    const firstVisibleChild = route.children.find((child: any) => !child.hidden)
+    if (firstVisibleChild) {
+      const childIcon = getMenuIcon(firstVisibleChild)
+      if (childIcon) return childIcon
+    }
+  }
+  const fallbackIcon = fallbackRoute?.meta?.icon
+  if (fallbackIcon && fallbackIcon !== '#') {
+    return fallbackIcon
+  }
+  return ''
 }
 </script>

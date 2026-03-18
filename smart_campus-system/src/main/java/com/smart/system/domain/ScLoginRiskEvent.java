@@ -10,10 +10,9 @@ import com.smart.common.core.domain.BaseEntity;
 /**
  * 登录风险事件对象 sc_login_risk_event
  *
- * @author Codex
+ * @author can
  */
-public class ScLoginRiskEvent extends BaseEntity
-{
+public class ScLoginRiskEvent extends BaseEntity {
     private static final long serialVersionUID = 1L;
 
     private Long id;
@@ -47,176 +46,145 @@ public class ScLoginRiskEvent extends BaseEntity
 
     private String evidenceJson;
 
-    public Long getId()
-    {
+    public Long getId() {
         return id;
     }
 
-    public void setId(Long id)
-    {
+    public void setId(Long id) {
         this.id = id;
     }
 
-    public Long getUserId()
-    {
+    public Long getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId)
-    {
+    public void setUserId(Long userId) {
         this.userId = userId;
     }
 
-    public String getLoginIp()
-    {
+    public String getLoginIp() {
         return loginIp;
     }
 
-    public void setLoginIp(String loginIp)
-    {
+    public void setLoginIp(String loginIp) {
         this.loginIp = loginIp;
     }
 
-    public String getLoginLocation()
-    {
+    public String getLoginLocation() {
         return loginLocation;
     }
 
-    public void setLoginLocation(String loginLocation)
-    {
+    public void setLoginLocation(String loginLocation) {
         this.loginLocation = loginLocation;
     }
 
-    public String getDeviceFingerprint()
-    {
+    public String getDeviceFingerprint() {
         return deviceFingerprint;
     }
 
-    public void setDeviceFingerprint(String deviceFingerprint)
-    {
+    public void setDeviceFingerprint(String deviceFingerprint) {
         this.deviceFingerprint = deviceFingerprint;
     }
 
-    public String getDeviceType()
-    {
+    public String getDeviceType() {
         return deviceType;
     }
 
-    public void setDeviceType(String deviceType)
-    {
+    public void setDeviceType(String deviceType) {
         this.deviceType = deviceType;
     }
 
-    public String getBrowser()
-    {
+    public String getBrowser() {
         return browser;
     }
 
-    public void setBrowser(String browser)
-    {
+    public void setBrowser(String browser) {
         this.browser = browser;
     }
 
-    public String getOs()
-    {
+    public String getOs() {
         return os;
     }
 
-    public void setOs(String os)
-    {
+    public void setOs(String os) {
         this.os = os;
     }
 
-    public Date getLoginTime()
-    {
+    public Date getLoginTime() {
         return loginTime;
     }
 
-    public void setLoginTime(Date loginTime)
-    {
+    public void setLoginTime(Date loginTime) {
         this.loginTime = loginTime;
     }
 
-    public String getRiskType()
-    {
+    public String getRiskType() {
         return riskType;
     }
 
-    public void setRiskType(String riskType)
-    {
+    public void setRiskType(String riskType) {
         this.riskType = riskType;
     }
 
-    public BigDecimal getRiskScore()
-    {
+    public BigDecimal getRiskScore() {
         return riskScore;
     }
 
-    public void setRiskScore(BigDecimal riskScore)
-    {
+    public void setRiskScore(BigDecimal riskScore) {
         this.riskScore = riskScore;
     }
 
-    public String getRiskLevel()
-    {
+    public String getRiskLevel() {
         return riskLevel;
     }
 
-    public void setRiskLevel(String riskLevel)
-    {
+    public void setRiskLevel(String riskLevel) {
         this.riskLevel = riskLevel;
     }
 
-    public String getDisposeAction()
-    {
+    public String getDisposeAction() {
         return disposeAction;
     }
 
-    public void setDisposeAction(String disposeAction)
-    {
+    public void setDisposeAction(String disposeAction) {
         this.disposeAction = disposeAction;
     }
 
-    public String getDisposeStatus()
-    {
+    public String getDisposeStatus() {
         return disposeStatus;
     }
 
-    public void setDisposeStatus(String disposeStatus)
-    {
+    public void setDisposeStatus(String disposeStatus) {
         this.disposeStatus = disposeStatus;
     }
 
-    public String getEvidenceJson()
-    {
+    public String getEvidenceJson() {
         return evidenceJson;
     }
 
-    public void setEvidenceJson(String evidenceJson)
-    {
+    public void setEvidenceJson(String evidenceJson) {
         this.evidenceJson = evidenceJson;
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         return new ToStringBuilder(this, ToStringStyle.MULTI_LINE_STYLE)
-            .append("id", getId())
-            .append("userId", getUserId())
-            .append("loginIp", getLoginIp())
-            .append("loginLocation", getLoginLocation())
-            .append("deviceFingerprint", getDeviceFingerprint())
-            .append("deviceType", getDeviceType())
-            .append("browser", getBrowser())
-            .append("os", getOs())
-            .append("loginTime", getLoginTime())
-            .append("riskType", getRiskType())
-            .append("riskScore", getRiskScore())
-            .append("riskLevel", getRiskLevel())
-            .append("disposeAction", getDisposeAction())
-            .append("disposeStatus", getDisposeStatus())
-            .append("evidenceJson", getEvidenceJson())
-            .append("remark", getRemark())
-            .toString();
+                .append("id", getId())
+                .append("userId", getUserId())
+                .append("loginIp", getLoginIp())
+                .append("loginLocation", getLoginLocation())
+                .append("deviceFingerprint", getDeviceFingerprint())
+                .append("deviceType", getDeviceType())
+                .append("browser", getBrowser())
+                .append("os", getOs())
+                .append("loginTime", getLoginTime())
+                .append("riskType", getRiskType())
+                .append("riskScore", getRiskScore())
+                .append("riskLevel", getRiskLevel())
+                .append("disposeAction", getDisposeAction())
+                .append("disposeStatus", getDisposeStatus())
+                .append("evidenceJson", getEvidenceJson())
+                .append("remark", getRemark())
+                .toString();
     }
 }

@@ -23,19 +23,17 @@ import com.smart.system.service.IScLoginRiskEventService;
 /**
  * 登录风险事件 Controller
  *
- * @author Codex
+ * @author can
  */
 @RestController
 @RequestMapping("/campus/loginRiskEvent")
-public class ScLoginRiskEventController extends BaseController
-{
+public class ScLoginRiskEventController extends BaseController {
     @Autowired
     private IScLoginRiskEventService scLoginRiskEventService;
 
     @PreAuthorize("@ss.hasPermi('campus:loginRiskEvent:list')")
     @GetMapping("/list")
-    public TableDataInfo list(ScLoginRiskEvent scLoginRiskEvent)
-    {
+    public TableDataInfo list(ScLoginRiskEvent scLoginRiskEvent) {
         startPage();
         List<ScLoginRiskEvent> list = scLoginRiskEventService.selectScLoginRiskEventList(scLoginRiskEvent);
         return getDataTable(list);
@@ -43,16 +41,14 @@ public class ScLoginRiskEventController extends BaseController
 
     @PreAuthorize("@ss.hasPermi('campus:loginRiskEvent:query')")
     @GetMapping(value = "/{id}")
-    public AjaxResult getInfo(@PathVariable Long id)
-    {
+    public AjaxResult getInfo(@PathVariable Long id) {
         return success(scLoginRiskEventService.selectScLoginRiskEventById(id));
     }
 
     @PreAuthorize("@ss.hasPermi('campus:loginRiskEvent:add')")
     @Log(title = "登录风险事件", businessType = BusinessType.INSERT)
     @PostMapping
-    public AjaxResult add(@Validated @RequestBody ScLoginRiskEvent scLoginRiskEvent)
-    {
+    public AjaxResult add(@Validated @RequestBody ScLoginRiskEvent scLoginRiskEvent) {
         scLoginRiskEvent.setCreateBy(getUsername());
         return toAjax(scLoginRiskEventService.insertScLoginRiskEvent(scLoginRiskEvent));
     }
@@ -60,8 +56,7 @@ public class ScLoginRiskEventController extends BaseController
     @PreAuthorize("@ss.hasPermi('campus:loginRiskEvent:edit')")
     @Log(title = "登录风险事件", businessType = BusinessType.UPDATE)
     @PutMapping
-    public AjaxResult edit(@Validated @RequestBody ScLoginRiskEvent scLoginRiskEvent)
-    {
+    public AjaxResult edit(@Validated @RequestBody ScLoginRiskEvent scLoginRiskEvent) {
         scLoginRiskEvent.setUpdateBy(getUsername());
         return toAjax(scLoginRiskEventService.updateScLoginRiskEvent(scLoginRiskEvent));
     }
@@ -69,8 +64,7 @@ public class ScLoginRiskEventController extends BaseController
     @PreAuthorize("@ss.hasPermi('campus:loginRiskEvent:remove')")
     @Log(title = "登录风险事件", businessType = BusinessType.DELETE)
     @DeleteMapping("/{ids}")
-    public AjaxResult remove(@PathVariable Long[] ids)
-    {
+    public AjaxResult remove(@PathVariable Long[] ids) {
         return toAjax(scLoginRiskEventService.deleteScLoginRiskEventByIds(ids));
     }
 }

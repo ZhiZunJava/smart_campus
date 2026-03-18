@@ -15,6 +15,8 @@ export interface UserQueryParams extends PageDomain {
   studentNo?: string;
   /** 工号 */
   teacherNo?: string;
+  /** 专业/方向 */
+  major?: string;
   /** 手机号码 */
   phonenumber?: string;
   /** 状态（0正常 1停用） */

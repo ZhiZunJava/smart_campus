@@ -1,122 +1,138 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper
-PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.smart.system.mapper.ScLoginRiskEventMapper">
 
     <resultMap type="ScLoginRiskEvent" id="ScLoginRiskEventResult">
-        <id property="id" column="id"/>
-        <result property="userId" column="user_id"/>
-        <result property="loginIp" column="login_ip"/>
-        <result property="loginLocation" column="login_location"/>
-        <result property="deviceFingerprint" column="device_fingerprint"/>
-        <result property="deviceType" column="device_type"/>
-        <result property="browser" column="browser"/>
-        <result property="os" column="os"/>
-        <result property="loginTime" column="login_time"/>
-        <result property="riskType" column="risk_type"/>
-        <result property="riskScore" column="risk_score"/>
-        <result property="riskLevel" column="risk_level"/>
-        <result property="disposeAction" column="dispose_action"/>
-        <result property="disposeStatus" column="dispose_status"/>
-        <result property="evidenceJson" column="evidence_json"/>
-        <result property="remark" column="remark"/>
+        <id property="id" column="id" />
+        <result property="userId" column="user_id" />
+        <result property="loginIp" column="login_ip" />
+        <result property="loginLocation" column="login_location" />
+        <result property="deviceFingerprint" column="device_fingerprint" />
+        <result property="deviceType" column="device_type" />
+        <result property="browser" column="browser" />
+        <result property="os" column="os" />
+        <result property="loginTime" column="login_time" />
+        <result property="riskType" column="risk_type" />
+        <result property="riskScore" column="risk_score" />
+        <result property="riskLevel" column="risk_level" />
+        <result property="disposeAction" column="dispose_action" />
+        <result property="disposeStatus" column="dispose_status" />
+        <result property="evidenceJson" column="evidence_json" />
+        <result property="remark" column="remark" />
     </resultMap>
 
-    <sql id="selectScLoginRiskEventVo">
-        select id, user_id, login_ip, login_location, device_fingerprint, device_type, browser, os,
-               login_time, risk_type, risk_score, risk_level, dispose_action, dispose_status, evidence_json, remark
-        from sc_login_risk_event
-    </sql>
+    <sql id="selectScLoginRiskEventVo"> select id, user_id, login_ip, login_location,
+        device_fingerprint, device_type, browser, os, login_time, risk_type, risk_score, risk_level,
+        dispose_action, dispose_status, evidence_json, remark from sc_login_risk_event </sql>
 
     <select id="selectScLoginRiskEventById" parameterType="Long" resultMap="ScLoginRiskEventResult">
-        <include refid="selectScLoginRiskEventVo"/>
-        where id = #{id}
-    </select>
+        <include refid="selectScLoginRiskEventVo" /> where id = #{id} </select>
 
-    <select id="selectScLoginRiskEventList" parameterType="ScLoginRiskEvent" resultMap="ScLoginRiskEventResult">
-        <include refid="selectScLoginRiskEventVo"/>
+    <select id="selectScLoginRiskEventList" parameterType="ScLoginRiskEvent"
+        resultMap="ScLoginRiskEventResult">
+        <include refid="selectScLoginRiskEventVo" />
         <where>
             <if test="userId != null">and user_id = #{userId}</if>
-            <if test="loginIp != null and loginIp != ''">and login_ip like concat('%', #{loginIp}, '%')</if>
+            <if
+                test="loginIp != null and loginIp != ''">and login_ip like concat('%', #{loginIp},
+        '%')</if>
             <if test="riskType != null and riskType != ''">and risk_type = #{riskType}</if>
-            <if test="riskLevel != null and riskLevel != ''">and risk_level = #{riskLevel}</if>
-            <if test="disposeStatus != null and disposeStatus != ''">and dispose_status = #{disposeStatus}</if>
-        </where>
-        order by id desc
-    </select>
+            <if
+                test="riskLevel != null and riskLevel != ''">and risk_level = #{riskLevel}</if>
+            <if
+                test="disposeStatus != null and disposeStatus != ''">and dispose_status =
+        #{disposeStatus}</if>
+        </where> order by id desc </select>
 
-    <insert id="insertScLoginRiskEvent" parameterType="ScLoginRiskEvent" useGeneratedKeys="true" keyProperty="id">
-        insert into sc_login_risk_event
-        <trim prefix="(" suffix=")" suffixOverrides=",">
+    <insert id="insertScLoginRiskEvent" parameterType="ScLoginRiskEvent" useGeneratedKeys="true"
+        keyProperty="id"> insert into sc_login_risk_event <trim prefix="(" suffix=")"
+            suffixOverrides=",">
             <if test="userId != null">user_id,</if>
             <if test="loginIp != null">login_ip,</if>
-            <if test="loginLocation != null">login_location,</if>
-            <if test="deviceFingerprint != null">device_fingerprint,</if>
-            <if test="deviceType != null">device_type,</if>
+            <if
+                test="loginLocation != null">login_location,</if>
+            <if
+                test="deviceFingerprint != null">device_fingerprint,</if>
+            <if
+                test="deviceType != null">device_type,</if>
             <if test="browser != null">browser,</if>
-            <if test="os != null">os,</if>
-            login_time,
-            <if test="riskType != null">risk_type,</if>
-            <if test="riskScore != null">risk_score,</if>
+            <if
+                test="os != null">os,</if> login_time, <if test="riskType != null">risk_type,</if>
+            <if
+                test="riskScore != null">risk_score,</if>
             <if test="riskLevel != null">risk_level,</if>
-            <if test="disposeAction != null">dispose_action,</if>
-            <if test="disposeStatus != null">dispose_status,</if>
+            <if
+                test="disposeAction != null">dispose_action,</if>
+            <if test="disposeStatus != null">
+        dispose_status,</if>
             <if test="evidenceJson != null">evidence_json,</if>
-            <if test="remark != null">remark,</if>
+            <if
+                test="remark != null">remark,</if>
         </trim>
-        <trim prefix="values (" suffix=")" suffixOverrides=",">
+        <trim prefix="values (" suffix=")"
+            suffixOverrides=",">
             <if test="userId != null">#{userId},</if>
             <if test="loginIp != null">#{loginIp},</if>
-            <if test="loginLocation != null">#{loginLocation},</if>
-            <if test="deviceFingerprint != null">#{deviceFingerprint},</if>
-            <if test="deviceType != null">#{deviceType},</if>
+            <if
+                test="loginLocation != null">#{loginLocation},</if>
+            <if
+                test="deviceFingerprint != null">#{deviceFingerprint},</if>
+            <if
+                test="deviceType != null">#{deviceType},</if>
             <if test="browser != null">#{browser},</if>
-            <if test="os != null">#{os},</if>
+            <if
+                test="os != null">#{os},</if>
             <choose>
                 <when test="loginTime != null">#{loginTime},</when>
                 <otherwise>sysdate(),</otherwise>
             </choose>
-            <if test="riskType != null">#{riskType},</if>
+            <if test="riskType != null">
+        #{riskType},</if>
             <if test="riskScore != null">#{riskScore},</if>
-            <if test="riskLevel != null">#{riskLevel},</if>
+            <if test="riskLevel != null">
+        #{riskLevel},</if>
             <if test="disposeAction != null">#{disposeAction},</if>
-            <if test="disposeStatus != null">#{disposeStatus},</if>
-            <if test="evidenceJson != null">#{evidenceJson},</if>
+            <if
+                test="disposeStatus != null">#{disposeStatus},</if>
+            <if test="evidenceJson != null">
+        #{evidenceJson},</if>
             <if test="remark != null">#{remark},</if>
         </trim>
     </insert>
 
-    <update id="updateScLoginRiskEvent" parameterType="ScLoginRiskEvent">
-        update sc_login_risk_event
-        <set>
+    <update id="updateScLoginRiskEvent" parameterType="ScLoginRiskEvent"> update sc_login_risk_event <set>
             <if test="userId != null">user_id = #{userId},</if>
-            <if test="loginIp != null">login_ip = #{loginIp},</if>
+            <if test="loginIp != null">login_ip =
+        #{loginIp},</if>
             <if test="loginLocation != null">login_location = #{loginLocation},</if>
-            <if test="deviceFingerprint != null">device_fingerprint = #{deviceFingerprint},</if>
-            <if test="deviceType != null">device_type = #{deviceType},</if>
-            <if test="browser != null">browser = #{browser},</if>
+            <if
+                test="deviceFingerprint != null">device_fingerprint = #{deviceFingerprint},</if>
+            <if
+                test="deviceType != null">device_type = #{deviceType},</if>
+            <if
+                test="browser != null">browser = #{browser},</if>
             <if test="os != null">os = #{os},</if>
-            <if test="loginTime != null">login_time = #{loginTime},</if>
-            <if test="riskType != null">risk_type = #{riskType},</if>
+            <if
+                test="loginTime != null">login_time = #{loginTime},</if>
+            <if test="riskType != null">risk_type
+        = #{riskType},</if>
             <if test="riskScore != null">risk_score = #{riskScore},</if>
-            <if test="riskLevel != null">risk_level = #{riskLevel},</if>
-            <if test="disposeAction != null">dispose_action = #{disposeAction},</if>
-            <if test="disposeStatus != null">dispose_status = #{disposeStatus},</if>
-            <if test="evidenceJson != null">evidence_json = #{evidenceJson},</if>
-            <if test="remark != null">remark = #{remark},</if>
-        </set>
-        where id = #{id}
-    </update>
+            <if
+                test="riskLevel != null">risk_level = #{riskLevel},</if>
+            <if
+                test="disposeAction != null">dispose_action = #{disposeAction},</if>
+            <if
+                test="disposeStatus != null">dispose_status = #{disposeStatus},</if>
+            <if
+                test="evidenceJson != null">evidence_json = #{evidenceJson},</if>
+            <if
+                test="remark != null">remark = #{remark},</if>
+        </set> where id = #{id} </update>
 
-    <delete id="deleteScLoginRiskEventById" parameterType="Long">
-        delete from sc_login_risk_event where id = #{id}
-    </delete>
+    <delete id="deleteScLoginRiskEventById" parameterType="Long"> delete from sc_login_risk_event
+        where id = #{id} </delete>
 
-    <delete id="deleteScLoginRiskEventByIds" parameterType="Long">
-        delete from sc_login_risk_event where id in
-        <foreach item="id" collection="array" open="(" separator="," close=")">
-            #{id}
-        </foreach>
+    <delete id="deleteScLoginRiskEventByIds" parameterType="Long"> delete from sc_login_risk_event
+        where id in <foreach item="id" collection="array" open="(" separator="," close=")"> #{id} </foreach>
     </delete>
 </mapper>

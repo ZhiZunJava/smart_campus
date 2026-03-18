@@ -1,8 +1,5 @@
-const icons: string[] = []
-const modules = import.meta.glob('./../../assets/icons/svg/*.svg')
-for (const path in modules) {
-  const p = path.split('assets/icons/svg/')[1].split('.svg')[0]
-  icons.push(p)
-}
+import remixiconNames from '@/assets/fonts/remixicon.json'
+
+const icons = (remixiconNames as string[]).map((name) => `ri-${name}`)
 
 export default icons

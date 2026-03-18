@@ -13,39 +13,34 @@ import com.smart.system.service.ICampusDetailService;
 /**
  * 校园详情聚合接口
  *
- * @author Codex
+ * @author can
  */
 @RestController
 @RequestMapping("/campus/detail")
-public class CampusDetailController extends BaseController
-{
+public class CampusDetailController extends BaseController {
     @Autowired
     private ICampusDetailService campusDetailService;
 
-    @PreAuthorize("@ss.hasPermi('campus:resource:query')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/resource/{resourceId}")
-    public AjaxResult resourceDetail(@PathVariable Long resourceId)
-    {
+    public AjaxResult resourceDetail(@PathVariable Long resourceId) {
         return success(campusDetailService.getResourceDetail(resourceId));
     }
 
-    @PreAuthorize("@ss.hasPermi('campus:exam:question:list')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/question/{questionId}")
-    public AjaxResult questionDetail(@PathVariable Long questionId)
-    {
+    public AjaxResult questionDetail(@PathVariable Long questionId) {
         return success(campusDetailService.getQuestionDetail(questionId));
     }
 
-    @PreAuthorize("@ss.hasPermi('campus:exam:paper:list')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/paper/{paperId}")
-    public AjaxResult paperDetail(@PathVariable Long paperId)
-    {
+    public AjaxResult paperDetail(@PathVariable Long paperId) {
         return success(campusDetailService.getExamPaperDetail(paperId));
     }
 
     @GetMapping("/qa/session/{sessionId}")
-    public AjaxResult qaSessionDetail(@PathVariable Long sessionId)
-    {
+    public AjaxResult qaSessionDetail(@PathVariable Long sessionId) {
         return success(campusDetailService.getQaSessionDetail(sessionId));
     }
 }

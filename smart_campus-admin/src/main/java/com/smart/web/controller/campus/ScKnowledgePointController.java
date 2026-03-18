@@ -22,15 +22,13 @@ import com.smart.system.service.IScKnowledgePointService;
 
 @RestController
 @RequestMapping("/campus/knowledgePoint")
-public class ScKnowledgePointController extends BaseController
-{
+public class ScKnowledgePointController extends BaseController {
     @Autowired
     private IScKnowledgePointService scKnowledgePointService;
 
     @PreAuthorize("@ss.hasPermi('campus:knowledgePoint:list')")
     @GetMapping("/list")
-    public TableDataInfo list(ScKnowledgePoint scKnowledgePoint)
-    {
+    public TableDataInfo list(ScKnowledgePoint scKnowledgePoint) {
         startPage();
         List<ScKnowledgePoint> list = scKnowledgePointService.selectScKnowledgePointList(scKnowledgePoint);
         return getDataTable(list);
@@ -38,16 +36,14 @@ public class ScKnowledgePointController extends BaseController
 
     @PreAuthorize("@ss.hasPermi('campus:knowledgePoint:query')")
     @GetMapping(value = "/{knowledgePointId}")
-    public AjaxResult getInfo(@PathVariable Long knowledgePointId)
-    {
+    public AjaxResult getInfo(@PathVariable Long knowledgePointId) {
         return success(scKnowledgePointService.selectScKnowledgePointByKnowledgePointId(knowledgePointId));
     }
 
     @PreAuthorize("@ss.hasPermi('campus:knowledgePoint:add')")
     @Log(title = "知识点管理", businessType = BusinessType.INSERT)
     @PostMapping
-    public AjaxResult add(@Validated @RequestBody ScKnowledgePoint scKnowledgePoint)
-    {
+    public AjaxResult add(@Validated @RequestBody ScKnowledgePoint scKnowledgePoint) {
         scKnowledgePoint.setCreateBy(getUsername());
         return toAjax(scKnowledgePointService.insertScKnowledgePoint(scKnowledgePoint));
     }
@@ -55,8 +51,7 @@ public class ScKnowledgePointController extends BaseController
     @PreAuthorize("@ss.hasPermi('campus:knowledgePoint:edit')")
     @Log(title = "知识点管理", businessType = BusinessType.UPDATE)
     @PutMapping
-    public AjaxResult edit(@Validated @RequestBody ScKnowledgePoint scKnowledgePoint)
-    {
+    public AjaxResult edit(@Validated @RequestBody ScKnowledgePoint scKnowledgePoint) {
         scKnowledgePoint.setUpdateBy(getUsername());
         return toAjax(scKnowledgePointService.updateScKnowledgePoint(scKnowledgePoint));
     }
@@ -64,8 +59,7 @@ public class ScKnowledgePointController extends BaseController
     @PreAuthorize("@ss.hasPermi('campus:knowledgePoint:remove')")
     @Log(title = "知识点管理", businessType = BusinessType.DELETE)
     @DeleteMapping("/{knowledgePointIds}")
-    public AjaxResult remove(@PathVariable Long[] knowledgePointIds)
-    {
+    public AjaxResult remove(@PathVariable Long[] knowledgePointIds) {
         return toAjax(scKnowledgePointService.deleteScKnowledgePointByKnowledgePointIds(knowledgePointIds));
     }
 }

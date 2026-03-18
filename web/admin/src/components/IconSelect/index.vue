@@ -4,43 +4,95 @@
       v-model="iconName"
       class="icon-search"
       clearable
-      placeholder="请输入图标名称"
-      @clear="filterIcons"
-      @input="filterIcons"
+      placeholder="搜索 Remix Icon 名称"
+      @clear="handleSearchClear"
+      @input="handleSearchInput"
     >
-      <template #suffix><i class="el-icon-search el-input__icon" /></template>
+      <template #prefix>
+        <el-icon><Search /></el-icon>
+      </template>
     </el-input>
-    <div class="icon-list">
-      <div class="list-container">
-        <div v-for="(item, index) in iconList" class="icon-item-wrapper" :key="index" @click="selectedIcon(item)">
-          <div :class="['icon-item', { active: activeIcon === item }]">
-            <svg-icon :icon-class="item" class-name="icon" style="height: 25px;width: 16px;"/>
-            <span>{{ item }}</span>
-          </div>
-        </div>
+
+    <div ref="scrollContainerRef" class="icon-list" @scroll="handleScroll">
+      <div class="icon-grid">
+        <button
+          v-for="item in visibleIcons"
+          :key="item"
+          type="button"
+          class="icon-card"
+          :class="{ active: resolvedActiveIcon === item }"
+          @click="selectedIcon(item)"
+        >
+          <svg-icon :icon-class="item" class-name="icon-card__icon" />
+          <span class="icon-card__name">{{ item }}</span>
+        </button>
       </div>
+
+      <div v-if="loadingMore" class="icon-loading">加载更多图标中...</div>
+      <el-empty v-else-if="!visibleIcons.length" description="没有匹配到图标" :image-size="72" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import icons from './requireIcons'
+import { Search } from '@element-plus/icons-vue'
+import iconSource from './requireIcons'
+import { resolveMenuIcon } from '@/utils/menuIcon'
+
+const PAGE_SIZE = 120
 
 const props = defineProps({
   activeIcon: {
-    type: String
+    type: String,
+    default: ''
   }
 })
 
-const iconName = ref('')
-const iconList = ref(icons)
 const emit = defineEmits(['selected'])
 
-function filterIcons(): void {
-  iconList.value = icons
-  if (iconName.value) {
-    iconList.value = icons.filter(item => item.indexOf(iconName.value) !== -1)
-  }
+const iconName = ref('')
+const scrollContainerRef = ref<HTMLElement | null>(null)
+const page = ref(1)
+const loadingMore = ref(false)
+
+const resolvedActiveIcon = computed(() => resolveMenuIcon(props.activeIcon))
+const filteredIcons = computed(() => {
+  const keyword = iconName.value.trim().toLowerCase()
+  if (!keyword) return iconSource
+  return iconSource.filter((item) => item.toLowerCase().includes(keyword))
+})
+
+const visibleIcons = computed(() => filteredIcons.value.slice(0, page.value * PAGE_SIZE))
+
+function resetPagination() {
+  page.value = 1
+  loadingMore.value = false
+  nextTick(() => {
+    if (scrollContainerRef.value) {
+      scrollContainerRef.value.scrollTop = 0
+    }
+  })
+}
+
+function handleSearchInput(): void {
+  resetPagination()
+}
+
+function handleSearchClear(): void {
+  resetPagination()
+}
+
+function handleScroll(): void {
+  const el = scrollContainerRef.value
+  if (!el || loadingMore.value) return
+  const nearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 80
+  const hasMore = visibleIcons.value.length < filteredIcons.value.length
+  if (!nearBottom || !hasMore) return
+  loadingMore.value = true
+  window.setTimeout(() => {
+    page.value += 1
+    loadingMore.value = false
+  }, 16)
 }
 
 function selectedIcon(name: string): void {
@@ -50,7 +102,7 @@ function selectedIcon(name: string): void {
 
 function reset(): void {
   iconName.value = ''
-  iconList.value = icons
+  resetPagination()
 }
 
 defineExpose({
@@ -58,54 +110,71 @@ defineExpose({
 })
 </script>
 
-<style lang='scss' scoped>
-   .icon-body {
-    width: 100%;
-    padding: 10px;
-    .icon-search {
-      position: relative;
-      margin-bottom: 5px;
-    }
-    .icon-list {
-      height: 200px;
-      overflow: auto;
-      .list-container {
-        display: flex;
-        flex-wrap: wrap;
-        .icon-item-wrapper {
-          width: calc(100% / 3);
-          height: 25px;
-          line-height: 25px;
-          cursor: pointer;
-          display: flex;
-          .icon-item {
-            display: flex;
-            max-width: 100%;
-            height: 100%;
-            padding: 0 5px;
-            &:hover {
-              background: #ececec;
-              border-radius: 5px;
-            }
-            .icon {
-              flex-shrink: 0;
-            }
-            span {
-              display: inline-block;
-              vertical-align: -0.15em;
-              fill: currentColor;
-              padding-left: 2px;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
-            }
-          }
-          .icon-item.active {
-            background: #ececec;
-            border-radius: 5px;
-          }
-        }
-      }
-    }
-  }
+<style lang="scss" scoped>
+.icon-body {
+  width: 100%;
+  padding: 12px;
+}
+
+.icon-search {
+  margin-bottom: 10px;
+}
+
+.icon-list {
+  height: 360px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.icon-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 86px;
+  padding: 10px 8px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 6px;
+  background: var(--el-bg-color);
+  color: var(--el-text-color-primary);
+  cursor: pointer;
+  transition: border-color .2s ease, background-color .2s ease, color .2s ease;
+}
+
+.icon-card:hover {
+  border-color: var(--el-color-primary-light-5);
+  background: var(--el-fill-color-extra-light);
+}
+
+.icon-card.active {
+  background: var(--el-color-primary);
+  border-color: var(--el-color-primary);
+  color: #ffffff;
+}
+
+.icon-card__icon {
+  font-size: 18px;
+}
+
+.icon-card__name {
+  width: 100%;
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: center;
+  word-break: break-all;
+}
+
+.icon-loading {
+  padding: 10px 0 4px;
+  text-align: center;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
 </style>

@@ -23,19 +23,17 @@ import com.smart.system.service.IScParentStudentRelService;
 /**
  * 家长学生关系 Controller
  *
- * @author Codex
+ * @author can
  */
 @RestController
 @RequestMapping("/campus/parentStudentRel")
-public class ScParentStudentRelController extends BaseController
-{
+public class ScParentStudentRelController extends BaseController {
     @Autowired
     private IScParentStudentRelService scParentStudentRelService;
 
     @PreAuthorize("@ss.hasPermi('campus:parentStudentRel:list')")
     @GetMapping("/list")
-    public TableDataInfo list(ScParentStudentRel scParentStudentRel)
-    {
+    public TableDataInfo list(ScParentStudentRel scParentStudentRel) {
         startPage();
         List<ScParentStudentRel> list = scParentStudentRelService.selectScParentStudentRelList(scParentStudentRel);
         return getDataTable(list);
@@ -43,16 +41,14 @@ public class ScParentStudentRelController extends BaseController
 
     @PreAuthorize("@ss.hasPermi('campus:parentStudentRel:query')")
     @GetMapping(value = "/{id}")
-    public AjaxResult getInfo(@PathVariable Long id)
-    {
+    public AjaxResult getInfo(@PathVariable Long id) {
         return success(scParentStudentRelService.selectScParentStudentRelById(id));
     }
 
     @PreAuthorize("@ss.hasPermi('campus:parentStudentRel:add')")
     @Log(title = "家长学生关系", businessType = BusinessType.INSERT)
     @PostMapping
-    public AjaxResult add(@Validated @RequestBody ScParentStudentRel scParentStudentRel)
-    {
+    public AjaxResult add(@Validated @RequestBody ScParentStudentRel scParentStudentRel) {
         scParentStudentRel.setCreateBy(getUsername());
         return toAjax(scParentStudentRelService.insertScParentStudentRel(scParentStudentRel));
     }
@@ -60,8 +56,7 @@ public class ScParentStudentRelController extends BaseController
     @PreAuthorize("@ss.hasPermi('campus:parentStudentRel:edit')")
     @Log(title = "家长学生关系", businessType = BusinessType.UPDATE)
     @PutMapping
-    public AjaxResult edit(@Validated @RequestBody ScParentStudentRel scParentStudentRel)
-    {
+    public AjaxResult edit(@Validated @RequestBody ScParentStudentRel scParentStudentRel) {
         scParentStudentRel.setUpdateBy(getUsername());
         return toAjax(scParentStudentRelService.updateScParentStudentRel(scParentStudentRel));
     }
@@ -69,8 +64,7 @@ public class ScParentStudentRelController extends BaseController
     @PreAuthorize("@ss.hasPermi('campus:parentStudentRel:remove')")
     @Log(title = "家长学生关系", businessType = BusinessType.DELETE)
     @DeleteMapping("/{ids}")
-    public AjaxResult remove(@PathVariable Long[] ids)
-    {
+    public AjaxResult remove(@PathVariable Long[] ids) {
         return toAjax(scParentStudentRelService.deleteScParentStudentRelByIds(ids));
     }
 }

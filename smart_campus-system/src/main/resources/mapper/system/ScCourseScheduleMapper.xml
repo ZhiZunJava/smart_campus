@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScCourseScheduleMapper">
+  <resultMap type="ScCourseSchedule" id="ScCourseScheduleResult">
+    <id property="scheduleId" column="schedule_id" />
+    <result property="termId" column="term_id" />
+    <result property="classCourseId" column="class_course_id" />
+    <result property="classroomId" column="classroom_id" />
+    <result property="weekDay" column="week_day" />
+    <result property="startSection" column="start_section" />
+    <result property="endSection" column="end_section" />
+    <result property="classroom" column="classroom" />
+    <result property="classroomName" column="classroom_name" />
+    <result property="buildingName" column="building_name" />
+    <result property="campusName" column="campus_name" />
+    <result property="weeksText" column="weeks_text" />
+    <result property="weeksJson" column="weeks_json" />
+    <result property="status" column="status" />
+    <result property="createBy" column="create_by" />
+    <result property="createTime" column="create_time" />
+    <result property="updateBy" column="update_by" />
+    <result property="updateTime" column="update_time" />
+    <result property="remark" column="remark" />
+  </resultMap>
+  <sql id="selectScCourseScheduleVo"> select s.schedule_id, s.term_id, s.class_course_id,
+    s.classroom_id, s.week_day, s.start_section, s.end_section, s.classroom, c.classroom_name,
+    c.building_name, c.campus_name, s.weeks_text, s.weeks_json, s.status, s.create_by,
+    s.create_time, s.update_by, s.update_time, s.remark from sc_course_schedule s left join
+    sc_classroom c on c.classroom_id = s.classroom_id </sql>
+  <select id="selectScCourseScheduleByScheduleId" parameterType="Long"
+    resultMap="ScCourseScheduleResult"><include refid="selectScCourseScheduleVo" /> where
+    schedule_id = #{scheduleId}</select>
+  <select id="selectScCourseScheduleList" parameterType="ScCourseSchedule"
+    resultMap="ScCourseScheduleResult">
+    <include refid="selectScCourseScheduleVo" />
+    <where>
+      <if test="termId != null">and s.term_id = #{termId}</if>
+      <if test="classCourseId != null">and
+    s.class_course_id = #{classCourseId}</if>
+      <if test="classroomId != null">and s.classroom_id =
+    #{classroomId}</if>
+      <if test="weekDay != null">and s.week_day = #{weekDay}</if>
+      <if
+        test="status != null and status != ''">and s.status = #{status}</if>
+    </where> order by
+    s.week_day asc, s.start_section asc, s.schedule_id desc </select>
+  <insert id="insertScCourseSchedule" parameterType="ScCourseSchedule" useGeneratedKeys="true"
+    keyProperty="scheduleId">insert into sc_course_schedule(term_id, class_course_id, classroom_id,
+    week_day, start_section, end_section, classroom, weeks_text, weeks_json, status, create_by,
+    create_time, remark) values(#{termId}, #{classCourseId}, #{classroomId}, #{weekDay},
+    #{startSection}, #{endSection}, #{classroom}, #{weeksText}, #{weeksJson}, #{status},
+    #{createBy}, sysdate(), #{remark})</insert>
+  <update id="updateScCourseSchedule" parameterType="ScCourseSchedule">update sc_course_schedule <set><if
+        test="termId != null">term_id = #{termId},</if><if test="classCourseId != null">class_course_id
+    = #{classCourseId},</if><if test="classroomId != null">classroom_id = #{classroomId},</if><if
+        test="weekDay != null">week_day = #{weekDay},</if><if test="startSection != null">start_section
+    = #{startSection},</if><if test="endSection != null">end_section = #{endSection},</if><if
+        test="classroom != null">classroom = #{classroom},</if><if test="weeksText != null">weeks_text
+    = #{weeksText},</if><if test="weeksJson != null">weeks_json = #{weeksJson},</if><if
+        test="status != null">status = #{status},</if><if test="updateBy != null">update_by =
+    #{updateBy},</if><if test="remark != null">remark = #{remark},</if>update_time = sysdate()</set>
+    where schedule_id = #{scheduleId}</update>
+  <delete id="deleteScCourseScheduleByScheduleId" parameterType="Long">delete from
+    sc_course_schedule where schedule_id = #{scheduleId}</delete>
+  <delete id="deleteScCourseScheduleByScheduleIds" parameterType="Long">delete from
+    sc_course_schedule where schedule_id in <foreach item="scheduleId" collection="array" open="("
+      separator="," close=")">#{scheduleId}</foreach></delete>
+</mapper>

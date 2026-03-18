@@ -6,10 +6,9 @@ import com.smart.system.domain.ScParentStudentRel;
 /**
  * 家长学生关系 Service 接口
  *
- * @author Codex
+ * @author can
  */
-public interface IScParentStudentRelService
-{
+public interface IScParentStudentRelService {
     ScParentStudentRel selectScParentStudentRelById(Long id);
 
     List<ScParentStudentRel> selectScParentStudentRelList(ScParentStudentRel scParentStudentRel);

@@ -27,6 +27,9 @@ export function delAiPrompt(ids: number | number[]) {
 export function testAiModel(data: any) {
   return request({ url: '/campus/ai/model/test', method: 'post', data })
 }
+export function testAiModelStreamUrl() {
+  return `${import.meta.env.VITE_APP_BASE_API}/campus/ai/model/test/stream`
+}
 export function chatAiModel(data: any) {
   return request({ url: '/campus/ai/chat', method: 'post', data })
 }

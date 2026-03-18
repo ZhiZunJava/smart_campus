@@ -8,12 +8,52 @@ export function getStudentDashboard(params: any) {
   return request({ url: '/campus/portal/student/dashboard', method: 'get', params })
 }
 
+export function getPortalHelpCenter() {
+  return request({ url: '/campus/portal/help', method: 'get' })
+}
+
+export function listPortalNotice(params?: any) {
+  return request({ url: '/campus/portal/notice', method: 'get', params })
+}
+
+export function getPortalNoticeDetail(noticeId: number) {
+  return request({ url: `/campus/portal/notice/${noticeId}`, method: 'get' })
+}
+
+export function getPortalProfile() {
+  return request({ url: '/campus/portal/profile', method: 'get' })
+}
+
+export function updatePortalProfile(data: any) {
+  return request({ url: '/campus/portal/profile', method: 'put', data })
+}
+
+export function updatePortalPassword(data: any) {
+  return request({ url: '/campus/portal/profile/password', method: 'put', data })
+}
+
 export function getTeacherDashboard(params: any) {
   return request({ url: '/campus/portal/teacher/dashboard', method: 'get', params })
 }
 
+export function listPortalTeacherCourses(params: any) {
+  return request({ url: '/campus/portal/teacher/my-courses', method: 'get', params })
+}
+
+export function getPortalTeacherSchedule(params: any) {
+  return request({ url: '/campus/portal/teacher/my-schedule', method: 'get', params })
+}
+
 export function getParentDashboard(params: any) {
   return request({ url: '/campus/portal/parent/dashboard', method: 'get', params })
+}
+
+export function listPortalParentCourses(params: any) {
+  return request({ url: '/campus/portal/parent/child-courses', method: 'get', params })
+}
+
+export function getPortalParentSchedule(params: any) {
+  return request({ url: '/campus/portal/parent/child-schedule', method: 'get', params })
 }
 
 export function getLearningDiagnosis(params: any) {
@@ -54,6 +94,26 @@ export function feedbackRecommendation(data: any) {
 
 export function listQaSession(query: any) {
   return request({ url: '/campus/qa/session/list', method: 'get', params: query })
+}
+
+export function uploadPortalQaAttachment(file: File, sessionId?: number) {
+  const formData = new FormData()
+  formData.append('file', file)
+  if (sessionId) {
+    formData.append('sessionId', String(sessionId))
+  }
+  return request({
+    url: '/campus/qa/attachment/upload',
+    method: 'post',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
+
+export function deletePortalQaAttachment(attachmentId: number) {
+  return request({ url: `/campus/qa/attachment/delete/${attachmentId}`, method: 'post' })
 }
 
 export function addQaSession(data: any) {
@@ -118,6 +178,18 @@ export function getPaperDetail(paperId: number) {
 
 export function listCourse(query: any) {
   return request({ url: '/campus/course/list', method: 'get', params: query })
+}
+
+export function listPortalMyCourses(params: any) {
+  return request({ url: '/campus/portal/student/my-courses', method: 'get', params })
+}
+
+export function getPortalMySchedule(params: any) {
+  return request({ url: '/campus/portal/student/my-schedule', method: 'get', params })
+}
+
+export function listPortalTermOptions() {
+  return request({ url: '/campus/portal/term/options', method: 'get' })
 }
 
 export async function fetchPortalUserOptions(userType?: string) {

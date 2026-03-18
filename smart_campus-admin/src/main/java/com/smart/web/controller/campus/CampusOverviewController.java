@@ -13,21 +13,19 @@ import com.smart.system.service.ICampusOverviewService;
 /**
  * 校园首页聚合接口
  *
- * @author Codex
+ * @author can
  */
 @RestController
 @RequestMapping("/campus/overview")
-public class CampusOverviewController extends BaseController
-{
+public class CampusOverviewController extends BaseController {
     @Autowired
     private ICampusOverviewService campusOverviewService;
 
     @PreAuthorize("@ss.hasPermi('campus:overview:query')")
     @GetMapping("/dashboard")
     public AjaxResult dashboard(@RequestParam Long userId,
-                                @RequestParam(required = false) Long courseId,
-                                @RequestParam(required = false) Integer recommendLimit)
-    {
+            @RequestParam(required = false) Long courseId,
+            @RequestParam(required = false) Integer recommendLimit) {
         return success(campusOverviewService.getDashboard(userId, courseId, recommendLimit));
     }
 }

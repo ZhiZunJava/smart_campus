@@ -5,10 +5,9 @@ import java.util.List;
 /**
  * AI 对话请求 DTO
  *
- * @author Codex
+ * @author can
  */
-public class AiChatRequestDto
-{
+public class AiChatRequestDto {
     private Long modelId;
     private String bizType;
     private String systemPrompt;
@@ -16,74 +15,69 @@ public class AiChatRequestDto
     private Boolean stream;
     private Boolean deepThinking;
     private List<AiImageInputDto> images;
+    private List<AiHistoryMessageDto> historyMessages;
 
-    public Long getModelId()
-    {
+    public Long getModelId() {
         return modelId;
     }
 
-    public void setModelId(Long modelId)
-    {
+    public void setModelId(Long modelId) {
         this.modelId = modelId;
     }
 
-    public String getBizType()
-    {
+    public String getBizType() {
         return bizType;
     }
 
-    public void setBizType(String bizType)
-    {
+    public void setBizType(String bizType) {
         this.bizType = bizType;
     }
 
-    public String getSystemPrompt()
-    {
+    public String getSystemPrompt() {
         return systemPrompt;
     }
 
-    public void setSystemPrompt(String systemPrompt)
-    {
+    public void setSystemPrompt(String systemPrompt) {
         this.systemPrompt = systemPrompt;
     }
 
-    public String getUserPrompt()
-    {
+    public String getUserPrompt() {
         return userPrompt;
     }
 
-    public void setUserPrompt(String userPrompt)
-    {
+    public void setUserPrompt(String userPrompt) {
         this.userPrompt = userPrompt;
     }
 
-    public Boolean getStream()
-    {
+    public Boolean getStream() {
         return stream;
     }
 
-    public void setStream(Boolean stream)
-    {
+    public void setStream(Boolean stream) {
         this.stream = stream;
     }
 
-    public Boolean getDeepThinking()
-    {
+    public Boolean getDeepThinking() {
         return deepThinking;
     }
 
-    public void setDeepThinking(Boolean deepThinking)
-    {
+    public void setDeepThinking(Boolean deepThinking) {
         this.deepThinking = deepThinking;
     }
 
-    public List<AiImageInputDto> getImages()
-    {
+    public List<AiImageInputDto> getImages() {
         return images;
     }
 
-    public void setImages(List<AiImageInputDto> images)
-    {
+    public void setImages(List<AiImageInputDto> images) {
         this.images = images;
+    }
+
+    public List<AiHistoryMessageDto> getHistoryMessages() {
+        return historyMessages;
+    }
+
+    public void setHistoryMessages(List<AiHistoryMessageDto> historyMessages) {
+        this.historyMessages = historyMessages;
     }
 }

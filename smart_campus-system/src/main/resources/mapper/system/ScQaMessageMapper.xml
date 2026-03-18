@@ -1,22 +1,50 @@
-<?xml version="1.0" encoding="UTF-8" ?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.smart.system.mapper.ScQaMessageMapper">
   <resultMap type="ScQaMessage" id="ScQaMessageResult">
-    <id property="messageId" column="message_id"/>
-    <result property="sessionId" column="session_id"/>
-    <result property="roleType" column="role_type"/>
-    <result property="content" column="content"/>
-    <result property="referenceSource" column="reference_source"/>
-    <result property="tokenCount" column="token_count"/>
-    <result property="latencyMs" column="latency_ms"/>
-    <result property="sensitiveFlag" column="sensitive_flag"/>
-    <result property="createTime" column="create_time"/>
+    <id property="messageId" column="message_id" />
+    <result property="sessionId" column="session_id" />
+    <result property="roleType" column="role_type" />
+    <result property="contentType" column="content_type" />
+    <result property="content" column="content" />
+    <result property="referenceSource" column="reference_source" />
+    <result property="attachmentJson" column="attachment_json" />
+    <result property="replyToMessageId" column="reply_to_message_id" />
+    <result property="modelName" column="model_name" />
+    <result property="reasoningContent" column="reasoning_content" />
+    <result property="tokenCount" column="token_count" />
+    <result property="latencyMs" column="latency_ms" />
+    <result property="sensitiveFlag" column="sensitive_flag" />
+    <result property="createTime" column="create_time" />
   </resultMap>
-  <sql id="selectScQaMessageVo">select message_id, session_id, role_type, content, reference_source, token_count, latency_ms, sensitive_flag, create_time from sc_qa_message</sql>
-  <select id="selectScQaMessageByMessageId" parameterType="Long" resultMap="ScQaMessageResult"><include refid="selectScQaMessageVo"/> where message_id = #{messageId}</select>
-  <select id="selectScQaMessageList" parameterType="ScQaMessage" resultMap="ScQaMessageResult"><include refid="selectScQaMessageVo"/><where><if test="sessionId != null">and session_id = #{sessionId}</if><if test="roleType != null and roleType != ''">and role_type = #{roleType}</if></where> order by message_id asc</select>
-  <insert id="insertScQaMessage" parameterType="ScQaMessage" useGeneratedKeys="true" keyProperty="messageId">insert into sc_qa_message(session_id, role_type, content, reference_source, token_count, latency_ms, sensitive_flag, create_time) values(#{sessionId}, #{roleType}, #{content}, #{referenceSource}, #{tokenCount}, #{latencyMs}, #{sensitiveFlag}, sysdate())</insert>
-  <update id="updateScQaMessage" parameterType="ScQaMessage">update sc_qa_message <set><if test="sessionId != null">session_id = #{sessionId},</if><if test="roleType != null">role_type = #{roleType},</if><if test="content != null">content = #{content},</if><if test="referenceSource != null">reference_source = #{referenceSource},</if><if test="tokenCount != null">token_count = #{tokenCount},</if><if test="latencyMs != null">latency_ms = #{latencyMs},</if><if test="sensitiveFlag != null">sensitive_flag = #{sensitiveFlag},</if></set> where message_id = #{messageId}</update>
-  <delete id="deleteScQaMessageByMessageId" parameterType="Long">delete from sc_qa_message where message_id = #{messageId}</delete>
-  <delete id="deleteScQaMessageByMessageIds" parameterType="Long">delete from sc_qa_message where message_id in <foreach item="messageId" collection="array" open="(" separator="," close=")">#{messageId}</foreach></delete>
+  <sql id="selectScQaMessageVo">select message_id, session_id, role_type, content_type, content,
+    reference_source, attachment_json, reply_to_message_id, model_name, reasoning_content,
+    token_count, latency_ms, sensitive_flag, create_time from sc_qa_message</sql>
+  <select id="selectScQaMessageByMessageId" parameterType="Long" resultMap="ScQaMessageResult"><include
+      refid="selectScQaMessageVo" /> where message_id = #{messageId}</select>
+  <select id="selectScQaMessageList" parameterType="ScQaMessage" resultMap="ScQaMessageResult"><include
+      refid="selectScQaMessageVo" /><where><if test="sessionId != null">and session_id =
+    #{sessionId}</if><if test="roleType != null and roleType != ''">and role_type = #{roleType}</if></where>
+    order by message_id asc</select>
+  <insert id="insertScQaMessage" parameterType="ScQaMessage" useGeneratedKeys="true"
+    keyProperty="messageId">insert into sc_qa_message(session_id, role_type, content_type, content,
+    reference_source, attachment_json, reply_to_message_id, model_name, reasoning_content,
+    token_count, latency_ms, sensitive_flag, create_time) values(#{sessionId}, #{roleType},
+    #{contentType}, #{content}, #{referenceSource}, #{attachmentJson}, #{replyToMessageId},
+    #{modelName}, #{reasoningContent}, #{tokenCount}, #{latencyMs}, #{sensitiveFlag}, sysdate())</insert>
+  <update id="updateScQaMessage" parameterType="ScQaMessage">update sc_qa_message <set><if
+        test="sessionId != null">session_id = #{sessionId},</if><if test="roleType != null">role_type
+    = #{roleType},</if><if test="contentType != null">content_type = #{contentType},</if><if
+        test="content != null">content = #{content},</if><if test="referenceSource != null">reference_source
+    = #{referenceSource},</if><if test="attachmentJson != null">attachment_json = #{attachmentJson},</if><if
+        test="replyToMessageId != null">reply_to_message_id = #{replyToMessageId},</if><if
+        test="modelName != null">model_name = #{modelName},</if><if test="reasoningContent != null">reasoning_content
+    = #{reasoningContent},</if><if test="tokenCount != null">token_count = #{tokenCount},</if><if
+        test="latencyMs != null">latency_ms = #{latencyMs},</if><if test="sensitiveFlag != null">sensitive_flag
+    = #{sensitiveFlag},</if></set> where message_id = #{messageId}</update>
+  <delete id="deleteScQaMessageByMessageId" parameterType="Long">delete from sc_qa_message where
+    message_id = #{messageId}</delete>
+  <delete id="deleteScQaMessageByMessageIds" parameterType="Long">delete from sc_qa_message where
+    message_id in <foreach item="messageId" collection="array" open="(" separator="," close=")">
+    #{messageId}</foreach></delete>
 </mapper>

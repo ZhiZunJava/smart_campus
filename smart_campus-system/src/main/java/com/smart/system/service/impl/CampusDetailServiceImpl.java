@@ -10,22 +10,26 @@ import com.smart.system.domain.campusvo.*;
 import com.smart.system.service.*;
 
 @Service
-public class CampusDetailServiceImpl implements ICampusDetailService
-{
-    @Autowired private IScResourceService scResourceService;
-    @Autowired private IScQuestionBankService scQuestionBankService;
-    @Autowired private IScQuestionOptionService scQuestionOptionService;
-    @Autowired private IScExamPaperService scExamPaperService;
-    @Autowired private IScExamPaperQuestionService scExamPaperQuestionService;
-    @Autowired private IScQaSessionService scQaSessionService;
-    @Autowired private IScQaMessageService scQaMessageService;
+public class CampusDetailServiceImpl implements ICampusDetailService {
+    @Autowired
+    private IScResourceService scResourceService;
+    @Autowired
+    private IScQuestionBankService scQuestionBankService;
+    @Autowired
+    private IScQuestionOptionService scQuestionOptionService;
+    @Autowired
+    private IScExamPaperService scExamPaperService;
+    @Autowired
+    private IScExamPaperQuestionService scExamPaperQuestionService;
+    @Autowired
+    private IScQaSessionService scQaSessionService;
+    @Autowired
+    private IScQaMessageService scQaMessageService;
 
     @Override
-    public ResourceDetailVo getResourceDetail(Long resourceId)
-    {
+    public ResourceDetailVo getResourceDetail(Long resourceId) {
         ScResource resource = scResourceService.selectScResourceByResourceId(resourceId);
-        if (resource == null)
-        {
+        if (resource == null) {
             throw new ServiceException("资源不存在");
         }
         ResourceDetailVo vo = new ResourceDetailVo();
@@ -49,11 +53,9 @@ public class CampusDetailServiceImpl implements ICampusDetailService
     }
 
     @Override
-    public QuestionDetailVo getQuestionDetail(Long questionId)
-    {
+    public QuestionDetailVo getQuestionDetail(Long questionId) {
         ScQuestionBank question = scQuestionBankService.selectScQuestionBankByQuestionId(questionId);
-        if (question == null)
-        {
+        if (question == null) {
             throw new ServiceException("题目不存在");
         }
         QuestionDetailVo vo = new QuestionDetailVo();
@@ -70,17 +72,15 @@ public class CampusDetailServiceImpl implements ICampusDetailService
         vo.setQualityScore(question.getQualityScore());
         vo.setStatus(question.getStatus());
         List<QuestionOptionVo> options = scQuestionOptionService.selectScQuestionOptionByQuestionId(questionId)
-            .stream().map(this::toQuestionOptionVo).collect(Collectors.toList());
+                .stream().map(this::toQuestionOptionVo).collect(Collectors.toList());
         vo.setOptions(options);
         return vo;
     }
 
     @Override
-    public ExamPaperDetailVo getExamPaperDetail(Long paperId)
-    {
+    public ExamPaperDetailVo getExamPaperDetail(Long paperId) {
         ScExamPaper paper = scExamPaperService.selectScExamPaperByPaperId(paperId);
-        if (paper == null)
-        {
+        if (paper == null) {
             throw new ServiceException("试卷不存在");
         }
         ExamPaperDetailVo vo = new ExamPaperDetailVo();
@@ -91,18 +91,17 @@ public class CampusDetailServiceImpl implements ICampusDetailService
         vo.setTotalScore(paper.getTotalScore());
         vo.setDurationMinutes(paper.getDurationMinutes());
         vo.setStatus(paper.getStatus());
-        List<ExamPaperQuestionDetailVo> questions = scExamPaperQuestionService.selectScExamPaperQuestionByPaperId(paperId)
-            .stream().map(this::toExamPaperQuestionDetailVo).collect(Collectors.toList());
+        List<ExamPaperQuestionDetailVo> questions = scExamPaperQuestionService
+                .selectScExamPaperQuestionByPaperId(paperId)
+                .stream().map(this::toExamPaperQuestionDetailVo).collect(Collectors.toList());
         vo.setQuestions(questions);
         return vo;
     }
 
     @Override
-    public QaSessionDetailVo getQaSessionDetail(Long sessionId)
-    {
+    public QaSessionDetailVo getQaSessionDetail(Long sessionId) {
         ScQaSession session = scQaSessionService.selectScQaSessionBySessionId(sessionId);
-        if (session == null)
-        {
+        if (session == null) {
             throw new ServiceException("问答会话不存在");
         }
         QaSessionDetailVo vo = new QaSessionDetailVo();
@@ -118,8 +117,7 @@ public class CampusDetailServiceImpl implements ICampusDetailService
         return vo;
     }
 
-    private QuestionOptionVo toQuestionOptionVo(ScQuestionOption option)
-    {
+    private QuestionOptionVo toQuestionOptionVo(ScQuestionOption option) {
         QuestionOptionVo vo = new QuestionOptionVo();
         vo.setOptionId(option.getOptionId());
         vo.setOptionKey(option.getOptionKey());
@@ -127,8 +125,7 @@ public class CampusDetailServiceImpl implements ICampusDetailService
         return vo;
     }
 
-    private ExamPaperQuestionDetailVo toExamPaperQuestionDetailVo(ScExamPaperQuestion paperQuestion)
-    {
+    private ExamPaperQuestionDetailVo toExamPaperQuestionDetailVo(ScExamPaperQuestion paperQuestion) {
         ExamPaperQuestionDetailVo vo = new ExamPaperQuestionDetailVo();
         vo.setId(paperQuestion.getId());
         vo.setPaperId(paperQuestion.getPaperId());

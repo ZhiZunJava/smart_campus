@@ -5,8 +5,7 @@ package com.smart.common.constant;
  * 
  * @author ruoyi
  */
-public class CacheConstants
-{
+public class CacheConstants {
     /**
      * 登录用户 redis key
      */
@@ -41,4 +40,9 @@ public class CacheConstants
      * 登录账户密码错误次数 redis key
      */
     public static final String PWD_ERR_CNT_KEY = "pwd_err_cnt:";
+
+    /**
+     * 扫码登录会话 redis key
+     */
+    public static final String SCAN_LOGIN_KEY = "scan_login:";
 }

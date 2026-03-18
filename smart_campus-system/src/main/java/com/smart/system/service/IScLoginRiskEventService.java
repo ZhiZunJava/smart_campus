@@ -6,10 +6,9 @@ import com.smart.system.domain.ScLoginRiskEvent;
 /**
  * 登录风险事件 Service 接口
  *
- * @author Codex
+ * @author can
  */
-public interface IScLoginRiskEventService
-{
+public interface IScLoginRiskEventService {
     ScLoginRiskEvent selectScLoginRiskEventById(Long id);
 
     List<ScLoginRiskEvent> selectScLoginRiskEventList(ScLoginRiskEvent scLoginRiskEvent);

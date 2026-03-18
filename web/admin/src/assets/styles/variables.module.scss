@@ -17,7 +17,7 @@ $menuHover: rgba(255, 255, 255, 0.08);
 // 浅色主题theme-light
 $menuLightBg: #ffffff;
 $menuLightHover: #eef4ff;
-$menuLightText: #1f2d3d;
+$menuLightText: #314156;
 $menuLightActiveText: #006eff;
 
 // 基础变量
@@ -92,32 +92,33 @@ $--color-info: #737d89;
   --el-color-success: #00893c;
   --el-color-warning: #c45500;
   --el-color-danger: #dc4242;
-  --el-bg-color-page: #ebeef2;
+  --el-bg-color-page: #f4f7fb;
   --el-bg-color: #ffffff;
   --el-bg-color-overlay: #ffffff;
-  --el-fill-color-light: #f4f8ff;
-  --el-fill-color-extra-light: #f8fbff;
-  --el-border-color-light: #dfe7f3;
-  --el-border-color-lighter: #ebf1f8;
-  --el-text-color-primary: rgba(0, 0, 0, .9);
-  --el-text-color-regular: rgba(0, 0, 0, .6);
-  --el-text-color-secondary: rgba(0, 0, 0, .4);
+  --el-fill-color-light: #f6f8fb;
+  --el-fill-color-extra-light: #fafcff;
+  --el-border-color-light: #dde6f0;
+  --el-border-color-lighter: #e8eef5;
+  --el-text-color-primary: #162538;
+  --el-text-color-regular: #465a70;
+  --el-text-color-secondary: #62778f;
 
-  --sidebar-bg: linear-gradient(180deg, #11284c 0%, #0d1d36 100%);
-  --sidebar-text: #d7e3f7;
-  --menu-hover: rgba(255, 255, 255, 0.08);
-  --menu-active-bg: linear-gradient(90deg, #006eff 0%, #2a86ff 100%);
-  --menu-active-shadow: 0 10px 20px rgba(0, 110, 255, 0.22);
+  --sidebar-bg: #ffffff;
+  --sidebar-text: #41546a;
+  --menu-hover: #f2f6fb;
+  --menu-active-bg: #eaf2ff;
+  --menu-active-shadow: none;
+  --menu-active-text: #155fca;
 
-  --navbar-bg: rgba(255, 255, 255, 0.86);
+  --navbar-bg: #ffffff;
   --navbar-text: #1f2d3d;
-  --navbar-hover: #eef4ff;
+  --navbar-hover: #f3f7fb;
 
-  --tags-bg: rgba(255, 255, 255, 0.86);
-  --tags-item-bg: rgba(255, 255, 255, 0.96);
-  --tags-item-border: #dfe7f3;
-  --tags-item-text: #4f5964;
-  --tags-item-hover: #eef4ff;
+  --tags-bg: #ffffff;
+  --tags-item-bg: #ffffff;
+  --tags-item-border: #e1e8f0;
+  --tags-item-text: #617186;
+  --tags-item-hover: #f3f7fb;
   --tags-close-hover: #98a2af;
 }
 
@@ -137,22 +138,23 @@ html.dark {
   --el-fill-color-extra-light: #24303c;
   --el-border-color-light: #303a44;
   --el-border-color-lighter: #3a4653;
-  --el-text-color-primary: rgba(255, 255, 255, .9);
-  --el-text-color-regular: rgba(255, 255, 255, .72);
-  --el-text-color-secondary: rgba(255, 255, 255, .5);
+  --el-text-color-primary: rgba(255, 255, 255, .92);
+  --el-text-color-regular: rgba(255, 255, 255, .78);
+  --el-text-color-secondary: rgba(255, 255, 255, .66);
 
-  --sidebar-bg: linear-gradient(180deg, #0f1724 0%, #0b1320 100%);
+  --sidebar-bg: #0f1724;
   --sidebar-text: rgba(255, 255, 255, .84);
   --menu-hover: rgba(255, 255, 255, 0.06);
-  --menu-active-bg: linear-gradient(90deg, #2684ff 0%, #4a99ff 100%);
-  --menu-active-shadow: 0 10px 20px rgba(38, 132, 255, 0.26);
+  --menu-active-bg: #2684ff;
+  --menu-active-shadow: none;
+  --menu-active-text: #ffffff;
 
-  --navbar-bg: rgba(23, 32, 42, 0.86);
+  --navbar-bg: #17202a;
   --navbar-text: rgba(255, 255, 255, .9);
   --navbar-hover: #24303c;
 
-  --tags-bg: rgba(23, 32, 42, 0.9);
-  --tags-item-bg: rgba(34, 44, 54, 0.96);
+  --tags-bg: #17202a;
+  --tags-item-bg: #222c36;
   --tags-item-border: #3a4653;
   --tags-item-text: rgba(255, 255, 255, 0.82);
   --tags-item-hover: #24303c;

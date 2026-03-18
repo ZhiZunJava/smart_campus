@@ -3,8 +3,7 @@ package com.smart.system.mapper;
 import java.util.List;
 import com.smart.system.domain.ScGrade;
 
-public interface ScGradeMapper
-{
+public interface ScGradeMapper {
     ScGrade selectScGradeByGradeId(Long gradeId);
 
     List<ScGrade> selectScGradeList(ScGrade scGrade);

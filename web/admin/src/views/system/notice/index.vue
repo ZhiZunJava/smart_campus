@@ -1,74 +1,79 @@
 <template>
-   <div class="app-container">
-      <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch">
-         <el-form-item label="公告标题" prop="noticeTitle">
-            <el-input
-               v-model="queryParams.noticeTitle"
-               placeholder="请输入公告标题"
-               clearable
-               style="width: 200px"
-               @keyup.enter="handleQuery"
-            />
-         </el-form-item>
-         <el-form-item label="操作人员" prop="createBy">
-            <el-input
-               v-model="queryParams.createBy"
-               placeholder="请输入操作人员"
-               clearable
-               style="width: 200px"
-               @keyup.enter="handleQuery"
-            />
-         </el-form-item>
-         <el-form-item label="类型" prop="noticeType">
-            <el-select v-model="queryParams.noticeType" placeholder="公告类型" clearable style="width: 200px">
-               <el-option
-                  v-for="dict in sys_notice_type"
-                  :key="dict.value"
-                  :label="dict.label"
-                  :value="dict.value"
-               />
-            </el-select>
-         </el-form-item>
-         <el-form-item>
-            <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
-            <el-button icon="Refresh" @click="resetQuery">重置</el-button>
-         </el-form-item>
-      </el-form>
+   <div class="app-container notice-page">
+      <div class="notice-shell">
+         <div class="notice-shell__toolbar">
+            <div class="notice-shell__headline">
+               <div>
+                  <h2>通知公告</h2>
+                  <p>统一管理系统通知与公告内容，支持筛选、维护与查看发布状态。</p>
+               </div>
+               <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
+            </div>
 
-      <el-row :gutter="10" class="mb8">
-         <el-col :span="1.5">
-            <el-button
-               type="primary"
-               plain
-               icon="Plus"
-               @click="handleAdd"
-               v-hasPermi="['system:notice:add']"
-            >新增</el-button>
-         </el-col>
-         <el-col :span="1.5">
-            <el-button
-               type="success"
-               plain
-               icon="Edit"
-               :disabled="single"
-               @click="handleUpdate"
-               v-hasPermi="['system:notice:edit']"
-            >修改</el-button>
-         </el-col>
-         <el-col :span="1.5">
-            <el-button
-               type="danger"
-               plain
-               icon="Delete"
-               :disabled="multiple"
-               @click="handleDelete"
-               v-hasPermi="['system:notice:remove']"
-            >删除</el-button>
-         </el-col>
-         <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
-      </el-row>
+            <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" class="notice-filter">
+               <el-form-item label="公告标题" prop="noticeTitle">
+                  <el-input
+                     v-model="queryParams.noticeTitle"
+                     placeholder="请输入公告标题"
+                     clearable
+                     style="width: 220px"
+                     @keyup.enter="handleQuery"
+                  />
+               </el-form-item>
+               <el-form-item label="操作人员" prop="createBy">
+                  <el-input
+                     v-model="queryParams.createBy"
+                     placeholder="请输入操作人员"
+                     clearable
+                     style="width: 220px"
+                     @keyup.enter="handleQuery"
+                  />
+               </el-form-item>
+               <el-form-item label="类型" prop="noticeType">
+                  <el-select v-model="queryParams.noticeType" placeholder="公告类型" clearable style="width: 180px">
+                     <el-option
+                        v-for="dict in sys_notice_type"
+                        :key="dict.value"
+                        :label="dict.label"
+                        :value="dict.value"
+                     />
+                  </el-select>
+               </el-form-item>
+               <el-form-item class="notice-filter__actions">
+                  <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
+                  <el-button icon="Refresh" @click="resetQuery">重置</el-button>
+               </el-form-item>
+            </el-form>
 
-      <el-table v-loading="loading" :data="noticeList" @selection-change="handleSelectionChange">
+            <div class="notice-actions">
+               <el-button
+                  type="primary"
+                  plain
+                  icon="Plus"
+                  @click="handleAdd"
+                  v-hasPermi="['system:notice:add']"
+               >新增</el-button>
+               <el-button
+                  type="success"
+                  plain
+                  icon="Edit"
+                  :disabled="single"
+                  @click="handleUpdate"
+                  v-hasPermi="['system:notice:edit']"
+               >修改</el-button>
+               <el-button
+                  type="danger"
+                  plain
+                  icon="Delete"
+                  :disabled="multiple"
+                  @click="handleDelete"
+                  v-hasPermi="['system:notice:remove']"
+               >删除</el-button>
+            </div>
+         </div>
+
+         <div class="notice-shell__table">
+            <el-table v-loading="loading" :data="noticeList" @selection-change="handleSelectionChange">
          <el-table-column type="selection" width="55" align="center" />
          <el-table-column label="序号" align="center" prop="noticeId" width="100" />
          <el-table-column
@@ -99,15 +104,17 @@
                <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['system:notice:remove']" >删除</el-button>
             </template>
          </el-table-column>
-      </el-table>
+            </el-table>
 
-      <pagination
-         v-show="total > 0"
-         :total="total"
-         v-model:page="queryParams.pageNum"
-         v-model:limit="queryParams.pageSize"
-         @pagination="getList"
-      />
+            <pagination
+               v-show="total > 0"
+               :total="total"
+               v-model:page="queryParams.pageNum"
+               v-model:limit="queryParams.pageSize"
+               @pagination="getList"
+            />
+         </div>
+      </div>
 
       <!-- 添加或修改公告对话框 -->
       <el-dialog :title="title" v-model="open" width="780px" append-to-body>
@@ -291,3 +298,107 @@ function handleDelete(row?: SysNotice) {
 
 getList()
 </script>
+
+<style scoped>
+.notice-page {
+  padding-top: 12px;
+}
+
+.notice-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.notice-shell__toolbar,
+.notice-shell__table {
+  border-radius: 18px;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-lighter);
+  box-shadow: 0 18px 36px rgba(148, 163, 184, 0.12);
+}
+
+.notice-shell__toolbar {
+  padding: 18px 20px 14px;
+}
+
+.notice-shell__headline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.notice-shell__headline h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--el-text-color-primary);
+}
+
+.notice-shell__headline p {
+  margin: 6px 0 0;
+  color: var(--el-text-color-regular);
+  font-size: 13px;
+}
+
+.notice-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+
+.notice-filter :deep(.el-form-item) {
+  margin-bottom: 10px;
+}
+
+.notice-filter__actions :deep(.el-button) {
+  min-width: 92px;
+}
+
+.notice-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.notice-shell__table {
+  padding: 14px 16px 8px;
+}
+
+.notice-shell__table :deep(.el-table) {
+  --el-table-border-color: var(--el-border-color-lighter);
+  --el-table-header-bg-color: var(--el-fill-color-extra-light);
+  --el-table-row-hover-bg-color: var(--el-color-primary-light-8);
+}
+
+.notice-shell__table :deep(.el-table th.el-table__cell) {
+  font-weight: 700;
+  color: var(--el-text-color-primary);
+}
+
+.notice-shell__table :deep(.el-table td.el-table__cell) {
+  color: var(--el-text-color-regular);
+}
+
+.notice-shell__table :deep(.pagination-container) {
+  padding: 18px 0 6px;
+}
+
+@media (max-width: 992px) {
+  .notice-shell__headline {
+    flex-direction: column;
+  }
+
+  .notice-actions {
+    flex-wrap: wrap;
+  }
+}
+
+html.dark .notice-shell__toolbar,
+html.dark .notice-shell__table {
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.18);
+}
+</style>

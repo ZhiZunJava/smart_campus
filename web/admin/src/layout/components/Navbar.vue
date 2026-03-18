@@ -154,7 +154,7 @@ async function toggleTheme(event?: MouseEvent): Promise<void> {
   position: relative;
   background: var(--navbar-bg);
   border-bottom: 1px solid var(--el-border-color-lighter);
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
   display: flex;
   align-items: center;
   padding: 0 12px 0 8px;
@@ -175,7 +175,7 @@ async function toggleTheme(event?: MouseEvent): Promise<void> {
     margin-right: 8px;
 
     &:hover {
-      background: var(--el-fill-color-light);
+      background: color-mix(in srgb, var(--el-color-primary) 8%, var(--el-fill-color-light));
     }
   }
 
@@ -224,7 +224,7 @@ async function toggleTheme(event?: MouseEvent): Promise<void> {
         transition: all 0.3s;
 
         &:hover {
-          background: var(--el-fill-color-light);
+          background: color-mix(in srgb, var(--el-color-primary) 8%, var(--el-fill-color-light));
           color: var(--el-color-primary);
         }
       }
@@ -255,7 +255,7 @@ async function toggleTheme(event?: MouseEvent): Promise<void> {
         width: 34px;
         height: 34px;
         border-radius: 50%;
-        border: 2px solid rgba(0, 110, 255, 0.15);
+        border: 2px solid color-mix(in srgb, var(--el-color-primary) 18%, transparent);
       }
 
       .user-nickname {

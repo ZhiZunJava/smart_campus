@@ -3,30 +3,25 @@ package com.smart.system.domain.dto;
 /**
  * AI 模型测试请求 DTO
  *
- * @author Codex
+ * @author can
  */
-public class AiModelTestDto
-{
+public class AiModelTestDto {
     private Long modelId;
     private String prompt;
 
-    public Long getModelId()
-    {
+    public Long getModelId() {
         return modelId;
     }
 
-    public void setModelId(Long modelId)
-    {
+    public void setModelId(Long modelId) {
         this.modelId = modelId;
     }
 
-    public String getPrompt()
-    {
+    public String getPrompt() {
         return prompt;
     }
 
-    public void setPrompt(String prompt)
-    {
+    public void setPrompt(String prompt) {
         this.prompt = prompt;
     }
 }

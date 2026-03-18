@@ -1,59 +1,72 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper
-PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.smart.system.mapper.ScLearningProfileMapper">
     <resultMap type="ScLearningProfile" id="ScLearningProfileResult">
-        <id property="profileId" column="profile_id"/>
-        <result property="userId" column="user_id"/>
-        <result property="courseId" column="course_id"/>
-        <result property="abilityLevel" column="ability_level"/>
-        <result property="concentrationScore" column="concentration_score"/>
-        <result property="activeScore" column="active_score"/>
-        <result property="masteryScore" column="mastery_score"/>
-        <result property="interestScore" column="interest_score"/>
-        <result property="riskScore" column="risk_score"/>
-        <result property="profileVersion" column="profile_version"/>
-        <result property="featureJson" column="feature_json"/>
-        <result property="lastCalculatedTime" column="last_calculated_time"/>
-        <result property="createTime" column="create_time"/>
-        <result property="updateTime" column="update_time"/>
+        <id property="profileId" column="profile_id" />
+        <result property="userId" column="user_id" />
+        <result property="courseId" column="course_id" />
+        <result property="abilityLevel" column="ability_level" />
+        <result property="concentrationScore" column="concentration_score" />
+        <result property="activeScore" column="active_score" />
+        <result property="masteryScore" column="mastery_score" />
+        <result property="interestScore" column="interest_score" />
+        <result property="riskScore" column="risk_score" />
+        <result property="profileVersion" column="profile_version" />
+        <result property="featureJson" column="feature_json" />
+        <result property="lastCalculatedTime" column="last_calculated_time" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
     </resultMap>
-    <sql id="selectScLearningProfileVo">
-        select profile_id, user_id, course_id, ability_level, concentration_score, active_score, mastery_score, interest_score, risk_score, profile_version, feature_json, last_calculated_time, create_time, update_time from sc_learning_profile
-    </sql>
-    <select id="selectScLearningProfileByProfileId" parameterType="Long" resultMap="ScLearningProfileResult"><include refid="selectScLearningProfileVo"/> where profile_id = #{profileId}</select>
-    <select id="selectScLearningProfileList" parameterType="ScLearningProfile" resultMap="ScLearningProfileResult">
-        <include refid="selectScLearningProfileVo"/>
+    <sql id="selectScLearningProfileVo"> select profile_id, user_id, course_id, ability_level,
+        concentration_score, active_score, mastery_score, interest_score, risk_score,
+        profile_version, feature_json, last_calculated_time, create_time, update_time from
+        sc_learning_profile </sql>
+    <select id="selectScLearningProfileByProfileId" parameterType="Long"
+        resultMap="ScLearningProfileResult"><include refid="selectScLearningProfileVo" /> where
+        profile_id = #{profileId}</select>
+    <select id="selectScLearningProfileList" parameterType="ScLearningProfile"
+        resultMap="ScLearningProfileResult">
+        <include refid="selectScLearningProfileVo" />
         <where>
             <if test="userId != null">and user_id = #{userId}</if>
-            <if test="courseId != null">and course_id = #{courseId}</if>
-            <if test="abilityLevel != null and abilityLevel != ''">and ability_level = #{abilityLevel}</if>
-        </where>
-        order by profile_id desc
-    </select>
-    <insert id="insertScLearningProfile" parameterType="ScLearningProfile" useGeneratedKeys="true" keyProperty="profileId">
-        insert into sc_learning_profile(user_id, course_id, ability_level, concentration_score, active_score, mastery_score, interest_score, risk_score, profile_version, feature_json, last_calculated_time, create_time, update_time)
-        values(#{userId}, #{courseId}, #{abilityLevel}, #{concentrationScore}, #{activeScore}, #{masteryScore}, #{interestScore}, #{riskScore}, #{profileVersion}, #{featureJson}, #{lastCalculatedTime}, sysdate(), sysdate())
-    </insert>
-    <update id="updateScLearningProfile" parameterType="ScLearningProfile">
-        update sc_learning_profile
-        <set>
+            <if test="courseId != null">and
+        course_id = #{courseId}</if>
+            <if test="abilityLevel != null and abilityLevel != ''">and
+        ability_level = #{abilityLevel}</if>
+        </where> order by profile_id desc </select>
+    <insert id="insertScLearningProfile" parameterType="ScLearningProfile" useGeneratedKeys="true"
+        keyProperty="profileId"> insert into sc_learning_profile(user_id, course_id, ability_level,
+        concentration_score, active_score, mastery_score, interest_score, risk_score,
+        profile_version, feature_json, last_calculated_time, create_time, update_time)
+        values(#{userId}, #{courseId}, #{abilityLevel}, #{concentrationScore}, #{activeScore},
+        #{masteryScore}, #{interestScore}, #{riskScore}, #{profileVersion}, #{featureJson},
+        #{lastCalculatedTime}, sysdate(), sysdate()) </insert>
+    <update id="updateScLearningProfile" parameterType="ScLearningProfile"> update
+        sc_learning_profile <set>
             <if test="userId != null">user_id = #{userId},</if>
-            <if test="courseId != null">course_id = #{courseId},</if>
+            <if test="courseId != null">course_id
+        = #{courseId},</if>
             <if test="abilityLevel != null">ability_level = #{abilityLevel},</if>
-            <if test="concentrationScore != null">concentration_score = #{concentrationScore},</if>
-            <if test="activeScore != null">active_score = #{activeScore},</if>
-            <if test="masteryScore != null">mastery_score = #{masteryScore},</if>
-            <if test="interestScore != null">interest_score = #{interestScore},</if>
-            <if test="riskScore != null">risk_score = #{riskScore},</if>
-            <if test="profileVersion != null">profile_version = #{profileVersion},</if>
-            <if test="featureJson != null">feature_json = #{featureJson},</if>
-            <if test="lastCalculatedTime != null">last_calculated_time = #{lastCalculatedTime},</if>
-            update_time = sysdate()
-        </set>
-        where profile_id = #{profileId}
-    </update>
-    <delete id="deleteScLearningProfileByProfileId" parameterType="Long">delete from sc_learning_profile where profile_id = #{profileId}</delete>
-    <delete id="deleteScLearningProfileByProfileIds" parameterType="Long">delete from sc_learning_profile where profile_id in <foreach item="profileId" collection="array" open="(" separator="," close=")">#{profileId}</foreach></delete>
+            <if
+                test="concentrationScore != null">concentration_score = #{concentrationScore},</if>
+            <if
+                test="activeScore != null">active_score = #{activeScore},</if>
+            <if
+                test="masteryScore != null">mastery_score = #{masteryScore},</if>
+            <if
+                test="interestScore != null">interest_score = #{interestScore},</if>
+            <if
+                test="riskScore != null">risk_score = #{riskScore},</if>
+            <if
+                test="profileVersion != null">profile_version = #{profileVersion},</if>
+            <if
+                test="featureJson != null">feature_json = #{featureJson},</if>
+            <if
+                test="lastCalculatedTime != null">last_calculated_time = #{lastCalculatedTime},</if>
+        update_time = sysdate() </set> where profile_id = #{profileId} </update>
+    <delete id="deleteScLearningProfileByProfileId" parameterType="Long">delete from
+        sc_learning_profile where profile_id = #{profileId}</delete>
+    <delete id="deleteScLearningProfileByProfileIds" parameterType="Long">delete from
+        sc_learning_profile where profile_id in <foreach item="profileId" collection="array"
+            open="(" separator="," close=")">#{profileId}</foreach></delete>
 </mapper>

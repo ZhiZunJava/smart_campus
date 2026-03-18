@@ -34,3 +34,29 @@ export function getCodeImg() {
     timeout: 20000,
   })
 }
+
+export function createScanLoginSession(clientBaseUrl: string) {
+  return request({
+    url: '/scan-login/session',
+    method: 'post',
+    headers: { isToken: false },
+    data: { clientBaseUrl },
+  })
+}
+
+export function getScanLoginStatus(ticket: string) {
+  return request({
+    url: `/scan-login/status/${ticket}`,
+    method: 'get',
+    headers: { isToken: false },
+  })
+}
+
+export function confirmScanLogin(data: { ticket: string; username?: string; password?: string; code?: string; uuid?: string }) {
+  return request({
+    url: '/scan-login/confirm',
+    method: 'post',
+    headers: { isToken: false },
+    data,
+  })
+}

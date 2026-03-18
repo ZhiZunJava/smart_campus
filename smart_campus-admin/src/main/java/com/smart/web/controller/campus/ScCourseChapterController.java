@@ -15,15 +15,13 @@ import com.smart.system.service.IScCourseChapterService;
 
 @RestController
 @RequestMapping("/campus/courseChapter")
-public class ScCourseChapterController extends BaseController
-{
+public class ScCourseChapterController extends BaseController {
     @Autowired
     private IScCourseChapterService scCourseChapterService;
 
     @PreAuthorize("@ss.hasPermi('campus:courseChapter:list')")
     @GetMapping("/list")
-    public TableDataInfo list(ScCourseChapter scCourseChapter)
-    {
+    public TableDataInfo list(ScCourseChapter scCourseChapter) {
         startPage();
         List<ScCourseChapter> list = scCourseChapterService.selectScCourseChapterList(scCourseChapter);
         return getDataTable(list);
@@ -31,16 +29,14 @@ public class ScCourseChapterController extends BaseController
 
     @PreAuthorize("@ss.hasPermi('campus:courseChapter:query')")
     @GetMapping(value = "/{chapterId}")
-    public AjaxResult getInfo(@PathVariable Long chapterId)
-    {
+    public AjaxResult getInfo(@PathVariable Long chapterId) {
         return success(scCourseChapterService.selectScCourseChapterByChapterId(chapterId));
     }
 
     @PreAuthorize("@ss.hasPermi('campus:courseChapter:add')")
     @Log(title = "课程章节", businessType = BusinessType.INSERT)
     @PostMapping
-    public AjaxResult add(@Validated @RequestBody ScCourseChapter scCourseChapter)
-    {
+    public AjaxResult add(@Validated @RequestBody ScCourseChapter scCourseChapter) {
         scCourseChapter.setCreateBy(getUsername());
         return toAjax(scCourseChapterService.insertScCourseChapter(scCourseChapter));
     }
@@ -48,8 +44,7 @@ public class ScCourseChapterController extends BaseController
     @PreAuthorize("@ss.hasPermi('campus:courseChapter:edit')")
     @Log(title = "课程章节", businessType = BusinessType.UPDATE)
     @PutMapping
-    public AjaxResult edit(@Validated @RequestBody ScCourseChapter scCourseChapter)
-    {
+    public AjaxResult edit(@Validated @RequestBody ScCourseChapter scCourseChapter) {
         scCourseChapter.setUpdateBy(getUsername());
         return toAjax(scCourseChapterService.updateScCourseChapter(scCourseChapter));
     }
@@ -57,8 +52,7 @@ public class ScCourseChapterController extends BaseController
     @PreAuthorize("@ss.hasPermi('campus:courseChapter:remove')")
     @Log(title = "课程章节", businessType = BusinessType.DELETE)
     @DeleteMapping("/{chapterIds}")
-    public AjaxResult remove(@PathVariable Long[] chapterIds)
-    {
+    public AjaxResult remove(@PathVariable Long[] chapterIds) {
         return toAjax(scCourseChapterService.deleteScCourseChapterByChapterIds(chapterIds));
     }
 }

@@ -9,10 +9,9 @@ import com.smart.common.core.domain.BaseEntity;
 /**
  * 学情报告对象 sc_learning_report
  *
- * @author Codex
+ * @author can
  */
-public class ScLearningReport extends BaseEntity
-{
+public class ScLearningReport extends BaseEntity {
     private static final long serialVersionUID = 1L;
 
     private Long reportId;
@@ -24,29 +23,63 @@ public class ScLearningReport extends BaseEntity
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date generateTime;
 
-    public Long getReportId() { return reportId; }
-    public void setReportId(Long reportId) { this.reportId = reportId; }
-    public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
-    public String getReportType() { return reportType; }
-    public void setReportType(String reportType) { this.reportType = reportType; }
-    public String getReportContent() { return reportContent; }
-    public void setReportContent(String reportContent) { this.reportContent = reportContent; }
-    public String getReportJson() { return reportJson; }
-    public void setReportJson(String reportJson) { this.reportJson = reportJson; }
-    public Date getGenerateTime() { return generateTime; }
-    public void setGenerateTime(Date generateTime) { this.generateTime = generateTime; }
+    public Long getReportId() {
+        return reportId;
+    }
+
+    public void setReportId(Long reportId) {
+        this.reportId = reportId;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
+    public String getReportType() {
+        return reportType;
+    }
+
+    public void setReportType(String reportType) {
+        this.reportType = reportType;
+    }
+
+    public String getReportContent() {
+        return reportContent;
+    }
+
+    public void setReportContent(String reportContent) {
+        this.reportContent = reportContent;
+    }
+
+    public String getReportJson() {
+        return reportJson;
+    }
+
+    public void setReportJson(String reportJson) {
+        this.reportJson = reportJson;
+    }
+
+    public Date getGenerateTime() {
+        return generateTime;
+    }
+
+    public void setGenerateTime(Date generateTime) {
+        this.generateTime = generateTime;
+    }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         return new ToStringBuilder(this, ToStringStyle.MULTI_LINE_STYLE)
-            .append("reportId", getReportId())
-            .append("userId", getUserId())
-            .append("reportType", getReportType())
-            .append("reportContent", getReportContent())
-            .append("reportJson", getReportJson())
-            .append("generateTime", getGenerateTime())
-            .toString();
+                .append("reportId", getReportId())
+                .append("userId", getUserId())
+                .append("reportType", getReportType())
+                .append("reportContent", getReportContent())
+                .append("reportJson", getReportJson())
+                .append("generateTime", getGenerateTime())
+                .toString();
     }
 }

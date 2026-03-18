@@ -1,19 +1,34 @@
-<?xml version="1.0" encoding="UTF-8" ?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.smart.system.mapper.ScQaFeedbackMapper">
   <resultMap type="ScQaFeedback" id="ScQaFeedbackResult">
-    <id property="id" column="id"/>
-    <result property="messageId" column="message_id"/>
-    <result property="userId" column="user_id"/>
-    <result property="feedbackType" column="feedback_type"/>
-    <result property="feedbackContent" column="feedback_content"/>
-    <result property="createTime" column="create_time"/>
+    <id property="id" column="id" />
+    <result property="messageId" column="message_id" />
+    <result property="userId" column="user_id" />
+    <result property="feedbackType" column="feedback_type" />
+    <result property="feedbackContent" column="feedback_content" />
+    <result property="createTime" column="create_time" />
   </resultMap>
-  <sql id="selectScQaFeedbackVo">select id, message_id, user_id, feedback_type, feedback_content, create_time from sc_qa_feedback</sql>
-  <select id="selectScQaFeedbackById" parameterType="Long" resultMap="ScQaFeedbackResult"><include refid="selectScQaFeedbackVo"/> where id = #{id}</select>
-  <select id="selectScQaFeedbackList" parameterType="ScQaFeedback" resultMap="ScQaFeedbackResult"><include refid="selectScQaFeedbackVo"/><where><if test="messageId != null">and message_id = #{messageId}</if><if test="userId != null">and user_id = #{userId}</if><if test="feedbackType != null and feedbackType != ''">and feedback_type = #{feedbackType}</if></where> order by id desc</select>
-  <insert id="insertScQaFeedback" parameterType="ScQaFeedback" useGeneratedKeys="true" keyProperty="id">insert into sc_qa_feedback(message_id, user_id, feedback_type, feedback_content, create_time) values(#{messageId}, #{userId}, #{feedbackType}, #{feedbackContent}, sysdate())</insert>
-  <update id="updateScQaFeedback" parameterType="ScQaFeedback">update sc_qa_feedback <set><if test="messageId != null">message_id = #{messageId},</if><if test="userId != null">user_id = #{userId},</if><if test="feedbackType != null">feedback_type = #{feedbackType},</if><if test="feedbackContent != null">feedback_content = #{feedbackContent},</if></set> where id = #{id}</update>
-  <delete id="deleteScQaFeedbackById" parameterType="Long">delete from sc_qa_feedback where id = #{id}</delete>
-  <delete id="deleteScQaFeedbackByIds" parameterType="Long">delete from sc_qa_feedback where id in <foreach item="id" collection="array" open="(" separator="," close=")">#{id}</foreach></delete>
+  <sql id="selectScQaFeedbackVo">select id, message_id, user_id, feedback_type, feedback_content,
+    create_time from sc_qa_feedback</sql>
+  <select id="selectScQaFeedbackById" parameterType="Long" resultMap="ScQaFeedbackResult"><include
+      refid="selectScQaFeedbackVo" /> where id = #{id}</select>
+  <select id="selectScQaFeedbackList" parameterType="ScQaFeedback" resultMap="ScQaFeedbackResult"><include
+      refid="selectScQaFeedbackVo" /><where><if test="messageId != null">and message_id =
+    #{messageId}</if><if test="userId != null">and user_id = #{userId}</if><if
+        test="feedbackType != null and feedbackType != ''">and feedback_type = #{feedbackType}</if></where>
+    order by id desc</select>
+  <insert id="insertScQaFeedback" parameterType="ScQaFeedback" useGeneratedKeys="true"
+    keyProperty="id">insert into sc_qa_feedback(message_id, user_id, feedback_type,
+    feedback_content, create_time) values(#{messageId}, #{userId}, #{feedbackType},
+    #{feedbackContent}, sysdate())</insert>
+  <update id="updateScQaFeedback" parameterType="ScQaFeedback">update sc_qa_feedback <set><if
+        test="messageId != null">message_id = #{messageId},</if><if test="userId != null">user_id =
+    #{userId},</if><if test="feedbackType != null">feedback_type = #{feedbackType},</if><if
+        test="feedbackContent != null">feedback_content = #{feedbackContent},</if></set> where id =
+    #{id}</update>
+  <delete id="deleteScQaFeedbackById" parameterType="Long">delete from sc_qa_feedback where id =
+    #{id}</delete>
+  <delete id="deleteScQaFeedbackByIds" parameterType="Long">delete from sc_qa_feedback where id in <foreach
+      item="id" collection="array" open="(" separator="," close=")">#{id}</foreach></delete>
 </mapper>

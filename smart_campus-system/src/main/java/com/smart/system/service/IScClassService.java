@@ -3,8 +3,7 @@ package com.smart.system.service;
 import java.util.List;
 import com.smart.system.domain.ScClass;
 
-public interface IScClassService
-{
+public interface IScClassService {
     ScClass selectScClassByClassId(Long classId);
 
     List<ScClass> selectScClassList(ScClass scClass);

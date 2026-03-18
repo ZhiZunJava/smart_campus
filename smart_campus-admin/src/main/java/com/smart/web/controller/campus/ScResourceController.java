@@ -15,32 +15,28 @@ import com.smart.system.service.IScResourceService;
 
 @RestController
 @RequestMapping("/campus/resource")
-public class ScResourceController extends BaseController
-{
+public class ScResourceController extends BaseController {
     @Autowired
     private IScResourceService scResourceService;
 
-    @PreAuthorize("@ss.hasPermi('campus:resource:list')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/list")
-    public TableDataInfo list(ScResource scResource)
-    {
+    public TableDataInfo list(ScResource scResource) {
         startPage();
         List<ScResource> list = scResourceService.selectScResourceList(scResource);
         return getDataTable(list);
     }
 
-    @PreAuthorize("@ss.hasPermi('campus:resource:query')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping(value = "/{resourceId}")
-    public AjaxResult getInfo(@PathVariable Long resourceId)
-    {
+    public AjaxResult getInfo(@PathVariable Long resourceId) {
         return success(scResourceService.selectScResourceByResourceId(resourceId));
     }
 
     @PreAuthorize("@ss.hasPermi('campus:resource:add')")
     @Log(title = "学习资源", businessType = BusinessType.INSERT)
     @PostMapping
-    public AjaxResult add(@Validated @RequestBody ScResource scResource)
-    {
+    public AjaxResult add(@Validated @RequestBody ScResource scResource) {
         scResource.setCreateBy(getUsername());
         return toAjax(scResourceService.insertScResource(scResource));
     }
@@ -48,8 +44,7 @@ public class ScResourceController extends BaseController
     @PreAuthorize("@ss.hasPermi('campus:resource:edit')")
     @Log(title = "学习资源", businessType = BusinessType.UPDATE)
     @PutMapping
-    public AjaxResult edit(@Validated @RequestBody ScResource scResource)
-    {
+    public AjaxResult edit(@Validated @RequestBody ScResource scResource) {
         scResource.setUpdateBy(getUsername());
         return toAjax(scResourceService.updateScResource(scResource));
     }
@@ -57,8 +52,7 @@ public class ScResourceController extends BaseController
     @PreAuthorize("@ss.hasPermi('campus:resource:remove')")
     @Log(title = "学习资源", businessType = BusinessType.DELETE)
     @DeleteMapping("/{resourceIds}")
-    public AjaxResult remove(@PathVariable Long[] resourceIds)
-    {
+    public AjaxResult remove(@PathVariable Long[] resourceIds) {
         return toAjax(scResourceService.deleteScResourceByResourceIds(resourceIds));
     }
 }

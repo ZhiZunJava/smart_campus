@@ -1,78 +1,113 @@
 <template>
-  <div class="portal-auth-page">
+  <main class="portal-auth-page">
     <PortalTopBar
       :menu-items="topMenus"
       :active-path="activeMenu"
       :selected-role="selectedRole"
       :role-options-override="publicRoleOptions"
-      :show-menu="true"
+      :show-menu="false"
       :show-role-switch="true"
       :show-auth-action="true"
       :show-user-panel="false"
       @role-change="handleRoleChange"
     />
 
-    <section class="portal-auth-wrap">
-      <div class="portal-auth-card">
-        <div class="portal-auth-card__visual">
-          <div class="portal-auth-card__badge">统一身份认证</div>
-          <h2>智慧校园统一门户</h2>
-          <p>面向学生、教师、家长与管理员的统一入口，支持按角色进入不同服务视图。</p>
-          <div class="portal-auth-card__illustration">
-            <div class="circle one"></div>
-            <div class="circle two"></div>
-            <div class="screen">
-              <div class="screen__header"></div>
-              <div class="screen__body"></div>
+    <section class="portal-auth-shell">
+      <section class="auth-card">
+        <div class="auth-card__top">
+          <div>
+            <div class="auth-card__eyebrow">Campus Access</div>
+            <h1>账号登录</h1>
+            <p>统一登录入口，登录后将根据当前角色设置进入对应工作台。</p>
+          </div>
+          <router-link class="auth-card__link" to="/register">注册</router-link>
+        </div>
+
+        <div class="auth-card__hint">
+          当前将优先进入 {{ currentRoleLabel }}
+        </div>
+
+        <div class="auth-mode-tabs" role="tablist" aria-label="登录方式切换">
+          <button
+            type="button"
+            :class="{ active: loginMode === 'account' }"
+            role="tab"
+            :aria-selected="loginMode === 'account'"
+            @click="loginMode = 'account'"
+          >
+            账号登录
+          </button>
+          <button
+            type="button"
+            :class="{ active: loginMode === 'scan' }"
+            role="tab"
+            :aria-selected="loginMode === 'scan'"
+            @click="loginMode = 'scan'"
+          >
+            扫码登录
+          </button>
+        </div>
+
+        <transition name="auth-panel" mode="out-in">
+          <div v-if="loginMode === 'account'" key="account" class="auth-card__body">
+            <el-form :model="form" label-position="top" class="login-form" @keyup.enter="handleLogin">
+              <el-form-item label="账号">
+                <el-input v-model="form.username" clearable autocomplete="username" placeholder="请输入账号" />
+              </el-form-item>
+              <el-form-item label="密码">
+                <el-input v-model="form.password" autocomplete="current-password" type="password" show-password placeholder="请输入密码" />
+              </el-form-item>
+              <el-form-item v-if="userStore.captchaEnabled" label="验证码">
+                <div class="captcha-row">
+                  <el-input v-model="form.code" clearable inputmode="numeric" placeholder="验证码" />
+                  <img class="captcha-img" :src="userStore.codeUrl" alt="验证码" @click="refreshCaptcha" />
+                </div>
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" class="login-btn" :loading="loading" @click="handleLogin">登录</el-button>
+              </el-form-item>
+            </el-form>
+          </div>
+
+          <div v-else key="scan" class="scan-panel">
+            <div class="scan-panel__code">
+              <img v-if="scanQrCode" class="scan-panel__image" :src="scanQrCode" alt="扫码登录二维码" />
+              <div v-else class="scan-panel__pixels"></div>
             </div>
+            <h3>校园 App 扫码</h3>
+            <p>使用手机扫描二维码，打开确认页并完成登录授权。</p>
+            <div class="scan-panel__status">{{ scanStatusText }}</div>
+            <el-button plain class="scan-panel__refresh" :loading="scanLoading" @click="startScanLogin">刷新二维码</el-button>
           </div>
+        </transition>
+
+        <div class="auth-card__footer">
+          <span>还没有账号？</span>
+          <router-link to="/register">立即注册</router-link>
         </div>
-
-        <div class="portal-auth-card__form">
-          <div class="form-title">统一身份认证登录</div>
-          <div class="form-tabs">
-            <button type="button" class="active">账号登录</button>
-            <button type="button">扫码登录</button>
-          </div>
-
-          <el-form :model="form" class="login-form" @keyup.enter="handleLogin">
-            <el-form-item>
-              <el-input v-model="form.username" placeholder="请输入账号" size="large" />
-            </el-form-item>
-            <el-form-item>
-              <el-input v-model="form.password" type="password" show-password placeholder="请输入密码" size="large" />
-            </el-form-item>
-            <el-form-item v-if="userStore.captchaEnabled">
-              <div class="captcha-row">
-                <el-input v-model="form.code" placeholder="请输入验证码" size="large" />
-                <img class="captcha-img" :src="userStore.codeUrl" @click="refreshCaptcha" />
-              </div>
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" size="large" class="login-btn" :loading="loading" @click="handleLogin">登录</el-button>
-            </el-form-item>
-          </el-form>
-
-          <div class="login-bottom">
-            <span>将按右上角角色偏好进入对应门户</span>
-            <router-link to="/register">立即注册</router-link>
-          </div>
-        </div>
-      </div>
+      </section>
     </section>
-  </div>
+  </main>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import PortalTopBar from '@/components/PortalTopBar.vue'
 import usePortalUserStore from '@/store/user'
+import loginBackground from '@/assets/img/login-background.jpg'
+import { createScanLoginSession, getScanLoginStatus } from '@/api/auth'
 
 const router = useRouter()
 const userStore = usePortalUserStore()
 const loading = ref(false)
+const loginMode = ref<'account' | 'scan'>('account')
+const scanLoading = ref(false)
+const scanTicket = ref('')
+const scanQrCode = ref('')
+const scanStatusText = ref('请使用移动设备扫描二维码')
+let scanPollTimer: number | null = null
 const form = reactive({ username: 'admin', password: 'admin123', code: '' })
 const topMenus = [
   { title: '智慧校园', path: '/login' },
@@ -85,6 +120,8 @@ const publicRoleOptions = [
 ]
 const activeMenu = ref('/login')
 const selectedRole = ref(userStore.preferredPortalRole)
+const currentRoleLabel = computed(() => publicRoleOptions.find((item) => item.value === selectedRole.value)?.label || '学生端')
+const authBackground = `url(${loginBackground})`
 
 function resolveRoleHome() {
   const role = userStore.preferredPortalRole
@@ -93,6 +130,58 @@ function resolveRoleHome() {
 
 async function refreshCaptcha() {
   await userStore.loadCaptcha()
+}
+
+async function startScanLogin() {
+  if (scanLoading.value) return
+  scanLoading.value = true
+  scanStatusText.value = '正在生成二维码...'
+  try {
+    const res = await createScanLoginSession(window.location.origin)
+    scanTicket.value = res.ticket || ''
+    scanQrCode.value = res.qrCode || ''
+    scanStatusText.value = '请使用手机扫码并在移动端确认登录'
+    beginScanPolling()
+  } finally {
+    scanLoading.value = false
+  }
+}
+
+function stopScanPolling() {
+  if (scanPollTimer) {
+    window.clearInterval(scanPollTimer)
+    scanPollTimer = null
+  }
+}
+
+function beginScanPolling() {
+  stopScanPolling()
+  if (!scanTicket.value) return
+  scanPollTimer = window.setInterval(async () => {
+    try {
+      const res = await getScanLoginStatus(scanTicket.value)
+      const status = res.status || 'PENDING'
+      if (status === 'CONFIRMED' && res.token) {
+        stopScanPolling()
+        userStore.acceptToken(res.token)
+        await userStore.loadUserInfo()
+        await router.replace(resolveRoleHome())
+        ElMessage.success('扫码登录成功')
+        return
+      }
+      if (status === 'EXPIRED') {
+        stopScanPolling()
+        scanStatusText.value = '二维码已过期，请刷新后重新扫码'
+        return
+      }
+      if (res.username) {
+        scanStatusText.value = `已扫码，等待 ${res.username} 确认登录`
+      }
+    } catch {
+      stopScanPolling()
+      scanStatusText.value = '扫码状态获取失败，请重新生成二维码'
+    }
+  }, 2000)
 }
 
 function handleRoleChange(role: string) {
@@ -124,15 +213,364 @@ onMounted(async () => {
   selectedRole.value = userStore.preferredPortalRole
   await refreshCaptcha()
 })
+
+watch(loginMode, async (mode) => {
+  if (mode === 'scan') {
+    await startScanLogin()
+  } else {
+    stopScanPolling()
+  }
+})
+
+onBeforeUnmount(() => {
+  stopScanPolling()
+})
 </script>
 
 <style scoped>
-.portal-auth-page{min-height:100vh;background:#f3f5f8}
-.portal-auth-wrap{padding:48px 24px 30px;display:flex;justify-content:center}.portal-auth-card{width:920px;max-width:100%;display:grid;grid-template-columns:1.05fr .8fr;background:rgba(255,255,255,.98);border-radius:12px;overflow:hidden;box-shadow:0 18px 42px rgba(15,35,66,.08);border:1px solid #edf1f6}
-.portal-auth-card__visual{padding:42px 48px;background:linear-gradient(180deg,#f8fbff 0%,#f5f8fd 100%)}.portal-auth-card__badge{display:inline-flex;padding:6px 12px;border-radius:999px;background:#eaf3ff;color:#2c86ff;font-size:12px;font-weight:700}.portal-auth-card__visual h2{margin:20px 0 12px;font-size:34px;color:#1a2d4d}.portal-auth-card__visual p{margin:0;color:#728199;line-height:1.9}
-.portal-auth-card__illustration{position:relative;height:310px;margin-top:26px;border-radius:24px;background:linear-gradient(135deg,#eef5ff 0%,#f8fbff 100%);overflow:hidden}.circle{position:absolute;border-radius:50%}.circle.one{width:220px;height:220px;left:36px;top:44px;background:rgba(44,134,255,.12)}.circle.two{width:140px;height:140px;right:42px;bottom:36px;background:rgba(48,195,142,.14)}.screen{position:absolute;left:88px;top:54px;width:330px;height:210px;border-radius:18px;background:#0d3558;box-shadow:0 18px 32px rgba(13,53,88,.18)}.screen__header{height:28px;border-radius:18px 18px 0 0;background:#123f67}.screen__body{margin:22px;background:linear-gradient(180deg,#d6ebff 0%,#f6fbff 100%);height:138px;border-radius:14px}
-.portal-auth-card__form{padding:52px 52px 40px}.form-title{font-size:34px;color:#26354f;text-align:center}.form-tabs{display:flex;justify-content:center;gap:30px;margin:28px 0 24px}.form-tabs button{border:none;background:transparent;font-size:18px;color:#60728c;cursor:pointer;padding-bottom:8px}.form-tabs button.active{color:#2c86ff;border-bottom:2px solid #2c86ff}
-.login-form :deep(.el-input__wrapper){min-height:46px;background:#f5f7fb;box-shadow:none;border:1px solid transparent}.login-form :deep(.el-input__wrapper.is-focus){border-color:#b6d6ff;box-shadow:none}.captcha-row{display:grid;grid-template-columns:1fr 118px;gap:12px;width:100%}.captcha-img{width:118px;height:46px;border-radius:8px;border:1px solid #e4ebf5;cursor:pointer}.login-btn{width:100%;height:46px;border-radius:24px}
-.login-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:16px;color:#7d8ba0;font-size:13px}.login-bottom a{color:#2c86ff;text-decoration:none}
-@media (max-width: 980px){.portal-auth-card{grid-template-columns:1fr}.portal-auth-card__visual{display:none}.portal-auth-wrap{padding:24px 16px 20px}.portal-auth-card__form{padding:34px 22px 26px}.form-title{font-size:28px}}
+.portal-auth-page {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+  background: v-bind(authBackground) center center / cover no-repeat;
+  font-family: 'MiSans', "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+}
+
+.portal-auth-page::before {
+  content: '';
+  position: fixed;
+  inset: 58px 0 0 0;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.portal-auth-shell {
+  min-height: calc(100dvh - 58px);
+  padding: 24px 16px 32px;
+  display: grid;
+  justify-items: center;
+  align-items: center;
+}
+
+.auth-card {
+  position: relative;
+  z-index: 1;
+  width: min(420px, calc(100vw - 32px));
+  padding: 28px 28px 22px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(214, 224, 239, 0.96);
+  box-shadow: 0 24px 64px rgba(16, 34, 66, 0.12);
+  backdrop-filter: blur(18px);
+}
+
+.auth-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.auth-card__top > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.auth-card__eyebrow {
+  color: #3f73db;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.auth-card__top h1 {
+  margin: 8px 0 0;
+  color: #1b3456;
+  font-size: 34px;
+  line-height: 1.08;
+}
+
+.auth-card__top p {
+  margin: 10px 0 0;
+  color: #667b93;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.auth-card__link,
+.auth-card__footer a {
+  color: #2a63d3;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.auth-card__link {
+  flex-shrink: 0;
+  align-self: flex-start;
+  padding-top: 8px;
+  font-size: 14px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.auth-card__hint {
+  margin-top: 18px;
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: #f7f9fd;
+  border: 1px solid #e4ebf5;
+  color: #58708d;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.auth-mode-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 5px;
+  border-radius: 6px;
+  background: #eef3fb;
+}
+
+.auth-mode-tabs button {
+  height: 40px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #6f8298;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.auth-mode-tabs button.active {
+  background: #fff;
+  color: #235dce;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
+}
+
+.auth-card__body {
+  margin-top: 18px;
+}
+
+.login-form :deep(.el-form-item) {
+  margin-bottom: 12px;
+}
+
+.login-form :deep(.el-form-item__content) {
+  min-width: 0;
+}
+
+.login-form :deep(.el-form-item__label) {
+  padding-bottom: 6px;
+  color: #556a84;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.login-form :deep(.el-input__wrapper) {
+  min-height: 42px;
+  border-radius: 4px;
+  background: #f8fbff;
+  border: 1px solid #dfe8f4;
+  box-shadow: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.login-form :deep(.el-input__wrapper:hover) {
+  background: #fff;
+  border-color: #c7d8ef;
+}
+
+.login-form :deep(.el-input__wrapper.is-focus) {
+  background: #fff;
+  border-color: #7baeff;
+  box-shadow: 0 0 0 3px rgba(44, 134, 255, 0.12);
+}
+
+.captcha-row {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) 96px;
+  gap: 10px;
+  align-items: center;
+}
+
+.captcha-row > * {
+  min-width: 0;
+}
+
+.captcha-img {
+  width: 100%;
+  height: 42px;
+  border-radius: 4px;
+  border: 1px solid #d8e3f4;
+  background: #fff;
+  cursor: pointer;
+  object-fit: cover;
+  display: block;
+}
+
+.login-btn {
+  width: 100%;
+  height: 42px;
+  border-radius: 4px;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: 0 14px 24px rgba(35, 93, 206, 0.16);
+}
+
+.scan-panel {
+  margin-top: 18px;
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
+.scan-panel__code {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  display: grid;
+  place-items: center;
+  padding: 10px;
+  border-radius: 6px;
+  background: #f7f9fd;
+  border: 1px solid #dce7f8;
+}
+
+.scan-panel__pixels {
+  position: absolute;
+  inset: 26px;
+  border-radius: 4px;
+  background-image:
+    linear-gradient(90deg, #173455 12px, transparent 12px),
+    linear-gradient(#173455 12px, transparent 12px);
+  background-size: 24px 24px;
+  opacity: 0.16;
+}
+
+.scan-panel__finder {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  border: 8px solid #173455;
+  border-radius: 4px;
+}
+
+.scan-panel__finder--one {
+  left: 26px;
+  top: 26px;
+}
+
+.scan-panel__finder--two {
+  top: 26px;
+  right: 26px;
+}
+
+.scan-panel__finder--three {
+  left: 26px;
+  bottom: 26px;
+}
+
+.scan-panel h3 {
+  margin: 18px 0 8px;
+  color: #20334f;
+  font-size: 22px;
+}
+
+.scan-panel p {
+  margin: 0;
+  color: #6f8298;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.scan-panel__image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.scan-panel__status {
+  margin-top: 10px;
+  min-height: 40px;
+  color: #58708d;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.scan-panel__refresh {
+  margin-top: 4px;
+  width: 100%;
+  height: 38px;
+  border-radius: 4px;
+}
+
+.auth-card__footer {
+  margin-top: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #7b8ba0;
+  font-size: 13px;
+}
+
+.auth-panel-enter-active,
+.auth-panel-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.auth-panel-enter-from,
+.auth-panel-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+@media (max-width: 760px) {
+  .portal-auth-shell {
+    padding: 16px 12px 24px;
+    justify-items: center;
+  }
+
+  .auth-card {
+    padding: 22px 18px 20px;
+    margin-right: 0;
+  }
+
+  .auth-card__top h1 {
+    font-size: 28px;
+  }
+
+  .auth-card__top {
+    gap: 10px;
+  }
+
+  .captcha-row,
+  .auth-card__footer {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .scan-panel__code {
+    width: 208px;
+    height: 208px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-mode-tabs button,
+  .auth-panel-enter-active,
+  .auth-panel-leave-active {
+    transition: none !important;
+  }
+}
 </style>

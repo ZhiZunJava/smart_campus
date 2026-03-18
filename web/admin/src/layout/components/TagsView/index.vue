@@ -91,7 +91,8 @@ function activeStyle(tag: any): Record<string, string> {
   if (!isActive(tag)) return {}
   return {
     "background-color": theme.value,
-    "border-color": theme.value
+    "border-color": theme.value,
+    "color": "#ffffff"
   }
 }
 
@@ -264,8 +265,7 @@ height: 40px;
 width: 100%;
 background: var(--tags-bg, rgba(255, 255, 255, 0.84));
 border-bottom: 1px solid var(--tags-item-border, #d8dce5);
-box-shadow: 0 8px 16px rgba(15, 23, 42, 0.04);
-backdrop-filter: blur(10px);
+box-shadow: none;
 
   .tags-view-wrapper {
     .tags-view-item {
@@ -280,7 +280,7 @@ backdrop-filter: blur(10px);
       background: var(--tags-item-bg, #fff);
       padding: 0 12px;
       font-size: 12px;
-      border-radius: 10px;
+      border-radius: 6px;
       margin-left: 6px;
       margin-top: 5px;
       transition: all 0.2s ease;
@@ -295,18 +295,16 @@ backdrop-filter: blur(10px);
 
       &:hover {
         background: var(--tags-item-hover, #f4f8ff);
-        border-color: #cfe0ff;
+        border-color: var(--el-color-primary-light-8);
       }
 
       &.active {
-        background: linear-gradient(90deg, #006eff 0%, #2a86ff 100%);
-        color: #fff;
-        border-color: transparent;
-        box-shadow: 0 10px 20px rgba(0, 110, 255, 0.18);
+        color: #ffffff;
+        box-shadow: none;
 
         &::before {
           content: '';
-          background: rgba(255, 255, 255, 0.95);
+          background: rgba(255, 255, 255, 0.92);
           display: inline-block;
           width: 6px;
           height: 6px;
@@ -326,12 +324,11 @@ backdrop-filter: blur(10px);
     margin: 0;
     min-width: 132px;
     background: rgba(255, 255, 255, 0.96);
-    backdrop-filter: blur(10px);
     z-index: 3000;
     position: absolute;
     list-style-type: none;
     padding: 6px;
-    border-radius: 12px;
+    border-radius: 6px;
     font-size: 13px;
     font-weight: 500;
     color: var(--tags-item-text, #333);

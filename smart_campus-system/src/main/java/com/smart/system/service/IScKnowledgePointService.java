@@ -3,8 +3,7 @@ package com.smart.system.service;
 import java.util.List;
 import com.smart.system.domain.ScKnowledgePoint;
 
-public interface IScKnowledgePointService
-{
+public interface IScKnowledgePointService {
     ScKnowledgePoint selectScKnowledgePointByKnowledgePointId(Long knowledgePointId);
 
     List<ScKnowledgePoint> selectScKnowledgePointList(ScKnowledgePoint scKnowledgePoint);

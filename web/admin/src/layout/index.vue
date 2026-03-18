@@ -71,6 +71,7 @@ function setLayout() {
   position: relative;
   height: 100%;
   width: 100%;
+  background: var(--el-bg-color-page);
 
   &.mobile.openSidebar {
     position: fixed;
@@ -84,8 +85,7 @@ function setLayout() {
 }
 
 .drawer-bg {
-  background: #000;
-  opacity: 0.3;
+  background: rgba(15, 23, 42, 0.18);
   width: 100%;
   top: 0;
   height: 100%;

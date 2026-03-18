@@ -28,6 +28,11 @@
                   <el-option v-for="item in userTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
                 </el-select>
               </el-form-item>
+              <el-form-item label="专业" prop="major">
+                <el-select v-model="queryParams.major" filterable clearable placeholder="请选择专业" style="width: 220px">
+                  <el-option v-for="dict in campus_major_type" :key="dict.value" :label="dict.label" :value="dict.value" />
+                </el-select>
+              </el-form-item>
               <el-form-item label="手机号码" prop="phonenumber">
                 <el-input v-model="queryParams.phonenumber" placeholder="请输入手机号码" clearable style="width: 240px" @keyup.enter="handleQuery" />
               </el-form-item>
@@ -78,6 +83,19 @@
               <el-table-column label="学号/工号" align="center" min-width="130">
                 <template #default="scope">
                   <span>{{ scope.row.studentNo || scope.row.teacherNo || '-' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="身份摘要" align="center" min-width="220">
+                <template #default="scope">
+                  <div class="identity-summary">
+                    <span v-if="scope.row.userType">{{ userTypeLabel(scope.row.userType) }}</span>
+                    <span v-if="scope.row.roles?.length">{{ scope.row.roles.map((item:any) => item.roleName).join(' / ') }}</span>
+                  </div>
+                </template>
+              </el-table-column>
+              <el-table-column label="专业" align="center" min-width="160" :show-overflow-tooltip="true">
+                <template #default="scope">
+                  <span>{{ scope.row.major || '-' }}</span>
                 </template>
               </el-table-column>
               <el-table-column label="部门" align="center" key="deptName" prop="dept.deptName" v-if="columns.deptName.visible" :show-overflow-tooltip="true" />
@@ -174,6 +192,17 @@
           </el-col>
         </el-row>
         <el-row>
+          <el-col :span="24">
+            <el-form-item label="身份模板">
+              <div class="identity-preset">
+                <el-button v-for="item in identityPresets" :key="item.key" size="small" @click="applyIdentityPreset(item.key)">
+                  {{ item.label }}
+                </el-button>
+              </div>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
           <el-col :span="12">
             <el-form-item label="用户性别">
               <el-select v-model="form.sex" placeholder="请选择">
@@ -203,7 +232,18 @@
               <el-input-number v-model="form.admissionYear" :min="2000" :max="2099" controls-position="right" style="width: 100%" />
             </el-form-item>
             <el-form-item label="专业方向" prop="major" v-else-if="form.userType === 'teacher'">
-              <el-input v-model="form.major" placeholder="请输入任教学科/专业方向" maxlength="50" />
+              <el-select v-model="form.major" filterable allow-create default-first-option clearable placeholder="请选择或输入任教学科/专业方向" style="width: 100%">
+                <el-option v-for="dict in campus_major_type" :key="`teacher-major-${dict.value}`" :label="dict.label" :value="dict.value" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row v-if="form.userType === 'student'">
+          <el-col :span="12">
+            <el-form-item label="专业" prop="major">
+              <el-select v-model="form.major" filterable allow-create default-first-option clearable placeholder="请选择或输入学生专业" style="width: 100%">
+                <el-option v-for="dict in campus_major_type" :key="`student-major-${dict.value}`" :label="dict.label" :value="dict.value" />
+              </el-select>
             </el-form-item>
           </el-col>
         </el-row>
@@ -285,7 +325,7 @@ import type { TreeSelect, TableShowColumns, AjaxResult } from '@/types/api/commo
 const router = useRouter()
 const appStore = useAppStore()
 const { proxy } = getCurrentInstance()
-const { sys_normal_disable, sys_user_sex } = proxy.useDict("sys_normal_disable", "sys_user_sex")
+const { sys_normal_disable, sys_user_sex, campus_major_type } = proxy.useDict("sys_normal_disable", "sys_user_sex", "campus_major_type")
 
 const userList = ref<SysUser[]>([])
 const open = ref<boolean>(false)
@@ -308,6 +348,13 @@ const userTypeOptions = [
   { label: '教师', value: 'teacher' },
   { label: '家长', value: 'parent' },
   { label: '管理员', value: 'admin' },
+]
+const identityPresets = [
+  { key: 'student', label: '学生' },
+  { key: 'teacher', label: '任课教师' },
+  { key: 'head_teacher', label: '班主任' },
+  { key: 'parent', label: '家长' },
+  { key: 'academic_admin', label: '教务员' },
 ]
 /*** 用户导入参数 */
 const upload = reactive({
@@ -345,6 +392,7 @@ const data = reactive({
     userType: undefined,
     studentNo: undefined,
     teacherNo: undefined,
+    major: undefined,
     phonenumber: undefined,
     status: undefined,
     deptId: undefined
@@ -543,6 +591,8 @@ function normalizeProfileFields() {
   }
   if (form.value.userType !== 'teacher') {
     form.value.teacherNo = undefined
+  }
+  if (form.value.userType !== 'teacher' && form.value.userType !== 'student') {
     form.value.major = undefined
   }
   if (form.value.userType !== 'student') {
@@ -553,6 +603,29 @@ function normalizeProfileFields() {
   }
   if (form.value.userType !== 'student' && form.value.userType !== 'teacher') {
     form.value.learningGoal = undefined
+  }
+}
+
+function applyIdentityPreset(presetKey: string) {
+  const presetMap: Record<string, { userType: 'student' | 'teacher' | 'parent' | 'admin'; roleKeys: string[]; postCodes: string[]; note?: string }> = {
+    student: { userType: 'student', roleKeys: ['student'], postCodes: ['student_identity'] },
+    teacher: { userType: 'teacher', roleKeys: ['teacher'], postCodes: ['course_teacher'], note: '适用于普通任课教师' },
+    head_teacher: { userType: 'teacher', roleKeys: ['teacher', 'campus_head_teacher'], postCodes: ['course_teacher', 'head_teacher'], note: '适用于同时承担班主任职责的教师' },
+    parent: { userType: 'parent', roleKeys: ['parent'], postCodes: ['parent_guardian'] },
+    academic_admin: { userType: 'admin', roleKeys: ['campus_academic_admin'], postCodes: ['academic_admin'], note: '适用于教务管理员和课务维护人员' },
+  }
+  const preset = presetMap[presetKey]
+  if (!preset) return
+  form.value.userType = preset.userType
+  form.value.roleIds = roleOptions.value
+    .filter((item) => preset.roleKeys.includes(item.roleKey))
+    .map((item) => item.roleId)
+  form.value.postIds = postOptions.value
+    .filter((item) => preset.postCodes.includes(item.postCode))
+    .map((item) => item.postId)
+  normalizeProfileFields()
+  if (preset.note) {
+    proxy.$modal.msgSuccess(`已应用身份模板：${preset.note}`)
   }
 }
 
@@ -666,3 +739,20 @@ onMounted(() => {
   })
 })
 </script>
+
+<style scoped>
+.identity-preset {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.identity-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #526076;
+  font-size: 12px;
+  line-height: 1.4;
+}
+</style>

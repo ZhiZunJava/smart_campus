@@ -10,47 +10,40 @@ import com.smart.system.service.IScLoginRiskEventService;
 /**
  * 登录风险事件 Service 实现
  *
- * @author Codex
+ * @author can
  */
 @Service
-public class ScLoginRiskEventServiceImpl implements IScLoginRiskEventService
-{
+public class ScLoginRiskEventServiceImpl implements IScLoginRiskEventService {
     @Autowired
     private ScLoginRiskEventMapper scLoginRiskEventMapper;
 
     @Override
-    public ScLoginRiskEvent selectScLoginRiskEventById(Long id)
-    {
+    public ScLoginRiskEvent selectScLoginRiskEventById(Long id) {
         return scLoginRiskEventMapper.selectScLoginRiskEventById(id);
     }
 
     @Override
-    public List<ScLoginRiskEvent> selectScLoginRiskEventList(ScLoginRiskEvent scLoginRiskEvent)
-    {
+    public List<ScLoginRiskEvent> selectScLoginRiskEventList(ScLoginRiskEvent scLoginRiskEvent) {
         return scLoginRiskEventMapper.selectScLoginRiskEventList(scLoginRiskEvent);
     }
 
     @Override
-    public int insertScLoginRiskEvent(ScLoginRiskEvent scLoginRiskEvent)
-    {
+    public int insertScLoginRiskEvent(ScLoginRiskEvent scLoginRiskEvent) {
         return scLoginRiskEventMapper.insertScLoginRiskEvent(scLoginRiskEvent);
     }
 
     @Override
-    public int updateScLoginRiskEvent(ScLoginRiskEvent scLoginRiskEvent)
-    {
+    public int updateScLoginRiskEvent(ScLoginRiskEvent scLoginRiskEvent) {
         return scLoginRiskEventMapper.updateScLoginRiskEvent(scLoginRiskEvent);
     }
 
     @Override
-    public int deleteScLoginRiskEventByIds(Long[] ids)
-    {
+    public int deleteScLoginRiskEventByIds(Long[] ids) {
         return scLoginRiskEventMapper.deleteScLoginRiskEventByIds(ids);
     }
 
     @Override
-    public int deleteScLoginRiskEventById(Long id)
-    {
+    public int deleteScLoginRiskEventById(Long id) {
         return scLoginRiskEventMapper.deleteScLoginRiskEventById(id);
     }
 }

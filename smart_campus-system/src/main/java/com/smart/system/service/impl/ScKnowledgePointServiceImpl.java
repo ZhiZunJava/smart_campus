@@ -8,44 +8,37 @@ import com.smart.system.mapper.ScKnowledgePointMapper;
 import com.smart.system.service.IScKnowledgePointService;
 
 @Service
-public class ScKnowledgePointServiceImpl implements IScKnowledgePointService
-{
+public class ScKnowledgePointServiceImpl implements IScKnowledgePointService {
     @Autowired
     private ScKnowledgePointMapper scKnowledgePointMapper;
 
     @Override
-    public ScKnowledgePoint selectScKnowledgePointByKnowledgePointId(Long knowledgePointId)
-    {
+    public ScKnowledgePoint selectScKnowledgePointByKnowledgePointId(Long knowledgePointId) {
         return scKnowledgePointMapper.selectScKnowledgePointByKnowledgePointId(knowledgePointId);
     }
 
     @Override
-    public List<ScKnowledgePoint> selectScKnowledgePointList(ScKnowledgePoint scKnowledgePoint)
-    {
+    public List<ScKnowledgePoint> selectScKnowledgePointList(ScKnowledgePoint scKnowledgePoint) {
         return scKnowledgePointMapper.selectScKnowledgePointList(scKnowledgePoint);
     }
 
     @Override
-    public int insertScKnowledgePoint(ScKnowledgePoint scKnowledgePoint)
-    {
+    public int insertScKnowledgePoint(ScKnowledgePoint scKnowledgePoint) {
         return scKnowledgePointMapper.insertScKnowledgePoint(scKnowledgePoint);
     }
 
     @Override
-    public int updateScKnowledgePoint(ScKnowledgePoint scKnowledgePoint)
-    {
+    public int updateScKnowledgePoint(ScKnowledgePoint scKnowledgePoint) {
         return scKnowledgePointMapper.updateScKnowledgePoint(scKnowledgePoint);
     }
 
     @Override
-    public int deleteScKnowledgePointByKnowledgePointIds(Long[] knowledgePointIds)
-    {
+    public int deleteScKnowledgePointByKnowledgePointIds(Long[] knowledgePointIds) {
         return scKnowledgePointMapper.deleteScKnowledgePointByKnowledgePointIds(knowledgePointIds);
     }
 
     @Override
-    public int deleteScKnowledgePointByKnowledgePointId(Long knowledgePointId)
-    {
+    public int deleteScKnowledgePointByKnowledgePointId(Long knowledgePointId) {
         return scKnowledgePointMapper.deleteScKnowledgePointByKnowledgePointId(knowledgePointId);
     }
 }

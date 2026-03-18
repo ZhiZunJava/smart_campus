@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScClassCourseMapper">
+  <resultMap type="ScClassCourse" id="ScClassCourseResult">
+    <id property="id" column="id" />
+    <result property="classId" column="class_id" />
+    <result property="className" column="class_name" />
+    <result property="courseId" column="course_id" />
+    <result property="courseName" column="course_name" />
+    <result property="teacherId" column="teacher_id" />
+    <result property="teacherName" column="teacher_name" />
+    <result property="termId" column="term_id" />
+    <result property="termName" column="term_name" />
+    <result property="businessType" column="business_type" />
+    <result property="teachingClassCode" column="teaching_class_code" />
+    <result property="credits" column="credits" />
+    <result property="courseCategory" column="course_category" />
+    <result property="openDeptId" column="open_dept_id" />
+    <result property="openDeptName" column="open_dept_name" />
+    <result property="major" column="major" />
+    <result property="campusName" column="campus_name" />
+    <result property="assessmentType" column="assessment_type" />
+    <result property="teachingLanguage" column="teaching_language" />
+    <result property="prerequisiteCourse" column="prerequisite_course" />
+    <result property="taskType" column="task_type" />
+    <result property="requiredFlag" column="required_flag" />
+    <result property="courseLevelRequirement" column="course_level_requirement" />
+    <result property="totalHours" column="total_hours" />
+    <result property="requiredWeeks" column="required_weeks" />
+    <result property="weeklyHours" column="weekly_hours" />
+    <result property="arrangedHours" column="arranged_hours" />
+    <result property="studentLimit" column="student_limit" />
+    <result property="actualStudentCount" column="actual_student_count" />
+    <result property="status" column="status" />
+    <result property="createBy" column="create_by" />
+    <result property="createTime" column="create_time" />
+    <result property="updateBy" column="update_by" />
+    <result property="updateTime" column="update_time" />
+    <result property="remark" column="remark" />
+  </resultMap>
+  <sql id="selectScClassCourseVo"> select c.id, c.class_id, cls.class_name, c.course_id,
+    crs.course_name, c.teacher_id, coalesce(u.nick_name, u.user_name) as teacher_name, c.term_id,
+    t.term_name, c.business_type, c.teaching_class_code, c.credits, c.course_category,
+    c.open_dept_id, d.dept_name as open_dept_name, c.major, c.campus_name, c.assessment_type,
+    c.teaching_language, c.prerequisite_course, c.task_type, c.required_flag,
+    c.course_level_requirement, c.total_hours, c.required_weeks, c.weekly_hours, c.arranged_hours,
+    c.student_limit, (select count(1) from sc_user_profile p where p.class_id = c.class_id and
+    p.user_type = 'student' and p.status = '0') as actual_student_count, c.status, c.create_by,
+    c.create_time, c.update_by, c.update_time, c.remark from sc_class_course c left join sc_class
+    cls on cls.class_id = c.class_id left join sc_course crs on crs.course_id = c.course_id left
+    join sys_user u on u.user_id = c.teacher_id left join sc_school_term t on t.term_id = c.term_id
+    left join sys_dept d on d.dept_id = c.open_dept_id </sql>
+  <select id="selectScClassCourseById" parameterType="Long" resultMap="ScClassCourseResult"><include
+      refid="selectScClassCourseVo" /> where id = #{id}</select>
+  <select id="selectScClassCourseList" parameterType="ScClassCourse" resultMap="ScClassCourseResult">
+    <include refid="selectScClassCourseVo" />
+    <where>
+      <if test="classId != null">and c.class_id = #{classId}</if>
+      <if test="courseId != null">and
+    c.course_id = #{courseId}</if>
+      <if test="teacherId != null">and c.teacher_id = #{teacherId}</if>
+      <if
+        test="termId != null">and c.term_id = #{termId}</if>
+      <if test="openDeptId != null">and
+    c.open_dept_id = #{openDeptId}</if>
+      <if test="major != null and major != ''">and c.major =
+    #{major}</if>
+      <if test="status != null and status != ''">and c.status = #{status}</if>
+    </where>
+    order by c.id desc </select>
+  <insert id="insertScClassCourse" parameterType="ScClassCourse" useGeneratedKeys="true"
+    keyProperty="id">insert into sc_class_course(class_id, course_id, teacher_id, term_id,
+    business_type, teaching_class_code, credits, course_category, open_dept_id, major, campus_name,
+    assessment_type, teaching_language, prerequisite_course, task_type, required_flag,
+    course_level_requirement, total_hours, required_weeks, weekly_hours, arranged_hours,
+    student_limit, status, create_by, create_time, remark) values(#{classId}, #{courseId},
+    #{teacherId}, #{termId}, #{businessType}, #{teachingClassCode}, #{credits}, #{courseCategory},
+    #{openDeptId}, #{major}, #{campusName}, #{assessmentType}, #{teachingLanguage},
+    #{prerequisiteCourse}, #{taskType}, #{requiredFlag}, #{courseLevelRequirement}, #{totalHours},
+    #{requiredWeeks}, #{weeklyHours}, #{arrangedHours}, #{studentLimit}, #{status}, #{createBy},
+    sysdate(), #{remark})</insert>
+  <update id="updateScClassCourse" parameterType="ScClassCourse">update sc_class_course <set><if
+        test="classId != null">class_id = #{classId},</if><if test="courseId != null">course_id =
+    #{courseId},</if><if test="teacherId != null">teacher_id = #{teacherId},</if><if
+        test="termId != null">term_id = #{termId},</if><if test="businessType != null">business_type
+    = #{businessType},</if><if test="teachingClassCode != null">teaching_class_code =
+    #{teachingClassCode},</if><if test="credits != null">credits = #{credits},</if><if
+        test="courseCategory != null">course_category = #{courseCategory},</if><if
+        test="openDeptId != null">open_dept_id = #{openDeptId},</if><if test="major != null">major =
+    #{major},</if><if test="campusName != null">campus_name = #{campusName},</if><if
+        test="assessmentType != null">assessment_type = #{assessmentType},</if><if
+        test="teachingLanguage != null">teaching_language = #{teachingLanguage},</if><if
+        test="prerequisiteCourse != null">prerequisite_course = #{prerequisiteCourse},</if><if
+        test="taskType != null">task_type = #{taskType},</if><if test="requiredFlag != null">required_flag
+    = #{requiredFlag},</if><if test="courseLevelRequirement != null">course_level_requirement =
+    #{courseLevelRequirement},</if><if test="totalHours != null">total_hours = #{totalHours},</if><if
+        test="requiredWeeks != null">required_weeks = #{requiredWeeks},</if><if
+        test="weeklyHours != null">weekly_hours = #{weeklyHours},</if><if
+        test="arrangedHours != null">arranged_hours = #{arrangedHours},</if><if
+        test="studentLimit != null">student_limit = #{studentLimit},</if><if test="status != null">status
+    = #{status},</if><if test="updateBy != null">update_by = #{updateBy},</if><if
+        test="remark != null">remark = #{remark},</if>update_time = sysdate()</set> where id = #{id}</update>
+  <delete id="deleteScClassCourseById" parameterType="Long">delete from sc_class_course where id =
+    #{id}</delete>
+  <delete id="deleteScClassCourseByIds" parameterType="Long">delete from sc_class_course where id in <foreach
+      item="id" collection="array" open="(" separator="," close=")">#{id}</foreach></delete>
+</mapper>

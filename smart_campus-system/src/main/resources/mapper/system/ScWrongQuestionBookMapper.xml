@@ -1,13 +1,41 @@
-<?xml version="1.0" encoding="UTF-8" ?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.smart.system.mapper.ScWrongQuestionBookMapper">
-  <resultMap type="ScWrongQuestionBook" id="ScWrongQuestionBookResult"><id property="id" column="id"/><result property="userId" column="user_id"/><result property="questionId" column="question_id"/><result property="courseId" column="course_id"/><result property="wrongCount" column="wrong_count"/><result property="lastWrongTime" column="last_wrong_time"/><result property="masteryStatus" column="mastery_status"/></resultMap>
-  <sql id="selectScWrongQuestionBookVo">select id, user_id, question_id, course_id, wrong_count, last_wrong_time, mastery_status from sc_wrong_question_book</sql>
-  <select id="selectScWrongQuestionBookById" parameterType="Long" resultMap="ScWrongQuestionBookResult"><include refid="selectScWrongQuestionBookVo"/> where id = #{id}</select>
-  <select id="selectScWrongQuestionBookByUserAndQuestion" resultMap="ScWrongQuestionBookResult"><include refid="selectScWrongQuestionBookVo"/> where user_id = #{userId} and question_id = #{questionId} limit 1</select>
-  <select id="selectScWrongQuestionBookList" parameterType="ScWrongQuestionBook" resultMap="ScWrongQuestionBookResult"><include refid="selectScWrongQuestionBookVo"/><where><if test="userId != null">and user_id = #{userId}</if><if test="courseId != null">and course_id = #{courseId}</if><if test="masteryStatus != null and masteryStatus != ''">and mastery_status = #{masteryStatus}</if></where> order by id desc</select>
-  <insert id="insertScWrongQuestionBook" parameterType="ScWrongQuestionBook" useGeneratedKeys="true" keyProperty="id">insert into sc_wrong_question_book(user_id, question_id, course_id, wrong_count, last_wrong_time, mastery_status) values(#{userId}, #{questionId}, #{courseId}, #{wrongCount}, #{lastWrongTime}, #{masteryStatus})</insert>
-  <update id="updateScWrongQuestionBook" parameterType="ScWrongQuestionBook">update sc_wrong_question_book <set><if test="userId != null">user_id = #{userId},</if><if test="questionId != null">question_id = #{questionId},</if><if test="courseId != null">course_id = #{courseId},</if><if test="wrongCount != null">wrong_count = #{wrongCount},</if><if test="lastWrongTime != null">last_wrong_time = #{lastWrongTime},</if><if test="masteryStatus != null">mastery_status = #{masteryStatus},</if></set> where id = #{id}</update>
-  <delete id="deleteScWrongQuestionBookById" parameterType="Long">delete from sc_wrong_question_book where id = #{id}</delete>
-  <delete id="deleteScWrongQuestionBookByIds" parameterType="Long">delete from sc_wrong_question_book where id in <foreach item="id" collection="array" open="(" separator="," close=")">#{id}</foreach></delete>
+  <resultMap type="ScWrongQuestionBook" id="ScWrongQuestionBookResult">
+    <id property="id" column="id" />
+    <result property="userId" column="user_id" />
+    <result property="questionId" column="question_id" />
+    <result property="courseId" column="course_id" />
+    <result property="wrongCount" column="wrong_count" />
+    <result property="lastWrongTime" column="last_wrong_time" />
+    <result property="masteryStatus" column="mastery_status" />
+  </resultMap>
+  <sql id="selectScWrongQuestionBookVo">select id, user_id, question_id, course_id, wrong_count,
+    last_wrong_time, mastery_status from sc_wrong_question_book</sql>
+  <select id="selectScWrongQuestionBookById" parameterType="Long"
+    resultMap="ScWrongQuestionBookResult"><include refid="selectScWrongQuestionBookVo" /> where id =
+    #{id}</select>
+  <select id="selectScWrongQuestionBookByUserAndQuestion" resultMap="ScWrongQuestionBookResult"><include
+      refid="selectScWrongQuestionBookVo" /> where user_id = #{userId} and question_id =
+    #{questionId} limit 1</select>
+  <select id="selectScWrongQuestionBookList" parameterType="ScWrongQuestionBook"
+    resultMap="ScWrongQuestionBookResult"><include refid="selectScWrongQuestionBookVo" /><where><if
+        test="userId != null">and user_id = #{userId}</if><if test="courseId != null">and course_id
+    = #{courseId}</if><if test="masteryStatus != null and masteryStatus != ''">and mastery_status =
+    #{masteryStatus}</if></where> order by id desc</select>
+  <insert id="insertScWrongQuestionBook" parameterType="ScWrongQuestionBook" useGeneratedKeys="true"
+    keyProperty="id">insert into sc_wrong_question_book(user_id, question_id, course_id,
+    wrong_count, last_wrong_time, mastery_status) values(#{userId}, #{questionId}, #{courseId},
+    #{wrongCount}, #{lastWrongTime}, #{masteryStatus})</insert>
+  <update id="updateScWrongQuestionBook" parameterType="ScWrongQuestionBook">update
+    sc_wrong_question_book <set><if test="userId != null">user_id = #{userId},</if><if
+        test="questionId != null">question_id = #{questionId},</if><if test="courseId != null">course_id
+    = #{courseId},</if><if test="wrongCount != null">wrong_count = #{wrongCount},</if><if
+        test="lastWrongTime != null">last_wrong_time = #{lastWrongTime},</if><if
+        test="masteryStatus != null">mastery_status = #{masteryStatus},</if></set> where id = #{id}</update>
+  <delete id="deleteScWrongQuestionBookById" parameterType="Long">delete from sc_wrong_question_book
+    where id = #{id}</delete>
+  <delete id="deleteScWrongQuestionBookByIds" parameterType="Long">delete from
+    sc_wrong_question_book where id in <foreach item="id" collection="array" open="(" separator=","
+      close=")">#{id}</foreach></delete>
 </mapper>

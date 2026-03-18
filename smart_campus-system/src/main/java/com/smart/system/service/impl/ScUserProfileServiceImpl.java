@@ -14,11 +14,10 @@ import com.smart.system.service.IScUserProfileService;
 /**
  * 智慧校园用户扩展档案 Service 实现
  *
- * @author Codex
+ * @author can
  */
 @Service
-public class ScUserProfileServiceImpl implements IScUserProfileService
-{
+public class ScUserProfileServiceImpl implements IScUserProfileService {
     @Autowired
     private ScUserProfileMapper scUserProfileMapper;
 
@@ -26,27 +25,23 @@ public class ScUserProfileServiceImpl implements IScUserProfileService
     private SysUserMapper sysUserMapper;
 
     @Override
-    public ScUserProfile selectScUserProfileByProfileId(Long profileId)
-    {
+    public ScUserProfile selectScUserProfileByProfileId(Long profileId) {
         return scUserProfileMapper.selectScUserProfileByProfileId(profileId);
     }
 
     @Override
-    public ScUserProfile selectScUserProfileByUserId(Long userId)
-    {
+    public ScUserProfile selectScUserProfileByUserId(Long userId) {
         return scUserProfileMapper.selectScUserProfileByUserId(userId);
     }
 
     @Override
-    public List<ScUserProfile> selectScUserProfileList(ScUserProfile scUserProfile)
-    {
+    public List<ScUserProfile> selectScUserProfileList(ScUserProfile scUserProfile) {
         return scUserProfileMapper.selectScUserProfileList(scUserProfile);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public int insertScUserProfile(ScUserProfile scUserProfile)
-    {
+    public int insertScUserProfile(ScUserProfile scUserProfile) {
         int rows = scUserProfileMapper.insertScUserProfile(scUserProfile);
         syncSystemUserBase(scUserProfile);
         return rows;
@@ -54,23 +49,17 @@ public class ScUserProfileServiceImpl implements IScUserProfileService
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public int updateScUserProfile(ScUserProfile scUserProfile)
-    {
-        if (scUserProfile.getProfileId() == null && scUserProfile.getUserId() != null)
-        {
+    public int updateScUserProfile(ScUserProfile scUserProfile) {
+        if (scUserProfile.getProfileId() == null && scUserProfile.getUserId() != null) {
             ScUserProfile current = scUserProfileMapper.selectScUserProfileByUserId(scUserProfile.getUserId());
-            if (current != null)
-            {
+            if (current != null) {
                 scUserProfile.setProfileId(current.getProfileId());
             }
         }
         int rows;
-        if (scUserProfile.getProfileId() == null)
-        {
+        if (scUserProfile.getProfileId() == null) {
             rows = scUserProfileMapper.insertScUserProfile(scUserProfile);
-        }
-        else
-        {
+        } else {
             rows = scUserProfileMapper.updateScUserProfile(scUserProfile);
         }
         syncSystemUserBase(scUserProfile);
@@ -78,40 +67,33 @@ public class ScUserProfileServiceImpl implements IScUserProfileService
     }
 
     @Override
-    public int deleteScUserProfileByProfileIds(Long[] profileIds)
-    {
+    public int deleteScUserProfileByProfileIds(Long[] profileIds) {
         return scUserProfileMapper.deleteScUserProfileByProfileIds(profileIds);
     }
 
     @Override
-    public int deleteScUserProfileByProfileId(Long profileId)
-    {
+    public int deleteScUserProfileByProfileId(Long profileId) {
         return scUserProfileMapper.deleteScUserProfileByProfileId(profileId);
     }
 
     @Override
-    public int deleteScUserProfileByUserId(Long userId)
-    {
+    public int deleteScUserProfileByUserId(Long userId) {
         return scUserProfileMapper.deleteScUserProfileByUserId(userId);
     }
 
     @Override
-    public int deleteScUserProfileByUserIds(Long[] userIds)
-    {
+    public int deleteScUserProfileByUserIds(Long[] userIds) {
         return scUserProfileMapper.deleteScUserProfileByUserIds(userIds);
     }
 
     @Override
-    public ScUserProfile syncUserProfile(SysUser user)
-    {
-        if (user == null || user.getUserId() == null)
-        {
+    public ScUserProfile syncUserProfile(SysUser user) {
+        if (user == null || user.getUserId() == null) {
             return null;
         }
         ScUserProfile profile = scUserProfileMapper.selectScUserProfileByUserId(user.getUserId());
         boolean create = profile == null;
-        if (create)
-        {
+        if (create) {
             profile = new ScUserProfile();
             profile.setUserId(user.getUserId());
             profile.setCreateBy(user.getCreateBy());
@@ -132,12 +114,9 @@ public class ScUserProfileServiceImpl implements IScUserProfileService
         profile.setStatus(StringUtils.isEmpty(user.getStatus()) ? "0" : user.getStatus());
         profile.setRemark(user.getRemark());
         profile.setUpdateBy(StringUtils.isNotEmpty(user.getUpdateBy()) ? user.getUpdateBy() : user.getCreateBy());
-        if (create)
-        {
+        if (create) {
             scUserProfileMapper.insertScUserProfile(profile);
-        }
-        else
-        {
+        } else {
             scUserProfileMapper.updateScUserProfile(profile);
         }
         fillUserProfile(user);
@@ -145,15 +124,12 @@ public class ScUserProfileServiceImpl implements IScUserProfileService
     }
 
     @Override
-    public void fillUserProfile(SysUser user)
-    {
-        if (user == null || user.getUserId() == null)
-        {
+    public void fillUserProfile(SysUser user) {
+        if (user == null || user.getUserId() == null) {
             return;
         }
         ScUserProfile profile = scUserProfileMapper.selectScUserProfileByUserId(user.getUserId());
-        if (profile == null)
-        {
+        if (profile == null) {
             return;
         }
         user.setProfileId(profile.getProfileId());
@@ -169,42 +145,33 @@ public class ScUserProfileServiceImpl implements IScUserProfileService
         user.setLearningGoal(profile.getLearningGoal());
         user.setInterestTags(profile.getInterestTags());
         user.setLearningStyle(profile.getLearningStyle());
-        if (StringUtils.isNotEmpty(profile.getAvatarUrl()))
-        {
+        if (StringUtils.isNotEmpty(profile.getAvatarUrl())) {
             user.setAvatar(profile.getAvatarUrl());
         }
-        if (StringUtils.isEmpty(user.getRemark()))
-        {
+        if (StringUtils.isEmpty(user.getRemark())) {
             user.setRemark(profile.getRemark());
         }
     }
 
-    private void syncSystemUserBase(ScUserProfile profile)
-    {
-        if (profile == null || profile.getUserId() == null)
-        {
+    private void syncSystemUserBase(ScUserProfile profile) {
+        if (profile == null || profile.getUserId() == null) {
             return;
         }
         SysUser user = sysUserMapper.selectUserById(profile.getUserId());
-        if (user == null)
-        {
+        if (user == null) {
             return;
         }
-        if (StringUtils.isNotEmpty(profile.getRealName()))
-        {
+        if (StringUtils.isNotEmpty(profile.getRealName())) {
             user.setNickName(profile.getRealName());
             user.setRealName(profile.getRealName());
         }
-        if (StringUtils.isNotEmpty(profile.getGender()))
-        {
+        if (StringUtils.isNotEmpty(profile.getGender())) {
             user.setSex(profile.getGender());
         }
-        if (StringUtils.isNotEmpty(profile.getAvatarUrl()))
-        {
+        if (StringUtils.isNotEmpty(profile.getAvatarUrl())) {
             user.setAvatar(profile.getAvatarUrl());
         }
-        if (StringUtils.isNotEmpty(profile.getStatus()))
-        {
+        if (StringUtils.isNotEmpty(profile.getStatus())) {
             user.setStatus(profile.getStatus());
         }
         user.setUserType(profile.getUserType());
@@ -217,18 +184,15 @@ public class ScUserProfileServiceImpl implements IScUserProfileService
         user.setLearningGoal(profile.getLearningGoal());
         user.setInterestTags(profile.getInterestTags());
         user.setLearningStyle(profile.getLearningStyle());
-        if (profile.getRemark() != null)
-        {
+        if (profile.getRemark() != null) {
             user.setRemark(profile.getRemark());
         }
         user.setUpdateBy(profile.getUpdateBy());
         sysUserMapper.updateUser(user);
     }
 
-    private String resolveUserType(SysUser user)
-    {
-        if (StringUtils.isNotEmpty(user.getUserType()))
-        {
+    private String resolveUserType(SysUser user) {
+        if (StringUtils.isNotEmpty(user.getUserType())) {
             return user.getUserType().trim().toLowerCase();
         }
         return "student";

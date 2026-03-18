@@ -18,36 +18,42 @@ import com.smart.common.core.domain.AjaxResult;
 import com.smart.common.core.page.TableDataInfo;
 import com.smart.common.enums.BusinessType;
 import com.smart.system.domain.ScCourse;
+import com.smart.system.service.impl.TeachingCodeRuleService;
 import com.smart.system.service.IScCourseService;
 
 @RestController
 @RequestMapping("/campus/course")
-public class ScCourseController extends BaseController
-{
+public class ScCourseController extends BaseController {
     @Autowired
     private IScCourseService scCourseService;
 
-    @PreAuthorize("@ss.hasPermi('campus:course:list')")
+    @Autowired
+    private TeachingCodeRuleService teachingCodeRuleService;
+
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/list")
-    public TableDataInfo list(ScCourse scCourse)
-    {
+    public TableDataInfo list(ScCourse scCourse) {
         startPage();
         List<ScCourse> list = scCourseService.selectScCourseList(scCourse);
         return getDataTable(list);
     }
 
-    @PreAuthorize("@ss.hasPermi('campus:course:query')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping(value = "/{courseId}")
-    public AjaxResult getInfo(@PathVariable Long courseId)
-    {
+    public AjaxResult getInfo(@PathVariable Long courseId) {
         return success(scCourseService.selectScCourseByCourseId(courseId));
+    }
+
+    @PreAuthorize("@ss.hasPermi('campus:course:edit')")
+    @PostMapping("/generate-code")
+    public AjaxResult generateCode(@RequestBody ScCourse scCourse) {
+        return success(teachingCodeRuleService.generateCourseCode(scCourse));
     }
 
     @PreAuthorize("@ss.hasPermi('campus:course:add')")
     @Log(title = "课程管理", businessType = BusinessType.INSERT)
     @PostMapping
-    public AjaxResult add(@Validated @RequestBody ScCourse scCourse)
-    {
+    public AjaxResult add(@Validated @RequestBody ScCourse scCourse) {
         scCourse.setCreateBy(getUsername());
         return toAjax(scCourseService.insertScCourse(scCourse));
     }
@@ -55,8 +61,7 @@ public class ScCourseController extends BaseController
     @PreAuthorize("@ss.hasPermi('campus:course:edit')")
     @Log(title = "课程管理", businessType = BusinessType.UPDATE)
     @PutMapping
-    public AjaxResult edit(@Validated @RequestBody ScCourse scCourse)
-    {
+    public AjaxResult edit(@Validated @RequestBody ScCourse scCourse) {
         scCourse.setUpdateBy(getUsername());
         return toAjax(scCourseService.updateScCourse(scCourse));
     }
@@ -64,8 +69,7 @@ public class ScCourseController extends BaseController
     @PreAuthorize("@ss.hasPermi('campus:course:remove')")
     @Log(title = "课程管理", businessType = BusinessType.DELETE)
     @DeleteMapping("/{courseIds}")
-    public AjaxResult remove(@PathVariable Long[] courseIds)
-    {
+    public AjaxResult remove(@PathVariable Long[] courseIds) {
         return toAjax(scCourseService.deleteScCourseByCourseIds(courseIds));
     }
 }

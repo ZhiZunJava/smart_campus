@@ -3,8 +3,7 @@ package com.smart.system.service;
 import java.util.List;
 import com.smart.system.domain.ScCourse;
 
-public interface IScCourseService
-{
+public interface IScCourseService {
     ScCourse selectScCourseByCourseId(Long courseId);
 
     List<ScCourse> selectScCourseList(ScCourse scCourse);

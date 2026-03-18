@@ -6,10 +6,9 @@ import com.smart.system.domain.ScParentStudentRel;
 /**
  * 家长学生关系 Mapper
  *
- * @author Codex
+ * @author can
  */
-public interface ScParentStudentRelMapper
-{
+public interface ScParentStudentRelMapper {
     ScParentStudentRel selectScParentStudentRelById(Long id);
 
     List<ScParentStudentRel> selectScParentStudentRelList(ScParentStudentRel scParentStudentRel);

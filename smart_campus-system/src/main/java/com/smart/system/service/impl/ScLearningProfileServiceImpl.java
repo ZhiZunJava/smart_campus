@@ -13,8 +13,7 @@ import com.smart.system.mapper.ScStudyRecordMapper;
 import com.smart.system.service.IScLearningProfileService;
 
 @Service
-public class ScLearningProfileServiceImpl implements IScLearningProfileService
-{
+public class ScLearningProfileServiceImpl implements IScLearningProfileService {
     @Autowired
     private ScLearningProfileMapper scLearningProfileMapper;
 
@@ -22,38 +21,46 @@ public class ScLearningProfileServiceImpl implements IScLearningProfileService
     private ScStudyRecordMapper scStudyRecordMapper;
 
     @Override
-    public ScLearningProfile selectScLearningProfileByProfileId(Long profileId) { return scLearningProfileMapper.selectScLearningProfileByProfileId(profileId); }
+    public ScLearningProfile selectScLearningProfileByProfileId(Long profileId) {
+        return scLearningProfileMapper.selectScLearningProfileByProfileId(profileId);
+    }
 
     @Override
-    public List<ScLearningProfile> selectScLearningProfileList(ScLearningProfile scLearningProfile) { return scLearningProfileMapper.selectScLearningProfileList(scLearningProfile); }
+    public List<ScLearningProfile> selectScLearningProfileList(ScLearningProfile scLearningProfile) {
+        return scLearningProfileMapper.selectScLearningProfileList(scLearningProfile);
+    }
 
     @Override
-    public int insertScLearningProfile(ScLearningProfile scLearningProfile) { return scLearningProfileMapper.insertScLearningProfile(scLearningProfile); }
+    public int insertScLearningProfile(ScLearningProfile scLearningProfile) {
+        return scLearningProfileMapper.insertScLearningProfile(scLearningProfile);
+    }
 
     @Override
-    public int updateScLearningProfile(ScLearningProfile scLearningProfile) { return scLearningProfileMapper.updateScLearningProfile(scLearningProfile); }
+    public int updateScLearningProfile(ScLearningProfile scLearningProfile) {
+        return scLearningProfileMapper.updateScLearningProfile(scLearningProfile);
+    }
 
     @Override
-    public int deleteScLearningProfileByProfileIds(Long[] profileIds) { return scLearningProfileMapper.deleteScLearningProfileByProfileIds(profileIds); }
+    public int deleteScLearningProfileByProfileIds(Long[] profileIds) {
+        return scLearningProfileMapper.deleteScLearningProfileByProfileIds(profileIds);
+    }
 
     @Override
-    public int deleteScLearningProfileByProfileId(Long profileId) { return scLearningProfileMapper.deleteScLearningProfileByProfileId(profileId); }
+    public int deleteScLearningProfileByProfileId(Long profileId) {
+        return scLearningProfileMapper.deleteScLearningProfileByProfileId(profileId);
+    }
 
     @Override
-    public ScLearningProfile rebuildProfile(Long userId, Long courseId)
-    {
+    public ScLearningProfile rebuildProfile(Long userId, Long courseId) {
         ScStudyRecord query = new ScStudyRecord();
         query.setUserId(userId);
         query.setCourseId(courseId);
         List<ScStudyRecord> records = scStudyRecordMapper.selectScStudyRecordList(query);
 
         Long resolvedCourseId = courseId;
-        if (resolvedCourseId == null)
-        {
-            for (ScStudyRecord record : records)
-            {
-                if (record.getCourseId() != null)
-                {
+        if (resolvedCourseId == null) {
+            for (ScStudyRecord record : records) {
+                if (record.getCourseId() != null) {
                     resolvedCourseId = record.getCourseId();
                     break;
                 }
@@ -65,33 +72,31 @@ public class ScLearningProfileServiceImpl implements IScLearningProfileService
         BigDecimal totalProgress = BigDecimal.ZERO;
         int resourceCount = 0;
 
-        for (ScStudyRecord record : records)
-        {
+        for (ScStudyRecord record : records) {
             totalDuration += record.getDurationSeconds() == null ? 0 : record.getDurationSeconds();
-            totalProgress = totalProgress.add(record.getProgressRate() == null ? BigDecimal.ZERO : record.getProgressRate());
-            if (record.getResourceId() != null)
-            {
+            totalProgress = totalProgress
+                    .add(record.getProgressRate() == null ? BigDecimal.ZERO : record.getProgressRate());
+            if (record.getResourceId() != null) {
                 resourceCount++;
             }
         }
 
         BigDecimal activeScore = BigDecimal.valueOf(Math.min(totalCount * 10, 100));
-        BigDecimal concentrationScore = BigDecimal.valueOf(Math.min(totalDuration / 18.0, 100)).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal masteryScore = totalCount == 0 ? BigDecimal.ZERO : totalProgress.divide(BigDecimal.valueOf(totalCount), 2, RoundingMode.HALF_UP);
+        BigDecimal concentrationScore = BigDecimal.valueOf(Math.min(totalDuration / 18.0, 100)).setScale(2,
+                RoundingMode.HALF_UP);
+        BigDecimal masteryScore = totalCount == 0 ? BigDecimal.ZERO
+                : totalProgress.divide(BigDecimal.valueOf(totalCount), 2, RoundingMode.HALF_UP);
         BigDecimal interestScore = BigDecimal.valueOf(Math.min(resourceCount * 12, 100));
-        BigDecimal riskScore = BigDecimal.valueOf(100).subtract(activeScore.multiply(BigDecimal.valueOf(0.4)).add(masteryScore.multiply(BigDecimal.valueOf(0.6)))).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal riskScore = BigDecimal.valueOf(100).subtract(
+                activeScore.multiply(BigDecimal.valueOf(0.4)).add(masteryScore.multiply(BigDecimal.valueOf(0.6))))
+                .setScale(2, RoundingMode.HALF_UP);
 
         String abilityLevel;
-        if (masteryScore.compareTo(BigDecimal.valueOf(85)) >= 0)
-        {
+        if (masteryScore.compareTo(BigDecimal.valueOf(85)) >= 0) {
             abilityLevel = "HIGH";
-        }
-        else if (masteryScore.compareTo(BigDecimal.valueOf(60)) >= 0)
-        {
+        } else if (masteryScore.compareTo(BigDecimal.valueOf(60)) >= 0) {
             abilityLevel = "MEDIUM";
-        }
-        else
-        {
+        } else {
             abilityLevel = "LOW";
         }
 
@@ -113,20 +118,17 @@ public class ScLearningProfileServiceImpl implements IScLearningProfileService
         profile.setFeatureJson(buildFeatureJson(totalCount, totalDuration, resourceCount, masteryScore));
         profile.setLastCalculatedTime(new Date());
 
-        if (profile.getProfileId() == null)
-        {
+        if (profile.getProfileId() == null) {
             scLearningProfileMapper.insertScLearningProfile(profile);
-        }
-        else
-        {
+        } else {
             scLearningProfileMapper.updateScLearningProfile(profile);
         }
         return profile;
     }
 
-    private String buildFeatureJson(int totalCount, int totalDuration, int resourceCount, BigDecimal masteryScore)
-    {
+    private String buildFeatureJson(int totalCount, int totalDuration, int resourceCount, BigDecimal masteryScore) {
         return String.format("{\"behaviorCount\":%d,\"durationSeconds\":%d,\"resourceCount\":%d,\"masteryScore\":%s}",
-            totalCount, totalDuration, resourceCount, masteryScore.setScale(2, RoundingMode.HALF_UP).toPlainString());
+                totalCount, totalDuration, resourceCount,
+                masteryScore.setScale(2, RoundingMode.HALF_UP).toPlainString());
     }
 }

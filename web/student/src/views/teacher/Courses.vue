@@ -2,90 +2,119 @@
   <div class="portal-page">
     <div class="portal-section-title">
       <h3>我的课程</h3>
-      <el-tag type="primary">查看课程分布与课程详情</el-tag>
+      <el-tag type="success">班级课程视图</el-tag>
     </div>
 
     <section class="portal-kpis" style="margin-top: 0; margin-bottom: 18px;">
-      <el-card class="portal-card portal-stat-card"><div class="label">课程数</div><div class="value">{{ courses.length }}</div><div class="sub">当前负责课程数量</div></el-card>
-      <el-card class="portal-card portal-stat-card"><div class="label">已选课程</div><div class="value">{{ detail.courseId ? 1 : 0 }}</div><div class="sub">右侧查看详情</div></el-card>
-      <el-card class="portal-card portal-stat-card"><div class="label">学科类型</div><div class="value">{{ subjectCount }}</div><div class="sub">覆盖学科类型数量</div></el-card>
-      <el-card class="portal-card portal-stat-card"><div class="label">教学建议</div><div class="sub">建议按课程建设资源与测评闭环</div></el-card>
+      <el-card class="portal-card portal-stat-card"><div class="label">课程数</div><div class="value">{{ courseList.length }}</div><div class="sub">当前学期授课数量</div></el-card>
+      <el-card class="portal-card portal-stat-card"><div class="label">班级数</div><div class="value">{{ classCount }}</div><div class="sub">覆盖教学班级</div></el-card>
+      <el-card class="portal-card portal-stat-card"><div class="label">周学时</div><div class="value">{{ totalHours }}</div><div class="sub">授课工作量参考</div></el-card>
+      <el-card class="portal-card portal-stat-card"><div class="label">学期</div><div class="value">{{ currentTermLabel }}</div><div class="sub">支持学期切换</div></el-card>
     </section>
 
-    <div class="portal-grid portal-grid-2">
-      <el-card class="portal-card">
-        <template #header><span>课程列表</span></template>
-        <el-table v-loading="loading" :data="courses" @row-click="selectCourse">
-          <el-table-column prop="courseId" label="课程ID" width="90" />
-          <el-table-column prop="courseName" label="课程名称" min-width="180" />
-          <el-table-column prop="courseCode" label="课程编码" width="120" />
-          <el-table-column prop="subjectType" label="学科类型" width="120" />
-          <el-table-column label="操作" width="100">
-            <template #default="scope">
-              <el-button link type="primary" @click.stop="selectCourse(scope.row)">详情</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-        <el-empty v-if="!loading && courses.length === 0" description="暂无课程数据" />
-      </el-card>
+    <el-card class="portal-card">
+      <div class="course-filter">
+        <el-select v-model="queryParams.termId" filterable clearable placeholder="选择学期" style="width: 240px" @change="loadCourses">
+          <el-option v-for="item in termOptions" :key="item.value" :label="item.label" :value="item.value" />
+        </el-select>
+        <el-input v-model="keyword" clearable placeholder="搜索课程名称、班级或课程编码" style="width: 320px" />
+      </div>
 
-      <el-card class="portal-card portal-soft-card">
-        <template #header><span>课程详情</span></template>
-        <template v-if="detail.courseId">
-          <div class="portal-surface">课程名称：{{ detail.courseName }}</div>
-          <div class="portal-grid portal-grid-2 mt16">
-            <div class="portal-surface">课程编码：{{ detail.courseCode || '-' }}</div>
-            <div class="portal-surface">学科类型：{{ detail.subjectType || '-' }}</div>
-          </div>
-          <div class="portal-surface mt16">课程简介：{{ detail.intro || '-' }}</div>
-          <div class="mt16">
-            <div class="portal-section-title"><h3>建议动作</h3></div>
-            <ul class="portal-simple-list">
-              <li>为该课程补充高质量资源，提升资源覆盖率。</li>
-              <li>定期检查课程相关预警学生情况，及时跟进。</li>
-              <li>围绕课程知识点组织阶段性测评和复盘。</li>
-            </ul>
-          </div>
-        </template>
-        <el-empty v-else class="portal-empty" description="请选择一门课程查看详情" />
-      </el-card>
-    </div>
+      <el-table v-loading="loading" :data="filteredCourses">
+        <el-table-column label="课程信息" min-width="260">
+          <template #default="{ row }">
+            <div class="course-cell">
+              <strong>{{ row.courseName }}</strong>
+              <span>{{ row.courseCode || '未配置课程编码' }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="班级" prop="className" min-width="140" />
+        <el-table-column label="学科类型" prop="subjectType" width="120" />
+        <el-table-column label="周学时" prop="weeklyHours" width="90" />
+        <el-table-column label="人数上限" prop="studentLimit" width="100" />
+        <el-table-column label="学期" min-width="180">
+          <template #default="{ row }">{{ row.termName || '-' }} {{ row.schoolYear ? `· ${row.schoolYear}` : '' }}</template>
+        </el-table-column>
+        <el-table-column label="课程简介" prop="intro" min-width="260" show-overflow-tooltip />
+      </el-table>
+      <el-empty v-if="!loading && !filteredCourses.length" description="当前学期暂无授课安排" />
+    </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { listCourse } from '@/api/portal'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { listPortalTeacherCourses, listPortalTermOptions } from '@/api/portal'
 import usePortalUserStore from '@/store/user'
 
 const userStore = usePortalUserStore()
 const loading = ref(false)
-const courses = ref<any[]>([])
-const detail = ref<any>({})
+const courseList = ref<any[]>([])
+const termOptions = ref<any[]>([])
+const keyword = ref('')
+const queryParams = reactive<any>({ termId: undefined })
 
-const subjectCount = computed(() => {
-  const values = new Set(courses.value.map((item: any) => item.subjectType).filter(Boolean))
-  return values.size
+const filteredCourses = computed(() => {
+  const value = keyword.value.trim().toLowerCase()
+  if (!value) return courseList.value
+  return courseList.value.filter((item: any) =>
+    String(item.courseName || '').toLowerCase().includes(value)
+    || String(item.courseCode || '').toLowerCase().includes(value)
+    || String(item.className || '').toLowerCase().includes(value),
+  )
 })
+const classCount = computed(() => new Set(courseList.value.map((item: any) => item.classId).filter(Boolean)).size)
+const totalHours = computed(() => courseList.value.reduce((sum: number, item: any) => sum + Number(item.weeklyHours || 0), 0))
+const currentTermLabel = computed(() => termOptions.value.find((item: any) => item.value === queryParams.termId)?.label || '全部')
 
-async function getList() {
+async function loadTerms() {
+  const res = await listPortalTermOptions()
+  termOptions.value = res.data || []
+  const current = termOptions.value.find((item: any) => item.isCurrent === '1')
+  if (!queryParams.termId && current) queryParams.termId = current.value
+}
+
+async function loadCourses() {
   const teacherId = userStore.user?.userId
   if (!teacherId) return
   loading.value = true
   try {
-    const res = await listCourse({ pageNum: 1, pageSize: 50, teacherId })
-    courses.value = res.rows || []
-    if (!detail.value.courseId && courses.value.length) {
-      detail.value = courses.value[0]
-    }
+    const res = await listPortalTeacherCourses({ teacherId, termId: queryParams.termId })
+    courseList.value = res.data || []
   } finally {
     loading.value = false
   }
 }
 
-function selectCourse(row: any) {
-  detail.value = row
+onMounted(async () => {
+  await loadTerms()
+  await loadCourses()
+})
+</script>
+
+<style scoped>
+.course-filter {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 
-onMounted(getList)
-</script>
+.course-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.course-cell strong {
+  color: #172033;
+  font-size: 14px;
+}
+
+.course-cell span {
+  color: #667085;
+  font-size: 12px;
+}
+</style>

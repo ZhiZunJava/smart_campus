@@ -8,10 +8,9 @@ import com.smart.system.domain.campusvo.ResourceDetailVo;
 /**
  * 校园详情聚合服务
  *
- * @author Codex
+ * @author can
  */
-public interface ICampusDetailService
-{
+public interface ICampusDetailService {
     ResourceDetailVo getResourceDetail(Long resourceId);
 
     QuestionDetailVo getQuestionDetail(Long questionId);

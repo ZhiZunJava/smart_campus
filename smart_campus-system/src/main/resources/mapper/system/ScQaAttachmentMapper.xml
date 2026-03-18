@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScQaAttachmentMapper">
+  <resultMap type="ScQaAttachment" id="ScQaAttachmentResult">
+    <id property="attachmentId" column="attachment_id" />
+    <result property="sessionId" column="session_id" />
+    <result property="messageId" column="message_id" />
+    <result property="userId" column="user_id" />
+    <result property="fileName" column="file_name" />
+    <result property="originalName" column="original_name" />
+    <result property="fileUrl" column="file_url" />
+    <result property="mimeType" column="mime_type" />
+    <result property="fileSize" column="file_size" />
+    <result property="storageType" column="storage_type" />
+    <result property="status" column="status" />
+    <result property="deleteTime" column="delete_time" />
+    <result property="createBy" column="create_by" />
+    <result property="createTime" column="create_time" />
+    <result property="updateBy" column="update_by" />
+    <result property="updateTime" column="update_time" />
+    <result property="remark" column="remark" />
+  </resultMap>
+  <sql id="selectScQaAttachmentVo">select attachment_id, session_id, message_id, user_id, file_name,
+    original_name, file_url, mime_type, file_size, storage_type, status, delete_time, create_by,
+    create_time, update_by, update_time, remark from sc_qa_attachment</sql>
+  <select id="selectScQaAttachmentByAttachmentId" parameterType="Long"
+    resultMap="ScQaAttachmentResult"><include refid="selectScQaAttachmentVo" /> where attachment_id
+    = #{attachmentId}</select>
+  <select id="selectScQaAttachmentList" parameterType="ScQaAttachment"
+    resultMap="ScQaAttachmentResult"><include refid="selectScQaAttachmentVo" /><where><if
+        test="sessionId != null">and session_id = #{sessionId}</if><if test="messageId != null">and
+    message_id = #{messageId}</if><if test="userId != null">and user_id = #{userId}</if><if
+        test="status != null and status != ''">and status = #{status}</if></where> order by
+    attachment_id asc</select>
+  <insert id="insertScQaAttachment" parameterType="ScQaAttachment" useGeneratedKeys="true"
+    keyProperty="attachmentId">insert into sc_qa_attachment(session_id, message_id, user_id,
+    file_name, original_name, file_url, mime_type, file_size, storage_type, status, delete_time,
+    create_by, create_time, update_by, update_time, remark) values(#{sessionId}, #{messageId},
+    #{userId}, #{fileName}, #{originalName}, #{fileUrl}, #{mimeType}, #{fileSize}, #{storageType},
+    #{status}, #{deleteTime}, #{createBy}, sysdate(), #{updateBy}, sysdate(), #{remark})</insert>
+  <update id="updateScQaAttachment" parameterType="ScQaAttachment">update sc_qa_attachment <set><if
+        test="sessionId != null">session_id = #{sessionId},</if><if test="messageId != null">message_id
+    = #{messageId},</if><if test="userId != null">user_id = #{userId},</if><if
+        test="fileName != null">file_name = #{fileName},</if><if test="originalName != null">original_name
+    = #{originalName},</if><if test="fileUrl != null">file_url = #{fileUrl},</if><if
+        test="mimeType != null">mime_type = #{mimeType},</if><if test="fileSize != null">file_size =
+    #{fileSize},</if><if test="storageType != null">storage_type = #{storageType},</if><if
+        test="status != null">status = #{status},</if><if test="deleteTime != null">delete_time =
+    #{deleteTime},</if><if test="updateBy != null">update_by = #{updateBy},</if><if
+        test="remark != null">remark = #{remark},</if>update_time = sysdate()</set> where
+    attachment_id = #{attachmentId}</update>
+  <delete id="deleteScQaAttachmentByAttachmentId" parameterType="Long">delete from sc_qa_attachment
+    where attachment_id = #{attachmentId}</delete>
+</mapper>

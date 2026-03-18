@@ -3,8 +3,7 @@ package com.smart.system.mapper;
 import java.util.List;
 import com.smart.system.domain.ScKnowledgePoint;
 
-public interface ScKnowledgePointMapper
-{
+public interface ScKnowledgePointMapper {
     ScKnowledgePoint selectScKnowledgePointByKnowledgePointId(Long knowledgePointId);
 
     List<ScKnowledgePoint> selectScKnowledgePointList(ScKnowledgePoint scKnowledgePoint);

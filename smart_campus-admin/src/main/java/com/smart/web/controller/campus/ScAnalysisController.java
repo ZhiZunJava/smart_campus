@@ -15,25 +15,25 @@ import com.smart.system.service.IScLearningWarningService;
 
 @RestController
 @RequestMapping("/campus/analysis")
-public class ScAnalysisController extends BaseController
-{
-    @Autowired private IScLearningWarningService scLearningWarningService;
-    @Autowired private IScLearningReportService scLearningReportService;
-    @Autowired private ICampusAnalysisService campusAnalysisService;
+public class ScAnalysisController extends BaseController {
+    @Autowired
+    private IScLearningWarningService scLearningWarningService;
+    @Autowired
+    private IScLearningReportService scLearningReportService;
+    @Autowired
+    private ICampusAnalysisService campusAnalysisService;
 
-    @PreAuthorize("@ss.hasPermi('campus:analysis:report:list')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/diagnosis")
     public AjaxResult diagnosis(Long userId, Long courseId,
-                                @RequestParam(required = false) Integer recommendLimit,
-                                @RequestParam(required = false, defaultValue = "true") Boolean autoGenerate)
-    {
+            @RequestParam(required = false) Integer recommendLimit,
+            @RequestParam(required = false, defaultValue = "true") Boolean autoGenerate) {
         return success(campusAnalysisService.diagnoseLearning(userId, courseId, recommendLimit, autoGenerate));
     }
 
-    @PreAuthorize("@ss.hasPermi('campus:analysis:warning:list')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/warning/list")
-    public TableDataInfo warningList(ScLearningWarning scLearningWarning)
-    {
+    public TableDataInfo warningList(ScLearningWarning scLearningWarning) {
         startPage();
         List<ScLearningWarning> list = scLearningWarningService.selectScLearningWarningList(scLearningWarning);
         return getDataTable(list);
@@ -41,38 +41,33 @@ public class ScAnalysisController extends BaseController
 
     @PreAuthorize("@ss.hasPermi('campus:analysis:warning:add')")
     @PostMapping("/warning/build")
-    public AjaxResult buildWarning(Long userId, Long courseId)
-    {
+    public AjaxResult buildWarning(Long userId, Long courseId) {
         return success(scLearningWarningService.buildWarning(userId, courseId));
     }
 
     @PreAuthorize("@ss.hasPermi('campus:analysis:warning:edit')")
     @PostMapping("/warning/{warningId}/process")
     public AjaxResult processWarning(@PathVariable Long warningId,
-                                     @RequestParam(required = false, defaultValue = "PROCESSED") String processStatus)
-    {
+            @RequestParam(required = false, defaultValue = "PROCESSED") String processStatus) {
         return toAjax(scLearningWarningService.processWarning(warningId, processStatus));
     }
 
-    @PreAuthorize("@ss.hasPermi('campus:analysis:report:list')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/workbench")
     public AjaxResult workbench(Long userId,
-                                @RequestParam(required = false) Long courseId,
-                                @RequestParam(required = false, defaultValue = "5") Integer limit)
-    {
+            @RequestParam(required = false) Long courseId,
+            @RequestParam(required = false, defaultValue = "5") Integer limit) {
         return success(campusAnalysisService.getLearningWorkbench(userId, courseId, limit));
     }
 
     @GetMapping("/meta")
-    public AjaxResult meta()
-    {
+    public AjaxResult meta() {
         return success(campusAnalysisService.getAnalysisMeta());
     }
 
-    @PreAuthorize("@ss.hasPermi('campus:analysis:report:list')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/report/list")
-    public TableDataInfo reportList(ScLearningReport scLearningReport)
-    {
+    public TableDataInfo reportList(ScLearningReport scLearningReport) {
         startPage();
         List<ScLearningReport> list = scLearningReportService.selectScLearningReportList(scLearningReport);
         return getDataTable(list);
@@ -80,8 +75,7 @@ public class ScAnalysisController extends BaseController
 
     @PreAuthorize("@ss.hasPermi('campus:analysis:report:add')")
     @PostMapping("/report/generate")
-    public AjaxResult generateReport(Long userId, String reportType)
-    {
+    public AjaxResult generateReport(Long userId, String reportType) {
         return success(scLearningReportService.generateReport(userId, reportType));
     }
 }

@@ -4,6 +4,7 @@
       :menu-items="menuItems"
       :active-path="route.path"
       :selected-role="activeRole"
+      :menu-groups="menuGroups"
       :show-menu="true"
       :show-role-switch="true"
       :show-auth-action="false"
@@ -12,18 +13,24 @@
       @logout="handleLogout"
     />
 
-    <section v-if="showBanner" class="portal-banner">
-      <div class="portal-banner__inner">
-        <div class="portal-banner__content">
-          <div class="portal-banner__tag">{{ currentRoleTitle }}</div>
-          <h1>{{ currentRouteTitle }}</h1>
-          <p>{{ currentRouteDesc }}</p>
-        </div>
+    <main
+      class="portal-main"
+      :class="{
+        'portal-main--workspace': isWorkspaceRoute,
+      }"
+    >
+      <div v-if="!isWorkspaceRoute" class="portal-stage">
+        <router-view v-slot="{ Component, route: childRoute }">
+          <transition :name="resolveChildTransitionName(childRoute, 'portal-content-shift')" mode="out-in">
+            <component :is="Component" :key="childRoute.fullPath" />
+          </transition>
+        </router-view>
       </div>
-    </section>
-
-    <main class="portal-main" :class="{ 'portal-main--compact': !showBanner }">
-      <router-view />
+      <router-view v-else v-slot="{ Component, route: childRoute }">
+        <transition :name="resolveChildTransitionName(childRoute, 'portal-workspace-fade')" mode="out-in">
+          <component :is="Component" :key="childRoute.fullPath" />
+        </transition>
+      </router-view>
     </main>
   </div>
 </template>
@@ -31,17 +38,32 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import type { RouteLocationNormalizedLoaded } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import PortalTopBar from '@/components/PortalTopBar.vue'
 import usePortalUserStore from '@/store/user'
+
+interface MenuItem {
+  title: string
+  path: string
+  desc: string
+}
+
+interface MenuGroup {
+  key: string
+  label: string
+  items: MenuItem[]
+}
 
 const route = useRoute()
 const router = useRouter()
 const userStore = usePortalUserStore()
 
-const menus: Record<string, Array<{ title: string; path: string; desc: string }>> = {
+const menus: Record<string, MenuItem[]> = {
   student: [
     { title: '学习首页', path: '/student/dashboard', desc: '诊断、工作台与关键指标' },
+    { title: '我的课程', path: '/student/courses', desc: '查看学期课程与班级课程' },
+    { title: '我的课表', path: '/student/schedule', desc: '按周查看课程安排' },
     { title: '资源中心', path: '/student/resources', desc: '筛选资源并记录学习行为' },
     { title: '个性推荐', path: '/student/recommendations', desc: '主动反馈推荐结果' },
     { title: '智能问答', path: '/student/qa', desc: '基于课程与学习问题问答' },
@@ -50,38 +72,84 @@ const menus: Record<string, Array<{ title: string; path: string; desc: string }>
   ],
   teacher: [
     { title: '教学概览', path: '/teacher/dashboard', desc: '课程、预警与教学建议' },
-    { title: '课程管理', path: '/teacher/courses', desc: '查看课程与学生分布' },
+    { title: '我的课程', path: '/teacher/courses', desc: '查看本学期授课安排' },
+    { title: '我的课表', path: '/teacher/schedule', desc: '按周查看教学安排' },
     { title: '教学资源', path: '/teacher/resources', desc: '资源查看与更新' },
     { title: '学情预警', path: '/teacher/warnings', desc: '跟进学生预警与干预' },
   ],
   parent: [
     { title: '孩子概览', path: '/parent/dashboard', desc: '孩子学情、建议与提醒' },
+    { title: '孩子课程', path: '/parent/courses', desc: '查看孩子当前学期课程' },
+    { title: '孩子课表', path: '/parent/schedule', desc: '按周查看孩子课程安排' },
     { title: '预警提醒', path: '/parent/warnings', desc: '查看近期风险与干预建议' },
     { title: '学习报告', path: '/parent/reports', desc: '查看阶段学习报告' },
   ],
 }
 
-const roleTitleMap: Record<string, string> = {
-  student: '学生端',
-  teacher: '教师端',
-  parent: '家长端',
+const groupedMenus: Record<string, MenuGroup[]> = {
+  student: [
+    {
+      key: 'student-service',
+      label: '学生全部服务',
+      items: [
+        menus.student[0],
+        menus.student[1],
+        menus.student[2],
+        menus.student[3],
+        menus.student[4],
+      ],
+    },
+    {
+      key: 'student-ai',
+      label: '智能学习',
+      items: [
+        menus.student[5],
+        menus.student[7],
+      ],
+    },
+    {
+      key: 'student-exam',
+      label: '考试成长',
+      items: [
+        menus.student[6],
+      ],
+    },
+  ],
+  teacher: [
+    {
+      key: 'teacher-service',
+      label: '教师全部服务',
+      items: menus.teacher,
+    },
+  ],
+  parent: [
+    {
+      key: 'parent-service',
+      label: '家长全部服务',
+      items: menus.parent,
+    },
+  ],
 }
 
-const activeRole = ref(route.path.split('/')[1] || 'student')
+const roleKeys = Object.keys(menus)
+
+const activeRole = ref('student')
 watch(
   () => route.path,
   (path) => {
-    activeRole.value = path.split('/')[1] || userStore.preferredPortalRole
+    const firstSegment = path.split('/')[1]
+    activeRole.value = roleKeys.includes(firstSegment) ? firstSegment : userStore.preferredPortalRole
   },
   { immediate: true }
 )
 
 const menuItems = computed(() => menus[activeRole.value] || menus.student)
-const currentRoleTitle = computed(() => roleTitleMap[activeRole.value] || '学习门户')
-const currentMenu = computed(() => menuItems.value.find((item) => item.path === route.path) || menuItems.value[0])
-const currentRouteTitle = computed(() => currentMenu.value?.title || currentRoleTitle.value)
-const currentRouteDesc = computed(() => currentMenu.value?.desc || '围绕资源、行为、画像、问答与考试构建学习闭环')
-const showBanner = computed(() => route.meta.hideBanner !== true)
+const menuGroups = computed(() => groupedMenus[activeRole.value] || groupedMenus.student)
+const isWorkspaceRoute = computed(() => route.path === '/student/qa')
+
+function resolveChildTransitionName(childRoute: RouteLocationNormalizedLoaded, fallback: string) {
+  return typeof childRoute.meta.transition === 'string' ? childRoute.meta.transition : fallback
+}
 
 function handleRoleChange(role: string) {
   userStore.setPreferredPortalRole(role)
@@ -99,9 +167,46 @@ async function handleLogout() {
 </script>
 
 <style scoped>
-.portal-shell{min-height:100vh;background:var(--portal-bg)}
-.portal-banner{padding:22px 24px 0}.portal-banner__inner{max-width:1600px;margin:0 auto;border-radius:24px;overflow:hidden;background:linear-gradient(100deg,#f3f7fc 0%,#eef4fb 36%,#e8f0fb 60%,#f5f9ff 100%);border:1px solid #e7eef7;position:relative}.portal-banner__inner::after{content:'';position:absolute;right:0;top:0;bottom:0;width:34%;background:linear-gradient(135deg,rgba(44,134,255,.07) 0%,rgba(93,176,255,.17) 100%)}
-.portal-banner__content{position:relative;z-index:1;padding:34px 40px;max-width:760px}.portal-banner__tag{display:inline-flex;padding:6px 12px;border-radius:999px;background:#e8f2ff;color:#2c86ff;font-size:12px;font-weight:700}.portal-banner h1{margin:14px 0 10px;font-size:36px;color:#152642}.portal-banner p{margin:0;color:#6e7d92;line-height:1.9;font-size:14px}
-.portal-main{max-width:1600px;margin:0 auto;padding-bottom:28px}.portal-main--compact{padding-top:18px}
-@media (max-width: 1200px){.portal-banner{padding:16px 16px 0}.portal-banner__content{padding:26px 22px}.portal-banner h1{font-size:28px}}
+.portal-shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(47, 107, 255, 0.08) 0%, rgba(47, 107, 255, 0) 26%),
+    radial-gradient(circle at 82% 16%, rgba(124, 208, 255, 0.12) 0%, rgba(124, 208, 255, 0) 22%),
+    linear-gradient(180deg, #f6f9fd 0%, #f3f6fb 54%, #f7f9fc 100%);
+}
+
+.portal-main {
+  max-width: 1680px;
+  margin: 0 auto;
+  padding: 10px 18px 18px;
+}
+
+.portal-stage {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  overflow: visible;
+}
+
+.portal-main--workspace {
+  max-width: none;
+  width: 100%;
+  height: calc(100vh - 64px);
+  overflow: hidden;
+  padding: 10px 18px 18px;
+}
+
+@media (max-width: 1200px) {
+  .portal-main {
+    padding: 10px 12px 14px;
+  }
+}
+
+@media (max-width: 900px) {
+  .portal-main--workspace {
+    height: calc(100vh - 60px);
+    padding: 8px 10px 10px;
+  }
+}
 </style>

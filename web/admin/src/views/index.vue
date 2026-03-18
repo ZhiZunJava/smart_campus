@@ -187,16 +187,17 @@ function navigateTo(path: string) {
 .dashboard-page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 16px;
+  gap: 18px;
+  padding: 20px;
 }
 
 .hero-card {
-  border-radius: 20px;
-  padding: 28px;
-  background: linear-gradient(135deg, rgba(0, 110, 255, 0.96), rgba(0, 88, 223, 0.92) 45%, rgba(19, 167, 80, 0.78));
-  box-shadow: 0 18px 40px rgba(0, 78, 170, 0.18);
-  color: #fff;
+  border-radius: 22px;
+  padding: 30px;
+  background: #ffffff;
+  border: 1px solid var(--el-border-color-lighter);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.05);
+  color: var(--el-text-color-primary);
 }
 
 .hero-content {
@@ -208,8 +209,9 @@ function navigateTo(path: string) {
 
 .hero-tag {
   margin-bottom: 16px;
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: #eef4ff;
+  border: 1px solid #dbe8ff;
+  color: #155fca;
 }
 
 .hero-copy h1 {
@@ -223,7 +225,7 @@ function navigateTo(path: string) {
   max-width: 720px;
   font-size: 15px;
   line-height: 1.9;
-  color: rgba(255, 255, 255, 0.88);
+  color: var(--el-text-color-regular);
 }
 
 .hero-actions {
@@ -234,11 +236,11 @@ function navigateTo(path: string) {
 }
 
 .hero-panel {
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--el-border-color-lighter);
   border-radius: 18px;
   padding: 20px;
-  backdrop-filter: blur(10px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .panel-title {
@@ -258,13 +260,13 @@ function navigateTo(path: string) {
 }
 
 .panel-item__desc {
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--el-text-color-regular);
   line-height: 1.7;
   font-size: 13px;
 }
 
 .overview-card {
-  border: none;
+  border: 1px solid var(--el-border-color-lighter);
   border-radius: 18px;
 }
 
@@ -308,7 +310,7 @@ function navigateTo(path: string) {
 }
 
 .section-card {
-  border: none;
+  border: 1px solid var(--el-border-color-lighter);
   border-radius: 18px;
 }
 
@@ -408,7 +410,7 @@ function navigateTo(path: string) {
 .quick-link {
   padding: 18px;
   border-radius: 16px;
-  background: linear-gradient(180deg, rgba(0, 110, 255, 0.06), rgba(255, 255, 255, 0));
+  background: #ffffff;
   border: 1px solid var(--el-border-color-lighter);
   cursor: pointer;
   transition: all 0.2s ease;

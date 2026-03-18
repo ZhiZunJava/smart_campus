@@ -1,14 +1,37 @@
-<?xml version="1.0" encoding="UTF-8" ?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.smart.system.mapper.ScExamPaperQuestionMapper">
-  <resultMap type="ScExamPaperQuestion" id="ScExamPaperQuestionResult"><id property="id" column="id"/><result property="paperId" column="paper_id"/><result property="questionId" column="question_id"/><result property="score" column="score"/><result property="sortNo" column="sort_no"/></resultMap>
-  <sql id="selectScExamPaperQuestionVo">select id, paper_id, question_id, score, sort_no from sc_exam_paper_question</sql>
-  <select id="selectScExamPaperQuestionById" parameterType="Long" resultMap="ScExamPaperQuestionResult"><include refid="selectScExamPaperQuestionVo"/> where id = #{id}</select>
-  <select id="selectScExamPaperQuestionList" parameterType="ScExamPaperQuestion" resultMap="ScExamPaperQuestionResult"><include refid="selectScExamPaperQuestionVo"/><where><if test="paperId != null">and paper_id = #{paperId}</if><if test="questionId != null">and question_id = #{questionId}</if></where> order by sort_no asc, id asc</select>
-  <select id="selectScExamPaperQuestionByPaperId" parameterType="Long" resultMap="ScExamPaperQuestionResult"><include refid="selectScExamPaperQuestionVo"/> where paper_id = #{paperId} order by sort_no asc, id asc</select>
-  <insert id="insertScExamPaperQuestion" parameterType="ScExamPaperQuestion" useGeneratedKeys="true" keyProperty="id">insert into sc_exam_paper_question(paper_id, question_id, score, sort_no) values(#{paperId}, #{questionId}, #{score}, #{sortNo})</insert>
-  <update id="updateScExamPaperQuestion" parameterType="ScExamPaperQuestion">update sc_exam_paper_question <set><if test="paperId != null">paper_id = #{paperId},</if><if test="questionId != null">question_id = #{questionId},</if><if test="score != null">score = #{score},</if><if test="sortNo != null">sort_no = #{sortNo},</if></set> where id = #{id}</update>
-  <delete id="deleteScExamPaperQuestionById" parameterType="Long">delete from sc_exam_paper_question where id = #{id}</delete>
-  <delete id="deleteScExamPaperQuestionByIds" parameterType="Long">delete from sc_exam_paper_question where id in <foreach item="id" collection="array" open="(" separator="," close=")">#{id}</foreach></delete>
-  <delete id="deleteScExamPaperQuestionByPaperId" parameterType="Long">delete from sc_exam_paper_question where paper_id = #{paperId}</delete>
+  <resultMap type="ScExamPaperQuestion" id="ScExamPaperQuestionResult">
+    <id property="id" column="id" />
+    <result property="paperId" column="paper_id" />
+    <result property="questionId" column="question_id" />
+    <result property="score" column="score" />
+    <result property="sortNo" column="sort_no" />
+  </resultMap>
+  <sql id="selectScExamPaperQuestionVo">select id, paper_id, question_id, score, sort_no from
+    sc_exam_paper_question</sql>
+  <select id="selectScExamPaperQuestionById" parameterType="Long"
+    resultMap="ScExamPaperQuestionResult"><include refid="selectScExamPaperQuestionVo" /> where id =
+    #{id}</select>
+  <select id="selectScExamPaperQuestionList" parameterType="ScExamPaperQuestion"
+    resultMap="ScExamPaperQuestionResult"><include refid="selectScExamPaperQuestionVo" /><where><if
+        test="paperId != null">and paper_id = #{paperId}</if><if test="questionId != null">and
+    question_id = #{questionId}</if></where> order by sort_no asc, id asc</select>
+  <select id="selectScExamPaperQuestionByPaperId" parameterType="Long"
+    resultMap="ScExamPaperQuestionResult"><include refid="selectScExamPaperQuestionVo" /> where
+    paper_id = #{paperId} order by sort_no asc, id asc</select>
+  <insert id="insertScExamPaperQuestion" parameterType="ScExamPaperQuestion" useGeneratedKeys="true"
+    keyProperty="id">insert into sc_exam_paper_question(paper_id, question_id, score, sort_no)
+    values(#{paperId}, #{questionId}, #{score}, #{sortNo})</insert>
+  <update id="updateScExamPaperQuestion" parameterType="ScExamPaperQuestion">update
+    sc_exam_paper_question <set><if test="paperId != null">paper_id = #{paperId},</if><if
+        test="questionId != null">question_id = #{questionId},</if><if test="score != null">score =
+    #{score},</if><if test="sortNo != null">sort_no = #{sortNo},</if></set> where id = #{id}</update>
+  <delete id="deleteScExamPaperQuestionById" parameterType="Long">delete from sc_exam_paper_question
+    where id = #{id}</delete>
+  <delete id="deleteScExamPaperQuestionByIds" parameterType="Long">delete from
+    sc_exam_paper_question where id in <foreach item="id" collection="array" open="(" separator=","
+      close=")">#{id}</foreach></delete>
+  <delete id="deleteScExamPaperQuestionByPaperId" parameterType="Long">delete from
+    sc_exam_paper_question where paper_id = #{paperId}</delete>
 </mapper>

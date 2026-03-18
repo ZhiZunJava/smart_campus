@@ -1,53 +1,57 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper
-PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.smart.system.mapper.ScClassMapper">
     <resultMap type="ScClass" id="ScClassResult">
-        <id property="classId" column="class_id"/>
-        <result property="gradeId" column="grade_id"/>
-        <result property="className" column="class_name"/>
-        <result property="headTeacherId" column="head_teacher_id"/>
-        <result property="status" column="status"/>
-        <result property="createBy" column="create_by"/>
-        <result property="createTime" column="create_time"/>
-        <result property="updateBy" column="update_by"/>
-        <result property="updateTime" column="update_time"/>
-        <result property="remark" column="remark"/>
+        <id property="classId" column="class_id" />
+        <result property="gradeId" column="grade_id" />
+        <result property="deptId" column="dept_id" />
+        <result property="deptName" column="dept_name" />
+        <result property="className" column="class_name" />
+        <result property="headTeacherId" column="head_teacher_id" />
+        <result property="status" column="status" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+        <result property="remark" column="remark" />
     </resultMap>
-    <sql id="selectScClassVo">
-        select class_id, grade_id, class_name, head_teacher_id, status, create_by, create_time, update_by, update_time, remark from sc_class
-    </sql>
+    <sql id="selectScClassVo"> select c.class_id, c.grade_id, c.dept_id, d.dept_name, c.class_name,
+        c.head_teacher_id, c.status, c.create_by, c.create_time, c.update_by, c.update_time,
+        c.remark from sc_class c left join sys_dept d on d.dept_id = c.dept_id </sql>
     <select id="selectScClassByClassId" parameterType="Long" resultMap="ScClassResult">
-        <include refid="selectScClassVo"/> where class_id = #{classId}
-    </select>
+        <include refid="selectScClassVo" /> where c.class_id = #{classId} </select>
     <select id="selectScClassList" parameterType="ScClass" resultMap="ScClassResult">
-        <include refid="selectScClassVo"/>
+        <include refid="selectScClassVo" />
         <where>
-            <if test="gradeId != null">and grade_id = #{gradeId}</if>
-            <if test="className != null and className != ''">and class_name like concat('%', #{className}, '%')</if>
-            <if test="headTeacherId != null">and head_teacher_id = #{headTeacherId}</if>
-            <if test="status != null and status != ''">and status = #{status}</if>
-        </where>
-        order by class_id desc
-    </select>
+            <if test="gradeId != null">and c.grade_id = #{gradeId}</if>
+            <if test="deptId != null">and
+        c.dept_id = #{deptId}</if>
+            <if test="className != null and className != ''">and c.class_name
+        like concat('%', #{className}, '%')</if>
+            <if test="headTeacherId != null">and
+        c.head_teacher_id = #{headTeacherId}</if>
+            <if test="status != null and status != ''">and
+        c.status = #{status}</if>
+        </where> order by c.class_id desc </select>
     <insert id="insertScClass" parameterType="ScClass" useGeneratedKeys="true" keyProperty="classId">
-        insert into sc_class(grade_id, class_name, head_teacher_id, status, create_by, create_time, remark)
-        values(#{gradeId}, #{className}, #{headTeacherId}, #{status}, #{createBy}, sysdate(), #{remark})
-    </insert>
-    <update id="updateScClass" parameterType="ScClass">
-        update sc_class
-        <set>
+        insert into sc_class(grade_id, dept_id, class_name, head_teacher_id, status, create_by,
+        create_time, remark) values(#{gradeId}, #{deptId}, #{className}, #{headTeacherId},
+        #{status}, #{createBy}, sysdate(), #{remark}) </insert>
+    <update id="updateScClass" parameterType="ScClass"> update sc_class <set>
             <if test="gradeId != null">grade_id = #{gradeId},</if>
+            <if test="deptId != null">dept_id
+        = #{deptId},</if>
             <if test="className != null">class_name = #{className},</if>
-            <if test="headTeacherId != null">head_teacher_id = #{headTeacherId},</if>
-            <if test="status != null">status = #{status},</if>
-            <if test="updateBy != null">update_by = #{updateBy},</if>
-            <if test="remark != null">remark = #{remark},</if>
-            update_time = sysdate()
-        </set>
-        where class_id = #{classId}
-    </update>
-    <delete id="deleteScClassByClassId" parameterType="Long">delete from sc_class where class_id = #{classId}</delete>
-    <delete id="deleteScClassByClassIds" parameterType="Long">delete from sc_class where class_id in <foreach item="classId" collection="array" open="(" separator="," close=")">#{classId}</foreach></delete>
+            <if
+                test="headTeacherId != null">head_teacher_id = #{headTeacherId},</if>
+            <if
+                test="status != null">status = #{status},</if>
+            <if test="updateBy != null">update_by
+        = #{updateBy},</if>
+            <if test="remark != null">remark = #{remark},</if> update_time =
+        sysdate() </set> where class_id = #{classId} </update>
+    <delete id="deleteScClassByClassId" parameterType="Long">delete from sc_class where class_id =
+        #{classId}</delete>
+    <delete id="deleteScClassByClassIds" parameterType="Long">delete from sc_class where class_id in <foreach
+            item="classId" collection="array" open="(" separator="," close=")">#{classId}</foreach></delete>
 </mapper>

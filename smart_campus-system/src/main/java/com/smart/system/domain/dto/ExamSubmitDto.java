@@ -5,30 +5,25 @@ import java.util.List;
 /**
  * 提交考试 DTO
  *
- * @author Codex
+ * @author can
  */
-public class ExamSubmitDto
-{
+public class ExamSubmitDto {
     private Long recordId;
     private List<ExamAnswerSubmitDto> answers;
 
-    public Long getRecordId()
-    {
+    public Long getRecordId() {
         return recordId;
     }
 
-    public void setRecordId(Long recordId)
-    {
+    public void setRecordId(Long recordId) {
         this.recordId = recordId;
     }
 
-    public List<ExamAnswerSubmitDto> getAnswers()
-    {
+    public List<ExamAnswerSubmitDto> getAnswers() {
         return answers;
     }
 
-    public void setAnswers(List<ExamAnswerSubmitDto> answers)
-    {
+    public void setAnswers(List<ExamAnswerSubmitDto> answers) {
         this.answers = answers;
     }
 }
