@@ -21,8 +21,8 @@ $menuLightText: #314156;
 $menuLightActiveText: #006eff;
 
 // 基础变量
-$base-sidebar-width: 220px;
-$sideBarWidth: 220px;
+$base-sidebar-width: 232px;
+$sideBarWidth: 232px;
 
 // 菜单暗色变量
 $base-menu-color: #d7e3f7;
@@ -64,6 +64,9 @@ $--color-info: #737d89;
 }
 
 :root {
+  --app-radius-xs: 2px;
+  --app-radius-sm: 4px;
+  --app-radius-md: 6px;
   --td-brand-color-1: #d5e7ff;
   --td-brand-color-2: #aacfff;
   --td-brand-color-3: #7fb7ff;
@@ -104,15 +107,15 @@ $--color-info: #737d89;
   --el-text-color-secondary: #62778f;
 
   --sidebar-bg: #ffffff;
-  --sidebar-text: #41546a;
-  --menu-hover: #f2f6fb;
-  --menu-active-bg: #eaf2ff;
+  --sidebar-text: #26384d;
+  --menu-hover: #edf2f8;
+  --menu-active-bg: #e4edf9;
   --menu-active-shadow: none;
-  --menu-active-text: #155fca;
+  --menu-active-text: #124ea3;
 
   --navbar-bg: #ffffff;
-  --navbar-text: #1f2d3d;
-  --navbar-hover: #f3f7fb;
+  --navbar-text: #182638;
+  --navbar-hover: #eef3f8;
 
   --tags-bg: #ffffff;
   --tags-item-bg: #ffffff;
@@ -143,7 +146,7 @@ html.dark {
   --el-text-color-secondary: rgba(255, 255, 255, .66);
 
   --sidebar-bg: #0f1724;
-  --sidebar-text: rgba(255, 255, 255, .84);
+  --sidebar-text: rgba(255, 255, 255, .88);
   --menu-hover: rgba(255, 255, 255, 0.06);
   --menu-active-bg: #2684ff;
   --menu-active-shadow: none;

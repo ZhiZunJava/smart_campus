@@ -1,28 +1,13 @@
 <template>
   <div class="app-container">
-    <section class="teaching-page-shell">
-      <div class="teaching-page-shell__copy">
-        <div class="teaching-page-shell__eyebrow">教学基础</div>
-        <h2>班级课表</h2>
-        <p>按班级和学期直接查看周课表，适合教务老师核对班级排课是否冲突。</p>
-      </div>
-      <div class="teaching-page-shell__stats">
-        <div v-for="item in headerStats" :key="item.label" class="teaching-page-shell__stat">
-          <span>{{ item.label }}</span>
-          <strong>{{ item.value }}</strong>
-          <small>{{ item.tip }}</small>
-        </div>
-      </div>
-    </section>
-
     <el-form :inline="true" :model="queryParams" class="mb16">
       <el-form-item label="学期"><el-select v-model="queryParams.termId" filterable clearable style="width:220px"><el-option v-for="item in termOptions" :key="`term-${item.value}`" :label="item.label" :value="item.value" /></el-select></el-form-item>
       <el-form-item label="部门">
         <el-tree-select
           v-model="queryParams.deptId"
           :data="deptOptions"
-          :props="{ value: 'value', label: 'label', children: 'children' }"
-          value-key="value"
+          :props="{ value: 'id', label: 'label', children: 'children' }"
+          value-key="id"
           check-strictly
           clearable
           filterable
@@ -34,6 +19,11 @@
       <el-form-item><el-button type="primary" icon="Search" @click="loadData">加载课表</el-button><el-button icon="Refresh" @click="resetQuery">重置</el-button></el-form-item>
     </el-form>
 
+    <div v-if="filterTags.length" class="filter-tag-bar">
+      <span class="filter-tag-bar__label">当前查看范围</span>
+      <el-tag v-for="tag in filterTags" :key="tag.label" size="small" round>{{ tag.label }}</el-tag>
+    </div>
+
     <el-card class="schedule-board-card">
       <div class="schedule-toolbar">
         <div class="schedule-weekbar">
@@ -41,7 +31,7 @@
           <el-button @click="shiftWeek(-1)">上一周</el-button>
           <el-button type="primary" plain @click="shiftWeek(1)">下一周</el-button>
         </div>
-        <div class="schedule-toolbar__hint">当前班级：{{ currentClassLabel }}，当前学期：{{ currentTermLabel }}</div>
+        <div class="schedule-toolbar__hint">第 {{ currentWeek }} 周 · {{ visibleSchedules.length }} 个课块</div>
       </div>
 
       <div class="schedule-board">
@@ -169,15 +159,32 @@ const occupiedMap = computed(() => {
   })
   return map
 })
-const headerStats = computed(() => [
-  { label: '排课数', value: schedules.value.length, tip: '当前班级全部排课' },
-  { label: '可见课块', value: visibleSchedules.value.length, tip: '按当前周次过滤后显示' },
-  { label: '上课日', value: new Set(visibleSchedules.value.map((item:any)=>item.weekDay).filter(Boolean)).size, tip: '本周排课分布' },
-])
-const currentClassLabel = computed(() => classOptions.value.find((item:any)=>item.value===queryParams.classId)?.label || '全部班级')
+const currentClassLabel = computed(() => simplifyClassLabel(classOptions.value.find((item:any)=>item.value===queryParams.classId)?.label) || '全部班级')
 const currentTermLabel = computed(() => termOptions.value.find((item:any)=>item.value===queryParams.termId)?.label || '全部学期')
+const filterTags = computed(() => {
+  const tags: Array<{ label: string }> = []
+  const termLabel = currentTermLabel.value
+  const classLabel = currentClassLabel.value
+  const deptLabel = findDeptLabel(deptOptions.value, queryParams.deptId)
+  if (termLabel && termLabel !== '全部学期') tags.push({ label: `学期：${termLabel}` })
+  if (deptLabel) tags.push({ label: `部门：${deptLabel}` })
+  if (classLabel && classLabel !== '全部班级') tags.push({ label: `班级：${classLabel}` })
+  return tags
+})
 
 function getOptionLabel(options:any[], value:any, fallback:string){ return options.find((item)=>item.value===value)?.label || `${fallback} ${value || '-'}` }
+function simplifyClassLabel(label?: string) {
+  return String(label || '').split(' · ')[0]
+}
+function findDeptLabel(options: any[], value: any): string {
+  if (value == null) return ''
+  for (const item of options || []) {
+    if (item?.id === value) return item.label || ''
+    const child = findDeptLabel(item?.children || [], value)
+    if (child) return child
+  }
+  return ''
+}
 function dayPartColor(dayPart?: string) {
   if (dayPart === 'NOON') return '#ffe7a3'
   if (dayPart === 'AFTERNOON') return '#c9f0ea'
@@ -349,8 +356,12 @@ function setCurrentWeek(){
 }
 async function loadOptions(){
   termOptions.value = await fetchTermOptions()
-  const deptRes = await listDept()
-  deptOptions.value = flattenDeptOptions(deptRes.data || [])
+  const deptRes = await deptTreeSelect()
+  deptOptions.value = deptRes.data || []
+  if (!queryParams.termId) {
+    const currentTerm = termOptions.value.find((item: any) => item.isCurrent === '1')
+    queryParams.termId = currentTerm?.value ?? termOptions.value[0]?.value
+  }
   classOptions.value = await fetchClassOptions(undefined, queryParams.deptId)
   try {
     const layoutRes = await getTimeTableLayout()
@@ -358,22 +369,21 @@ async function loadOptions(){
   } catch {
     tableRows.value = [...defaultTableRows]
   }
-  if (!queryParams.termId && termOptions.value.length) queryParams.termId = termOptions.value[0].value
   if (!queryParams.classId && classOptions.value.length) queryParams.classId = classOptions.value[0].value
-}
-function flattenDeptOptions(items:any[] = [], prefix = ''): any[] {
-  return items.map((item:any) => {
-    const label = prefix ? `${prefix} / ${item.deptName}` : item.deptName
-    return {
-      label,
-      value: item.deptId,
-      children: flattenDeptOptions(item.children || [], label),
-    }
-  })
 }
 async function loadData(){
   loading.value = true
   try {
+    if (!queryParams.termId) {
+      const currentTerm = termOptions.value.find((item: any) => item.isCurrent === '1')
+      queryParams.termId = currentTerm?.value ?? termOptions.value[0]?.value
+    }
+    if (!queryParams.classId) {
+      schedules.value = []
+      classCourseOptions.value = []
+      classCourseMap.value = new Map()
+      return
+    }
     const classCourseRes = await listClassCourse({ pageNum:1, pageSize:200, classId: queryParams.classId, termId: queryParams.termId, status:'0' })
     const classCourseRows = classCourseRes.rows || []
     classCourseMap.value = new Map(classCourseRows.map((item:any) => [Number(item.id), item]))
@@ -387,7 +397,8 @@ async function loadData(){
   }
 }
 function resetQuery(){
-  queryParams.termId = undefined
+  const currentTerm = termOptions.value.find((item: any) => item.isCurrent === '1')
+  queryParams.termId = currentTerm?.value ?? termOptions.value[0]?.value
   queryParams.deptId = undefined
   queryParams.classId = undefined
   schedules.value = []
@@ -397,20 +408,17 @@ function resetQuery(){
 watch(() => queryParams.deptId, async (value) => {
   classOptions.value = await fetchClassOptions(undefined, value)
   if (!classOptions.value.some((item:any) => item.value === queryParams.classId)) queryParams.classId = undefined
+  schedules.value = []
+  classCourseOptions.value = []
+  classCourseMap.value = new Map()
 })
 onMounted(async()=>{ await loadOptions(); await loadData() })
 </script>
 
 <style scoped>
 .mb16{margin-bottom:16px}
-.teaching-page-shell{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(320px,.85fr);gap:16px;margin-bottom:16px;padding:18px;border:1px solid #dbe3f0;border-radius:18px;background:linear-gradient(180deg,#fff 0%,#f7fbff 100%)}
-.teaching-page-shell__eyebrow{color:#607188;font-size:12px;font-weight:700;letter-spacing:.08em}
-.teaching-page-shell__copy h2{margin:8px 0 10px;color:#172033;font-size:24px;line-height:1.2}
-.teaching-page-shell__copy p{margin:0;color:#526076;font-size:13px;line-height:1.8}
-.teaching-page-shell__stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.teaching-page-shell__stat{display:flex;flex-direction:column;gap:6px;padding:14px;border-radius:16px;background:#fff;border:1px solid rgba(219,227,240,.92)}
-.teaching-page-shell__stat span,.teaching-page-shell__stat small{color:#667085;font-size:12px}
-.teaching-page-shell__stat strong{color:#172033;font-size:22px;line-height:1.1}
+.filter-tag-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:-2px 0 16px;padding:10px 12px;border-radius:14px;background:linear-gradient(180deg,#f8fbff 0%,#f3f8ff 100%);border:1px solid #dbe6f5}
+.filter-tag-bar__label{color:#526076;font-size:12px;font-weight:600}
 .schedule-board-card{
   margin-bottom:16px;
   border:none;
@@ -528,5 +536,4 @@ onMounted(async()=>{ await loadOptions(); await loadData() })
   font-size:12px;
   font-weight:600;
 }
-@media (max-width: 1100px){.teaching-page-shell{grid-template-columns:1fr}.teaching-page-shell__stats{grid-template-columns:1fr}}
 </style>

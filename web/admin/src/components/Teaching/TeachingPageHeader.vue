@@ -37,7 +37,7 @@ defineProps<{
   margin-bottom: 16px;
   padding: 18px;
   border: 1px solid #dbe3f0;
-  border-radius: 18px;
+  border-radius: 6px;
   background:
     radial-gradient(circle at top right, rgba(76, 120, 255, 0.14), transparent 28%),
     linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
@@ -52,7 +52,7 @@ defineProps<{
 .teaching-page-header__icon {
   width: 52px;
   height: 52px;
-  border-radius: 16px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -94,7 +94,7 @@ defineProps<{
   flex-direction: column;
   gap: 6px;
   padding: 14px;
-  border-radius: 16px;
+  border-radius: 6px;
   background: rgba(255, 255, 255, 0.86);
   border: 1px solid rgba(219, 227, 240, 0.9);
 }

@@ -341,7 +341,7 @@ box-shadow: none;
       gap: 8px;
       margin: 0;
       padding: 9px 12px;
-      border-radius: 8px;
+      border-radius: 4px;
       cursor: pointer;
       line-height: 1;
       transition: all 0.2s ease;

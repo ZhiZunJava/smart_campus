@@ -212,7 +212,7 @@ watch(searchPool, (list: SearchItem[]) => {
     display: flex;
     height: 48px;
     align-items: center;
-    border-radius: 10px;
+    border-radius: 4px;
     padding-right: 10px;
     color: var(--el-text-color-primary);
     transition: background-color .2s ease, color .2s ease;

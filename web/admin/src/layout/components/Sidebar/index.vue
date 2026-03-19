@@ -93,7 +93,7 @@ const activeMenu = computed(() => {
       &.is-active {
         color: var(--menu-active-text, var(--el-color-primary));
         background: var(--menu-active-bg) !important;
-        box-shadow: inset 2px 0 0 var(--el-color-primary);
+        box-shadow: none;
       }
     }
 

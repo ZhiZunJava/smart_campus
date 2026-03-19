@@ -12,6 +12,7 @@ import com.smart.common.core.domain.AjaxResult;
 import com.smart.common.core.page.TableDataInfo;
 import com.smart.common.enums.BusinessType;
 import com.smart.system.domain.ScCourseStudent;
+import com.smart.system.domain.dto.CourseStudentBatchAddDto;
 import com.smart.system.service.IScCourseStudentService;
 
 @RestController
@@ -47,6 +48,13 @@ public class ScCourseStudentController extends BaseController {
     public AjaxResult add(@Validated @RequestBody ScCourseStudent scCourseStudent) {
         scCourseStudent.setCreateBy(getUsername());
         return toAjax(scCourseStudentService.insertScCourseStudent(scCourseStudent));
+    }
+
+    @PreAuthorize("@ss.hasPermi('campus:courseStudent:add')")
+    @Log(title = "课程学生关系", businessType = BusinessType.INSERT)
+    @PostMapping("/batch-add")
+    public AjaxResult batchAdd(@RequestBody CourseStudentBatchAddDto batchDto) {
+        return success(scCourseStudentService.batchAddCourseStudents(batchDto));
     }
 
     @PreAuthorize("@ss.hasPermi('campus:courseStudent:edit')")

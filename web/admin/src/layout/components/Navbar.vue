@@ -164,7 +164,7 @@ async function toggleTheme(event?: MouseEvent): Promise<void> {
     line-height: 46px;
     height: 42px;
     width: 42px;
-    border-radius: 12px;
+    border-radius: 4px;
     cursor: pointer;
     transition: all 0.3s;
     -webkit-tap-highlight-color: transparent;
@@ -215,7 +215,7 @@ async function toggleTheme(event?: MouseEvent): Promise<void> {
       padding: 0 10px;
       min-width: 42px;
       height: 42px;
-      border-radius: 12px;
+      border-radius: 4px;
       font-size: 18px;
       color: var(--el-text-color-regular);
 

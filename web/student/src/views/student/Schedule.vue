@@ -145,7 +145,7 @@
                         <span>
                           {{ getActivity(row.key, day.value).weeksStr || '全周' }}
                           ·
-                          {{ getActivity(row.key, day.value).startSection }}-{{ getActivity(row.key, day.value).endSection }}节
+                          {{ getSectionText(getActivity(row.key, day.value)) }}
                         </span>
                       </div>
                       <div
@@ -492,7 +492,24 @@ function formatLocation(item: any) {
 }
 
 function formatWeeksAndUnits(item: any) {
-  return `(${item?.weeksStr || '全周'}) (${item?.startSection}-${item?.endSection}节)`
+  return `(${item?.weeksStr || '全周'}) (${getSectionText(item)})`
+}
+
+function getUnitLabel(unit: number) {
+  const row = tableRows.value.find((item: any) => Number(item.unit) === Number(unit))
+  return String(row?.label || unit)
+}
+
+function getSectionText(item: any) {
+  const start = Number(item?.startSection || 0)
+  const end = Number(item?.endSection || start)
+  if (!start) return '-'
+  const labels: string[] = []
+  for (let unit = start; unit <= end; unit += 1) {
+    labels.push(getUnitLabel(unit))
+  }
+  if (!labels.length) return `${item?.startSection || '-'}-${item?.endSection || '-'}节`
+  return `${labels[0]}-${labels[labels.length - 1]}节`
 }
 
 function escapeHtml(value: any) {

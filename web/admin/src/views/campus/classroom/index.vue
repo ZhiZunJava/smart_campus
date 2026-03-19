@@ -1,28 +1,13 @@
 <template>
   <div class="app-container">
-    <section class="teaching-page-shell">
-      <div class="teaching-page-shell__copy">
-        <div class="teaching-page-shell__eyebrow">教学基础</div>
-        <h2>教室管理</h2>
-        <p>统一维护校区、楼栋和教室容量，排课时直接选择，课程表自动回填。</p>
-      </div>
-      <div class="teaching-page-shell__stats">
-        <div v-for="item in headerStats" :key="item.label" class="teaching-page-shell__stat">
-          <span>{{ item.label }}</span>
-          <strong>{{ item.value }}</strong>
-          <small>{{ item.tip }}</small>
-        </div>
-      </div>
-    </section>
-
     <el-form :inline="true" :model="queryParams" class="mb16">
       <el-form-item label="教室"><el-input v-model="queryParams.classroomName" placeholder="请输入教室名称" clearable style="width:220px" /></el-form-item>
       <el-form-item label="部门">
         <el-tree-select
           v-model="queryParams.deptId"
           :data="deptOptions"
-          :props="{ value: 'value', label: 'label', children: 'children' }"
-          value-key="value"
+          :props="{ value: 'id', label: 'label', children: 'children' }"
+          value-key="id"
           check-strictly
           clearable
           filterable
@@ -39,8 +24,18 @@
           <el-option v-for="dict in campus_area_type" :key="`query-campus-${dict.value}`" :label="dict.label" :value="dict.value" />
         </el-select>
       </el-form-item>
+      <el-form-item label="类型">
+        <el-select v-model="queryParams.roomType" filterable clearable placeholder="请选择教室类型" style="width:220px">
+          <el-option v-for="dict in classroom_room_type" :key="`query-room-type-${dict.value}`" :label="dict.label" :value="dict.value" />
+        </el-select>
+      </el-form-item>
       <el-form-item><el-button type="primary" icon="Search" @click="getList">搜索</el-button><el-button icon="Refresh" @click="resetQuery">重置</el-button></el-form-item>
     </el-form>
+
+    <div v-if="currentFilterTags.length" class="filter-tag-bar">
+      <span class="filter-tag-bar__label">当前资源范围</span>
+      <el-tag v-for="tag in currentFilterTags" :key="tag.label" size="small" round>{{ tag.label }}</el-tag>
+    </div>
 
     <el-row :gutter="10" class="mb16">
       <el-col :span="1.5"><el-button type="primary" plain icon="Plus" @click="handleAdd">新增</el-button></el-col>
@@ -70,8 +65,8 @@
           <el-tree-select
             v-model="form.deptId"
             :data="deptOptions"
-            :props="{ value: 'value', label: 'label', children: 'children' }"
-            value-key="value"
+            :props="{ value: 'id', label: 'label', children: 'children' }"
+            value-key="id"
             check-strictly
             clearable
             filterable
@@ -130,14 +125,14 @@
 import { computed, getCurrentInstance, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { addClassroom, delClassroom, listClassroom, updateClassroom } from '@/api/campus/teaching'
-import { listDept } from '@/api/system/dept'
+import { deptTreeSelect } from '@/api/system/user'
 
 const { proxy } = getCurrentInstance() as any
 const { campus_area_type, classroom_room_type } = proxy.useDict('campus_area_type', 'classroom_room_type')
 const loading=ref(false), showSearch=ref(true), total=ref(0), open=ref(false), title=ref(''), ids=ref<any[]>([]), single=ref(true), multiple=ref(true), dataList=ref<any[]>([])
 const allClassrooms = ref<any[]>([])
 const deptOptions=ref<any[]>([])
-const queryParams=reactive<any>({ pageNum:1,pageSize:10,classroomName:undefined,deptId:undefined,buildingName:undefined,campusName:undefined })
+const queryParams=reactive<any>({ pageNum:1,pageSize:10,classroomName:undefined,deptId:undefined,buildingName:undefined,campusName:undefined,roomType:undefined })
 const form=reactive<any>({})
 const buildingOptions = computed(() => uniqueOptions(allClassrooms.value.map((item:any) => item.buildingName)))
 const filteredBuildingOptions = computed(() => {
@@ -148,21 +143,36 @@ const filteredBuildingOptions = computed(() => {
       .map((item:any) => item.buildingName)
   )
 })
-const headerStats = computed(() => [
-  { label: '当前页教室', value: total.value, tip: '可供排课直接选择' },
-  { label: '已启用', value: dataList.value.filter((item:any)=>item.status==='0').length, tip: '课表会自动读取' },
-  { label: '楼栋覆盖', value: new Set(dataList.value.map((item:any)=>item.buildingName).filter(Boolean)).size, tip: '统一楼栋命名' },
-])
+const currentFilterTags = computed(() => {
+  const tags: Array<{ label: string }> = []
+  const deptLabel = findDeptLabel(deptOptions.value, queryParams.deptId)
+  const campusLabel = campus_area_type.value.find((item:any) => item.value === queryParams.campusName)?.label
+  const roomTypeLabel = classroom_room_type.value.find((item:any) => item.value === queryParams.roomType)?.label
+  if (deptLabel) tags.push({ label: `部门：${deptLabel}` })
+  if (campusLabel) tags.push({ label: `校区：${campusLabel}` })
+  if (roomTypeLabel) tags.push({ label: `类型：${roomTypeLabel}` })
+  if (queryParams.buildingName) tags.push({ label: `楼栋：${queryParams.buildingName}` })
+  return tags
+})
 
 function resetForm(){ Object.assign(form,{ classroomId:undefined,classroomName:'',buildingName:'',deptId:undefined,campusName:'',capacity:0,roomType:'',sortOrder:0,status:'0',remark:'' }) }
 async function getList(){ loading.value=true; const res=await listClassroom(queryParams); dataList.value=res.rows||[]; total.value=res.total||0; loading.value=false }
 async function loadDictionaryOptions() {
   const res = await listClassroom({ pageNum:1, pageSize:500 })
   allClassrooms.value = res.rows || []
-  const deptRes = await listDept()
-  deptOptions.value = buildDeptTree(deptRes.data || [])
+  const deptRes = await deptTreeSelect()
+  deptOptions.value = deptRes.data || []
 }
-function resetQuery(){ queryParams.pageNum=1; queryParams.classroomName=undefined; queryParams.deptId=undefined; queryParams.buildingName=undefined; queryParams.campusName=undefined; getList() }
+function findDeptLabel(options: any[], value: any): string {
+  if (value == null) return ''
+  for (const item of options || []) {
+    if (item?.id === value) return item.label || ''
+    const child = findDeptLabel(item?.children || [], value)
+    if (child) return child
+  }
+  return ''
+}
+function resetQuery(){ queryParams.pageNum=1; queryParams.classroomName=undefined; queryParams.deptId=undefined; queryParams.buildingName=undefined; queryParams.campusName=undefined; queryParams.roomType=undefined; getList() }
 function handleSelectionChange(selection:any[]){ ids.value=selection.map((i:any)=>i.classroomId); single.value=selection.length!==1; multiple.value=!selection.length }
 function handleAdd(){ resetForm(); title.value='新增教室'; open.value=true }
 function handleUpdate(row?:any){ const item=row || dataList.value.find((i:any)=>i.classroomId===ids.value[0]); if(!item) return; resetForm(); Object.assign(form,item); title.value='修改教室'; open.value=true }
@@ -191,27 +201,13 @@ async function submitForm(){
   getList()
 }
 async function handleDelete(row?:any){ const target=row?.classroomId || ids.value; if(!target || (Array.isArray(target)&&!target.length)) return; await ElMessageBox.confirm('确认删除所选教室吗？','提示',{type:'warning'}); await delClassroom(target); ElMessage.success('删除成功'); getList() }
-function buildDeptTree(items:any[] = []): any[] {
-  return items.map((item:any) => ({
-    label: item.deptName,
-    value: item.deptId,
-    children: buildDeptTree(item.children || []),
-  }))
-}
-
 onMounted(async()=>{ resetForm(); await loadDictionaryOptions(); getList() })
 </script>
 
 <style scoped>
 .mb16{margin-bottom:16px}
-.teaching-page-shell{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(320px,.85fr);gap:16px;margin-bottom:16px;padding:18px;border:1px solid #dbe3f0;border-radius:18px;background:linear-gradient(180deg,#fff 0%,#f7fbff 100%)}
-.teaching-page-shell__eyebrow{color:#607188;font-size:12px;font-weight:700;letter-spacing:.08em}
-.teaching-page-shell__copy h2{margin:8px 0 10px;color:#172033;font-size:24px;line-height:1.2}
-.teaching-page-shell__copy p{margin:0;color:#526076;font-size:13px;line-height:1.8}
-.teaching-page-shell__stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.teaching-page-shell__stat{display:flex;flex-direction:column;gap:6px;padding:14px;border-radius:16px;background:#fff;border:1px solid rgba(219,227,240,.92)}
-.teaching-page-shell__stat span,.teaching-page-shell__stat small{color:#667085;font-size:12px}
-.teaching-page-shell__stat strong{color:#172033;font-size:22px;line-height:1.1}
+.filter-tag-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:-2px 0 16px;padding:10px 12px;border-radius:14px;background:linear-gradient(180deg,#f8fbff 0%,#f3f8ff 100%);border:1px solid #dbe6f5}
+.filter-tag-bar__label{color:#526076;font-size:12px;font-weight:600}
 .classroom-form-preview{
   margin-top:4px;
   padding-left:90px;
@@ -219,5 +215,4 @@ onMounted(async()=>{ resetForm(); await loadDictionaryOptions(); getList() })
   font-size:12px;
   line-height:1.6;
 }
-@media (max-width: 1100px){.teaching-page-shell{grid-template-columns:1fr}.teaching-page-shell__stats{grid-template-columns:1fr}}
 </style>

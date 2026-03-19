@@ -16,6 +16,14 @@ export function addCourseStudent(data: any) {
   })
 }
 
+export function batchAddCourseStudent(data: any) {
+  return request({
+    url: '/campus/courseStudent/batch-add',
+    method: 'post',
+    data,
+  })
+}
+
 export function checkCourseStudentDuplicate(data: any) {
   return request({
     url: '/campus/courseStudent/duplicate-check',

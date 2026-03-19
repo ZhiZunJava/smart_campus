@@ -4,11 +4,58 @@
       <h3>我的课程</h3>
     </div>
 
-    <section class="portal-kpis course-kpis">
-      <el-card class="portal-card portal-stat-card"><div class="label">课程数</div><div class="value">{{ courseList.length }}</div><div class="sub">当前学期课程数量</div></el-card>
-      <el-card class="portal-card portal-stat-card"><div class="label">总周学时</div><div class="value">{{ totalHours }}</div><div class="sub">按班级课程累计</div></el-card>
-      <el-card class="portal-card portal-stat-card"><div class="label">学科数</div><div class="value">{{ subjectCount }}</div><div class="sub">覆盖学科类型</div></el-card>
-      <el-card class="portal-card portal-stat-card"><div class="label">学期</div><div class="value">{{ currentTermLabel }}</div><div class="sub">支持切换学年学期</div></el-card>
+    <section class="course-overview">
+      <el-card class="portal-card course-overview__hero">
+        <div class="course-overview__hero-copy">
+          <span class="course-overview__eyebrow">课程总览</span>
+          <h4>{{ summaryTermText }}</h4>
+          <p>当前学期共 {{ courseList.length }} 门课程，建议优先查看已排课课程与本周上课安排。</p>
+          <div class="course-overview__hero-tags">
+            <span class="course-overview__tag">总学分 {{ totalCredits }}</span>
+            <span class="course-overview__tag">周学时 {{ totalHours }}</span>
+            <span class="course-overview__tag">学科 {{ subjectCount }}</span>
+          </div>
+        </div>
+        <div class="course-overview__hero-stats">
+          <div class="course-overview__hero-stat">
+            <span>已排课程</span>
+            <strong>{{ scheduledCourseCount }}</strong>
+          </div>
+          <div class="course-overview__hero-stat">
+            <span>待补排课程</span>
+            <strong>{{ unscheduledCourseCount }}</strong>
+          </div>
+        </div>
+      </el-card>
+
+      <div class="course-overview__metrics">
+        <el-card class="portal-card course-metric-card course-metric-card--courses">
+          <div class="course-metric-card__icon"><i class="ri-book-open-line"></i></div>
+          <div class="course-metric-card__body">
+            <div class="course-metric-card__label">课程数</div>
+            <div class="course-metric-card__value">{{ courseList.length }}</div>
+            <div class="course-metric-card__sub">当前学期修读课程</div>
+          </div>
+        </el-card>
+
+        <el-card class="portal-card course-metric-card course-metric-card--hours">
+          <div class="course-metric-card__icon"><i class="ri-time-line"></i></div>
+          <div class="course-metric-card__body">
+            <div class="course-metric-card__label">总周学时</div>
+            <div class="course-metric-card__value">{{ totalHours }}</div>
+            <div class="course-metric-card__sub">按班级课程累计</div>
+          </div>
+        </el-card>
+
+        <el-card class="portal-card course-metric-card course-metric-card--subjects">
+          <div class="course-metric-card__icon"><i class="ri-layout-grid-line"></i></div>
+          <div class="course-metric-card__body">
+            <div class="course-metric-card__label">学科数</div>
+            <div class="course-metric-card__value">{{ subjectCount }}</div>
+            <div class="course-metric-card__sub">覆盖课程类型</div>
+          </div>
+        </el-card>
+      </div>
     </section>
 
     <el-card class="portal-card course-list-card">
@@ -161,6 +208,8 @@ const summaryTermText = computed(() => {
 const totalCredits = computed(() => {
   return courseList.value.reduce((sum: number, item: any) => sum + Number(item.credits || 0), 0)
 })
+const scheduledCourseCount = computed(() => courseList.value.filter((item: any) => (item.scheduleDetails || []).length > 0).length)
+const unscheduledCourseCount = computed(() => Math.max(courseList.value.length - scheduledCourseCount.value, 0))
 
 function requiredLabel(value?: string) {
   if (value === 'Y') return '是'
@@ -178,7 +227,7 @@ function summarizeSchedules(items: any[]) {
   const seen = new Set<string>()
   return items.reduce((result: string[], item: any) => {
     const weeksText = item.weeksText || '-'
-    const sectionText = `${item.startSection || '-'}~${item.endSection || '-'}节`
+    const sectionText = item.sectionText || `${item.startSectionLabel || item.startSection || '-'}~${item.endSectionLabel || item.endSection || '-'}节`
     const text = `${weeksText} ${item.weekLabel || ''} ${sectionText} ${item.classroom || ''} ${item.teacherName || ''}`.trim()
     if (!text || seen.has(text)) return result
     seen.add(text)
@@ -215,9 +264,172 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.course-kpis {
-  margin-top: 0;
+.course-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.9fr);
+  gap: 14px;
   margin-bottom: 18px;
+}
+
+.course-overview__hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(220px, 0.65fr);
+  gap: 16px;
+  padding: 0;
+  background:
+    radial-gradient(circle at top right, rgba(47, 107, 255, 0.14), transparent 28%),
+    linear-gradient(135deg, #ffffff 0%, #f5f9ff 62%, #eef4ff 100%);
+}
+
+.course-overview__hero :deep(.el-card__body) {
+  padding: 18px 20px;
+}
+
+.course-overview__hero-copy {
+  min-width: 0;
+}
+
+.course-overview__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(47, 107, 255, 0.09);
+  color: #2b63ea;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.course-overview__hero-copy h4 {
+  margin: 12px 0 8px;
+  color: #16345c;
+  font-size: 28px;
+  line-height: 1.24;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.course-overview__hero-copy p {
+  margin: 0;
+  max-width: 520px;
+  color: #5f728b;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.course-overview__hero-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.course-overview__tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(206, 220, 241, 0.95);
+  color: #31567f;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.course-overview__hero-stats {
+  display: grid;
+  gap: 12px;
+  align-content: stretch;
+}
+
+.course-overview__hero-stat {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 110px;
+  padding: 16px 18px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(212, 223, 240, 0.92);
+}
+
+.course-overview__hero-stat span {
+  color: #6a7b90;
+  font-size: 12px;
+}
+
+.course-overview__hero-stat strong {
+  margin-top: 8px;
+  color: #204f9e;
+  font-size: 30px;
+  line-height: 1.05;
+  font-weight: 800;
+}
+
+.course-overview__metrics {
+  display: grid;
+  gap: 12px;
+}
+
+.course-metric-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.course-metric-card :deep(.el-card__body) {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 16px 18px;
+}
+
+.course-metric-card__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+
+.course-metric-card__label {
+  color: #6a7b90;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.course-metric-card__value {
+  margin-top: 4px;
+  color: #17345d;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.08;
+}
+
+.course-metric-card__sub {
+  margin-top: 6px;
+  color: #8a97ab;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.course-metric-card--courses .course-metric-card__icon {
+  background: linear-gradient(135deg, #e8f0ff 0%, #dce8ff 100%);
+  color: #2b63ea;
+}
+
+.course-metric-card--hours .course-metric-card__icon {
+  background: linear-gradient(135deg, #e7fbfa 0%, #d7f3f1 100%);
+  color: #11867c;
+}
+
+.course-metric-card--subjects .course-metric-card__icon {
+  background: linear-gradient(135deg, #fff4e8 0%, #fde8cf 100%);
+  color: #cc7a14;
 }
 
 .course-list-card {
@@ -417,6 +629,22 @@ onMounted(async () => {
 
 .muted {
   color: #98a2b3;
+}
+
+@media (max-width: 1100px) {
+  .course-overview {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .course-overview__hero {
+    grid-template-columns: 1fr;
+  }
+
+  .course-overview__hero-copy h4 {
+    font-size: 24px;
+  }
 }
 
 .course-detail-header {

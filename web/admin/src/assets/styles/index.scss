@@ -104,7 +104,7 @@ aside {
   background: var(--el-fill-color-light);
   padding: 10px 18px;
   margin-bottom: 20px;
-  border-radius: 12px;
+  border-radius: var(--app-radius-md);
   display: block;
   line-height: 28px;
   font-size: 14px;
@@ -179,24 +179,38 @@ aside {
 }
 
 .el-card {
-  border-radius: 18px;
+  border-radius: var(--app-radius-md);
   border: 1px solid var(--el-border-color-lighter);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
 }
 
 .el-button {
-  border-radius: 12px;
+  border-radius: var(--app-radius-sm);
 }
 
 .el-input__wrapper,
 .el-textarea__inner,
 .el-select__wrapper {
-  border-radius: 12px;
+  border-radius: var(--app-radius-sm);
 }
 
 .el-table {
-  border-radius: 16px;
+  border-radius: var(--app-radius-md);
   overflow: hidden;
+}
+
+.el-dialog,
+.el-drawer,
+.el-message-box {
+  border-radius: var(--app-radius-md);
+}
+
+.el-dropdown-menu,
+.el-popper.is-light,
+.el-select-dropdown,
+.el-picker-panel,
+.el-tooltip__popper {
+  border-radius: var(--app-radius-sm);
 }
 
 .el-table th {
@@ -252,7 +266,7 @@ aside {
 .el-form,
 .el-descriptions,
 .el-tabs {
-  --el-border-radius-base: 12px;
+  --el-border-radius-base: var(--app-radius-sm);
 }
 
 html.dark {

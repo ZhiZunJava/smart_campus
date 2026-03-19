@@ -1,40 +1,73 @@
 <template>
   <div class="dashboard-page">
-    <section class="hero-card">
-      <div class="hero-content">
-        <div class="hero-copy">
-          <el-tag effect="dark" class="hero-tag">智慧校园管理驾驶舱</el-tag>
-          <h1>AI 赋能智慧校园自主学习生态系统</h1>
-          <p>
-            面向学生、教师、管理员与家长，统一承载学习资源、学习画像、学情分析、智能答疑与测评考试，打造数据驱动、过程可追踪、结果可干预的校园学习平台。
-          </p>
-          <div class="hero-actions">
-            <el-button type="primary" @click="navigateTo('/system/user')">进入用户管理</el-button>
-            <el-button plain @click="navigateTo('/system/menu')">配置系统菜单</el-button>
-          </div>
+    <section class="ops-hero">
+      <div class="ops-hero__main">
+        <div class="ops-hero__eyebrow">首页概览</div>
+        <h1>智慧校园运营首页</h1>
+        <p>聚焦用户基础、教务基础和待处理事项，首页直接给出可执行信息，不再展示空泛介绍。</p>
+        <div class="ops-hero__chips">
+          <span class="ops-chip">当前学期：{{ currentTermLabel }}</span>
+          <span class="ops-chip">启用学期：{{ metrics.enabledTermCount }}</span>
+          <span class="ops-chip">待排课程：{{ metrics.pendingArrangeCount }}</span>
         </div>
-        <div class="hero-panel">
-          <div class="panel-title">平台建设重点</div>
-          <div class="panel-list">
-            <div v-for="item in priorities" :key="item.title" class="panel-item">
-              <div class="panel-item__title">{{ item.title }}</div>
-              <div class="panel-item__desc">{{ item.desc }}</div>
-            </div>
-          </div>
+      </div>
+      <div class="ops-hero__side">
+        <div class="hero-stat">
+          <span>用户总量</span>
+          <strong>{{ metrics.userTotal }}</strong>
+          <small>学生、教师、家长、管理员统一管理</small>
+        </div>
+        <div class="hero-stat hero-stat--warn">
+          <span>学情预警</span>
+          <strong>{{ dashboard.warningCount || 0 }}</strong>
+          <small>{{ warningHint }}</small>
         </div>
       </div>
     </section>
 
-    <el-row :gutter="16" class="overview-row">
-      <el-col v-for="item in overviewCards" :key="item.title" :xs="24" :sm="12" :lg="6">
-        <el-card shadow="hover" class="overview-card">
-          <div class="overview-card__icon" :class="item.type">
-            <el-icon><component :is="item.icon" /></el-icon>
+    <el-row :gutter="16" class="metric-row">
+      <el-col v-for="item in topMetrics" :key="item.title" :xs="24" :sm="12" :xl="6">
+        <el-card class="metric-card" shadow="never">
+          <div class="metric-card__label">{{ item.title }}</div>
+          <div class="metric-card__value">{{ item.value }}</div>
+          <div class="metric-card__desc">{{ item.desc }}</div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <el-row :gutter="16" class="content-row">
+      <el-col :xs="24" :xl="14">
+        <el-card class="section-card" shadow="never">
+          <template #header>
+            <div class="section-card__header">
+              <span>用户基础</span>
+              <span class="section-card__sub">多类型用户与教务档案底座</span>
+            </div>
+          </template>
+          <div class="info-grid info-grid--users">
+            <div v-for="item in userMetrics" :key="item.title" class="info-tile">
+              <div class="info-tile__title">{{ item.title }}</div>
+              <div class="info-tile__value">{{ item.value }}</div>
+              <div class="info-tile__desc">{{ item.desc }}</div>
+            </div>
           </div>
-          <div class="overview-card__main">
-            <div class="overview-card__label">{{ item.title }}</div>
-            <div class="overview-card__value">{{ item.value }}</div>
-            <div class="overview-card__desc">{{ item.desc }}</div>
+        </el-card>
+      </el-col>
+
+      <el-col :xs="24" :xl="10">
+        <el-card class="section-card" shadow="never">
+          <template #header>
+            <div class="section-card__header">
+              <span>教务基础</span>
+              <span class="section-card__sub">当前可用于排课与教学运行的数据规模</span>
+            </div>
+          </template>
+          <div class="info-grid">
+            <div v-for="item in teachingMetrics" :key="item.title" class="info-tile info-tile--compact">
+              <div class="info-tile__title">{{ item.title }}</div>
+              <div class="info-tile__value">{{ item.value }}</div>
+              <div class="info-tile__desc">{{ item.desc }}</div>
+            </div>
           </div>
         </el-card>
       </el-col>
@@ -45,18 +78,17 @@
         <el-card class="section-card" shadow="never">
           <template #header>
             <div class="section-card__header">
-              <span>核心业务模块</span>
-              <span class="section-card__sub">围绕自主学习闭环建设</span>
+              <span>待处理事项</span>
+              <span class="section-card__sub">首页直接给出有动作价值的提醒</span>
             </div>
           </template>
-          <div class="feature-grid">
-            <div v-for="item in featureModules" :key="item.title" class="feature-item">
-              <div class="feature-item__top">
-                <el-icon class="feature-item__icon"><component :is="item.icon" /></el-icon>
-                <span class="feature-item__title">{{ item.title }}</span>
+          <div class="task-list">
+            <div v-for="item in actionItems" :key="item.title" class="task-item" @click="navigateTo(item.path)">
+              <div class="task-item__main">
+                <div class="task-item__title">{{ item.title }}</div>
+                <div class="task-item__desc">{{ item.desc }}</div>
               </div>
-              <div class="feature-item__desc">{{ item.desc }}</div>
-              <div class="feature-item__meta">{{ item.meta }}</div>
+              <div class="task-item__value">{{ item.value }}</div>
             </div>
           </div>
         </el-card>
@@ -66,58 +98,16 @@
         <el-card class="section-card" shadow="never">
           <template #header>
             <div class="section-card__header">
-              <span>建设建议</span>
-              <span class="section-card__sub">建议按阶段推进</span>
-            </div>
-          </template>
-          <el-timeline>
-            <el-timeline-item
-              v-for="item in roadmap"
-              :key="item.title"
-              :timestamp="item.stage"
-              placement="top"
-              :type="item.type"
-            >
-              <div class="timeline-title">{{ item.title }}</div>
-              <div class="timeline-desc">{{ item.desc }}</div>
-            </el-timeline-item>
-          </el-timeline>
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <el-row :gutter="16" class="content-row bottom-row">
-      <el-col :xs="24" :lg="12">
-        <el-card class="section-card quick-card" shadow="never">
-          <template #header>
-            <div class="section-card__header">
               <span>快捷入口</span>
-              <span class="section-card__sub">常用后台配置入口</span>
+              <span class="section-card__sub">高频管理入口</span>
             </div>
           </template>
-          <div class="quick-links">
-            <div v-for="item in quickLinks" :key="item.title" class="quick-link" @click="navigateTo(item.path)">
-              <div class="quick-link__title">{{ item.title }}</div>
-              <div class="quick-link__desc">{{ item.desc }}</div>
+          <div class="quick-grid">
+            <div v-for="item in quickLinks" :key="item.title" class="quick-item" @click="navigateTo(item.path)">
+              <div class="quick-item__title">{{ item.title }}</div>
+              <div class="quick-item__desc">{{ item.desc }}</div>
             </div>
           </div>
-        </el-card>
-      </el-col>
-
-      <el-col :xs="24" :lg="12">
-        <el-card class="section-card quick-card" shadow="never">
-          <template #header>
-            <div class="section-card__header">
-              <span>平台说明</span>
-              <span class="section-card__sub">可用于项目汇报与演示</span>
-            </div>
-          </template>
-          <ul class="tips-list">
-            <li>支持学生、教师、管理员、家长四类用户统一认证与权限管理。</li>
-            <li>支持学习资源管理、智能检索、学习过程追踪与 AI 学情分析。</li>
-            <li>支持智能答疑、自适应考试、错题沉淀与个性化学习推荐。</li>
-            <li>支持后续扩展向量检索、模型配置、风控策略与推荐排序能力。</li>
-          </ul>
         </el-card>
       </el-col>
     </el-row>
@@ -125,202 +115,282 @@
 </template>
 
 <script setup lang="ts">
+import { computed, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import pkg from '../../package.json'
-import {
-  DataAnalysis,
-  Reading,
-  ChatDotRound,
-  Finished,
-  Monitor,
-  User,
-  Files,
-  Notebook,
-  TrendCharts,
-  SetUp,
-} from '@element-plus/icons-vue'
+import useUserStore from '@/store/modules/user'
+import { getCampusDashboard } from '@/api/campus/overview'
+import { listGrade, listClass, listCourse, listClassCourse, listCourseSchedule, listSchoolTerm, listClassroom } from '@/api/campus/teaching'
+import { listUser } from '@/api/system/user'
 
 const router = useRouter()
+const userStore = useUserStore()
 
-const overviewCards = [
-  { title: '当前版本', value: `v${pkg.version}`, desc: '管理端前端版本号', icon: DataAnalysis, type: 'brand' },
-  { title: '核心角色', value: '4 类', desc: '学生 / 教师 / 管理员 / 家长', icon: User, type: 'success' },
-  { title: '核心能力', value: '6 大', desc: '画像、推荐、答疑、资源、分析、测评', icon: Monitor, type: 'warning' },
-  { title: '一期方向', value: '可落地', desc: '适合作为课程设计与毕设演示', icon: Finished, type: 'danger' },
-]
+const dashboard = reactive<any>({})
+const metrics = reactive<any>({
+  userTotal: 0,
+  studentCount: 0,
+  teacherCount: 0,
+  parentCount: 0,
+  adminCount: 0,
+  gradeCount: 0,
+  classCount: 0,
+  courseCount: 0,
+  classCourseCount: 0,
+  scheduleCount: 0,
+  classroomCount: 0,
+  termCount: 0,
+  enabledTermCount: 0,
+  pendingArrangeCount: 0,
+  arrangedClassCourseCount: 0,
+})
 
-const priorities = [
-  { title: '统一身份认证', desc: '多角色账号统一接入，结合登录异常识别提升安全性。' },
-  { title: '学习数据中台', desc: '沉淀课程、资源、行为、测评、画像等核心学习数据。' },
-  { title: 'AI 场景闭环', desc: '从推荐、问答、分析到考试形成教学与学习闭环。' },
-]
+const currentTermLabel = computed(() => {
+  const label = dashboard.currentTermName || dashboard.currentTermLabel
+  return label || '未识别当前学期'
+})
 
-const featureModules = [
-  { title: '个性化学习中心', desc: '学习画像、学习计划、资源推荐、成长追踪。', meta: '画像 + 推荐 + 学习目标', icon: Reading },
-  { title: '学习资源中心', desc: '支持视频、文档、PPT、试题等资源统一管理与检索。', meta: '资源管理 + 智能检索', icon: Files },
-  { title: '智能答疑助手', desc: '结合课程资料与知识点，提供可追溯的问答服务。', meta: '知识库问答 + 来源引用', icon: ChatDotRound },
-  { title: '学情分析预警', desc: '跟踪活跃度、完成率、成绩波动并生成干预建议。', meta: '过程追踪 + 风险预警', icon: TrendCharts },
-  { title: '智能测评考试', desc: '支持题库、试卷、在线考试、错题本与自适应测评。', meta: '考试记录 + 自适应出题', icon: Notebook },
-  { title: 'AI 运维配置', desc: '统一管理模型配置、Prompt 模板与 AI 调用日志。', meta: '模型配置 + 可运维化', icon: SetUp },
-]
+const warningHint = computed(() => {
+  const count = Number(dashboard.warningCount || 0)
+  if (count <= 0) return '当前没有学情预警'
+  if (count <= 5) return '建议今日内完成核查'
+  return '建议优先进入学情预警页处理'
+})
 
-const roadmap = [
-  { stage: '阶段一', title: '平台底座搭建', desc: '完成用户、课程、班级、资源、菜单与权限基础能力建设。', type: 'primary' },
-  { stage: '阶段二', title: '学习闭环打通', desc: '打通资源学习、学习行为、画像、推荐和智能答疑。', type: 'success' },
-  { stage: '阶段三', title: '测评分析完善', desc: '补齐学情预警、考试记录、错题本和阶段性学情报告。', type: 'warning' },
-  { stage: '阶段四', title: 'AI 增强升级', desc: '接入更强的检索、风控、推荐排序与预测分析能力。', type: 'danger' },
-]
+const topMetrics = computed(() => [
+  { title: '教学班关系', value: metrics.classCourseCount, desc: '班级课程正式绑定数量' },
+  { title: '已排课教学班', value: metrics.arrangedClassCourseCount, desc: '已有排课安排的教学班' },
+  { title: '待排课教学班', value: metrics.pendingArrangeCount, desc: '总课时尚未排满，建议优先处理' },
+  { title: '学习行为', value: dashboard.studyRecordCount || 0, desc: '当前账号关联的学习行为采集量' },
+])
+
+const userMetrics = computed(() => [
+  { title: '学生', value: metrics.studentCount, desc: '学生账号规模' },
+  { title: '教师', value: metrics.teacherCount, desc: '任课与班主任基础' },
+  { title: '家长', value: metrics.parentCount, desc: '家校协同用户基础' },
+  { title: '管理员', value: metrics.adminCount, desc: '后台管理与教务账号' },
+  { title: '全部用户', value: metrics.userTotal, desc: '统一身份认证账号总量' },
+  { title: '考试记录', value: dashboard.examRecordCount || 0, desc: '当前账号关联测评记录' },
+])
+
+const teachingMetrics = computed(() => [
+  { title: '年级', value: metrics.gradeCount, desc: '年级基础数据' },
+  { title: '班级', value: metrics.classCount, desc: '班级组织规模' },
+  { title: '课程', value: metrics.courseCount, desc: '课程主数据规模' },
+  { title: '排课表', value: metrics.scheduleCount, desc: '正式排课记录总数' },
+  { title: '教室', value: metrics.classroomCount, desc: '可排课教室资源' },
+  { title: '学期', value: metrics.enabledTermCount, desc: `启用 ${metrics.enabledTermCount} / 总计 ${metrics.termCount}` },
+])
+
+const actionItems = computed(() => [
+  { title: '处理待排课教学班', value: metrics.pendingArrangeCount, desc: '优先进入班级课程或排课表，完成未排满课程的安排。', path: '/campus/classCourse' },
+  { title: '查看学情预警', value: dashboard.warningCount || 0, desc: '核查当前学习风险并制定干预动作。', path: '/campus/analysis/warning' },
+  { title: '检查班级课表', value: metrics.scheduleCount, desc: '进入班级课表核对教室与时间冲突。', path: '/campus/classSchedule' },
+  { title: '维护教室资源', value: metrics.classroomCount, desc: '补齐教室、校区、类型与容量基础数据。', path: '/campus/classroom' },
+])
 
 const quickLinks = [
-  { title: '用户管理', desc: '维护平台账户与角色权限', path: '/system/user' },
-  { title: '角色管理', desc: '配置学生/教师/管理员/家长权限', path: '/system/role' },
-  { title: '菜单管理', desc: '维护前端导航与功能权限点', path: '/system/menu' },
-  { title: '参数设置', desc: '配置模型、策略与系统参数', path: '/system/config' },
+  { title: '用户与身份', desc: '管理学生、教师、家长与后台账号', path: '/system/user' },
+  { title: '班级课程', desc: '维护教学班、教师、总课时与完成率', path: '/campus/classCourse' },
+  { title: '排课表', desc: '进行手工排课与自动排课', path: '/campus/courseSchedule' },
+  { title: '学情预警', desc: '查看风险学生与预警处理建议', path: '/campus/analysis/warning' },
 ]
 
 function navigateTo(path: string) {
   router.push(path)
 }
+
+async function loadDashboard() {
+  const userId = Number(userStore.id || 0)
+  if (!userId) return
+  const res = await getCampusDashboard({ userId, recommendLimit: 5 })
+  Object.assign(dashboard, res.data || {})
+}
+
+async function loadUserMetrics() {
+  const [allRes, studentRes, teacherRes, parentRes, adminRes] = await Promise.all([
+    listUser({ pageNum: 1, pageSize: 1 }),
+    listUser({ pageNum: 1, pageSize: 1, userType: 'student' }),
+    listUser({ pageNum: 1, pageSize: 1, userType: 'teacher' }),
+    listUser({ pageNum: 1, pageSize: 1, userType: 'parent' }),
+    listUser({ pageNum: 1, pageSize: 1, userType: 'admin' }),
+  ])
+  metrics.userTotal = Number(allRes.total || 0)
+  metrics.studentCount = Number(studentRes.total || 0)
+  metrics.teacherCount = Number(teacherRes.total || 0)
+  metrics.parentCount = Number(parentRes.total || 0)
+  metrics.adminCount = Number(adminRes.total || 0)
+}
+
+async function loadTeachingMetrics() {
+  const [gradeRes, classRes, courseRes, classCourseRes, scheduleRes, termRes, classroomRes] = await Promise.all([
+    listGrade({ pageNum: 1, pageSize: 1 }),
+    listClass({ pageNum: 1, pageSize: 1 }),
+    listCourse({ pageNum: 1, pageSize: 1 }),
+    listClassCourse({ pageNum: 1, pageSize: 500 }),
+    listCourseSchedule({ pageNum: 1, pageSize: 1 }),
+    listSchoolTerm({ pageNum: 1, pageSize: 200 }),
+    listClassroom({ pageNum: 1, pageSize: 1 }),
+  ])
+
+  const classCourseRows = classCourseRes.rows || []
+
+  metrics.gradeCount = Number(gradeRes.total || 0)
+  metrics.classCount = Number(classRes.total || 0)
+  metrics.courseCount = Number(courseRes.total || 0)
+  metrics.classCourseCount = Number(classCourseRes.total || classCourseRows.length || 0)
+  metrics.scheduleCount = Number(scheduleRes.total || 0)
+  metrics.classroomCount = Number(classroomRes.total || 0)
+  metrics.termCount = Number(termRes.total || termRes.rows?.length || 0)
+  metrics.enabledTermCount = (termRes.rows || []).filter((item: any) => item.status === '0').length
+  metrics.pendingArrangeCount = classCourseRows.filter((item: any) => Number(item.totalHours || 0) > Number(item.arrangedHours || 0)).length
+  metrics.arrangedClassCourseCount = classCourseRows.filter((item: any) => Number(item.arrangedHours || 0) > 0).length
+
+  const currentTerm = (termRes.rows || []).find((item: any) => item.isCurrent === '1')
+  if (currentTerm) {
+    dashboard.currentTermName = currentTerm.termName
+    dashboard.currentTermLabel = `${currentTerm.termName}（${currentTerm.schoolYear}）`
+  }
+}
+
+onMounted(async () => {
+  await Promise.all([loadDashboard(), loadUserMetrics(), loadTeachingMetrics()])
+})
 </script>
 
 <style lang="scss" scoped>
 .dashboard-page {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
   padding: 20px;
 }
 
-.hero-card {
-  border-radius: 22px;
-  padding: 30px;
-  background: #ffffff;
-  border: 1px solid var(--el-border-color-lighter);
-  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.05);
-  color: var(--el-text-color-primary);
-}
-
-.hero-content {
+.ops-hero {
   display: grid;
-  grid-template-columns: 1.6fr 1fr;
-  gap: 24px;
-  align-items: stretch;
-}
-
-.hero-tag {
-  margin-bottom: 16px;
-  background: #eef4ff;
-  border: 1px solid #dbe8ff;
-  color: #155fca;
-}
-
-.hero-copy h1 {
-  margin: 0 0 14px;
-  font-size: 32px;
-  line-height: 1.25;
-}
-
-.hero-copy p {
-  margin: 0;
-  max-width: 720px;
-  font-size: 15px;
-  line-height: 1.9;
-  color: var(--el-text-color-regular);
-}
-
-.hero-actions {
-  margin-top: 24px;
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.hero-panel {
-  background: rgba(255, 255, 255, 0.92);
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.55fr);
+  gap: 16px;
+  padding: 22px 24px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #ffffff 0%, #f5f9ff 58%, #eef4ff 100%);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 18px;
-  padding: 20px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
 }
 
-.panel-title {
-  font-size: 16px;
-  font-weight: 700;
-  margin-bottom: 16px;
-}
-
-.panel-list {
-  display: grid;
-  gap: 14px;
-}
-
-.panel-item__title {
-  margin-bottom: 6px;
-  font-weight: 600;
-}
-
-.panel-item__desc {
-  color: var(--el-text-color-regular);
-  line-height: 1.7;
-  font-size: 13px;
-}
-
-.overview-card {
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 18px;
-}
-
-.overview-card :deep(.el-card__body) {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 20px;
-}
-
-.overview-card__icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-}
-
-.overview-card__icon.brand { background: rgba(0, 110, 255, 0.12); color: #006eff; }
-.overview-card__icon.success { background: rgba(19, 167, 80, 0.12); color: #13a750; }
-.overview-card__icon.warning { background: rgba(240, 105, 0, 0.12); color: #c45500; }
-.overview-card__icon.danger { background: rgba(252, 98, 94, 0.12); color: #dc4242; }
-
-.overview-card__label {
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
-}
-
-.overview-card__value {
-  margin: 6px 0;
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--el-text-color-primary);
-}
-
-.overview-card__desc {
+.ops-hero__eyebrow {
+  color: #4f6b92;
   font-size: 12px;
-  color: var(--el-text-color-secondary);
+  font-weight: 700;
+  letter-spacing: 0.08em;
 }
 
+.ops-hero__main h1 {
+  margin: 10px 0 10px;
+  color: #15283f;
+  font-size: 30px;
+  line-height: 1.2;
+}
+
+.ops-hero__main p {
+  margin: 0;
+  max-width: 760px;
+  color: var(--el-text-color-regular);
+  font-size: 14px;
+  line-height: 1.9;
+}
+
+.ops-hero__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.ops-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid #d9e4f2;
+  color: #365074;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ops-hero__side {
+  display: grid;
+  gap: 12px;
+}
+
+.hero-stat {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 108px;
+  padding: 18px;
+  border-radius: 6px;
+  background: #ffffff;
+  border: 1px solid #dbe5f2;
+}
+
+.hero-stat span,
+.hero-stat small {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+
+.hero-stat strong {
+  margin: 8px 0 6px;
+  color: #153d7a;
+  font-size: 28px;
+  line-height: 1.05;
+}
+
+.hero-stat--warn strong {
+  color: #c45500;
+}
+
+.metric-row,
+.content-row {
+  margin: 0 !important;
+}
+
+.metric-card,
 .section-card {
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 18px;
+  border-radius: 6px;
+}
+
+.metric-card :deep(.el-card__body) {
+  padding: 16px 18px;
+}
+
+.metric-card__label {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+
+.metric-card__value {
+  margin: 10px 0 8px;
+  color: #15283f;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.metric-card__desc {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  line-height: 1.7;
 }
 
 .section-card :deep(.el-card__header) {
-  padding: 18px 22px 0;
+  padding: 16px 18px 0;
   border-bottom: none;
 }
 
 .section-card :deep(.el-card__body) {
-  padding: 18px 22px 22px;
+  padding: 16px 18px 18px;
 }
 
 .section-card__header {
@@ -333,135 +403,117 @@ function navigateTo(path: string) {
 }
 
 .section-card__sub {
+  color: var(--el-text-color-secondary);
   font-size: 12px;
   font-weight: 500;
-  color: var(--el-text-color-secondary);
 }
 
-.feature-grid {
+.info-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  gap: 12px;
 }
 
-.feature-item {
-  padding: 18px;
-  border-radius: 16px;
+.info-grid--users {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.info-tile {
+  padding: 16px;
+  border-radius: 6px;
   background: var(--el-fill-color-extra-light);
   border: 1px solid var(--el-border-color-lighter);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-.feature-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
-  border-color: rgba(0, 110, 255, 0.2);
+.info-tile--compact {
+  padding: 14px;
 }
 
-.feature-item__top {
+.info-tile__title {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+
+.info-tile__value {
+  margin: 8px 0 6px;
+  color: #15283f;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.info-tile__desc {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.task-list,
+.quick-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.task-item,
+.quick-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-
-.feature-item__icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #006eff;
-  background: rgba(0, 110, 255, 0.1);
-}
-
-.feature-item__title {
-  font-weight: 700;
-  color: var(--el-text-color-primary);
-}
-
-.feature-item__desc,
-.timeline-desc,
-.tips-list li {
-  font-size: 13px;
-  line-height: 1.8;
-  color: var(--el-text-color-secondary);
-}
-
-.feature-item__meta {
-  margin-top: 10px;
-  font-size: 12px;
-  color: #006eff;
-}
-
-.timeline-title {
-  margin-bottom: 6px;
-  font-weight: 700;
-  color: var(--el-text-color-primary);
-}
-
-.quick-links {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.quick-link {
-  padding: 18px;
-  border-radius: 16px;
-  background: #ffffff;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 6px;
+  background: var(--el-fill-color-extra-light);
   border: 1px solid var(--el-border-color-lighter);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.quick-link:hover {
-  border-color: rgba(0, 110, 255, 0.26);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+.task-item:hover,
+.quick-item:hover {
+  border-color: rgba(0, 110, 255, 0.18);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
 }
 
-.quick-link__title {
-  margin-bottom: 8px;
+.task-item__title,
+.quick-item__title {
+  color: #15283f;
+  font-size: 14px;
   font-weight: 700;
-  color: var(--el-text-color-primary);
 }
 
-.quick-link__desc {
-  font-size: 13px;
-  line-height: 1.7;
+.task-item__desc,
+.quick-item__desc {
+  margin-top: 4px;
   color: var(--el-text-color-secondary);
+  font-size: 12px;
+  line-height: 1.7;
 }
 
-.tips-list {
-  margin: 0;
-  padding-left: 18px;
-}
-
-.tips-list li + li {
-  margin-top: 10px;
+.task-item__value {
+  color: #006eff;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 @media (max-width: 1200px) {
-  .hero-content,
-  .feature-grid,
-  .quick-links {
+  .ops-hero {
     grid-template-columns: 1fr;
+  }
+
+  .info-grid--users {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 768px) {
   .dashboard-page {
-    padding: 12px;
+    padding: 16px;
   }
 
-  .hero-card {
-    padding: 20px;
-  }
-
-  .hero-copy h1 {
-    font-size: 24px;
+  .info-grid,
+  .info-grid--users {
+    grid-template-columns: 1fr;
   }
 }
 </style>

@@ -122,8 +122,14 @@ public class CourseScheduleAutoArrangeService {
         result.setBestFitnessScore(best.fitnessScore);
         result.setArrangedLessonTasks(validAssignments.size());
         result.setInsertedSchedules(validAssignments.size());
-        result.setArrangedLessons(
-                validAssignments.stream().map(item -> buildArrangedLessonMap(item, term)).collect(Collectors.toList()));
+        Map<String, LessonTask> taskMap = lessonTasks.stream()
+                .collect(Collectors.toMap(item -> item.taskId, item -> item, (left, right) -> left));
+        Map<Long, ScClassroom> classroomMap = activeClassrooms.stream()
+                .filter(item -> item != null && item.getClassroomId() != null)
+                .collect(Collectors.toMap(ScClassroom::getClassroomId, item -> item, (left, right) -> left));
+        result.setArrangedLessons(validAssignments.stream()
+                .map(item -> buildArrangedLessonMap(item, term, taskMap, classroomMap))
+                .collect(Collectors.toList()));
         result.setUnscheduledLessons(buildUnscheduledLessons(lessonTasks, validAssignments));
 
         if (clearExistingSchedules) {
@@ -291,8 +297,14 @@ public class CourseScheduleAutoArrangeService {
                 continue;
             }
 
+            Long assignedClassroomId = itemConfig != null ? itemConfig.getClassroomId() : null;
             List<Integer> durations = splitDurations(remainSections, preferredDurations);
-            List<Long> preferredClassrooms = resolvePreferredClassrooms(item, classrooms);
+            List<Long> preferredClassrooms;
+            if (assignedClassroomId != null) {
+                preferredClassrooms = Collections.singletonList(assignedClassroomId);
+            } else {
+                preferredClassrooms = resolvePreferredClassrooms(item, classrooms);
+            }
             String weeksText = itemConfig != null && StringUtils.isNotEmpty(itemConfig.getWeeksText())
                     ? normalizeWeeksText(itemConfig.getWeeksText())
                     : buildWeeksText(item, term);
@@ -304,18 +316,22 @@ public class CourseScheduleAutoArrangeService {
                 task.classId = item.getClassId();
                 task.className = item.getClassName();
                 task.courseName = item.getCourseName();
+                task.courseCategory = item.getCourseCategory();
                 task.teacherId = item.getTeacherId();
                 task.teacherName = item.getTeacherName();
                 task.campusName = item.getCampusName();
+                task.openDeptId = item.getOpenDeptId();
                 task.expectedDuration = duration;
                 task.studentCount = resolveStudentCount(item);
                 task.weeksText = weeksText;
                 task.preferredClassroomIds = preferredClassrooms;
+                task.fixedClassroom = assignedClassroomId != null;
                 task.priorityScore = (item.getRequiredFlag() != null && "Y".equalsIgnoreCase(item.getRequiredFlag())
                         ? 10
                         : 0)
                         + Math.max(task.studentCount, 0)
-                        + Math.max(remainSections, 0) * 2;
+                        + Math.max(remainSections, 0) * 2
+                        + (assignedClassroomId != null ? 20 : 0);
                 tasks.add(task);
                 sequence++;
             }
@@ -375,7 +391,10 @@ public class CourseScheduleAutoArrangeService {
                 .filter(room -> room.getClassroomId() != null)
                 .filter(room -> room.getCapacity() == null || room.getCapacity() <= 0 || studentCount <= 0
                         || room.getCapacity() >= studentCount)
-                .sorted(Comparator.comparing((ScClassroom room) -> sameCampus(item, room) ? 0 : 1)
+                .sorted(Comparator
+                        .comparing((ScClassroom room) -> sameDept(item, room) ? 0 : 1)
+                        .thenComparing(room -> sameCampus(item, room) ? 0 : 1)
+                        .thenComparing(room -> sameRoomType(item, room) ? 0 : 1)
                         .thenComparing(room -> room.getCapacity() == null ? Integer.MAX_VALUE
                                 : Math.abs(room.getCapacity() - studentCount))
                         .thenComparing(room -> room.getSortOrder() == null ? Integer.MAX_VALUE : room.getSortOrder()))
@@ -398,6 +417,34 @@ public class CourseScheduleAutoArrangeService {
         return StringUtils.equals(course.getCampusName(), room.getCampusName());
     }
 
+    private boolean sameDept(ScClassCourse course, ScClassroom room) {
+        if (course == null || room == null || room.getDeptId() == null) {
+            return false;
+        }
+        return course.getOpenDeptId() != null && course.getOpenDeptId().equals(room.getDeptId());
+    }
+
+    private boolean sameRoomType(ScClassCourse course, ScClassroom room) {
+        if (course == null || room == null) {
+            return false;
+        }
+        String category = StringUtils.defaultIfEmpty(course.getCourseCategory(), "");
+        String roomType = StringUtils.defaultIfEmpty(room.getRoomType(), "");
+        if (StringUtils.isEmpty(category) || StringUtils.isEmpty(roomType)) {
+            return false;
+        }
+        if (StringUtils.contains(category, "实训") || StringUtils.contains(category, "实验")) {
+            return StringUtils.contains(roomType, "实验室") || StringUtils.contains(roomType, "机房");
+        }
+        if (StringUtils.contains(category, "上机")) {
+            return StringUtils.contains(roomType, "机房");
+        }
+        if (StringUtils.contains(category, "讲座")) {
+            return StringUtils.contains(roomType, "报告厅");
+        }
+        return StringUtils.contains(roomType, "普通教室");
+    }
+
     private boolean sameCampus(LessonTask task, ScClassroom room) {
         if (task == null || room == null) {
             return false;
@@ -406,6 +453,34 @@ public class CourseScheduleAutoArrangeService {
             return false;
         }
         return StringUtils.equals(task.campusName, room.getCampusName());
+    }
+
+    private boolean sameDept(LessonTask task, ScClassroom room) {
+        if (task == null || room == null || room.getDeptId() == null) {
+            return false;
+        }
+        return task.openDeptId != null && task.openDeptId.equals(room.getDeptId());
+    }
+
+    private boolean sameRoomType(LessonTask task, ScClassroom room) {
+        if (task == null || room == null) {
+            return false;
+        }
+        String category = StringUtils.defaultIfEmpty(task.courseCategory, "");
+        String roomType = StringUtils.defaultIfEmpty(room.getRoomType(), "");
+        if (StringUtils.isEmpty(category) || StringUtils.isEmpty(roomType)) {
+            return false;
+        }
+        if (StringUtils.contains(category, "实训") || StringUtils.contains(category, "实验")) {
+            return StringUtils.contains(roomType, "实验室") || StringUtils.contains(roomType, "机房");
+        }
+        if (StringUtils.contains(category, "上机")) {
+            return StringUtils.contains(roomType, "机房");
+        }
+        if (StringUtils.contains(category, "讲座")) {
+            return StringUtils.contains(roomType, "报告厅");
+        }
+        return StringUtils.contains(roomType, "普通教室");
     }
 
     private String buildWeeksText(ScClassCourse item, ScSchoolTerm term) {
@@ -598,6 +673,9 @@ public class CourseScheduleAutoArrangeService {
     private Long pickClassroom(LessonTask task, List<ScClassroom> classrooms, Random random) {
         List<Long> preferred = task.preferredClassroomIds == null ? Collections.emptyList()
                 : task.preferredClassroomIds;
+        if (task.fixedClassroom && !preferred.isEmpty()) {
+            return preferred.get(0);
+        }
         if (!preferred.isEmpty()) {
             return preferred.get(random.nextInt(preferred.size()));
         }
@@ -643,6 +721,12 @@ public class CourseScheduleAutoArrangeService {
                 }
                 if (sameCampus(task, room)) {
                     score += 8D;
+                }
+                if (sameDept(task, room)) {
+                    score += 14D;
+                }
+                if (sameRoomType(task, room)) {
+                    score += 10D;
                 }
             }
 
@@ -768,18 +852,24 @@ public class CourseScheduleAutoArrangeService {
                 continue;
             }
             LessonAssignment assignment = entry.getValue();
-            int action = random.nextInt(3);
-            if (action == 0) {
+            if (task.fixedClassroom) {
                 assignment.weekDay = random.nextInt(7) + 1;
                 assignment.startSection = pickStartSection(task.expectedDuration, sectionUnits, random);
                 assignment.endSection = assignment.startSection + task.expectedDuration - 1;
-            } else if (action == 1) {
-                assignment.classroomId = pickClassroom(task, classrooms, random);
             } else {
-                assignment.weekDay = random.nextInt(7) + 1;
-                assignment.startSection = pickStartSection(task.expectedDuration, sectionUnits, random);
-                assignment.endSection = assignment.startSection + task.expectedDuration - 1;
-                assignment.classroomId = pickClassroom(task, classrooms, random);
+                int action = random.nextInt(3);
+                if (action == 0) {
+                    assignment.weekDay = random.nextInt(7) + 1;
+                    assignment.startSection = pickStartSection(task.expectedDuration, sectionUnits, random);
+                    assignment.endSection = assignment.startSection + task.expectedDuration - 1;
+                } else if (action == 1) {
+                    assignment.classroomId = pickClassroom(task, classrooms, random);
+                } else {
+                    assignment.weekDay = random.nextInt(7) + 1;
+                    assignment.startSection = pickStartSection(task.expectedDuration, sectionUnits, random);
+                    assignment.endSection = assignment.startSection + task.expectedDuration - 1;
+                    assignment.classroomId = pickClassroom(task, classrooms, random);
+                }
             }
         }
     }
@@ -828,6 +918,12 @@ public class CourseScheduleAutoArrangeService {
         }
         if (task.studentCount > 0 && room.getCapacity() != null && room.getCapacity() > 0
                 && room.getCapacity() < task.studentCount) {
+            return false;
+        }
+        if ((StringUtils.contains(StringUtils.defaultIfEmpty(task.courseCategory, ""), "实训")
+                || StringUtils.contains(StringUtils.defaultIfEmpty(task.courseCategory, ""), "实验"))
+                && StringUtils.isNotEmpty(room.getRoomType())
+                && !(StringUtils.contains(room.getRoomType(), "实验室") || StringUtils.contains(room.getRoomType(), "机房"))) {
             return false;
         }
 
@@ -905,15 +1001,60 @@ public class CourseScheduleAutoArrangeService {
         return result;
     }
 
-    private Map<String, Object> buildArrangedLessonMap(LessonAssignment assignment, ScSchoolTerm term) {
+    private Map<String, Object> buildArrangedLessonMap(LessonAssignment assignment, ScSchoolTerm term,
+            Map<String, LessonTask> taskMap,
+            Map<Long, ScClassroom> classroomMap) {
         Map<String, Object> result = new LinkedHashMap<>();
+        LessonTask task = taskMap.get(assignment.taskId);
+        ScClassroom classroom = classroomMap.get(assignment.classroomId);
         result.put("taskId", assignment.taskId);
         result.put("termId", term.getTermId());
+        result.put("termName", term.getTermName());
         result.put("weekDay", assignment.weekDay);
         result.put("startSection", assignment.startSection);
         result.put("endSection", assignment.endSection);
         result.put("classroomId", assignment.classroomId);
+        if (task != null) {
+            result.put("classCourseId", task.classCourseId);
+            result.put("className", task.className);
+            result.put("courseName", task.courseName);
+            result.put("teacherName", task.teacherName);
+            result.put("weeksText", task.weeksText);
+            result.put("studentCount", task.studentCount);
+            result.put("courseCategory", task.courseCategory);
+        }
+        if (classroom != null) {
+            result.put("classroomName", classroom.getClassroomName());
+            result.put("buildingName", classroom.getBuildingName());
+            result.put("campusName", classroom.getCampusName());
+            result.put("roomType", classroom.getRoomType());
+            result.put("capacity", classroom.getCapacity());
+        }
+        result.put("reasons", buildRoomReasonTags(task, classroom));
         return result;
+    }
+
+    private List<String> buildRoomReasonTags(LessonTask task, ScClassroom classroom) {
+        List<String> reasons = new ArrayList<>();
+        if (task == null || classroom == null) {
+            return reasons;
+        }
+        if (sameDept(task, classroom)) {
+            reasons.add("同部门优先");
+        }
+        if (sameCampus(task, classroom)) {
+            reasons.add("同校区优先");
+        }
+        if (sameRoomType(task, classroom)) {
+            reasons.add("类型匹配");
+        }
+        if (task.studentCount > 0 && classroom.getCapacity() != null && classroom.getCapacity() >= task.studentCount) {
+            reasons.add("容量匹配");
+        }
+        if (reasons.isEmpty() && task.studentCount > 0 && classroom.getCapacity() != null) {
+            reasons.add("容量可承载");
+        }
+        return reasons;
     }
 
     private boolean isOverlap(Integer leftStart, Integer leftEnd, Integer rightStart, Integer rightEnd) {
@@ -1033,14 +1174,17 @@ public class CourseScheduleAutoArrangeService {
         private Long classId;
         private String className;
         private String courseName;
+        private String courseCategory;
         private Long teacherId;
         private String teacherName;
         private String campusName;
+        private Long openDeptId;
         private int expectedDuration;
         private int studentCount;
         private int priorityScore;
         private String weeksText;
         private List<Long> preferredClassroomIds = new ArrayList<>();
+        private boolean fixedClassroom;
     }
 
     private static class LessonAssignment {

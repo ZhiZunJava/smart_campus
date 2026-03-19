@@ -88,6 +88,7 @@ public class CourseScheduleAutoArrangeDto {
         private String weeksText;
         private String weeksJson;
         private Integer maxWeeklySections;
+        private Long classroomId;
 
         public Long getClassCourseId() {
             return classCourseId;
@@ -119,6 +120,14 @@ public class CourseScheduleAutoArrangeDto {
 
         public void setMaxWeeklySections(Integer maxWeeklySections) {
             this.maxWeeklySections = maxWeeklySections;
+        }
+
+        public Long getClassroomId() {
+            return classroomId;
+        }
+
+        public void setClassroomId(Long classroomId) {
+            this.classroomId = classroomId;
         }
     }
 }

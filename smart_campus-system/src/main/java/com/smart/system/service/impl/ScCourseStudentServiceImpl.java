@@ -3,6 +3,9 @@ package com.smart.system.service.impl;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Objects;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.smart.common.exception.ServiceException;
@@ -10,6 +13,7 @@ import com.smart.common.utils.DateUtils;
 import com.smart.common.utils.StringUtils;
 import com.smart.system.domain.ScCourseStudent;
 import com.smart.system.domain.ScUserProfile;
+import com.smart.system.domain.dto.CourseStudentBatchAddDto;
 import com.smart.system.mapper.ScCourseStudentMapper;
 import com.smart.system.service.IScCourseStudentService;
 import com.smart.system.service.IScUserProfileService;
@@ -49,6 +53,45 @@ public class ScCourseStudentServiceImpl implements IScCourseStudentService {
             result.put("classId", duplicate.getClassId());
             result.put("className", duplicate.getClassName());
         }
+        return result;
+    }
+
+    public Map<String, Object> batchAddCourseStudents(CourseStudentBatchAddDto batchDto) {
+        if (batchDto == null || batchDto.getCourseId() == null || batchDto.getStudentUserIds() == null
+                || batchDto.getStudentUserIds().length == 0) {
+            throw new ServiceException("请先选择课程和学生");
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        List<Map<String, Object>> skipped = new ArrayList<>();
+        int successCount = 0;
+        for (Long studentUserId : Arrays.stream(batchDto.getStudentUserIds()).filter(Objects::nonNull).toList()) {
+            ScCourseStudent item = new ScCourseStudent();
+            item.setCourseId(batchDto.getCourseId());
+            item.setStudentUserId(studentUserId);
+            item.setClassId(batchDto.getClassId());
+            item.setStatus(StringUtils.defaultIfEmpty(batchDto.getStatus(), "0"));
+            item.setRemark(batchDto.getRemark());
+            fillDefaultClass(item);
+            ScCourseStudent duplicate = scCourseStudentMapper.selectDuplicateScCourseStudent(item);
+            if (duplicate != null) {
+                Map<String, Object> duplicateItem = new LinkedHashMap<>();
+                duplicateItem.put("studentUserId", duplicate.getStudentUserId());
+                duplicateItem.put("studentName", duplicate.getStudentName());
+                duplicateItem.put("studentNo", duplicate.getStudentNo());
+                duplicateItem.put("courseName", duplicate.getCourseName());
+                duplicateItem.put("className", duplicate.getClassName());
+                skipped.add(duplicateItem);
+                continue;
+            }
+            if (item.getJoinTime() == null) {
+                item.setJoinTime(DateUtils.getNowDate());
+            }
+            scCourseStudentMapper.insertScCourseStudent(item);
+            successCount++;
+        }
+        result.put("successCount", successCount);
+        result.put("skippedCount", skipped.size());
+        result.put("skippedStudents", skipped);
         return result;
     }
 

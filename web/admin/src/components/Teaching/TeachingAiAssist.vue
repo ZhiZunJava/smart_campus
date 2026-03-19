@@ -284,7 +284,7 @@ async function runAssist(actionType: 'generate' | 'optimize') {
   margin-bottom: 16px;
   padding: 14px;
   border: 1px solid #dbe3f0;
-  border-radius: 18px;
+  border-radius: 6px;
   background:
     radial-gradient(circle at top left, rgba(55, 121, 178, 0.12), transparent 24%),
     linear-gradient(180deg, #fcfdff 0%, #f5f9ff 100%);
@@ -308,7 +308,7 @@ async function runAssist(actionType: 'generate' | 'optimize') {
 .teaching-ai-compact__icon {
   width: 40px;
   height: 40px;
-  border-radius: 14px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -349,7 +349,7 @@ async function runAssist(actionType: 'generate' | 'optimize') {
 
 .teaching-ai-compact :deep(.el-textarea__inner) {
   min-height: 78px;
-  border-radius: 14px;
+  border-radius: 4px;
   background: #fff;
 }
 
@@ -449,7 +449,7 @@ async function runAssist(actionType: 'generate' | 'optimize') {
 
 .teaching-ai-compact__group {
   padding: 12px;
-  border-radius: 14px;
+  border-radius: 6px;
   background: rgba(255,255,255,0.82);
   border: 1px solid #e2e9f4;
 }

@@ -628,23 +628,24 @@ public class CampusPortalController extends BaseController {
     private Map<String, Object> buildScheduleTextVm(ScClassCourse classCourse, List<ScCourseSchedule> schedules) {
         String teacherName = StringUtils.defaultIfEmpty(classCourse.getTeacherName(),
                 resolveTeacherName(classCourse.getTeacherId()));
+        Map<Integer, Map<String, Object>> unitMap = buildLayoutUnitMap();
         String dateTimeText = schedules.stream()
-                .map(item -> String.format("%s周 %s %s~%s节", normalizeWeeksText(item.getWeeksText()),
-                        resolveWeekdayLabel(item.getWeekDay()), item.getStartSection(), item.getEndSection()))
+                .map(item -> String.format("%s周 %s %s", normalizeWeeksText(item.getWeeksText()),
+                        resolveWeekdayLabel(item.getWeekDay()), buildSectionDisplayText(item, unitMap)))
                 .collect(Collectors.joining("; \n"));
         String dateTimePlaceText = schedules.stream()
-                .map(item -> String.format("%s周 %s %s~%s节 %s", normalizeWeeksText(item.getWeeksText()),
-                        resolveWeekdayLabel(item.getWeekDay()), item.getStartSection(), item.getEndSection(),
-                        StringUtils.defaultIfEmpty(item.getClassroom(), "待定教室")))
+                .map(item -> String.format("%s周 %s %s %s", normalizeWeeksText(item.getWeeksText()),
+                        resolveWeekdayLabel(item.getWeekDay()), buildSectionDisplayText(item, unitMap),
+                        resolveScheduleLocation(item)))
                 .collect(Collectors.joining("; \n"));
         String dateTimePlacePersonText = schedules.stream()
-                .map(item -> String.format("%s周 %s %s~%s节 %s %s", normalizeWeeksText(item.getWeeksText()),
-                        resolveWeekdayLabel(item.getWeekDay()), item.getStartSection(), item.getEndSection(),
-                        StringUtils.defaultIfEmpty(item.getClassroom(), "待定教室"),
+                .map(item -> String.format("%s周 %s %s %s %s", normalizeWeeksText(item.getWeeksText()),
+                        resolveWeekdayLabel(item.getWeekDay()), buildSectionDisplayText(item, unitMap),
+                        resolveScheduleLocation(item),
                         StringUtils.defaultIfEmpty(teacherName, "")))
                 .collect(Collectors.joining("; \n"));
         String roomSeatText = schedules.stream()
-                .map(item -> StringUtils.defaultIfEmpty(item.getClassroom(), "待定教室"))
+                .map(this::resolveScheduleLocation)
                 .distinct()
                 .collect(Collectors.joining("; \n"));
 
@@ -654,6 +655,61 @@ public class CampusPortalController extends BaseController {
         result.put("dateTimePlacePersonText", buildTextBlock(dateTimePlacePersonText));
         result.put("roomSeatText", buildTextBlock(roomSeatText));
         return result;
+    }
+
+    private String buildSectionDisplayText(ScCourseSchedule schedule, Map<Integer, Map<String, Object>> unitMap) {
+        if (schedule == null || schedule.getStartSection() == null) {
+            return "-";
+        }
+        String sectionLabel = resolveSectionRangeLabel(schedule.getStartSection(), schedule.getEndSection(), unitMap);
+        String startTime = formatSectionTime(schedule.getStartSection(), true);
+        String endTime = formatSectionTime(schedule.getEndSection(), false);
+        if (StringUtils.isNotEmpty(startTime) && StringUtils.isNotEmpty(endTime)) {
+            return sectionLabel + "（" + startTime + "-" + endTime + "）";
+        }
+        return sectionLabel;
+    }
+
+    private String resolveSectionRangeLabel(Integer startSection, Integer endSection,
+            Map<Integer, Map<String, Object>> unitMap) {
+        if (startSection == null) {
+            return "-";
+        }
+        int start = startSection;
+        int end = endSection == null ? startSection : endSection;
+        if (start > end) {
+            int temp = start;
+            start = end;
+            end = temp;
+        }
+        List<String> labels = new ArrayList<>();
+        for (int index = start; index <= end; index++) {
+            labels.add(resolveUnitLabel(index, unitMap));
+        }
+        if (labels.isEmpty()) {
+            return start + "~" + end + "节";
+        }
+        return labels.get(0) + "~" + labels.get(labels.size() - 1) + "节";
+    }
+
+    private String resolveUnitLabel(Integer section, Map<Integer, Map<String, Object>> unitMap) {
+        if (section == null) {
+            return "-";
+        }
+        Map<String, Object> unit = unitMap.get(section);
+        if (unit == null) {
+            return String.valueOf(section);
+        }
+        return String.valueOf(unit.getOrDefault("nameZh", section));
+    }
+
+    private String resolveScheduleLocation(ScCourseSchedule schedule) {
+        if (schedule == null) {
+            return "待定教室";
+        }
+        String location = joinLocation(schedule.getCampusName(), schedule.getBuildingName(),
+                StringUtils.defaultIfEmpty(schedule.getClassroomName(), schedule.getClassroom()));
+        return StringUtils.isNotEmpty(location) ? location : "待定教室";
     }
 
     private String buildTermLabel(ScSchoolTerm term) {
@@ -694,6 +750,9 @@ public class CampusPortalController extends BaseController {
         detail.put("weeksText", normalizeWeeksText(schedule.getWeeksText()));
         detail.put("startSection", schedule.getStartSection());
         detail.put("endSection", schedule.getEndSection());
+        detail.put("startSectionLabel", resolveUnitLabel(schedule.getStartSection(), buildLayoutUnitMap()));
+        detail.put("endSectionLabel", resolveUnitLabel(schedule.getEndSection(), buildLayoutUnitMap()));
+        detail.put("sectionText", resolveSectionRangeLabel(schedule.getStartSection(), schedule.getEndSection(), buildLayoutUnitMap()));
         detail.put("campusName", schedule.getCampusName());
         detail.put("buildingName", schedule.getBuildingName());
         detail.put("classroomName", StringUtils.defaultIfEmpty(schedule.getClassroomName(), schedule.getClassroom()));

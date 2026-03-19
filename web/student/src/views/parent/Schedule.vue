@@ -69,7 +69,7 @@
                     <div class="course-name">{{ getActivity(row.key, day.value).courseName || '未命名课程' }}</div>
                     <div>
                       ({{ getActivity(row.key, day.value).weeksStr || '全周' }})
-                      ({{ getActivity(row.key, day.value).startSection }}-{{ getActivity(row.key, day.value).endSection }}节)
+                      ({{ getSectionText(getActivity(row.key, day.value)) }})
                       {{ getActivity(row.key, day.value).campus || '' }}
                       {{ getActivity(row.key, day.value).classroom || '' }}
                     </div>
@@ -342,6 +342,23 @@ function hexToRgba(hex: string, alpha: number) {
   const g = (bigint >> 8) & 255
   const b = bigint & 255
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+function getUnitLabel(unit: number) {
+  const row = tableRows.value.find((item: any) => Number(item.unit) === Number(unit))
+  return String(row?.label || unit)
+}
+
+function getSectionText(item: any) {
+  const start = Number(item?.startSection || 0)
+  const end = Number(item?.endSection || start)
+  if (!start) return '-'
+  const labels: string[] = []
+  for (let unit = start; unit <= end; unit += 1) {
+    labels.push(getUnitLabel(unit))
+  }
+  if (!labels.length) return `${item?.startSection || '-'}-${item?.endSection || '-'}节`
+  return `${labels[0]}-${labels[labels.length - 1]}节`
 }
 
 onMounted(async () => {

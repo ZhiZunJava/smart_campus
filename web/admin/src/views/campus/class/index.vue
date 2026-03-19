@@ -1,20 +1,5 @@
 <template>
   <div class="app-container">
-    <section class="teaching-page-shell">
-      <div class="teaching-page-shell__copy">
-        <div class="teaching-page-shell__eyebrow">教学基础</div>
-        <h2>班级管理</h2>
-        <p>班级、年级和班主任关系统一维护，支持通过 AI 快速补齐规范化配置。</p>
-      </div>
-      <div class="teaching-page-shell__stats">
-        <div v-for="item in headerStats" :key="item.label" class="teaching-page-shell__stat">
-          <span>{{ item.label }}</span>
-          <strong>{{ item.value }}</strong>
-          <small>{{ item.tip }}</small>
-        </div>
-      </div>
-    </section>
-
     <el-form :inline="true" :model="queryParams" class="mb16">
       <el-form-item label="班级名称"><el-input v-model="queryParams.className" clearable style="width:220px" @keyup.enter="getList" /></el-form-item>
       <el-form-item label="部门">
@@ -121,12 +106,6 @@ const selectedRows = ref<any[]>([])
 const queryParams = reactive<any>({ pageNum:1,pageSize:10,className:'',gradeId:undefined,deptId:undefined,termId:undefined })
 const form = reactive<any>({})
 
-const headerStats = computed(() => [
-  { label: '当前页班级', value: total.value, tip: '支持按年级快速筛选' },
-  { label: '已启用', value: dataList.value.filter((item: any) => item.status === '0').length, tip: '班级状态一眼可见' },
-  { label: '覆盖年级', value: new Set(dataList.value.map((item: any) => item.gradeId).filter(Boolean)).size, tip: 'AI 可快速生成命名方案' },
-])
-
 function getOptionLabel(options: any[], value: any, fallback: string) {
   return options.find((item) => item.value === value)?.label || `${fallback} ${value || '-'}`
 }
@@ -158,16 +137,7 @@ onMounted(async()=>{ await loadOptions(); resetFormData(); getList() })
 
 <style scoped>
 .mb16{margin-bottom:16px;}
-.teaching-page-shell{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(320px,.85fr);gap:16px;margin-bottom:16px;padding:18px;border:1px solid #dbe3f0;border-radius:18px;background:linear-gradient(180deg,#fff 0%,#f7fbff 100%)}
-.teaching-page-shell__eyebrow{color:#607188;font-size:12px;font-weight:700;letter-spacing:.08em}
-.teaching-page-shell__copy h2{margin:8px 0 10px;color:#172033;font-size:24px;line-height:1.2}
-.teaching-page-shell__copy p{margin:0;color:#526076;font-size:13px;line-height:1.8}
-.teaching-page-shell__stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.teaching-page-shell__stat{display:flex;flex-direction:column;gap:6px;padding:14px;border-radius:16px;background:#fff;border:1px solid rgba(219,227,240,.92)}
-.teaching-page-shell__stat span,.teaching-page-shell__stat small{color:#667085;font-size:12px}
-.teaching-page-shell__stat strong{color:#172033;font-size:22px;line-height:1.1}
 .entity-cell{display:flex;flex-direction:column;gap:6px}
 .entity-cell strong{color:#172033;font-size:13px}
 .entity-cell span{color:#667085;font-size:12px}
-@media (max-width: 1100px){.teaching-page-shell{grid-template-columns:1fr}.teaching-page-shell__stats{grid-template-columns:1fr}}
 </style>

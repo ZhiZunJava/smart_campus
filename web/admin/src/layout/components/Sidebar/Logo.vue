@@ -3,12 +3,12 @@
     <transition name="sidebarLogoFade">
       <router-link v-if="collapse" key="collapse" class="sidebar-logo-link" to="/">
         <div class="sidebar-brand sidebar-brand--collapse">
-          <i class="sidebar-brand__icon ri-graduation-cap-line"></i>
+          <i class="sidebar-brand__icon ri-school-line"></i>
         </div>
       </router-link>
       <router-link v-else key="expand" class="sidebar-logo-link" to="/">
         <div class="sidebar-brand">
-          <i class="sidebar-brand__icon ri-graduation-cap-line"></i>
+          <i class="sidebar-brand__icon ri-school-line"></i>
           <div class="sidebar-brand__text">
             <strong>{{ displayTitle }}</strong>
             <span>{{ subtitle }}</span>
@@ -76,6 +76,13 @@ const getLogoTextColor = computed(() => {
     height: 100%;
     width: 100%;
   }
+
+  &.collapse {
+    .sidebar-logo-link {
+      width: 100%;
+      justify-content: center;
+    }
+  }
 }
 
 .sidebar-brand {
@@ -120,7 +127,20 @@ const getLogoTextColor = computed(() => {
 }
 
 .sidebar-brand--collapse {
-  justify-content: center;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
   padding: 0;
+}
+
+.sidebar-logo-container.collapse .sidebar-brand__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  transform: translateX(1px);
 }
 </style>

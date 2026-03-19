@@ -1,20 +1,5 @@
 <template>
   <div class="app-container">
-    <section class="teaching-page-shell">
-      <div class="teaching-page-shell__copy">
-        <div class="teaching-page-shell__eyebrow">教学基础</div>
-        <h2>班级课程</h2>
-        <p>建立班级、课程、任课教师和学期之间的正式教学关系，为排课和我的课程提供数据基础。</p>
-      </div>
-      <div class="teaching-page-shell__stats">
-        <div v-for="item in headerStats" :key="item.label" class="teaching-page-shell__stat">
-          <span>{{ item.label }}</span>
-          <strong>{{ item.value }}</strong>
-          <small>{{ item.tip }}</small>
-        </div>
-      </div>
-    </section>
-
     <el-form :inline="true" :model="queryParams" class="mb16">
       <el-form-item label="班级"><el-select v-model="queryParams.classId" filterable clearable style="width:220px"><el-option v-for="item in classOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
       <el-form-item label="课程"><el-select v-model="queryParams.courseId" filterable clearable style="width:220px"><el-option v-for="item in courseOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
@@ -159,11 +144,6 @@ const termOptions=ref<any[]>([])
 const deptOptions=ref<any[]>([])
 const queryParams=reactive<any>({ pageNum:1,pageSize:10,classId:undefined,courseId:undefined,termId:undefined,openDeptId:undefined,major:undefined })
 const form=reactive<any>({})
-const headerStats = computed(() => [
-  { label: '当前页关系', value: total.value, tip: '班级课程正式绑定' },
-  { label: '已启用', value: dataList.value.filter((item:any)=>item.status==='0').length, tip: '排课从这里起步' },
-  { label: '学期覆盖', value: new Set(dataList.value.map((item:any)=>item.termId).filter(Boolean)).size, tip: '支撑学期切换' },
-])
 const teachingLoadSummary = computed(() => {
   const total = Number(form.totalHours || 0)
   const weeks = Number(form.requiredWeeks || 0)
@@ -247,14 +227,6 @@ onMounted(async()=>{ await loadOptions(); resetForm(); getList() })
 
 <style scoped>
 .mb16{margin-bottom:16px}
-.teaching-page-shell{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(320px,.85fr);gap:16px;margin-bottom:16px;padding:18px;border:1px solid #dbe3f0;border-radius:18px;background:linear-gradient(180deg,#fff 0%,#f7fbff 100%)}
-.teaching-page-shell__eyebrow{color:#607188;font-size:12px;font-weight:700;letter-spacing:.08em}
-.teaching-page-shell__copy h2{margin:8px 0 10px;color:#172033;font-size:24px;line-height:1.2}
-.teaching-page-shell__copy p{margin:0;color:#526076;font-size:13px;line-height:1.8}
-.teaching-page-shell__stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.teaching-page-shell__stat{display:flex;flex-direction:column;gap:6px;padding:14px;border-radius:16px;background:#fff;border:1px solid rgba(219,227,240,.92)}
-.teaching-page-shell__stat span,.teaching-page-shell__stat small{color:#667085;font-size:12px}
-.teaching-page-shell__stat strong{color:#172033;font-size:22px;line-height:1.1}
 .entity-cell{display:flex;flex-direction:column;gap:6px}
 .entity-cell strong{color:#172033;font-size:13px}
 .entity-cell span{color:#667085;font-size:12px}
@@ -268,6 +240,5 @@ onMounted(async()=>{ await loadOptions(); resetForm(); getList() })
 .dialog-panel__title{margin-bottom:14px;color:#172033;font-size:14px;font-weight:700}
 .teaching-load-tip{margin-top:-4px;margin-bottom:4px;padding:10px 12px;border-radius:12px;background:#f6f9fc;color:#526076;font-size:12px;line-height:1.7}
 .teaching-load-tip strong{display:block;color:#172033;font-size:12px;margin-bottom:4px}
-@media (max-width: 1100px){.teaching-page-shell{grid-template-columns:1fr}.teaching-page-shell__stats{grid-template-columns:1fr}}
 @media (max-width: 900px){.dialog-dual-grid{grid-template-columns:1fr}}
 </style>

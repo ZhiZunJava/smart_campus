@@ -1,20 +1,5 @@
 <template>
   <div class="app-container">
-    <section class="teaching-page-shell">
-      <div class="teaching-page-shell__copy">
-        <div class="teaching-page-shell__eyebrow">教学基础</div>
-        <h2>选课关系</h2>
-        <p>课程、学生、班级三方关系统一维护，AI 可帮助生成更合理的选课备注与配置建议。</p>
-      </div>
-      <div class="teaching-page-shell__stats">
-        <div v-for="item in headerStats" :key="item.label" class="teaching-page-shell__stat">
-          <span>{{ item.label }}</span>
-          <strong>{{ item.value }}</strong>
-          <small>{{ item.tip }}</small>
-        </div>
-      </div>
-    </section>
-
     <el-form :inline="true" :model="queryParams" class="mb16">
       <el-form-item label="课程"><el-select v-model="queryParams.courseId" filterable clearable style="width:240px"><el-option v-for="item in courseOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
       <el-form-item label="学生"><el-select v-model="queryParams.studentUserId" filterable clearable style="width:240px"><el-option v-for="item in studentOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
@@ -24,6 +9,7 @@
 
     <el-row :gutter="10" class="mb16">
       <el-col :span="1.5"><el-button type="primary" plain icon="Plus" @click="handleAdd">新增</el-button></el-col>
+      <el-col :span="1.8"><el-button type="primary" icon="UserFilled" @click="handleBatchAdd">批量加学生</el-button></el-col>
       <el-col :span="1.5"><el-button type="success" plain icon="Edit" :disabled="single" @click="handleUpdate()">修改</el-button></el-col>
       <el-col :span="1.5"><el-button type="danger" plain icon="Delete" :disabled="multiple" @click="handleDelete()">删除</el-button></el-col>
       <el-col :span="2"><el-button type="warning" plain icon="MagicStick" @click="handleAutoArrange">自动排课</el-button></el-col>
@@ -88,13 +74,48 @@
       </el-form>
       <template #footer><el-button @click="open=false">取消</el-button><el-button type="primary" @click="submitForm">确定</el-button></template>
     </el-dialog>
+
+    <el-dialog v-model="batchOpen" title="批量添加选课学生" width="900px">
+      <el-form :model="batchForm" label-width="100px" class="mb16">
+        <el-row :gutter="16">
+          <el-col :span="12"><el-form-item label="课程"><el-select v-model="batchForm.courseId" filterable clearable style="width:100%"><el-option v-for="item in courseOptions" :key="`batch-course-${item.value}`" :label="item.label" :value="item.value" /></el-select></el-form-item></el-col>
+          <el-col :span="12"><el-form-item label="班级"><el-select v-model="batchForm.classId" filterable clearable style="width:100%"><el-option v-for="item in classOptions" :key="`batch-class-${item.value}`" :label="item.label" :value="item.value" /></el-select></el-form-item></el-col>
+          <el-col :span="12"><el-form-item label="状态"><el-select v-model="batchForm.status" style="width:100%"><el-option label="正常" value="0" /><el-option label="停用" value="1" /></el-select></el-form-item></el-col>
+          <el-col :span="12"><el-form-item label="备注"><el-input v-model="batchForm.remark" placeholder="可统一补充本次选课说明" /></el-form-item></el-col>
+        </el-row>
+      </el-form>
+
+      <div class="batch-toolbar">
+        <div class="batch-toolbar__summary">当前可选学生 {{ batchCandidateStudents.length }} 人，已勾选 {{ batchSelectedStudentIds.length }} 人</div>
+        <el-input v-model="batchKeyword" clearable placeholder="筛选姓名/学号" style="width:240px" />
+      </div>
+
+      <el-table :data="filteredBatchStudents" @selection-change="handleBatchSelectionChange" row-key="value" max-height="420">
+        <el-table-column type="selection" width="55" />
+        <el-table-column label="学生" min-width="220">
+          <template #default="{ row }">
+            <div class="entity-cell">
+              <strong>{{ row.realName || row.label }}</strong>
+              <span>{{ row.studentNo || `用户ID ${row.value}` }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="班级" min-width="180"><template #default="{ row }">{{ row.className || '-' }}</template></el-table-column>
+        <el-table-column label="专业" min-width="160" prop="major" />
+      </el-table>
+
+      <template #footer>
+        <el-button @click="batchOpen=false">取消</el-button>
+        <el-button type="primary" @click="submitBatchAdd">批量加入课程</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { addCourseStudent, checkCourseStudentDuplicate, delCourseStudent, listCourseStudent, updateCourseStudent } from '@/api/campus/courseStudent'
+import { addCourseStudent, batchAddCourseStudent, checkCourseStudentDuplicate, delCourseStudent, listCourseStudent, updateCourseStudent } from '@/api/campus/courseStudent'
 import { fetchClassOptions, fetchCourseOptions, fetchUserOptions } from '@/api/campus/options'
 import { listUserProfile } from '@/api/campus/userProfile'
 import { autoArrangeCourseSchedule, listClassCourse } from '@/api/campus/teaching'
@@ -106,24 +127,24 @@ const studentOptions=ref<any[]>([])
 const classOptions=ref<any[]>([])
 const studentProfileMap = ref<Map<number, any>>(new Map())
 const selectedRows=ref<any[]>([])
+const batchOpen = ref(false)
+const batchKeyword = ref('')
+const batchSelectedStudentIds = ref<number[]>([])
 const queryParams=reactive<any>({ pageNum:1,pageSize:10,courseId:undefined,studentUserId:undefined,classId:undefined })
 const form=reactive<any>({})
+const batchForm = reactive<any>({ courseId: undefined, classId: undefined, status:'0', remark:'' })
 const duplicateState = reactive<any>({ duplicate:false })
-const headerStats = computed(() => [
-  { label: '当前页关系', value: total.value, tip: '课程与学生映射清晰管理' },
-  { label: '已启用', value: dataList.value.filter((item: any) => item.status === '0').length, tip: '便于快速核对可用关系' },
-  { label: '课程覆盖', value: new Set(dataList.value.map((item: any) => item.courseId).filter(Boolean)).size, tip: '支持 AI 优化配置' },
-])
-
 function getOptionLabel(options: any[], value: any, fallback: string) {
   return options.find((item) => item.value === value)?.label || `${fallback} ${value || '-'}`
 }
 function resetForm(){ Object.assign(form,{ id:undefined,courseId:undefined,studentUserId:undefined,classId:undefined,status:'0',remark:'' }) }
+function resetBatchForm(){ Object.assign(batchForm,{ courseId:undefined,classId:undefined,status:'0',remark:'' }); batchKeyword.value=''; batchSelectedStudentIds.value=[] }
 function applyAiDraft(draft: Record<string, any>) { Object.assign(form, draft); syncClassByStudent() }
 async function getList(){ loading.value=true; const res=await listCourseStudent(queryParams); dataList.value=res.rows||[]; total.value=res.total||0; loading.value=false }
 function resetQuery(){ queryParams.pageNum=1; queryParams.courseId=undefined; queryParams.studentUserId=undefined; queryParams.classId=undefined; getList() }
 function handleSelectionChange(selection:any[]){ selectedRows.value = selection; ids.value=selection.map(i=>i.id); single.value=selection.length!==1; multiple.value=!selection.length }
 function handleAdd(){ resetForm(); Object.assign(duplicateState,{ duplicate:false }); title.value='新增选课关系'; open.value=true }
+function handleBatchAdd(){ resetBatchForm(); batchOpen.value = true }
 function handleUpdate(row?:any){ const item=row || dataList.value.find((i:any)=>i.id===ids.value[0]); if(!item) return; resetForm(); Object.assign(duplicateState,{ duplicate:false }); Object.assign(form,item); title.value='修改选课关系'; open.value=true }
 async function submitForm(){
   syncClassByStudent()
@@ -133,6 +154,34 @@ async function submitForm(){
   open.value=false; getList()
 }
 async function handleDelete(row?:any){ const target=row?.id || ids.value; if(!target || (Array.isArray(target)&&!target.length)) return; await ElMessageBox.confirm('确认删除所选选课关系吗？','提示',{type:'warning'}); await delCourseStudent(target); ElMessage.success('删除成功'); getList() }
+const batchCandidateStudents = computed(() => {
+  let rows = studentOptions.value
+  if (batchForm.classId) rows = rows.filter((item:any) => item.classId === batchForm.classId)
+  return rows
+})
+const filteredBatchStudents = computed(() => {
+  const keyword = String(batchKeyword.value || '').trim()
+  if (!keyword) return batchCandidateStudents.value
+  return batchCandidateStudents.value.filter((item:any) => String(item.realName || item.label || '').includes(keyword) || String(item.studentNo || '').includes(keyword))
+})
+function handleBatchSelectionChange(selection:any[]){
+  batchSelectedStudentIds.value = selection.map((item:any)=>Number(item.value))
+}
+async function submitBatchAdd(){
+  if(!batchForm.courseId){ ElMessage.warning('请先选择课程'); return }
+  if(!batchSelectedStudentIds.value.length){ ElMessage.warning('请至少勾选一个学生'); return }
+  const res = await batchAddCourseStudent({
+    courseId: batchForm.courseId,
+    classId: batchForm.classId,
+    studentUserIds: batchSelectedStudentIds.value,
+    status: batchForm.status,
+    remark: batchForm.remark,
+  })
+  const data = res.data || {}
+  ElMessage.success(`批量加入完成：成功 ${data.successCount || 0} 人${data.skippedCount ? `，跳过重复 ${data.skippedCount} 人` : ''}`)
+  batchOpen.value = false
+  getList()
+}
 function syncClassByStudent(){
   if(form.classId) return
   const profile = studentProfileMap.value.get(Number(form.studentUserId))
@@ -169,7 +218,10 @@ async function loadOptions(){
     return {
       ...item,
       label: `${profile?.realName || item.label}${profile?.studentNo ? ' · ' + profile.studentNo : ''}`,
+      realName: profile?.realName,
       classId: profile?.classId,
+      className: classOptions.value.find((classItem:any)=>classItem.value===profile?.classId)?.label,
+      major: profile?.major,
       studentNo: profile?.studentNo,
     }
   })
@@ -181,16 +233,9 @@ onMounted(async()=>{ await loadOptions(); resetForm(); getList() })
 
 <style scoped>
 .mb16{margin-bottom:16px}
-.teaching-page-shell{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(320px,.85fr);gap:16px;margin-bottom:16px;padding:18px;border:1px solid #dbe3f0;border-radius:18px;background:linear-gradient(180deg,#fff 0%,#f7fbff 100%)}
-.teaching-page-shell__eyebrow{color:#607188;font-size:12px;font-weight:700;letter-spacing:.08em}
-.teaching-page-shell__copy h2{margin:8px 0 10px;color:#172033;font-size:24px;line-height:1.2}
-.teaching-page-shell__copy p{margin:0;color:#526076;font-size:13px;line-height:1.8}
-.teaching-page-shell__stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.teaching-page-shell__stat{display:flex;flex-direction:column;gap:6px;padding:14px;border-radius:16px;background:#fff;border:1px solid rgba(219,227,240,.92)}
-.teaching-page-shell__stat span,.teaching-page-shell__stat small{color:#667085;font-size:12px}
-.teaching-page-shell__stat strong{color:#172033;font-size:22px;line-height:1.1}
 .entity-cell{display:flex;flex-direction:column;gap:6px}
 .entity-cell strong{color:#172033;font-size:13px}
 .entity-cell span{color:#667085;font-size:12px}
-@media (max-width: 1100px){.teaching-page-shell{grid-template-columns:1fr}.teaching-page-shell__stats{grid-template-columns:1fr}}
+.batch-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.batch-toolbar__summary{color:#526076;font-size:12px}
 </style>
