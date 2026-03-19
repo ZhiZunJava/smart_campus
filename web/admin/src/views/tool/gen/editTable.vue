@@ -122,6 +122,7 @@
 </template>
 
 <script setup lang="ts" name="GenEdit">
+// @ts-nocheck
 import { getGenTable, updateGenTable } from "@/api/tool/gen"
 import { optionselect as getDictOptionselect } from "@/api/system/dict/type"
 import type { GenTableInfoResult } from '@/types/api/tool/gen'

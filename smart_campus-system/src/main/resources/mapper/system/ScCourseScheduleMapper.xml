@@ -23,8 +23,12 @@
     <result property="remark" column="remark" />
   </resultMap>
   <sql id="selectScCourseScheduleVo"> select s.schedule_id, s.term_id, s.class_course_id,
-    s.classroom_id, s.week_day, s.start_section, s.end_section, s.classroom, c.classroom_name,
-    c.building_name, c.campus_name, s.weeks_text, s.weeks_json, s.status, s.create_by,
+    s.classroom_id, s.week_day, s.start_section, s.end_section,
+    coalesce(c.classroom_name, s.classroom_name, s.classroom) as classroom,
+    coalesce(c.classroom_name, s.classroom_name, s.classroom) as classroom_name,
+    coalesce(c.building_name, s.building_name) as building_name,
+    coalesce(c.campus_name, s.campus_name) as campus_name,
+    s.weeks_text, s.weeks_json, s.status, s.create_by,
     s.create_time, s.update_by, s.update_time, s.remark from sc_course_schedule s left join
     sc_classroom c on c.classroom_id = s.classroom_id </sql>
   <select id="selectScCourseScheduleByScheduleId" parameterType="Long"
@@ -46,20 +50,34 @@
     s.week_day asc, s.start_section asc, s.schedule_id desc </select>
   <insert id="insertScCourseSchedule" parameterType="ScCourseSchedule" useGeneratedKeys="true"
     keyProperty="scheduleId">insert into sc_course_schedule(term_id, class_course_id, classroom_id,
-    week_day, start_section, end_section, classroom, weeks_text, weeks_json, status, create_by,
-    create_time, remark) values(#{termId}, #{classCourseId}, #{classroomId}, #{weekDay},
-    #{startSection}, #{endSection}, #{classroom}, #{weeksText}, #{weeksJson}, #{status},
+    week_day, start_section, end_section, classroom, classroom_name, building_name, campus_name,
+    weeks_text, weeks_json, status, create_by, create_time, remark) values(#{termId},
+    #{classCourseId}, #{classroomId}, #{weekDay}, #{startSection}, #{endSection}, #{classroom},
+    #{classroomName}, #{buildingName}, #{campusName}, #{weeksText}, #{weeksJson}, #{status},
     #{createBy}, sysdate(), #{remark})</insert>
   <update id="updateScCourseSchedule" parameterType="ScCourseSchedule">update sc_course_schedule <set><if
         test="termId != null">term_id = #{termId},</if><if test="classCourseId != null">class_course_id
     = #{classCourseId},</if><if test="classroomId != null">classroom_id = #{classroomId},</if><if
         test="weekDay != null">week_day = #{weekDay},</if><if test="startSection != null">start_section
     = #{startSection},</if><if test="endSection != null">end_section = #{endSection},</if><if
-        test="classroom != null">classroom = #{classroom},</if><if test="weeksText != null">weeks_text
+        test="classroom != null">classroom = #{classroom},</if><if
+        test="classroomName != null">classroom_name = #{classroomName},</if><if
+        test="buildingName != null">building_name = #{buildingName},</if><if
+        test="campusName != null">campus_name = #{campusName},</if><if test="weeksText != null">weeks_text
     = #{weeksText},</if><if test="weeksJson != null">weeks_json = #{weeksJson},</if><if
         test="status != null">status = #{status},</if><if test="updateBy != null">update_by =
     #{updateBy},</if><if test="remark != null">remark = #{remark},</if>update_time = sysdate()</set>
     where schedule_id = #{scheduleId}</update>
+  <update id="syncClassroomSnapshotByClassroomId" parameterType="ScCourseSchedule">
+    update sc_course_schedule
+    set classroom = #{classroom},
+        classroom_name = #{classroomName},
+        building_name = #{buildingName},
+        campus_name = #{campusName},
+        update_by = #{updateBy},
+        update_time = sysdate()
+    where classroom_id = #{classroomId}
+  </update>
   <delete id="deleteScCourseScheduleByScheduleId" parameterType="Long">delete from
     sc_course_schedule where schedule_id = #{scheduleId}</delete>
   <delete id="deleteScCourseScheduleByScheduleIds" parameterType="Long">delete from

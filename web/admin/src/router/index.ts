@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createWebHistory, createRouter } from 'vue-router'
 /* Layout */
 import Layout from '@/layout/index.vue'

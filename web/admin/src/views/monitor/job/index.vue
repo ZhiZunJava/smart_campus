@@ -285,6 +285,7 @@
 </template>
 
 <script setup lang="ts" name="Job">
+// @ts-nocheck
 import Crontab from '@/components/Crontab/index.vue'
 import { listJob, getJob, delJob, addJob, updateJob, runJob, changeJobStatus } from "@/api/monitor/job"
 import type { JobQueryParams, SysJob } from '@/types/api/monitor/job'

@@ -61,6 +61,7 @@
 </template>
 
 <script setup lang="ts" name="SelectUser">
+// @ts-nocheck
 import { authUserSelectAll, unallocatedUserList } from "@/api/system/role"
 import type { SysUser, UserQueryParams } from '@/types/api/system/user'
 

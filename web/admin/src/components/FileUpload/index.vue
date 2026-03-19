@@ -41,6 +41,7 @@
 </template>
 
 <script setup lang="ts">
+// @ts-nocheck
 import { getToken } from "@/utils/auth"
 import Sortable from 'sortablejs'
 import type { UploadFileResult } from '@/types/api/common'

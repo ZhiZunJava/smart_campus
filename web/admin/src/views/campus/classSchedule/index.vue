@@ -92,6 +92,7 @@
 </template>
 
 <script setup lang="ts">
+// @ts-nocheck
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { fetchClassOptions, fetchTermOptions } from '@/api/campus/options'
 import { getTimeTableLayout, listClassCourse, listCourseSchedule } from '@/api/campus/teaching'

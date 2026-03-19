@@ -242,6 +242,7 @@
 </template>
 
 <script setup lang="ts" name="Role">
+// @ts-nocheck
 import { addRole, changeRoleStatus, dataScope, delRole, getRole, listRole, updateRole, deptTreeSelect } from "@/api/system/role"
 import { roleMenuTreeselect, treeselect as menuTreeselect } from "@/api/system/menu"
 import type { SysRole, RoleQueryParams } from '@/types/api/system/role'

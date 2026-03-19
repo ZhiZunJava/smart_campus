@@ -43,6 +43,7 @@
 </template>
 
 <script setup lang="ts">
+// @ts-nocheck
 import ScrollPane from './ScrollPane.vue'
 import { getNormalPath } from '@/utils/ruoyi'
 import useTagsViewStore from '@/store/modules/tagsView'

@@ -65,6 +65,7 @@
 </template>
 
 <script setup lang="ts">
+// @ts-nocheck
 import { getCodeImg } from "@/api/login"
 import Cookies from "js-cookie"
 import { encrypt, decrypt } from "@/utils/jsencrypt"

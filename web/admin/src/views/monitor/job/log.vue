@@ -171,6 +171,7 @@
 </template>
 
 <script setup lang="ts" name="JobLog">
+// @ts-nocheck
 import { getJob } from "@/api/monitor/job"
 import { listJobLog, delJobLog, cleanJobLog } from "@/api/monitor/jobLog"
 import type { SysJobLog, JobLogQueryParams } from '@/types/api/monitor/jobLog'

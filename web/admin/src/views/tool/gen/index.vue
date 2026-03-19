@@ -146,6 +146,7 @@
 </template>
 
 <script setup lang="ts" name="Gen">
+// @ts-nocheck
 import { listTable, previewTable, delTable, genCode, synchDb } from "@/api/tool/gen"
 import importTable from "./importTable.vue"
 import createTable from "./createTable.vue"

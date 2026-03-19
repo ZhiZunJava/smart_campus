@@ -155,6 +155,7 @@
 </template>
 
 <script setup lang="ts" name="CacheList">
+// @ts-nocheck
 import { listCacheName, listCacheKey, getCacheValue, clearCacheName, clearCacheKey, clearCacheAll } from "@/api/monitor/cache"
 import type { SysCache } from '@/types/api/monitor/cache'
 

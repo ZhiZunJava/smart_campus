@@ -1,7 +1,11 @@
-import axios from 'axios'
+import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios'
 import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
 import { getToken, removeToken } from '@/utils/auth'
 import errorCode from '@/utils/errorCode'
+
+type RequestInstance = AxiosInstance & {
+  <T = any>(config: AxiosRequestConfig): Promise<T>
+}
 
 const service = axios.create({
   baseURL: import.meta.env.VITE_APP_BASE_API,
@@ -10,6 +14,11 @@ const service = axios.create({
     'Content-Type': 'application/json;charset=utf-8'
   }
 })
+
+const request = Object.assign(
+  <T = any>(config: AxiosRequestConfig) => service(config) as Promise<T>,
+  service
+) as RequestInstance
 
 service.interceptors.request.use((config: any) => {
   const isToken = (config.headers || {}).isToken === false
@@ -63,4 +72,4 @@ service.interceptors.response.use(
   }
 )
 
-export default service
+export default request

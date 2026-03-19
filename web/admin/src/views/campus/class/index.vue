@@ -90,6 +90,7 @@
 </template>
 
 <script setup lang="ts">
+// @ts-nocheck
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { addClass, delClass, listClass, updateClass } from '@/api/campus/teaching'

@@ -664,10 +664,59 @@ public class CourseScheduleAutoArrangeService {
                 candidates.add(start);
             }
         }
+        List<Integer> preferredCandidates = candidates.stream()
+                .filter(start -> isStandardBlockStart(start, duration, sectionUnits))
+                .collect(Collectors.toList());
+        if (!preferredCandidates.isEmpty()) {
+            candidates = preferredCandidates;
+        }
         if (candidates.isEmpty()) {
             return sectionUnits.get(0);
         }
         return candidates.get(random.nextInt(candidates.size()));
+    }
+
+    private boolean isStandardBlockStart(Integer start, int duration, List<Integer> sectionUnits) {
+        if (start == null || duration <= 1) {
+            return true;
+        }
+        List<List<Integer>> runs = splitContinuousRuns(sectionUnits);
+        for (List<Integer> run : runs) {
+            int index = run.indexOf(start);
+            if (index < 0) {
+                continue;
+            }
+            if (duration == 2) {
+                return index % 2 == 0;
+            }
+            if (duration >= 4) {
+                return index % 4 == 0;
+            }
+            return index % 2 == 0;
+        }
+        return false;
+    }
+
+    private List<List<Integer>> splitContinuousRuns(List<Integer> sectionUnits) {
+        if (sectionUnits == null || sectionUnits.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<Integer> sortedUnits = sectionUnits.stream().distinct().sorted().collect(Collectors.toList());
+        List<List<Integer>> runs = new ArrayList<>();
+        List<Integer> current = new ArrayList<>();
+        Integer previous = null;
+        for (Integer unit : sortedUnits) {
+            if (previous != null && unit != previous + 1) {
+                runs.add(new ArrayList<>(current));
+                current.clear();
+            }
+            current.add(unit);
+            previous = unit;
+        }
+        if (!current.isEmpty()) {
+            runs.add(current);
+        }
+        return runs;
     }
 
     private Long pickClassroom(LessonTask task, List<ScClassroom> classrooms, Random random) {
@@ -923,7 +972,8 @@ public class CourseScheduleAutoArrangeService {
         if ((StringUtils.contains(StringUtils.defaultIfEmpty(task.courseCategory, ""), "实训")
                 || StringUtils.contains(StringUtils.defaultIfEmpty(task.courseCategory, ""), "实验"))
                 && StringUtils.isNotEmpty(room.getRoomType())
-                && !(StringUtils.contains(room.getRoomType(), "实验室") || StringUtils.contains(room.getRoomType(), "机房"))) {
+                && !(StringUtils.contains(room.getRoomType(), "实验室")
+                        || StringUtils.contains(room.getRoomType(), "机房"))) {
             return false;
         }
 

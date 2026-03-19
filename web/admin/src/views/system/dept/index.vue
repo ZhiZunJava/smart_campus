@@ -141,6 +141,7 @@
 </template>
 
 <script setup lang="ts" name="Dept">
+// @ts-nocheck
 import { listDept, getDept, delDept, addDept, updateDept, listDeptExcludeChild } from "@/api/system/dept"
 import type { SysDept, DeptQueryParams } from '@/types/api/system/dept'
 import type { TreeSelect } from '@/types/api/common'

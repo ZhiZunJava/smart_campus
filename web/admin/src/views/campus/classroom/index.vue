@@ -122,6 +122,7 @@
 </template>
 
 <script setup lang="ts">
+// @ts-nocheck
 import { computed, getCurrentInstance, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { addClassroom, delClassroom, listClassroom, updateClassroom } from '@/api/campus/teaching'

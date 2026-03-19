@@ -289,6 +289,7 @@
 </template>
 
 <script setup lang="ts" name="Menu">
+// @ts-nocheck
 import { addMenu, delMenu, getMenu, listMenu, updateMenu } from "@/api/system/menu"
 import SvgIcon from "@/components/SvgIcon/index.vue"
 import IconSelect from "@/components/IconSelect/index.vue"

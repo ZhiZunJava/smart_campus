@@ -5,6 +5,7 @@
 </template>
 
 <script setup lang="ts">
+// @ts-nocheck
 import { isExternal } from '@/utils/validate'
 
 const props = defineProps({

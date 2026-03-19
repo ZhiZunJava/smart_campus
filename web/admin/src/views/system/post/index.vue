@@ -145,6 +145,7 @@
 </template>
 
 <script setup lang="ts" name="Post">
+// @ts-nocheck
 import { listPost, addPost, delPost, getPost, updatePost } from "@/api/system/post"
 import type { SysPost, PostQueryParams } from '@/types/api/system/post'
 

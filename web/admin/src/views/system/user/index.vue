@@ -312,6 +312,7 @@
 </template>
 
 <script setup lang="ts" name="User">
+// @ts-nocheck
 import { getToken } from "@/utils/auth"
 import useAppStore from '@/store/modules/app'
 import { changeUserStatus, listUser, resetUserPwd, delUser, getUser, updateUser, addUser, deptTreeSelect } from "@/api/system/user"

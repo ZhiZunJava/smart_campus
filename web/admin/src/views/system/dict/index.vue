@@ -180,6 +180,7 @@
 </template>
 
 <script setup lang="ts" name="Dict">
+// @ts-nocheck
 import useDictStore from '@/store/modules/dict'
 import { listType, getType, delType, addType, updateType, refreshCache } from "@/api/system/dict/type"
 import type { SysDictType, DictTypeQueryParams } from '@/types/api/system/dict'

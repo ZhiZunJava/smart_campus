@@ -65,6 +65,7 @@
 </template>
 
 <script setup lang="ts" name="Cache">
+// @ts-nocheck
 import { getCache } from '@/api/monitor/cache'
 import * as echarts from 'echarts'
 

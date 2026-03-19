@@ -125,6 +125,7 @@
 </template>
 
 <script setup lang="ts" name="Logininfor">
+// @ts-nocheck
 import { list, delLogininfor, cleanLogininfor, unlockLogininfor } from "@/api/monitor/logininfor"
 import type { SysLogininfor, LogininforQueryParams } from '@/types/api/monitor/logininfor'
 

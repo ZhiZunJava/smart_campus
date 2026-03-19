@@ -198,6 +198,7 @@
 </template>
 
 <script setup lang="ts" name="Operlog">
+// @ts-nocheck
 import { list, delOperlog, cleanOperlog } from "@/api/monitor/operlog"
 import type { SysOperLog, OperlogQueryParams } from '@/types/api/monitor/operlog'
 

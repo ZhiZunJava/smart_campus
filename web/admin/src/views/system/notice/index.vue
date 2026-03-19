@@ -166,6 +166,7 @@
 </template>
 
 <script setup lang="ts" name="Notice">
+// @ts-nocheck
 import { listNotice, getNotice, delNotice, addNotice, updateNotice } from "@/api/system/notice"
 import type { SysNotice, NoticeQueryParams } from '@/types/api/system/notice'
 

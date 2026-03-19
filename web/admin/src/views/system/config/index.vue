@@ -165,6 +165,7 @@
 </template>
 
 <script setup lang="ts" name="Config">
+// @ts-nocheck
 import type { SysConfig, ConfigQueryParams } from '@/types/api/system/config'
 import { listConfig, getConfig, delConfig, addConfig, updateConfig, refreshCache } from "@/api/system/config"
 

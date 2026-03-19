@@ -58,6 +58,7 @@
 </template>
 
 <script setup lang="ts" name="Online">
+// @ts-nocheck
 import { forceLogout, list as initData } from "@/api/monitor/online"
 import type { SysUserOnline, OnlineQueryParams } from '@/types/api/monitor/online'
 

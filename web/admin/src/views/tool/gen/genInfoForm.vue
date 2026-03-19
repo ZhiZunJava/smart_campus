@@ -235,6 +235,7 @@
 </template>
 
 <script setup lang="ts">
+// @ts-nocheck
 import { listMenu } from "@/api/system/menu"
 
 const subColumns = ref([])

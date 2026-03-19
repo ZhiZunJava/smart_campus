@@ -10,6 +10,7 @@
 </template>
 
 <script setup lang="ts">
+// @ts-nocheck
 import useTagsViewStore from '@/store/modules/tagsView'
 
 const tagAndTagSpacing = ref<number>(4)

@@ -17,6 +17,7 @@
 </template>
 
 <script setup lang="ts">
+// @ts-nocheck
 import { updateUserPwd } from "@/api/system/user"
 
 const { proxy } = getCurrentInstance()

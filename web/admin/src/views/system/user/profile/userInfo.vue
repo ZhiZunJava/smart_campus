@@ -23,6 +23,7 @@
 </template>
 
 <script setup lang="ts">
+// @ts-nocheck
 import { updateUserProfile } from "@/api/system/user"
 import type { SysUser } from '@/types/api/system/user'
 

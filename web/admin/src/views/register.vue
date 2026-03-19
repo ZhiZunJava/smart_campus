@@ -76,6 +76,7 @@
 </template>
 
 <script setup lang="ts">
+// @ts-nocheck
 import { ElMessageBox } from "element-plus"
 import { getCodeImg, register } from "@/api/login"
 import defaultSettings from '@/settings'

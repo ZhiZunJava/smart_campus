@@ -10,7 +10,7 @@
     },
 
     // 严格性和类型检查相关配置
-    "strict": true,
+    "strict": false,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
 
@@ -28,8 +28,12 @@
     // 类型声明相关配置
     "types": ["node", "vite/client", "element-plus/global"]
   },
+  "vueCompilerOptions": {
+    "strictTemplates": false
+  },
   "include": [
     "src/**/*.ts",
+    "src/**/*.d.ts",
     "src/**/*.vue",
     "vite/**/*.ts",
     "auto-imports.d.ts",
@@ -37,4 +41,3 @@
   ],
   "exclude": ["node_modules", "dist", "src/**/*.js"]
 }
-

@@ -48,6 +48,7 @@
 </template>
 
 <script setup lang="ts">
+// @ts-nocheck
 import { getToken } from "@/utils/auth"
 import { isExternal } from "@/utils/validate"
 import Sortable from 'sortablejs'

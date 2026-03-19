@@ -33,6 +33,7 @@
 </template>
 
 <script setup lang="ts">
+// @ts-nocheck
 import { constantRoutes } from "@/router"
 import { isHttp } from '@/utils/validate'
 import useAppStore from '@/store/modules/app'

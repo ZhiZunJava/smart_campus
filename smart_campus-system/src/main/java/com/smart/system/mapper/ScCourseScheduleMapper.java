@@ -12,6 +12,8 @@ public interface ScCourseScheduleMapper {
 
     int updateScCourseSchedule(ScCourseSchedule scCourseSchedule);
 
+    int syncClassroomSnapshotByClassroomId(ScCourseSchedule scCourseSchedule);
+
     int deleteScCourseScheduleByScheduleId(Long scheduleId);
 
     int deleteScCourseScheduleByScheduleIds(Long[] scheduleIds);

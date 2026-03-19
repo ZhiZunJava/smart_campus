@@ -18,8 +18,8 @@
     "useDefineForClassFields": true,
     "allowJs": true,
     "noEmit": true,
-    "types": ["node", "vite/client", "element-plus/global"]
+    "types": ["vite/client", "element-plus/global"]
   },
-  "include": ["src/**/*.ts", "src/**/*.vue", "vite.config.ts"],
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.vue"],
   "exclude": ["node_modules", "dist"]
 }

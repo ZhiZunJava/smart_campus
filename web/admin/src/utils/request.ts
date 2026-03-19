@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios'
 import { ElNotification , ElMessageBox, ElMessage, ElLoading } from 'element-plus'
 import { getToken } from '@/utils/auth'
 import errorCode from '@/utils/errorCode'
@@ -13,12 +13,21 @@ export const isRelogin = { show: false }
 
 axios.defaults.headers['Content-Type'] = 'application/json;charset=utf-8'
 // 创建axios实例
+type RequestInstance = AxiosInstance & {
+  <T = any>(config: AxiosRequestConfig): Promise<T>
+}
+
 const service = axios.create({
   // axios中请求配置有baseURL选项，表示请求URL公共部分
   baseURL: import.meta.env.VITE_APP_BASE_API,
   // 超时
   timeout: 10000
 })
+
+const request = Object.assign(
+  <T = any>(config: AxiosRequestConfig) => service(config) as Promise<T>,
+  service
+) as RequestInstance
 
 // request拦截器
 service.interceptors.request.use((config: any) => {
@@ -126,7 +135,7 @@ service.interceptors.response.use((res: any) => {
 // 通用下载方法
 export function download(url: string, params: any, filename: string, config?: any) {
   downloadLoadingInstance = ElLoading.service({ text: "正在下载数据，请稍候", background: "rgba(0, 0, 0, 0.7)", })
-  return service.post(url, params, {
+  return request.post(url, params, {
     transformRequest: [(params: any) => { return tansParams(params) }],
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     responseType: 'blob',
@@ -150,4 +159,4 @@ export function download(url: string, params: any, filename: string, config?: an
   })
 }
 
-export default service
+export default request

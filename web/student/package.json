@@ -7,6 +7,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 3000",
+    "typecheck": "tsc --noEmit",
     "build:prod": "vite build",
     "preview": "vite preview"
   },

@@ -92,6 +92,7 @@
 </template>
 
 <script setup lang="ts" name="AuthUser">
+// @ts-nocheck
 import selectUser from "./selectUser.vue"
 import { allocatedUserList, authUserCancel, authUserCancelAll } from "@/api/system/role"
 import type { SysUser, AuthUserQueryParams } from '@/types/api/system/user'

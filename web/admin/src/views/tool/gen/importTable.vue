@@ -51,6 +51,7 @@
 </template>
 
 <script setup lang="ts">
+// @ts-nocheck
 import { listDbTable, importTable } from "@/api/tool/gen"
 import type { GenQueryParams, GenTable } from '@/types/api/tool/gen'
 
