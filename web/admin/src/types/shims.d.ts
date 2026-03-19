@@ -20,7 +20,7 @@ declare module 'file-saver' {
   export const saveAs: any
 }
 
-declare module 'jsencrypt/bin/jsencrypt.min' {
+declare module 'jsencrypt' {
   const JSEncrypt: any
   export default JSEncrypt
 }

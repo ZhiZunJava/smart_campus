@@ -173,7 +173,7 @@
                     <div class="timeline-item__head">
                       <div class="timeline-item__title">
                         <strong>{{ formatRole(item.roleType) }}</strong>
-                        <span>#{{ index + 1 }}</span>
+                        <span>#{{ Number(index) + 1 }}</span>
                       </div>
                       <div class="timeline-item__meta">
                         <span>ID {{ item.messageId }}</span>

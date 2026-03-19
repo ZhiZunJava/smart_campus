@@ -142,14 +142,14 @@ if (props.showColumnsType == "transfer") {
 }
 
 // 单勾选
-function checkboxChange(event: boolean, key: string): void {
+function checkboxChange(event: boolean, key: string | number): void {
   if (Array.isArray(props.columns)) {
     const col = props.columns.filter((item: any) => item.key == key)[0]
     if (col) {
       col.visible = event
     }
   } else {
-    props.columns[key].visible = event
+    props.columns[String(key)].visible = event
   }
 }
 

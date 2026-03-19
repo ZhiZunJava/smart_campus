@@ -1,8 +1,10 @@
 import { defineConfig, loadEnv } from 'vite'
-import path from 'path'
+import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import createVitePlugins from './vite/plugins'
 
 const baseUrl = 'http://localhost:8080' // 后端接口
+const rootDir = fileURLToPath(new URL('.', import.meta.url))
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode, command }) => {
@@ -18,9 +20,9 @@ export default defineConfig(({ mode, command }) => {
       // https://cn.vitejs.dev/config/#resolve-alias
       alias: {
         // 设置路径
-        '~': path.resolve(__dirname, './'),
+        '~': resolve(rootDir, './'),
         // 设置别名
-        '@': path.resolve(__dirname, './src')
+        '@': resolve(rootDir, './src')
       },
       // https://cn.vitejs.dev/config/#resolve-extensions
       extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json', '.vue']
@@ -28,10 +30,16 @@ export default defineConfig(({ mode, command }) => {
     // 打包配置
     build: {
       // https://vite.dev/config/build-options.html
+      cssMinify: 'esbuild',
+      chunkSizeWarningLimit: 1200,
+      rolldownOptions: {
+        checks: {
+          pluginTimings: false
+        }
+      },
       sourcemap: command === 'build' ? false : 'inline',
       outDir: 'dist',
       assetsDir: 'assets',
-      chunkSizeWarningLimit: 2000,
       rollupOptions: {
         output: {
           chunkFileNames: 'static/js/[name]-[hash].js',
@@ -77,4 +85,3 @@ export default defineConfig(({ mode, command }) => {
     }
   }
 })
-
