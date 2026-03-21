@@ -42,7 +42,7 @@
       <el-table-column label="教师" min-width="100"><template #default="{ row }">{{ getMergedSchedule(row)?.teacherName || '-' }}</template></el-table-column>
       <el-table-column label="星期" width="90"><template #default="{ row }">{{ weekLabel(row.weekDay) }}</template></el-table-column>
       <el-table-column label="节次" width="120"><template #default="{ row }">{{ getSectionText(row) }}</template></el-table-column>
-      <el-table-column label="教室" min-width="200"><template #default="{ row }">{{ row.classroomName || row.classroom || '待定教室' }}{{ row.buildingName ? ` · ${row.buildingName}` : '' }}</template></el-table-column>
+      <el-table-column label="教室" min-width="220"><template #default="{ row }">{{ getScheduleRoom(row) }}</template></el-table-column>
       <el-table-column label="周次" prop="weeksText" min-width="140" />
       <el-table-column label="人数" width="90"><template #default="{ row }">{{ getStudentCount(getMergedSchedule(row)) }}</template></el-table-column>
       <el-table-column label="状态" width="80"><template #default="{ row }"><el-tag :type="row.status === '0' ? 'success' : 'danger'" size="small">{{ row.status === '0' ? '正常' : '停用' }}</el-tag></template></el-table-column>
@@ -163,6 +163,15 @@
           <el-col :span="8"><el-form-item label="课块优先长度"><el-select v-model="autoArrangeForm.preferredSessionDurations" multiple collapse-tags collapse-tags-tooltip style="width:100%"><el-option label="4节连排" :value="4" /><el-option label="3节连排" :value="3" /><el-option label="2节连排" :value="2" /><el-option label="1节拆分" :value="1" /></el-select></el-form-item></el-col>
           <el-col :span="8"><el-form-item label="禁排时段"><el-select v-model="autoArrangeForm.excludedDayParts" multiple collapse-tags collapse-tags-tooltip style="width:100%"><el-option label="中午" value="NOON" /><el-option label="晚上" value="EVENING" /><el-option label="下午" value="AFTERNOON" /><el-option label="上午" value="MORNING" /></el-select></el-form-item></el-col>
         </el-row>
+        <el-row :gutter="16">
+          <el-col :span="8">
+            <el-form-item label="禁排星期">
+              <el-select v-model="autoArrangeForm.excludedWeekDays" multiple collapse-tags collapse-tags-tooltip style="width:100%">
+                <el-option v-for="item in weekOptions" :key="`a-ew-${item.value}`" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
       </el-form>
 
       <div class="auto-arrange-summary">
@@ -185,6 +194,25 @@
           <template #default="{ row }">
             <el-select v-model="row.selectedWeeks" multiple collapse-tags collapse-tags-tooltip style="width:100%"><el-option v-for="item in autoArrangeWeekOptions" :key="`a-wk-${row.id}-${item}`" :label="`第${item}周`" :value="item" /></el-select>
             <div class="auto-arrange-week-preview">{{ row.weeksText || '未选择周次' }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="禁排星期" min-width="170">
+          <template #default="{ row }">
+            <el-select v-model="row.excludedWeekDays" multiple collapse-tags collapse-tags-tooltip clearable style="width:100%">
+              <el-option v-for="item in weekOptions" :key="`a-ewd-${row.id}-${item.value}`" :label="item.label" :value="item.value" />
+            </el-select>
+            <div class="auto-arrange-week-preview">{{ formatExcludedWeekDays(row.excludedWeekDays) }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="禁排时段" min-width="170">
+          <template #default="{ row }">
+            <el-select v-model="row.excludedDayParts" multiple collapse-tags collapse-tags-tooltip clearable style="width:100%">
+              <el-option label="上午" value="MORNING" />
+              <el-option label="中午" value="NOON" />
+              <el-option label="下午" value="AFTERNOON" />
+              <el-option label="晚上" value="EVENING" />
+            </el-select>
+            <div class="auto-arrange-week-preview">{{ formatExcludedDayParts(row.excludedDayParts) }}</div>
           </template>
         </el-table-column>
         <el-table-column label="最多节/周" width="120"><template #default="{ row }"><el-input-number v-model="row.maxWeeklySections" :min="1" :max="12" style="width:100%" /></template></el-table-column>
@@ -293,7 +321,7 @@ const autoArrangeResult = ref<any>({ arrangedLessons: [], unscheduledLessons: []
 const viewMode = ref('table'), currentWeek = ref(1)
 const queryParams = reactive<any>({ pageNum: 1, pageSize: 10, termId: undefined, deptId: undefined, classId: undefined, courseId: undefined, classroomId: undefined, weekDay: undefined, weekNo: undefined })
 const form = reactive<any>({})
-const autoArrangeForm = reactive<any>({ termId: undefined, keepExisting: true, scopeType: 'all', deptId: undefined, classId: undefined, courseId: undefined, preferredSessionDurations: [4, 2, 1], excludedDayParts: ['NOON', 'EVENING'] })
+const autoArrangeForm = reactive<any>({ termId: undefined, keepExisting: true, scopeType: 'all', deptId: undefined, classId: undefined, courseId: undefined, preferredSessionDurations: [4, 2, 1], excludedDayParts: ['NOON', 'EVENING'], excludedWeekDays: [6, 7] })
 const importForm = reactive<any>({ termId: undefined, scopeType: 'dept', deptId: undefined, classId: undefined, overwrite: false })
 const conflictState = reactive<any>({ hasConflict: false })
 const weekOptions = [{ label: '星期一', value: 1 }, { label: '星期二', value: 2 }, { label: '星期三', value: 3 }, { label: '星期四', value: 4 }, { label: '星期五', value: 5 }, { label: '星期六', value: 6 }, { label: '星期日', value: 7 }]
@@ -450,7 +478,7 @@ function getSectionText(item: any) {
 function getScheduleRoom(item: any) {
   const parts = [item?.campusName, item?.buildingName, item?.classroomName || item?.classroom || '待定教室']
   const res: string[] = []; parts.forEach(p => { const t = String(p || '').trim(); if (t && !res.some(x => x === t || x.includes(t) || t.includes(x))) res.push(t) })
-  return res.join(' ')
+  return res.join(' / ')
 }
 function getAutoArrangeResultRoom(item: any) {
   return getScheduleRoom(item)
@@ -474,12 +502,25 @@ function getCardStyle(item: any) {
 }
 function buildConflictTitle() {
   if (conflictState.conflictType === 'teacher') return `教师时间冲突：${conflictState.teacherName || '教师'} 在 ${weekLabel(conflictState.weekDay)} ${conflictState.startSection}-${conflictState.endSection}节已有安排`
+  if (conflictState.conflictType === 'class') return `班级时间冲突：${conflictState.className || '班级'} 在 ${weekLabel(conflictState.weekDay)} ${conflictState.startSection}-${conflictState.endSection}节已有安排`
   return `教室时间冲突：${conflictState.classroomName || '教室'} 在 ${weekLabel(conflictState.weekDay)} ${conflictState.startSection}-${conflictState.endSection}节已被占用`
 }
 function buildConflictDescription() {
   const loc = `${conflictState.buildingName ? '，楼栋：' + conflictState.buildingName : ''}${conflictState.campusName ? '，校区：' + conflictState.campusName : ''}`
   if (conflictState.conflictType === 'teacher') return `冲突周次：${conflictState.weeksText || '-'}${conflictState.className ? '，班级：' + conflictState.className : ''}${loc}`
+  if (conflictState.conflictType === 'class') return `冲突周次：${conflictState.weeksText || '-'}${conflictState.classCourseName ? '，课程：' + conflictState.classCourseName : ''}${conflictState.teacherName ? '，教师：' + conflictState.teacherName : ''}${loc}`
   return `冲突周次：${conflictState.weeksText || '-'}${loc}`
+}
+function formatExcludedWeekDays(days: any) {
+  const values = Array.isArray(days) ? days.map((item: any) => Number(item)).filter((item: number) => Number.isFinite(item)) : []
+  if (!values.length) return '不限制'
+  return values.map((item: number) => weekLabel(item)).join('、')
+}
+function formatExcludedDayParts(parts: any) {
+  const values = Array.isArray(parts) ? parts.map((item: any) => String(item || '').trim()).filter(Boolean) : []
+  if (!values.length) return '不限制'
+  const labels: Record<string, string> = { MORNING: '上午', NOON: '中午', AFTERNOON: '下午', EVENING: '晚上' }
+  return values.map((item: string) => labels[item] || item).join('、')
 }
 function shiftWeek(offset: number) {
   const opts = weekNumberOptions.value, idx = opts.indexOf(currentWeek.value)
@@ -568,7 +609,12 @@ async function submitForm() {
   form.weeksJson = JSON.stringify((form.selectedWeeks || []).map(Number).filter(Number.isFinite))
   if (!form.weeksText) { ElMessage.warning('请选择至少一个上课周次'); return }
   await checkConflict()
-  if (conflictState.hasConflict) { ElMessage.warning(conflictState.conflictType === 'teacher' ? '教师时间冲突，请调整' : '教室时间冲突，请调整'); return }
+  if (conflictState.hasConflict) {
+    if (conflictState.conflictType === 'teacher') ElMessage.warning('教师时间冲突，请调整')
+    else if (conflictState.conflictType === 'class') ElMessage.warning('班级时间冲突，请调整')
+    else ElMessage.warning('教室时间冲突，请调整')
+    return
+  }
   if (form.scheduleId) { await updateCourseSchedule(form); ElMessage.success('修改成功') } else { await addCourseSchedule(form); ElMessage.success('新增成功') }
   open.value = false; getList()
 }
@@ -587,7 +633,7 @@ function refreshAutoArrangeItems() {
   autoArrangeItems.value = items.map((c: any) => ({
     ...c, weeksText: c.requiredWeeks ? `1-${c.requiredWeeks}周` : '',
     selectedWeeks: c.requiredWeeks ? Array.from({ length: c.requiredWeeks }, (_, i) => i + 1) : [...autoArrangeWeekOptions.value],
-    maxWeeklySections: c.weeklyHours || 2, selected: true, assignedClassroomId: undefined,
+    maxWeeklySections: c.weeklyHours || 2, selected: true, assignedClassroomId: undefined, excludedWeekDays: [...(autoArrangeForm.excludedWeekDays || [])], excludedDayParts: [...(autoArrangeForm.excludedDayParts || [])],
   }))
 }
 async function openAutoArrangeDialog() {
@@ -605,9 +651,9 @@ async function handleAutoArrange() {
   try {
     const res = await autoArrangeCourseSchedule({
       termId: tid, classCourseIds: selected.map((i: any) => i.id),
-      items: selected.map((i: any) => ({ classCourseId: i.id, weeksText: i.weeksText, weeksJson: JSON.stringify(i.selectedWeeks || []), maxWeeklySections: i.maxWeeklySections, classroomId: i.assignedClassroomId || undefined })),
+      items: selected.map((i: any) => ({ classCourseId: i.id, weeksText: i.weeksText, weeksJson: JSON.stringify(i.selectedWeeks || []), maxWeeklySections: i.maxWeeklySections, classroomId: i.assignedClassroomId || undefined, excludedWeekDays: i.excludedWeekDays || [], excludedDayParts: i.excludedDayParts || [] })),
       clearExistingSchedules: !autoArrangeForm.keepExisting, populationSize: 60, generationCount: 120, mutationRate: 0.12,
-      preferredSessionDurations: autoArrangeForm.preferredSessionDurations, excludedDayParts: autoArrangeForm.excludedDayParts,
+      preferredSessionDurations: autoArrangeForm.preferredSessionDurations, excludedDayParts: autoArrangeForm.excludedDayParts, excludedWeekDays: autoArrangeForm.excludedWeekDays,
     })
     const d = res.data || {}, arr = Number(d.arrangedLessonTasks || 0), tot = Number(d.totalLessonTasks || 0), un = Array.isArray(d.unscheduledLessons) ? d.unscheduledLessons.length : 0
     autoArrangeResult.value = d

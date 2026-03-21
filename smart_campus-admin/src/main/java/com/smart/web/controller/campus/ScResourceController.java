@@ -33,6 +33,13 @@ public class ScResourceController extends BaseController {
         return success(scResourceService.selectScResourceByResourceId(resourceId));
     }
 
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/operation/overview")
+    public AjaxResult operationOverview(@RequestParam(required = false) Long courseId,
+            @RequestParam(required = false, defaultValue = "5") Integer limit) {
+        return success(scResourceService.getResourceOperationOverview(courseId, limit));
+    }
+
     @PreAuthorize("@ss.hasPermi('campus:resource:add')")
     @Log(title = "学习资源", businessType = BusinessType.INSERT)
     @PostMapping

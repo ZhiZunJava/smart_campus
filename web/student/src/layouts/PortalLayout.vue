@@ -2,7 +2,7 @@
   <div class="portal-shell">
     <PortalTopBar
       :menu-items="menuItems"
-      :active-path="route.path"
+      :active-path="activeMenuPath"
       :selected-role="activeRole"
       :menu-groups="menuGroups"
       :show-menu="true"
@@ -19,6 +19,24 @@
         'portal-main--workspace': isWorkspaceRoute,
       }"
     >
+      <el-alert
+        v-if="showOngoingExamBanner"
+        type="warning"
+        :closable="true"
+        class="portal-ongoing-banner"
+        @close="dismissOngoingBanner"
+      >
+        <template #title>
+          <div class="portal-ongoing-banner__content">
+            <span>
+              你有一场未完成考试：{{ userStore.ongoingExam?.paperName || `试卷 ${userStore.ongoingExam?.paperId}` }}，
+              开始于 {{ formatDateTime(userStore.ongoingExam?.startTime) }}
+            </span>
+            <el-button type="warning" plain @click="continueOngoingExam">继续考试</el-button>
+          </div>
+        </template>
+      </el-alert>
+
       <div v-if="!isWorkspaceRoute" class="portal-stage">
         <router-view v-slot="{ Component, route: childRoute }">
           <transition :name="resolveChildTransitionName(childRoute, 'portal-content-shift')" mode="out-in">
@@ -67,6 +85,7 @@ const menus: Record<string, MenuItem[]> = {
     { title: '资源中心', path: '/student/resources', desc: '筛选资源并记录学习行为' },
     { title: '个性推荐', path: '/student/recommendations', desc: '主动反馈推荐结果' },
     { title: '智能问答', path: '/student/qa', desc: '基于课程与学习问题问答' },
+    { title: '任务广场', path: '/student/plaza', desc: '浏览通用试卷、开放挑战与通用题目' },
     { title: '我的考试', path: '/student/exams', desc: '考试、记录与错题闭环' },
     { title: '我的错题本', path: '/student/wrongbook', desc: '错题回顾与复盘' },
   ],
@@ -89,44 +108,87 @@ const menus: Record<string, MenuItem[]> = {
 const groupedMenus: Record<string, MenuGroup[]> = {
   student: [
     {
-      key: 'student-service',
-      label: '学生全部服务',
+      key: 'student-general',
+      label: '综合服务',
       items: [
         menus.student[0],
+        menus.student[3],
+        menus.student[5],
+      ],
+    },
+    {
+      key: 'student-course',
+      label: '课程与选课',
+      items: [
         menus.student[1],
         menus.student[2],
-        menus.student[3],
         menus.student[4],
       ],
     },
     {
-      key: 'student-ai',
-      label: '智能学习',
+      key: 'student-plaza',
+      label: '任务中心',
       items: [
-        menus.student[5],
-        menus.student[7],
+        menus.student[6],
       ],
     },
     {
-      key: 'student-exam',
-      label: '考试成长',
+      key: 'student-growth',
+      label: '考试与成长',
       items: [
-        menus.student[6],
+        menus.student[7],
+        menus.student[8],
       ],
     },
   ],
   teacher: [
     {
-      key: 'teacher-service',
-      label: '教师全部服务',
-      items: menus.teacher,
+      key: 'teacher-general',
+      label: '综合服务',
+      items: [
+        menus.teacher[0],
+        menus.teacher[3],
+      ],
+    },
+    {
+      key: 'teacher-course',
+      label: '课程与课表',
+      items: [
+        menus.teacher[1],
+        menus.teacher[2],
+      ],
+    },
+    {
+      key: 'teacher-analysis',
+      label: '学情与预警',
+      items: [
+        menus.teacher[4],
+      ],
     },
   ],
   parent: [
     {
-      key: 'parent-service',
-      label: '家长全部服务',
-      items: menus.parent,
+      key: 'parent-general',
+      label: '综合服务',
+      items: [
+        menus.parent[0],
+      ],
+    },
+    {
+      key: 'parent-course',
+      label: '课程与课表',
+      items: [
+        menus.parent[1],
+        menus.parent[2],
+      ],
+    },
+    {
+      key: 'parent-growth',
+      label: '成绩与成长',
+      items: [
+        menus.parent[3],
+        menus.parent[4],
+      ],
     },
   ],
 }
@@ -145,7 +207,19 @@ watch(
 
 const menuItems = computed(() => menus[activeRole.value] || menus.student)
 const menuGroups = computed(() => groupedMenus[activeRole.value] || groupedMenus.student)
-const isWorkspaceRoute = computed(() => route.path === '/student/qa')
+const isWorkspaceRoute = computed(() => Boolean(route.meta.workspace) || route.path === '/student/qa')
+const showOngoingExamBanner = computed(() => {
+  const ongoingExam = userStore.ongoingExam
+  if (activeRole.value !== 'student' || !ongoingExam) return false
+  if (route.path.startsWith('/student/exams/session/')) return false
+  return !userStore.isOngoingExamDismissed(ongoingExam.recordId)
+})
+const activeMenuPath = computed(() => {
+  if (route.path.startsWith('/student/exams/session/')) {
+    return '/student/exams'
+  }
+  return route.path
+})
 
 function resolveChildTransitionName(childRoute: RouteLocationNormalizedLoaded, fallback: string) {
   return typeof childRoute.meta.transition === 'string' ? childRoute.meta.transition : fallback
@@ -157,6 +231,29 @@ function handleRoleChange(role: string) {
   if (first) {
     router.push(first.path)
   }
+}
+
+function formatDateTime(value?: string) {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString()
+}
+
+function continueOngoingExam() {
+  const ongoingExam = userStore.ongoingExam
+  if (!ongoingExam?.recordId) return
+  router.push({
+    path: `/student/exams/session/${ongoingExam.recordId}`,
+    query: {
+      paperId: String(ongoingExam.paperId || ''),
+      startedAt: String(ongoingExam.startTime || ''),
+    },
+  })
+}
+
+function dismissOngoingBanner() {
+  userStore.dismissOngoingExam(userStore.ongoingExam?.recordId)
 }
 
 async function handleLogout() {
@@ -179,6 +276,18 @@ async function handleLogout() {
   max-width: 1680px;
   margin: 0 auto;
   padding: 10px 18px 18px;
+}
+
+.portal-ongoing-banner {
+  margin: 0 0 12px;
+}
+
+.portal-ongoing-banner__content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .portal-stage {

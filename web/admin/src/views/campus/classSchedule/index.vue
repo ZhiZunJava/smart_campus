@@ -308,7 +308,7 @@ function getScheduleRoom(item: any) {
     if (result.some((item) => item === text || item.includes(text) || text.includes(item))) return
     result.push(text)
   })
-  return result.join(' ')
+  return result.join(' / ')
 }
 function getScheduleTeacher(item: any) {
   return item?.teacherName || '未配置'

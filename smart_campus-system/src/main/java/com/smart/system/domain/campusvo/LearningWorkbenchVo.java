@@ -10,11 +10,13 @@ public class LearningWorkbenchVo {
     private Long userId;
     private Long courseId;
     private LearningProfileOverviewVo profile;
+    private LearningBehaviorStatsVo behaviorStats;
     private List<ScStudyRecord> recentStudyRecords;
     private List<ScExamRecord> recentExamRecords;
     private List<ScLearningWarning> recentWarnings;
     private List<ScLearningReport> recentReports;
     private List<RecommendationItemVo> activeRecommendations;
+    private List<ResourceInsightVo> focusResources;
 
     public Long getUserId() {
         return userId;
@@ -38,6 +40,14 @@ public class LearningWorkbenchVo {
 
     public void setProfile(LearningProfileOverviewVo profile) {
         this.profile = profile;
+    }
+
+    public LearningBehaviorStatsVo getBehaviorStats() {
+        return behaviorStats;
+    }
+
+    public void setBehaviorStats(LearningBehaviorStatsVo behaviorStats) {
+        this.behaviorStats = behaviorStats;
     }
 
     public List<ScStudyRecord> getRecentStudyRecords() {
@@ -78,5 +88,13 @@ public class LearningWorkbenchVo {
 
     public void setActiveRecommendations(List<RecommendationItemVo> activeRecommendations) {
         this.activeRecommendations = activeRecommendations;
+    }
+
+    public List<ResourceInsightVo> getFocusResources() {
+        return focusResources;
+    }
+
+    public void setFocusResources(List<ResourceInsightVo> focusResources) {
+        this.focusResources = focusResources;
     }
 }

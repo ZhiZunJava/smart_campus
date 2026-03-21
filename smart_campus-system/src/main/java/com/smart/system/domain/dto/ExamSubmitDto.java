@@ -10,6 +10,8 @@ import java.util.List;
 public class ExamSubmitDto {
     private Long recordId;
     private List<ExamAnswerSubmitDto> answers;
+    private Integer focusLossCount;
+    private Integer flaggedCount;
 
     public Long getRecordId() {
         return recordId;
@@ -25,5 +27,21 @@ public class ExamSubmitDto {
 
     public void setAnswers(List<ExamAnswerSubmitDto> answers) {
         this.answers = answers;
+    }
+
+    public Integer getFocusLossCount() {
+        return focusLossCount;
+    }
+
+    public void setFocusLossCount(Integer focusLossCount) {
+        this.focusLossCount = focusLossCount;
+    }
+
+    public Integer getFlaggedCount() {
+        return flaggedCount;
+    }
+
+    public void setFlaggedCount(Integer flaggedCount) {
+        this.flaggedCount = flaggedCount;
     }
 }

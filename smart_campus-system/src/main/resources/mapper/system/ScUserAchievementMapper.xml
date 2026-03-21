@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScUserAchievementMapper">
+  <resultMap type="ScUserAchievement" id="ScUserAchievementResult">
+    <id property="achievementId" column="achievement_id" />
+    <result property="userId" column="user_id" />
+    <result property="achievementCode" column="achievement_code" />
+    <result property="achievementTitle" column="achievement_title" />
+    <result property="achievementDesc" column="achievement_desc" />
+    <result property="status" column="status" />
+    <result property="progressValue" column="progress_value" />
+    <result property="earnedTime" column="earned_time" />
+  </resultMap>
+
+  <select id="selectScUserAchievementByUserAndCode" resultMap="ScUserAchievementResult">
+    select achievement_id, user_id, achievement_code, achievement_title, achievement_desc, status, progress_value, earned_time
+    from sc_user_achievement
+    where user_id = #{param1} and achievement_code = #{param2}
+    limit 1
+  </select>
+
+  <select id="selectScUserAchievementList" parameterType="ScUserAchievement" resultMap="ScUserAchievementResult">
+    select achievement_id, user_id, achievement_code, achievement_title, achievement_desc, status, progress_value, earned_time
+    from sc_user_achievement
+    <where>
+      <if test="userId != null">and user_id = #{userId}</if>
+      <if test="status != null and status != ''">and status = #{status}</if>
+    </where>
+    order by earned_time desc, achievement_id desc
+  </select>
+
+  <insert id="insertScUserAchievement" parameterType="ScUserAchievement" useGeneratedKeys="true" keyProperty="achievementId">
+    insert into sc_user_achievement(user_id, achievement_code, achievement_title, achievement_desc, status, progress_value, earned_time, create_by, create_time, remark)
+    values(#{userId}, #{achievementCode}, #{achievementTitle}, #{achievementDesc}, #{status}, #{progressValue}, #{earnedTime}, #{createBy}, sysdate(), #{remark})
+  </insert>
+
+  <update id="updateScUserAchievement" parameterType="ScUserAchievement">
+    update sc_user_achievement
+    <set>
+      <if test="achievementTitle != null">achievement_title = #{achievementTitle},</if>
+      <if test="achievementDesc != null">achievement_desc = #{achievementDesc},</if>
+      <if test="status != null">status = #{status},</if>
+      <if test="progressValue != null">progress_value = #{progressValue},</if>
+      <if test="earnedTime != null">earned_time = #{earnedTime},</if>
+      <if test="updateBy != null">update_by = #{updateBy},</if>
+      update_time = sysdate()
+    </set>
+    where achievement_id = #{achievementId}
+  </update>
+</mapper>

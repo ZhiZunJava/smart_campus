@@ -131,12 +131,12 @@
 
     <el-dialog v-model="detailOpen" :title="currentCourse?.courseName || '任务详情'" width="1280px" top="4vh" class="course-detail-dialog">
       <div class="course-detail-header">
-        <div class="course-detail-header__meta">
-          <span><i class="ri-barcode-box-line"></i>{{ currentCourse?.courseCode || '-' }}</span>
-          <span><i class="ri-hashtag"></i>{{ currentCourse?.teachingClassCode || '-' }}</span>
-          <span><i class="ri-book-shelf-line"></i>{{ currentCourse?.courseCategory || '-' }}</span>
+          <div class="course-detail-header__meta">
+            <span><i class="ri-barcode-box-line"></i>{{ currentCourse?.courseCode || '-' }}</span>
+            <span><i class="ri-hashtag"></i>{{ currentCourse?.teachingClassCode || '-' }}</span>
+            <span><i class="ri-book-shelf-line"></i>{{ currentCourse?.courseCategory || '-' }}</span>
+          </div>
         </div>
-      </div>
       <el-tabs v-model="detailTab">
         <el-tab-pane label="基本信息" name="basic">
           <div class="detail-grid">
@@ -170,16 +170,119 @@
           </el-table>
           <el-empty v-if="!(currentCourse?.scheduleDetails || []).length" description="当前课程暂无排课信息" />
         </el-tab-pane>
+        <el-tab-pane :label="`课程考试（${courseDetail.stats?.paperCount || 0}）`" name="papers">
+          <div class="course-tab-hint">仅展示当前课程已配置并开放到课程维度的考试。</div>
+          <el-table :data="courseDetail.papers || []" max-height="520">
+            <el-table-column prop="paperName" label="试卷名称" min-width="220" show-overflow-tooltip />
+            <el-table-column label="类型" width="100">
+              <template #default="scope">{{ paperTypeLabel(scope.row.paperType) }}</template>
+            </el-table-column>
+            <el-table-column prop="durationMinutes" label="时长" width="90" />
+            <el-table-column prop="totalScore" label="总分" width="90" />
+            <el-table-column label="状态" width="100">
+              <template #default="scope">{{ publishStatusLabel(scope.row.publishStatus) }}</template>
+            </el-table-column>
+            <el-table-column label="操作" width="180">
+              <template #default="scope">
+                <el-button link type="primary" @click="previewCoursePaper(scope.row)">预览试卷</el-button>
+                <el-button link type="success" @click="goExamHub(scope.row)">去考试中心</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-empty v-if="!(courseDetail.papers || []).length" description="当前课程暂未配置考试，所以这里为空" />
+        </el-tab-pane>
+        <el-tab-pane :label="`课程题库（${courseDetail.stats?.questionCount || 0}）`" name="questions">
+          <div class="course-tab-hint">这里展示已绑定到当前课程的题目预览；为避免泄题，题干已做半脱敏处理，且不会返回答案、解析与正确项。</div>
+          <el-table :data="courseDetail.questions || []" max-height="520" @row-click="openQuestionDetail">
+            <el-table-column prop="questionId" label="题目ID" width="90" />
+            <el-table-column label="题型" width="100">
+              <template #default="scope">{{ questionTypeLabel(scope.row.questionType) }}</template>
+            </el-table-column>
+            <el-table-column prop="difficultyLevel" label="难度" width="80" />
+            <el-table-column label="题干" min-width="320" show-overflow-tooltip>
+              <template #default="scope">{{ stripHtml(scope.row.stem) || '题干暂未维护' }}</template>
+            </el-table-column>
+            <el-table-column label="来源" min-width="140" show-overflow-tooltip>
+              <template #default="scope">{{ scope.row.source || '未标注来源' }}</template>
+            </el-table-column>
+            <el-table-column label="操作" width="120">
+              <template #default="scope">
+                <el-button link type="primary" @click.stop="openQuestionDetail(scope.row)">查看预览</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-empty v-if="!(courseDetail.questions || []).length" description="当前课程没有绑定题库题目，或题目录入时未关联课程" />
+        </el-tab-pane>
+        <el-tab-pane label="课程统计" name="stats">
+          <div class="course-detail-metrics">
+            <el-card class="portal-card course-detail-metric">
+              <div class="course-detail-metric__label">课程考试数</div>
+              <div class="course-detail-metric__value">{{ courseDetail.stats?.paperCount || 0 }}</div>
+            </el-card>
+            <el-card class="portal-card course-detail-metric">
+              <div class="course-detail-metric__label">课程题目数</div>
+              <div class="course-detail-metric__value">{{ courseDetail.stats?.questionCount || 0 }}</div>
+            </el-card>
+            <el-card class="portal-card course-detail-metric">
+              <div class="course-detail-metric__label">考试记录数</div>
+              <div class="course-detail-metric__value">{{ courseDetail.stats?.recordCount || 0 }}</div>
+            </el-card>
+            <el-card class="portal-card course-detail-metric">
+              <div class="course-detail-metric__label">平均分</div>
+              <div class="course-detail-metric__value">{{ courseDetail.stats?.avgScore || 0 }}</div>
+            </el-card>
+          </div>
+          <el-table :data="courseDetail.records || []" max-height="420" class="mt16">
+            <el-table-column prop="paperName" label="考试记录" min-width="220" show-overflow-tooltip />
+            <el-table-column prop="score" label="得分" width="90" />
+            <el-table-column prop="correctRate" label="正确率" width="100" />
+            <el-table-column prop="examStatus" label="状态" width="100" />
+            <el-table-column prop="startTime" label="开始时间" min-width="160" />
+          </el-table>
+        </el-tab-pane>
       </el-tabs>
+    </el-dialog>
+
+    <el-dialog v-model="paperPreviewOpen" :title="paperPreviewData.paperName || '试卷预览'" width="980px" top="4vh">
+      <div class="preview-head">
+        <span>{{ paperTypeLabel(paperPreviewData.paperType) }}</span>
+        <span>{{ paperPreviewData.durationMinutes || 0 }} 分钟</span>
+        <span>总分 {{ paperPreviewData.totalScore || 0 }}</span>
+      </div>
+      <el-table :data="paperPreviewData.questions || []" border class="mt16">
+        <el-table-column prop="sortNo" label="序号" width="90" />
+        <el-table-column label="题型" width="110">
+          <template #default="scope">{{ questionTypeLabel(scope.row.question?.questionType) }}</template>
+        </el-table-column>
+        <el-table-column label="题干" min-width="360" show-overflow-tooltip>
+          <template #default="scope">{{ stripHtml(scope.row.question?.stem) }}</template>
+        </el-table-column>
+        <el-table-column prop="score" label="分值" width="90" />
+      </el-table>
+    </el-dialog>
+
+    <el-dialog v-model="questionPreviewOpen" :title="`题目预览 #${questionPreview.questionId || '-'}`" width="860px">
+      <div class="course-question-preview">
+        <div class="course-question-preview__meta">
+          <span>题型：{{ questionTypeLabel(questionPreview.questionType) }}</span>
+          <span>难度：{{ questionPreview.difficultyLevel || '-' }}</span>
+          <span>来源：{{ questionPreview.source || '未标注来源' }}</span>
+        </div>
+        <div class="course-question-preview__stem">{{ stripHtml(questionPreview.stem) || '题干暂未维护' }}</div>
+        <div class="course-question-preview__tips">当前为脱敏预览，不展示答案、解析和正确项。</div>
+      </div>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { listPortalMyCourses, listPortalTermOptions } from '@/api/portal'
+import { getPaperDetail, getPortalCourseDetail, listPortalMyCourses, listPortalTermOptions } from '@/api/portal'
+import { useRoute, useRouter } from 'vue-router'
 import usePortalUserStore from '@/store/user'
 
+const router = useRouter()
+const route = useRoute()
 const userStore = usePortalUserStore()
 const loading = ref(false)
 const courseList = ref<any[]>([])
@@ -189,6 +292,11 @@ const queryParams = reactive<any>({ termId: undefined })
 const detailOpen = ref(false)
 const detailTab = ref('basic')
 const currentCourse = ref<any>(null)
+const courseDetail = ref<any>({})
+const paperPreviewOpen = ref(false)
+const paperPreviewData = ref<any>({})
+const questionPreviewOpen = ref(false)
+const questionPreview = ref<any>({})
 
 const filteredCourses = computed(() => {
   const value = keyword.value.trim().toLowerCase()
@@ -211,16 +319,58 @@ const totalCredits = computed(() => {
 const scheduledCourseCount = computed(() => courseList.value.filter((item: any) => (item.scheduleDetails || []).length > 0).length)
 const unscheduledCourseCount = computed(() => Math.max(courseList.value.length - scheduledCourseCount.value, 0))
 
+function stripHtml(value: string) {
+  return String(value || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
 function requiredLabel(value?: string) {
   if (value === 'Y') return '是'
   if (value === 'N') return '否'
   return value || '-'
 }
 
-function openCourseDetail(row: any) {
+function questionTypeLabel(type?: string) {
+  return ({ single: '单选题', multiple: '多选题', judge: '判断题', fill: '填空题', essay: '简答题', material: '材料题', case: '案例题' } as any)[type || ''] || type || '-'
+}
+
+function paperTypeLabel(type?: string) {
+  return ({ fixed: '固定', random: '随机', adaptive: '自适应' } as any)[type || ''] || type || '-'
+}
+
+function publishStatusLabel(status?: string) {
+  return ({ draft: '草稿', published: '已发布', archived: '已归档' } as any)[status || ''] || status || '-'
+}
+
+async function openCourseDetail(row: any) {
   currentCourse.value = row
   detailTab.value = 'basic'
+  const userId = userStore.user?.userId
+  if (userId && row?.id) {
+    const res = await getPortalCourseDetail({ userId, classCourseId: row.id })
+    courseDetail.value = res.data || {}
+    currentCourse.value = courseDetail.value.course || row
+  } else {
+    courseDetail.value = { course: row, papers: [], questions: [], records: [], stats: {} }
+  }
   detailOpen.value = true
+}
+
+async function previewCoursePaper(row: any) {
+  const res = await getPaperDetail(row.paperId)
+  paperPreviewData.value = res.data || {}
+  paperPreviewOpen.value = true
+}
+
+function goExamHub(row?: any) {
+  router.push({
+    path: '/student/exams',
+    query: row?.paperId ? { paperId: String(row.paperId), tab: 'papers' } : { tab: 'papers' },
+  })
+}
+
+function openQuestionDetail(row: any) {
+  questionPreview.value = row || {}
+  questionPreviewOpen.value = true
 }
 
 function summarizeSchedules(items: any[]) {
@@ -260,6 +410,13 @@ async function loadCourses() {
 onMounted(async () => {
   await loadTerms()
   await loadCourses()
+  const openCourseId = Number(route.query.openCourseId || 0)
+  if (openCourseId) {
+    const matched = courseList.value.find((item: any) => Number(item.id) === openCourseId)
+    if (matched) {
+      await openCourseDetail(matched)
+    }
+  }
 })
 </script>
 
@@ -713,11 +870,75 @@ onMounted(async () => {
   white-space: pre-wrap;
 }
 
+.course-tab-hint {
+  margin-bottom: 12px;
+  color: #7a8798;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.course-detail-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.course-detail-metric {
+  padding: 0;
+}
+
+.course-detail-metric :deep(.el-card__body) {
+  padding: 16px;
+}
+
+.course-detail-metric__label {
+  color: #6a7b90;
+  font-size: 12px;
+}
+
+.course-detail-metric__value {
+  margin-top: 8px;
+  color: #17345d;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.course-question-preview {
+  display: grid;
+  gap: 12px;
+}
+
+.course-question-preview__meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: #667085;
+  font-size: 13px;
+}
+
+.course-question-preview__stem {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #f8fbff;
+  border: 1px solid #e6edf5;
+  color: #374357;
+  line-height: 1.8;
+}
+
+.course-question-preview__tips {
+  color: #7a8798;
+  font-size: 12px;
+}
+
 @media (max-width: 1200px) {
   .course-sheet__head,
   .course-sheet__row {
     grid-template-columns: 1.9fr 1.1fr 2fr 0.9fr 0.9fr;
     gap: 14px;
+  }
+
+  .course-detail-metrics {
+    grid-template-columns: 1fr 1fr;
   }
 }
 </style>

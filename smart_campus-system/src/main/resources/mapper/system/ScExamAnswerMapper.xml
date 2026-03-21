@@ -3,28 +3,39 @@
 <mapper namespace="com.smart.system.mapper.ScExamAnswerMapper">
   <resultMap type="ScExamAnswer" id="ScExamAnswerResult">
     <id property="answerId" column="answer_id" />
+    <result property="sessionId" column="session_id" />
+    <result property="sessionPaperId" column="session_paper_id" />
     <result property="recordId" column="record_id" />
     <result property="questionId" column="question_id" />
     <result property="userAnswer" column="user_answer" />
     <result property="isCorrect" column="is_correct" />
     <result property="score" column="score" />
     <result property="knowledgePointId" column="knowledge_point_id" />
+    <result property="questionType" column="question_type" />
+    <result property="stem" column="stem" />
+    <result property="standardAnswer" column="standard_answer" />
+    <result property="analysis" column="analysis" />
   </resultMap>
-  <sql id="selectScExamAnswerVo">select answer_id, record_id, question_id, user_answer, is_correct,
-    score, knowledge_point_id from sc_exam_answer</sql>
+  <sql id="selectScExamAnswerVo">select a.answer_id, a.session_id, a.session_paper_id, a.record_id, a.question_id, a.user_answer,
+    a.is_correct, a.score, a.knowledge_point_id, q.question_type, q.stem, q.answer as standard_answer,
+    q.analysis from sc_exam_answer a left join sc_question_bank q on a.question_id = q.question_id</sql>
   <select id="selectScExamAnswerByAnswerId" parameterType="Long" resultMap="ScExamAnswerResult"><include
-      refid="selectScExamAnswerVo" /> where answer_id = #{answerId}</select>
+      refid="selectScExamAnswerVo" /> where a.answer_id = #{answerId}</select>
   <select id="selectScExamAnswerList" parameterType="ScExamAnswer" resultMap="ScExamAnswerResult"><include
-      refid="selectScExamAnswerVo" /><where><if test="recordId != null">and record_id = #{recordId}</if><if
-        test="questionId != null">and question_id = #{questionId}</if></where> order by answer_id
+      refid="selectScExamAnswerVo" /><where><if test="sessionId != null">and a.session_id = #{sessionId}</if><if
+        test="sessionPaperId != null">and a.session_paper_id = #{sessionPaperId}</if><if
+        test="recordId != null">and a.record_id = #{recordId}</if><if
+        test="questionId != null">and a.question_id = #{questionId}</if></where> order by a.answer_id
     asc</select>
   <select id="selectScExamAnswerByRecordId" parameterType="Long" resultMap="ScExamAnswerResult"><include
-      refid="selectScExamAnswerVo" /> where record_id = #{recordId} order by answer_id asc</select>
+      refid="selectScExamAnswerVo" /> where a.record_id = #{recordId} order by a.answer_id asc</select>
   <insert id="insertScExamAnswer" parameterType="ScExamAnswer" useGeneratedKeys="true"
-    keyProperty="answerId">insert into sc_exam_answer(record_id, question_id, user_answer,
-    is_correct, score, knowledge_point_id) values(#{recordId}, #{questionId}, #{userAnswer},
+    keyProperty="answerId">insert into sc_exam_answer(session_id, session_paper_id, record_id, question_id, user_answer,
+    is_correct, score, knowledge_point_id) values(#{sessionId}, #{sessionPaperId}, #{recordId}, #{questionId}, #{userAnswer},
     #{isCorrect}, #{score}, #{knowledgePointId})</insert>
   <update id="updateScExamAnswer" parameterType="ScExamAnswer">update sc_exam_answer <set><if
+        test="sessionId != null">session_id = #{sessionId},</if><if
+        test="sessionPaperId != null">session_paper_id = #{sessionPaperId},</if><if
         test="recordId != null">record_id = #{recordId},</if><if test="questionId != null">question_id
     = #{questionId},</if><if test="userAnswer != null">user_answer = #{userAnswer},</if><if
         test="isCorrect != null">is_correct = #{isCorrect},</if><if test="score != null">score =

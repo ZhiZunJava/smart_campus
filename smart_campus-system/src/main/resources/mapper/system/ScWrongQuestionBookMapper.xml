@@ -5,24 +5,58 @@
     <id property="id" column="id" />
     <result property="userId" column="user_id" />
     <result property="questionId" column="question_id" />
+    <result property="catalogId" column="catalog_id" />
     <result property="courseId" column="course_id" />
     <result property="wrongCount" column="wrong_count" />
     <result property="lastWrongTime" column="last_wrong_time" />
     <result property="masteryStatus" column="mastery_status" />
+    <result property="questionType" column="question_type" />
+    <result property="stem" column="stem" />
+    <result property="answer" column="answer" />
+    <result property="analysis" column="analysis" />
+    <result property="knowledgePointId" column="knowledge_point_id" />
   </resultMap>
-  <sql id="selectScWrongQuestionBookVo">select id, user_id, question_id, course_id, wrong_count,
-    last_wrong_time, mastery_status from sc_wrong_question_book</sql>
+  <sql id="selectScWrongQuestionBookVo">select w.id, w.user_id, w.question_id,
+    (select i.default_catalog_id from sc_question_item i where i.source_type = 'LEGACY' and i.source_ref_id = w.question_id
+      order by i.item_id desc limit 1) as catalog_id,
+    w.course_id, w.wrong_count,
+    w.last_wrong_time, w.mastery_status, q.question_type, q.stem, q.answer, q.analysis,
+    q.knowledge_point_id from sc_wrong_question_book w left join sc_question_bank q on
+    w.question_id = q.question_id</sql>
   <select id="selectScWrongQuestionBookById" parameterType="Long"
-    resultMap="ScWrongQuestionBookResult"><include refid="selectScWrongQuestionBookVo" /> where id =
+    resultMap="ScWrongQuestionBookResult"><include refid="selectScWrongQuestionBookVo" /> where w.id =
     #{id}</select>
   <select id="selectScWrongQuestionBookByUserAndQuestion" resultMap="ScWrongQuestionBookResult"><include
-      refid="selectScWrongQuestionBookVo" /> where user_id = #{userId} and question_id =
+      refid="selectScWrongQuestionBookVo" /> where w.user_id = #{userId} and w.question_id =
     #{questionId} limit 1</select>
   <select id="selectScWrongQuestionBookList" parameterType="ScWrongQuestionBook"
-    resultMap="ScWrongQuestionBookResult"><include refid="selectScWrongQuestionBookVo" /><where><if
-        test="userId != null">and user_id = #{userId}</if><if test="courseId != null">and course_id
-    = #{courseId}</if><if test="masteryStatus != null and masteryStatus != ''">and mastery_status =
-    #{masteryStatus}</if></where> order by id desc</select>
+    resultMap="ScWrongQuestionBookResult">
+    <include refid="selectScWrongQuestionBookVo" />
+    <where>
+      <if test="userId != null">
+        and w.user_id = #{userId}
+      </if>
+      <if test="courseId != null">
+        and w.course_id = #{courseId}
+      </if>
+      <if test="catalogId != null">
+        and w.question_id in (
+          select i.source_ref_id from sc_question_item i
+          where i.default_catalog_id = #{catalogId} and i.source_type = 'LEGACY'
+        )
+      </if>
+      <if test="questionType != null and questionType != ''">
+        and q.question_type = #{questionType}
+      </if>
+      <if test="knowledgePointId != null">
+        and q.knowledge_point_id = #{knowledgePointId}
+      </if>
+      <if test="masteryStatus != null and masteryStatus != ''">
+        and w.mastery_status = #{masteryStatus}
+      </if>
+    </where>
+    order by w.id desc
+  </select>
   <insert id="insertScWrongQuestionBook" parameterType="ScWrongQuestionBook" useGeneratedKeys="true"
     keyProperty="id">insert into sc_wrong_question_book(user_id, question_id, course_id,
     wrong_count, last_wrong_time, mastery_status) values(#{userId}, #{questionId}, #{courseId},

@@ -1,5 +1,6 @@
 package com.smart.web.controller.campus;
 
+import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -32,7 +33,12 @@ import com.smart.system.domain.ScClass;
 import com.smart.system.domain.ScClassCourse;
 import com.smart.system.domain.ScCourse;
 import com.smart.system.domain.ScCourseSchedule;
+import com.smart.system.domain.ScExamPaper;
+import com.smart.system.domain.ScExamRecord;
+import com.smart.system.domain.ScKnowledgePoint;
+import com.smart.system.domain.ScQuestionBank;
 import com.smart.system.domain.ScSchoolTerm;
+import com.smart.system.domain.ScWrongQuestionBook;
 import com.smart.system.domain.ScParentStudentRel;
 import com.smart.system.domain.SysNotice;
 import com.smart.system.service.ICampusOverviewService;
@@ -40,9 +46,15 @@ import com.smart.system.service.IScClassCourseService;
 import com.smart.system.service.IScClassService;
 import com.smart.system.service.IScCourseScheduleService;
 import com.smart.system.service.IScCourseService;
+import com.smart.system.service.IScExamPaperService;
+import com.smart.system.service.IScExamRecordService;
+import com.smart.system.service.IScKnowledgePointService;
 import com.smart.system.service.IScParentStudentRelService;
+import com.smart.system.service.IScQuestionBankService;
 import com.smart.system.service.IScSchoolTermService;
+import com.smart.system.service.IScUserGrowthService;
 import com.smart.system.service.IScUserProfileService;
+import com.smart.system.service.IScWrongQuestionBookService;
 import com.smart.system.service.ISysConfigService;
 import com.smart.system.service.ISysNoticeService;
 import com.smart.system.service.ISysUserService;
@@ -84,6 +96,24 @@ public class CampusPortalController extends BaseController {
 
     @Autowired
     private IScParentStudentRelService scParentStudentRelService;
+
+    @Autowired
+    private IScKnowledgePointService scKnowledgePointService;
+
+    @Autowired
+    private IScQuestionBankService scQuestionBankService;
+
+    @Autowired
+    private IScExamPaperService scExamPaperService;
+
+    @Autowired
+    private IScExamRecordService scExamRecordService;
+
+    @Autowired
+    private IScWrongQuestionBookService scWrongQuestionBookService;
+
+    @Autowired
+    private IScUserGrowthService scUserGrowthService;
 
     @Autowired
     private TokenService tokenService;
@@ -167,6 +197,248 @@ public class CampusPortalController extends BaseController {
     }
 
     @PreAuthorize("@ss.hasAnyRoles('student,admin')")
+    @GetMapping("/student/course-detail")
+    public AjaxResult studentCourseDetail(@RequestParam Long userId, @RequestParam Long classCourseId) {
+        ScUserProfile profile = scUserProfileService.selectScUserProfileByUserId(userId);
+        if (profile == null || profile.getClassId() == null) {
+            return success(Collections.emptyMap());
+        }
+        ScClassCourse classCourse = scClassCourseService.selectScClassCourseById(classCourseId);
+        if (classCourse == null || !Objects.equals(classCourse.getClassId(), profile.getClassId())) {
+            return success(Collections.emptyMap());
+        }
+
+        Map<Long, List<ScCourseSchedule>> scheduleMap = loadScheduleMap(Collections.singletonList(classCourse));
+        ScSchoolTerm term = classCourse.getTermId() == null ? null
+                : scSchoolTermService.selectScSchoolTermByTermId(classCourse.getTermId());
+        Map<String, Object> currentCourse = buildStudentCourseItem(classCourse, term, scheduleMap.getOrDefault(classCourse.getId(), Collections.emptyList()));
+
+        ScExamPaper paperQuery = new ScExamPaper();
+        paperQuery.setCourseId(classCourse.getCourseId());
+        paperQuery.setStatus("0");
+        List<ScExamPaper> papers = scExamPaperService.selectScExamPaperList(paperQuery).stream()
+                .filter(item -> !"SUB".equalsIgnoreCase(item.getPaperLevel()))
+                .collect(Collectors.toList());
+        Set<Long> examCourseIds = papers.stream()
+                .map(ScExamPaper::getCourseId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        ScQuestionBank questionQuery = new ScQuestionBank();
+        questionQuery.setCourseId(classCourse.getCourseId());
+        questionQuery.setStatus("0");
+        List<ScQuestionBank> questions = scQuestionBankService.selectScQuestionBankList(questionQuery);
+
+        ScExamRecord recordQuery = new ScExamRecord();
+        recordQuery.setUserId(userId);
+        List<ScExamRecord> allRecords = scExamRecordService.selectScExamRecordList(recordQuery);
+        Set<Long> coursePaperIds = papers.stream().map(ScExamPaper::getPaperId).filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        List<ScExamRecord> records = allRecords.stream()
+                .filter(item -> item.getPaperId() != null && coursePaperIds.contains(item.getPaperId()))
+                .collect(Collectors.toList());
+
+        Map<String, Object> stats = new LinkedHashMap<>();
+        stats.put("paperCount", papers.size());
+        stats.put("questionCount", questions.size());
+        stats.put("recordCount", records.size());
+        stats.put("avgScore", averageScore(records));
+        stats.put("submittedCount", records.stream().filter(item -> "SUBMITTED".equals(item.getExamStatus())).count());
+        stats.put("ongoingCount", records.stream().filter(item -> "ONGOING".equals(item.getExamStatus())).count());
+        stats.put("questionTypeCount", questions.stream().map(ScQuestionBank::getQuestionType).filter(StringUtils::isNotEmpty).distinct().count());
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("course", currentCourse);
+        result.put("papers", papers);
+        result.put("questions", questions.stream().limit(20).map(this::maskCourseQuestion).collect(Collectors.toList()));
+        result.put("records", records.stream().limit(20).collect(Collectors.toList()));
+        result.put("stats", stats);
+        return success(result);
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('student,admin')")
+    @GetMapping("/student/tasks")
+    public AjaxResult studentTasks(@RequestParam Long userId, @RequestParam(required = false) Long termId) {
+        List<Map<String, Object>> courseList = castToMapList(studentMyCourses(userId, termId).get("data"));
+
+        ScExamPaper paperQuery = new ScExamPaper();
+        paperQuery.setStatus("0");
+        List<ScExamPaper> papers = scExamPaperService.selectScExamPaperList(paperQuery).stream()
+                .filter(item -> !"SUB".equalsIgnoreCase(item.getPaperLevel()))
+                .collect(Collectors.toList());
+        Set<Long> examCourseIds = papers.stream()
+                .map(ScExamPaper::getCourseId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        ScExamRecord recordQuery = new ScExamRecord();
+        recordQuery.setUserId(userId);
+        List<ScExamRecord> records = scExamRecordService.selectScExamRecordList(recordQuery);
+
+        ScWrongQuestionBook wrongQuery = new ScWrongQuestionBook();
+        wrongQuery.setUserId(userId);
+        List<ScWrongQuestionBook> wrongs = scWrongQuestionBookService.selectScWrongQuestionBookList(wrongQuery);
+
+        List<Map<String, Object>> examTasks = papers.stream()
+                .limit(10)
+                .map(item -> taskItem("exam-" + item.getPaperId(),
+                        StringUtils.defaultIfEmpty(item.getPaperName(), "试卷 " + item.getPaperId()),
+                        item.getCourseId() == null ? "开放考试任务，可自由参与。" : "课程考试任务，建议按课程进度完成。",
+                        "考试任务", "primary", "待处理",
+                        Arrays.asList((item.getDurationMinutes() == null ? 0 : item.getDurationMinutes()) + " 分钟",
+                                "总分 " + StringUtils.defaultIfEmpty(item.getTotalScore() == null ? null : item.getTotalScore().toPlainString(), "0")),
+                        actionItem("exam", item.getPaperId(), null)))
+                .collect(Collectors.toList());
+
+        List<Map<String, Object>> wrongTasks = wrongs.stream()
+                .limit(6)
+                .map(item -> taskItem("wrong-" + item.getId(),
+                        "错题回练 · 题目 " + item.getQuestionId(),
+                        "建议优先复盘高频错题，再进行错题回练。",
+                        "错题任务", "warning", "1".equals(item.getMasteryStatus()) ? "已掌握" : "待巩固",
+                        Arrays.asList("错误 " + defaultInt(item.getWrongCount()) + " 次",
+                                item.getCourseId() == null ? "通用题目" : "课程 " + item.getCourseId()),
+                        actionItem("wrongbook", null, null)))
+                .collect(Collectors.<Map<String, Object>>toList());
+
+        List<Map<String, Object>> courseTasks = courseList.stream()
+                .filter(item -> {
+                    Long courseId = asLong(item.get("courseId"));
+                    return courseId != null && examCourseIds.contains(courseId);
+                })
+                .limit(8)
+                .map(item -> taskItem("course-" + item.get("id"),
+                        String.valueOf(item.get("courseName")) + " · 课程考试跟进",
+                        "该课程已有考试相关数据，进入课程详情查看考试与统计概况。",
+                        "课程任务", "success", "进行中",
+                        Arrays.asList(StringUtils.defaultIfEmpty((String) item.get("courseCode"), "无课程编码"),
+                                StringUtils.defaultIfEmpty((String) item.get("termName"), "当前学期")),
+                        actionItem("course", asLong(item.get("id")), null)))
+                .collect(Collectors.toList());
+
+        List<Map<String, Object>> todoTasks = new ArrayList<>();
+        records.stream()
+                .filter(item -> "ONGOING".equals(item.getExamStatus()))
+                .findFirst()
+                .ifPresent(item -> todoTasks.add(taskItem("ongoing-" + item.getRecordId(),
+                        StringUtils.defaultIfEmpty(item.getPaperName(), "试卷 " + item.getPaperId()),
+                        "你有一场未完成考试，建议优先继续作答。",
+                        "待办考试", "danger", "进行中",
+                        Collections.singletonList("开始于 " + StringUtils.defaultIfEmpty(DateUtils.parseDateToStr("yyyy-MM-dd HH:mm:ss", item.getStartTime()), "-")),
+                        actionItem("resume", item.getPaperId(), item.getRecordId()))));
+        todoTasks.addAll(wrongTasks.stream().limit(2).collect(Collectors.toList()));
+        todoTasks.addAll(courseTasks.stream().limit(2).collect(Collectors.toList()));
+
+        List<Map<String, Object>> recommendedTasks = new ArrayList<>();
+        recommendedTasks.addAll(examTasks.stream().limit(2).collect(Collectors.toList()));
+        List<Map<String, Object>> topWrongTasks = wrongs.stream().limit(2).map(item -> taskItem("topwrong-" + item.getQuestionId(),
+                "高频错题 · " + item.getQuestionId(),
+                "这道题在你的历史作答里属于高频失分，建议尽快回练。",
+                "薄弱项", "warning", "推荐",
+                Collections.singletonList("错误 " + defaultInt(item.getWrongCount()) + " 次"),
+                actionItem("wrongbook", null, null))).collect(Collectors.<Map<String, Object>>toList());
+        recommendedTasks.addAll(topWrongTasks);
+        recommendedTasks.addAll(courseTasks.stream().skip(2).limit(2).collect(Collectors.toList()));
+
+        List<Map<String, Object>> historyTasks = records.stream()
+                .filter(item -> "SUBMITTED".equals(item.getExamStatus()))
+                .limit(10)
+                .map(item -> taskItem("history-" + item.getRecordId(),
+                        StringUtils.defaultIfEmpty(item.getPaperName(), "试卷 " + item.getPaperId()),
+                        "历史考试记录，可回看作答详情与结果。",
+                        "已完成", "info", "已提交",
+                        Collections.emptyList(),
+                        actionItem("record", item.getPaperId(), item.getRecordId())))
+                .collect(Collectors.toList());
+
+        Map<String, Object> stats = new LinkedHashMap<>();
+        stats.put("examTaskCount", examTasks.size());
+        stats.put("wrongTaskCount", wrongTasks.size());
+        stats.put("courseTaskCount", courseTasks.size());
+        stats.put("todoCount", todoTasks.size());
+        stats.put("recommendedCount", recommendedTasks.size());
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("todoTasks", todoTasks);
+        result.put("recommendedTasks", recommendedTasks);
+        result.put("historyTasks", historyTasks);
+        result.put("examTasks", examTasks);
+        result.put("wrongTasks", wrongTasks);
+        result.put("courseTasks", courseTasks);
+        result.put("stats", stats);
+        return success(result);
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('student,admin')")
+    @GetMapping("/student/growth-summary")
+    public AjaxResult studentGrowthSummary(@RequestParam Long userId) {
+        return success(scUserGrowthService.buildGrowthSummary(userId));
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('student,admin')")
+    @GetMapping("/student/messages")
+    public AjaxResult studentMessages(@RequestParam Long userId) {
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        SysNotice noticeQuery = new SysNotice();
+        noticeQuery.setStatus("0");
+        List<SysNotice> notices = noticeService.selectNoticeList(noticeQuery).stream()
+                .limit(6)
+                .collect(Collectors.toList());
+        for (SysNotice notice : notices) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("messageId", "notice-" + notice.getNoticeId());
+            item.put("messageType", "NOTICE");
+            item.put("messageTitle", notice.getNoticeTitle());
+            item.put("messageContent", notice.getNoticeContent());
+            item.put("createTime", notice.getCreateTime());
+            item.put("levelType", "INFO");
+            item.put("actionType", "notice");
+            item.put("actionTarget", notice.getNoticeId());
+            result.add(item);
+        }
+
+        ScExamRecord recordQuery = new ScExamRecord();
+        recordQuery.setUserId(userId);
+        List<ScExamRecord> records = scExamRecordService.selectScExamRecordList(recordQuery);
+        records.stream()
+                .filter(item -> "ONGOING".equals(item.getExamStatus()))
+                .limit(2)
+                .forEach(item -> {
+                    Map<String, Object> message = new LinkedHashMap<>();
+                    message.put("messageId", "exam-ongoing-" + item.getRecordId());
+                    message.put("messageType", "EXAM_REMINDER");
+                    message.put("messageTitle", "考试进行中提醒");
+                    message.put("messageContent", "你有一场未完成考试：" + StringUtils.defaultIfEmpty(item.getPaperName(), "试卷 " + item.getPaperId()));
+                    message.put("createTime", item.getStartTime());
+                    message.put("levelType", "WARNING");
+                    message.put("actionType", "resumeExam");
+                    message.put("actionTarget", item.getRecordId());
+                    message.put("paperId", item.getPaperId());
+                    result.add(message);
+                });
+
+        Map<String, Object> growth = scUserGrowthService.buildGrowthSummary(userId);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> achievements = (List<Map<String, Object>>) (List<?>) growth.getOrDefault("achievements", Collections.emptyList());
+        achievements.stream().limit(3).forEach(item -> {
+            Map<String, Object> message = new LinkedHashMap<>();
+            message.put("messageId", "achievement-" + item.get("achievementId"));
+            message.put("messageType", "ACHIEVEMENT");
+            message.put("messageTitle", StringUtils.defaultIfEmpty((String) item.get("achievementTitle"), "成就解锁"));
+            message.put("messageContent", StringUtils.defaultIfEmpty((String) item.get("achievementDesc"), "你已解锁新的成长成就"));
+            message.put("createTime", item.get("earnedTime"));
+            message.put("levelType", "SUCCESS");
+            message.put("actionType", "growth");
+            message.put("actionTarget", item.get("achievementId"));
+            result.add(message);
+        });
+
+        result.sort((a, b) -> String.valueOf(b.get("createTime")).compareTo(String.valueOf(a.get("createTime"))));
+        return success(result.stream().limit(12).collect(Collectors.toList()));
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('student,admin')")
     @GetMapping("/student/my-schedule")
     public AjaxResult studentMySchedule(@RequestParam Long userId, @RequestParam(required = false) Long termId) {
         ScUserProfile profile = scUserProfileService.selectScUserProfileByUserId(userId);
@@ -189,6 +461,58 @@ public class CampusPortalController extends BaseController {
         result.put("studentNo", resolveProfileStudentNo(userId, profile));
         result.put("major", profile.getMajor());
         result.put("admissionYear", profile.getAdmissionYear());
+        return success(result);
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('student,admin')")
+    @GetMapping("/student/knowledge-points")
+    public AjaxResult studentKnowledgePoints(@RequestParam Long userId,
+            @RequestParam(required = false) Long courseId,
+            @RequestParam(required = false, defaultValue = "200") Integer limit) {
+        ScUserProfile profile = scUserProfileService.selectScUserProfileByUserId(userId);
+        if (profile == null || profile.getClassId() == null) {
+            return success(Collections.emptyList());
+        }
+        ScClassCourse query = new ScClassCourse();
+        query.setClassId(profile.getClassId());
+        query.setStatus("0");
+        List<ScClassCourse> classCourses = scClassCourseService.selectScClassCourseList(query);
+        Set<Long> allowedCourseIds = classCourses.stream()
+                .map(ScClassCourse::getCourseId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (courseId != null) {
+            if (!allowedCourseIds.contains(courseId)) {
+                return success(Collections.emptyList());
+            }
+            allowedCourseIds = new LinkedHashSet<>(Collections.singleton(courseId));
+        }
+        if (allowedCourseIds.isEmpty()) {
+            return success(Collections.emptyList());
+        }
+        int safeLimit = limit == null || limit <= 0 ? 200 : Math.min(limit, 500);
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Long itemCourseId : allowedCourseIds) {
+            ScKnowledgePoint kpQuery = new ScKnowledgePoint();
+            kpQuery.setCourseId(itemCourseId);
+            kpQuery.setStatus("0");
+            List<ScKnowledgePoint> points = scKnowledgePointService.selectScKnowledgePointList(kpQuery);
+            for (ScKnowledgePoint point : points) {
+                if (result.size() >= safeLimit) {
+                    return success(result);
+                }
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("label", point.getKnowledgeName() + "（" + point.getKnowledgePointId() + "）");
+                item.put("value", point.getKnowledgePointId());
+                item.put("knowledgePointId", point.getKnowledgePointId());
+                item.put("knowledgeName", point.getKnowledgeName());
+                item.put("courseId", point.getCourseId());
+                item.put("difficultyLevel", point.getDifficultyLevel());
+                item.put("keyword", point.getKeyword());
+                item.put("description", point.getDescription());
+                result.add(item);
+            }
+        }
         return success(result);
     }
 
@@ -720,6 +1044,148 @@ public class CampusPortalController extends BaseController {
             return StringUtils.defaultIfEmpty(term.getTermName(), "-") + "（" + term.getSchoolYear() + "）";
         }
         return StringUtils.defaultIfEmpty(term.getTermName(), "-");
+    }
+
+    private Map<String, Object> buildStudentCourseItem(ScClassCourse classCourse, ScSchoolTerm term, List<ScCourseSchedule> schedules) {
+        ScCourse course = classCourse.getCourseId() == null ? null
+                : scCourseService.selectScCourseByCourseId(classCourse.getCourseId());
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("id", classCourse.getId());
+        item.put("classId", classCourse.getClassId());
+        item.put("className", classCourse.getClassName());
+        item.put("courseId", classCourse.getCourseId());
+        item.put("courseName", classCourse.getCourseName());
+        item.put("courseCode", course == null ? null : course.getCourseCode());
+        item.put("subjectType", course == null ? null : course.getSubjectType());
+        item.put("intro", course == null ? null : course.getIntro());
+        item.put("teacherId", classCourse.getTeacherId());
+        item.put("termId", classCourse.getTermId());
+        item.put("termName", classCourse.getTermName());
+        item.put("schoolYear", term == null ? null : term.getSchoolYear());
+        item.put("businessType", classCourse.getBusinessType());
+        item.put("teachingClassCode", classCourse.getTeachingClassCode());
+        item.put("credits", classCourse.getCredits() == null ? estimateCredits(course, classCourse) : classCourse.getCredits());
+        item.put("courseCategory", classCourse.getCourseCategory());
+        item.put("openDeptName", classCourse.getOpenDeptName());
+        item.put("major", classCourse.getMajor());
+        item.put("campusName", classCourse.getCampusName());
+        item.put("assessmentType", classCourse.getAssessmentType());
+        item.put("teachingLanguage", classCourse.getTeachingLanguage());
+        item.put("prerequisiteCourse", classCourse.getPrerequisiteCourse());
+        item.put("taskType", classCourse.getTaskType());
+        item.put("requiredFlag", classCourse.getRequiredFlag());
+        item.put("courseLevelRequirement", classCourse.getCourseLevelRequirement());
+        item.put("totalHours", classCourse.getTotalHours());
+        item.put("requiredWeeks", classCourse.getRequiredWeeks());
+        item.put("weeklyHours", classCourse.getWeeklyHours());
+        item.put("arrangedHours", classCourse.getArrangedHours());
+        item.put("studentLimit", classCourse.getStudentLimit());
+        item.put("actualStudentCount", classCourse.getActualStudentCount());
+        item.put("remark", classCourse.getRemark());
+        item.put("semesterLabel", term == null ? classCourse.getTermName() : buildTermLabel(term));
+        item.put("scheduleText", buildScheduleTextVm(classCourse, schedules));
+        item.put("scheduleDetails", buildCourseScheduleDetails(classCourse, schedules, term));
+        return item;
+    }
+
+    private double averageScore(List<ScExamRecord> records) {
+        List<Double> scores = records.stream()
+                .map(ScExamRecord::getScore)
+                .filter(Objects::nonNull)
+                .map(BigDecimal::doubleValue)
+                .collect(Collectors.toList());
+        if (scores.isEmpty()) {
+            return 0D;
+        }
+        double total = scores.stream().reduce(0D, Double::sum);
+        return Math.round((total / scores.size()) * 100D) / 100D;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> castToMapList(Object data) {
+        if (data instanceof List) {
+            return (List<Map<String, Object>>) data;
+        }
+        return Collections.emptyList();
+    }
+
+    private Map<String, Object> taskItem(String key, String title, String desc, String tag, String tagType,
+            String status, List<String> meta, Map<String, Object> action) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("key", key);
+        item.put("title", title);
+        item.put("desc", desc);
+        item.put("tag", tag);
+        item.put("tagType", tagType);
+        item.put("status", status);
+        item.put("meta", meta == null ? Collections.emptyList() : meta);
+        item.put("action", action);
+        return item;
+    }
+
+    private Map<String, Object> actionItem(String type, Long paperId, Long recordId) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("type", type);
+        item.put("paperId", paperId);
+        item.put("recordId", recordId);
+        return item;
+    }
+
+    private Long asLong(Object value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            return Long.valueOf(String.valueOf(value));
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private int defaultInt(Integer value) {
+        return value == null ? 0 : value;
+    }
+
+    private Map<String, Object> maskCourseQuestion(ScQuestionBank source) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("questionId", source.getQuestionId());
+        item.put("catalogId", source.getCatalogId());
+        item.put("courseId", source.getCourseId());
+        item.put("chapterId", source.getChapterId());
+        item.put("knowledgePointId", source.getKnowledgePointId());
+        item.put("questionType", source.getQuestionType());
+        item.put("difficultyLevel", source.getDifficultyLevel());
+        item.put("stem", maskStem(source.getStem(), source.getQuestionType()));
+        item.put("source", source.getSource());
+        item.put("questionTags", source.getQuestionTags());
+        item.put("materialContent", source.getMaterialContent());
+        item.put("sourceBatchNo", source.getSourceBatchNo());
+        item.put("qualityScore", source.getQualityScore());
+        item.put("status", source.getStatus());
+        return item;
+    }
+
+    private String maskStem(String stem, String questionType) {
+        if (StringUtils.isEmpty(stem)) {
+            return stem;
+        }
+        String plain = stem.replaceAll("<[^>]+>", " ").replaceAll("\\s+", " ").trim();
+        String type = StringUtils.defaultIfEmpty(questionType, "").trim().toLowerCase();
+        if ("essay".equals(type) || "material".equals(type) || "case".equals(type)) {
+            if (plain.length() <= 10) {
+                return "题干已脱敏";
+            }
+            return plain.substring(0, Math.min(8, plain.length())) + " ……（题干已脱敏）";
+        }
+        if (plain.length() <= 12) {
+            return plain.length() <= 4 ? "题干已脱敏" : plain.substring(0, 2) + " ...";
+        }
+        int prefix = Math.min(10, Math.max(4, plain.length() / 5));
+        int suffix = Math.min(6, Math.max(2, plain.length() / 8));
+        if (prefix + suffix >= plain.length()) {
+            return plain.substring(0, Math.min(4, plain.length())) + " ...";
+        }
+        return plain.substring(0, prefix) + " ...... " + plain.substring(plain.length() - suffix);
     }
 
     private List<Map<String, Object>> buildCourseScheduleDetails(ScClassCourse classCourse,

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScQuestionCatalogItemRelMapper">
+  <resultMap type="ScQuestionCatalogItemRel" id="ScQuestionCatalogItemRelResult">
+    <id property="id" column="id" />
+    <result property="catalogId" column="catalog_id" />
+    <result property="itemId" column="item_id" />
+    <result property="sortNo" column="sort_no" />
+    <result property="status" column="status" />
+  </resultMap>
+
+  <sql id="selectScQuestionCatalogItemRelVo">
+    select id, catalog_id, item_id, sort_no, status
+    from sc_question_catalog_item_rel
+  </sql>
+
+  <select id="selectScQuestionCatalogItemRelList" parameterType="ScQuestionCatalogItemRel" resultMap="ScQuestionCatalogItemRelResult">
+    <include refid="selectScQuestionCatalogItemRelVo" />
+    <where>
+      <if test="catalogId != null">
+        and catalog_id = #{catalogId}
+      </if>
+      <if test="itemId != null">
+        and item_id = #{itemId}
+      </if>
+      <if test="status != null and status != ''">
+        and status = #{status}
+      </if>
+    </where>
+    order by id desc
+  </select>
+
+  <insert id="insertScQuestionCatalogItemRel" parameterType="ScQuestionCatalogItemRel" useGeneratedKeys="true" keyProperty="id">
+    insert into sc_question_catalog_item_rel(catalog_id, item_id, sort_no, status, create_by, create_time, remark)
+    values(#{catalogId}, #{itemId}, #{sortNo}, #{status}, #{createBy}, sysdate(), #{remark})
+  </insert>
+
+  <delete id="deleteScQuestionCatalogItemRelByItemId" parameterType="Long">
+    delete from sc_question_catalog_item_rel where item_id = #{itemId}
+  </delete>
+</mapper>

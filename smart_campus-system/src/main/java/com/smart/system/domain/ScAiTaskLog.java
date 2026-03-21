@@ -15,6 +15,7 @@ public class ScAiTaskLog extends BaseEntity {
     private Long taskId;
     private String bizType;
     private Long bizId;
+    private String[] bizTypes;
     private Long modelId;
     private String modelName;
     private String requestPayload;
@@ -46,6 +47,14 @@ public class ScAiTaskLog extends BaseEntity {
 
     public void setBizId(Long bizId) {
         this.bizId = bizId;
+    }
+
+    public String[] getBizTypes() {
+        return bizTypes;
+    }
+
+    public void setBizTypes(String[] bizTypes) {
+        this.bizTypes = bizTypes;
     }
 
     public Long getModelId() {

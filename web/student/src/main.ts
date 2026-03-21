@@ -7,6 +7,7 @@ import 'element-plus/theme-chalk/dark/css-vars.css'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import App from './App.vue'
 import router from './router'
+import '@/styles/tailwind.css'
 import '@/styles/index.scss'
 import usePortalThemeStore from './store/theme'
 

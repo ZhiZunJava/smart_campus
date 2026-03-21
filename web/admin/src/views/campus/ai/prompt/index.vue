@@ -38,6 +38,17 @@
         <el-form-item label="版本"><el-input-number v-model="form.version" :min="1" :max="20" /></el-form-item>
         <el-form-item label="状态"><el-select v-model="form.status"><el-option label="正常" value="0" /><el-option label="停用" value="1" /></el-select></el-form-item>
         <el-form-item label="模板内容"><el-input v-model="form.promptContent" type="textarea" rows="8" placeholder="这里填写系统提示词模板，测试时会作为 system prompt 使用" /></el-form-item>
+        <el-form-item label="变量说明">
+          <div class="prompt-helper">
+            <div class="prompt-helper__title">推荐占位变量</div>
+            <div class="prompt-helper__tokens">
+              <span v-for="item in promptTokens" :key="item" class="prompt-helper__token">{{ item }}</span>
+            </div>
+            <div class="prompt-helper__desc">
+              出题场景建议至少使用课程名称、知识点名称、题型标签和难度提示，避免模型输出与课程无关的题目。
+            </div>
+          </div>
+        </el-form-item>
       </el-form>
       <template #footer><el-button @click="open=false">取消</el-button><el-button type="primary" @click="submitForm">确定</el-button></template>
     </el-dialog>
@@ -63,10 +74,26 @@ import { fetchAiModelOptions } from '@/api/campus/options'
 import { addAiPrompt, delAiPrompt, listAiPrompt, testAiPrompt, updateAiPrompt } from '@/api/campus/ai'
 
 const bizTypeOptions = [
-  { label: '问答', value: 'qa' },
-  { label: '报告', value: 'report' },
-  { label: '推荐', value: 'recommend' },
+  { label: 'AI出题', value: 'exam_question_generate' },
+  { label: 'AI异步出题', value: 'exam_question_generate_async' },
+  { label: '智能问答', value: 'qa' },
+  { label: '学习画像分析', value: 'learning_profile_analysis' },
+  { label: '资源分析', value: 'resource_analysis' },
+  { label: '教学配置助手', value: 'teaching_admin' },
+  { label: '模型测试', value: 'model_test' },
   { label: '通用', value: 'common' },
+]
+
+const promptTokens = [
+  '{{courseName}}',
+  '{{courseCode}}',
+  '{{subjectType}}',
+  '{{courseIntro}}',
+  '{{chapterOutline}}',
+  '{{knowledgeName}}',
+  '{{knowledgeDescription}}',
+  '{{questionTypeLabel}}',
+  '{{difficultyHint}}',
 ]
 
 const loading = ref(false)
@@ -94,11 +121,23 @@ async function loadModelOptions() {
 }
 
 function resetForm() {
-  Object.assign(form, { templateId: undefined, templateCode: '', templateName: '', bizType: '', promptContent: '', version: 1, status: '0' })
+  Object.assign(form, {
+    templateId: undefined,
+    templateCode: '',
+    templateName: '',
+    bizType: 'exam_question_generate',
+    promptContent: '',
+    version: 1,
+    status: '0'
+  })
 }
 
 function handleAdd() {
   resetForm()
+  if (!form.templateCode && form.bizType === 'exam_question_generate') {
+    form.templateCode = 'exam_question_generate_default'
+    form.templateName = 'AI出题默认模板'
+  }
   open.value = true
 }
 
@@ -119,6 +158,9 @@ function handleTest(row: any) {
   if (!testForm.modelId && modelOptions.value.length) {
     testForm.modelId = modelOptions.value[0].value
   }
+  testForm.userPrompt = row.bizType === 'exam_question_generate'
+    ? '{"courseId":101,"courseName":"Python程序设计","knowledgeName":"函数与参数传递","questionTypeLabel":"单选题","difficultyHint":"中等难度，兼顾概念理解与基础应用"}'
+    : '请介绍一下这个提示词是否工作正常。'
   testResult.value = ''
   testOpen.value = true
 }

@@ -28,7 +28,7 @@
         <el-table-column prop="warningType" label="预警类型" width="120" />
         <el-table-column label="预警等级" width="100">
           <template #default="scope">
-            <el-tag :type="scope.row.warningLevel === 'HIGH' ? 'danger' : scope.row.warningLevel === 'MEDIUM' ? 'warning' : 'success'">{{ scope.row.warningLevel }}</el-tag>
+            <el-tag :type="scope.row.warningLevel === 'HIGH' ? 'danger' : scope.row.warningLevel === 'MEDIUM' ? 'warning' : 'success'">{{ warningLevelLabel(scope.row.warningLevel) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="warningContent" label="预警内容" min-width="260" show-overflow-tooltip />
@@ -52,6 +52,10 @@ const queryParams = reactive<any>({ pageNum: 1, pageSize: 50, userId: undefined 
 
 const highCount = computed(() => warnings.value.filter((item: any) => item.warningLevel === 'HIGH').length)
 const pendingCount = computed(() => warnings.value.filter((item: any) => item.processStatus === 'PENDING').length)
+
+function warningLevelLabel(level: string) {
+  return ({ LOW: '低风险', MEDIUM: '中风险', HIGH: '高风险' } as any)[level] || level || '-'
+}
 
 async function loadOptions() {
   studentOptions.value = await fetchPortalUserOptions('student')

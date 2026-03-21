@@ -20,8 +20,16 @@ export function getPortalNoticeDetail(noticeId: number) {
   return request({ url: `/campus/portal/notice/${noticeId}`, method: 'get' })
 }
 
+export function getPortalMessageCenter(params: any) {
+  return request({ url: '/campus/portal/student/messages', method: 'get', params })
+}
+
 export function getPortalProfile() {
   return request({ url: '/campus/portal/profile', method: 'get' })
+}
+
+export function getPortalGrowthSummary(params: any) {
+  return request({ url: '/campus/portal/student/growth-summary', method: 'get', params })
 }
 
 export function updatePortalProfile(data: any) {
@@ -69,7 +77,7 @@ export function getAnalysisMeta() {
 }
 
 export function listResource(query: any) {
-  return request({ url: '/campus/resource/list', method: 'get', params: query })
+  return request({ url: '/campus/portal/learning/resource/list', method: 'get', params: query })
 }
 
 export function recordStudyBehavior(data: any) {
@@ -77,19 +85,19 @@ export function recordStudyBehavior(data: any) {
 }
 
 export function getResourceDetail(resourceId: number) {
-  return request({ url: `/campus/detail/resource/${resourceId}`, method: 'get' })
+  return request({ url: `/campus/portal/learning/resource/${resourceId}`, method: 'get' })
 }
 
 export function listRecommendation(query: any) {
-  return request({ url: '/campus/learningRecommendation/list', method: 'get', params: query })
+  return request({ url: '/campus/portal/learning/recommendation/list', method: 'get', params: query })
 }
 
 export function listActiveRecommendation(query: any) {
-  return request({ url: '/campus/learningRecommendation/active', method: 'get', params: query })
+  return request({ url: '/campus/portal/learning/recommendation/active', method: 'get', params: query })
 }
 
 export function feedbackRecommendation(data: any) {
-  return request({ url: '/campus/learningRecommendation/feedback', method: 'post', data })
+  return request({ url: '/campus/portal/learning/recommendation/feedback', method: 'post', data })
 }
 
 export function listQaSession(query: any) {
@@ -149,11 +157,27 @@ export function addQaFeedback(data: any) {
 }
 
 export function listExamPaper(query: any) {
-  return request({ url: '/campus/exam/paper/list', method: 'get', params: query })
+  return request({ url: '/campus/portal/exam/paper/list', method: 'get', params: query })
+}
+
+export function listQuestionBank(query: any) {
+  return request({ url: '/campus/portal/exam/question/list', method: 'get', params: query })
 }
 
 export function listExamRecord(query: any) {
-  return request({ url: '/campus/exam/record/list', method: 'get', params: query })
+  return request({ url: '/campus/portal/exam/record/list', method: 'get', params: query })
+}
+
+export function getExamRecordOverview(query: any) {
+  return request({ url: '/campus/portal/exam/record/overview', method: 'get', params: query })
+}
+
+export function getExamRecordDetail(recordId: number) {
+  return request({ url: `/campus/portal/exam/record/${recordId}`, method: 'get' })
+}
+
+export function getExamRuntime(recordId: number) {
+  return request({ url: `/campus/portal/exam/runtime/${recordId}`, method: 'get' })
 }
 
 export function listExamAnswer(query: any) {
@@ -161,27 +185,67 @@ export function listExamAnswer(query: any) {
 }
 
 export function listWrongBook(query: any) {
-  return request({ url: '/campus/exam/wrong/list', method: 'get', params: query })
+  return request({ url: '/campus/portal/exam/wrong/list', method: 'get', params: query })
+}
+
+export function getWrongBookOverview(query: any) {
+  return request({ url: '/campus/portal/exam/wrong/overview', method: 'get', params: query })
+}
+
+export function getWrongBookDetail(wrongId: number) {
+  return request({ url: `/campus/portal/exam/wrong/${wrongId}`, method: 'get' })
+}
+
+export function createWrongRetryPaper(data: any) {
+  return request({ url: '/campus/portal/exam/wrong/retry', method: 'post', data })
 }
 
 export function startExam(params: any) {
-  return request({ url: '/campus/exam/start', method: 'post', params })
+  return request({ url: '/campus/portal/exam/start', method: 'post', params })
 }
 
 export function submitExam(data: any) {
-  return request({ url: '/campus/exam/submit', method: 'post', data })
+  return request({ url: '/campus/portal/exam/submit', method: 'post', data })
+}
+
+export function saveExamDraft(data: any) {
+  return request({ url: '/campus/portal/exam/draft/save', method: 'post', data })
+}
+
+export function listExamDrafts(recordId: number) {
+  return request({ url: `/campus/portal/exam/draft/${recordId}`, method: 'get' })
+}
+
+export function submitExamQuestion(data: any) {
+  return request({ url: '/campus/portal/exam/question/submit', method: 'post', data })
+}
+
+export function submitExamSubPaper(data: any) {
+  return request({ url: '/campus/portal/exam/sub-paper/submit', method: 'post', data })
 }
 
 export function getPaperDetail(paperId: number) {
-  return request({ url: `/campus/detail/paper/${paperId}`, method: 'get' })
+  return request({ url: `/campus/portal/exam/paper/${paperId}`, method: 'get' })
 }
 
 export function listCourse(query: any) {
   return request({ url: '/campus/course/list', method: 'get', params: query })
 }
 
+export function listKnowledgePoint(query: any) {
+  return request({ url: '/campus/knowledgePoint/list', method: 'get', params: query })
+}
+
 export function listPortalMyCourses(params: any) {
   return request({ url: '/campus/portal/student/my-courses', method: 'get', params })
+}
+
+export function getPortalCourseDetail(params: any) {
+  return request({ url: '/campus/portal/student/course-detail', method: 'get', params })
+}
+
+export function getPortalTaskCenter(params: any) {
+  return request({ url: '/campus/portal/student/tasks', method: 'get', params })
 }
 
 export function getPortalMySchedule(params: any) {
@@ -200,18 +264,55 @@ export async function fetchPortalUserOptions(userType?: string) {
   }))
 }
 
-export async function fetchPortalCourseOptions() {
-  const res = await listCourse({ pageNum: 1, pageSize: 200 })
-  return (res.rows || []).map((item: any) => ({
-    label: `${item.courseName}（${item.courseId}）`,
-    value: item.courseId,
-  }))
+export async function fetchPortalCourseOptions(userId?: number) {
+  try {
+    if (userId) {
+      const res = await listPortalMyCourses({ userId })
+      return (res.data || res || []).map((item: any) => ({
+        label: `${item.courseName}（${item.courseId}）`,
+        value: item.courseId,
+      }))
+    }
+    const res = await listCourse({ pageNum: 1, pageSize: 200 })
+    return (res.rows || []).map((item: any) => ({
+      label: `${item.courseName}（${item.courseId}）`,
+      value: item.courseId,
+    }))
+  } catch {
+    return []
+  }
+}
+
+export async function fetchPortalKnowledgePointOptions() {
+  try {
+    return []
+  } catch {
+    return []
+  }
+}
+
+export async function fetchPortalStudentKnowledgePointOptions(userId?: number, courseId?: number, limit = 200) {
+  try {
+    if (!userId) return []
+    const res = await request({
+      url: '/campus/portal/student/knowledge-points',
+      method: 'get',
+      params: { userId, courseId, limit },
+    })
+    return (res.data || res || []).map((item: any) => ({
+      label: item.label || `${item.knowledgeName}（${item.knowledgePointId}）`,
+      value: item.knowledgePointId || item.value,
+      courseId: item.courseId,
+    }))
+  } catch {
+    return []
+  }
 }
 
 export function listWarning(query: any) {
-  return request({ url: '/campus/analysis/warning/list', method: 'get', params: query })
+  return request({ url: '/campus/portal/learning/warning/list', method: 'get', params: query })
 }
 
 export function listReport(query: any) {
-  return request({ url: '/campus/analysis/report/list', method: 'get', params: query })
+  return request({ url: '/campus/portal/learning/report/list', method: 'get', params: query })
 }

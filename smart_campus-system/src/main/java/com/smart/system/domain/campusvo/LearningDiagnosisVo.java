@@ -22,6 +22,7 @@ public class LearningDiagnosisVo {
     private Integer recommendationCount;
     private List<String> riskTags;
     private List<String> actionSuggestions;
+    private String aiNarrative;
     private ScLearningWarning latestWarning;
     private ScLearningReport latestReport;
     private List<RecommendationItemVo> recommendations;
@@ -152,6 +153,14 @@ public class LearningDiagnosisVo {
 
     public void setActionSuggestions(List<String> actionSuggestions) {
         this.actionSuggestions = actionSuggestions;
+    }
+
+    public String getAiNarrative() {
+        return aiNarrative;
+    }
+
+    public void setAiNarrative(String aiNarrative) {
+        this.aiNarrative = aiNarrative;
     }
 
     public ScLearningWarning getLatestWarning() {

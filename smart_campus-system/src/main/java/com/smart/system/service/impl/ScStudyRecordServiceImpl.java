@@ -5,9 +5,13 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.smart.common.utils.StringUtils;
+import com.smart.system.domain.ScResource;
 import com.smart.system.domain.ScStudyRecord;
 import com.smart.system.mapper.ScResourceMapper;
 import com.smart.system.mapper.ScStudyRecordMapper;
+import com.smart.system.service.IScLearningProfileService;
+import com.smart.system.service.IScLearningRecommendationService;
+import com.smart.system.service.IScLearningWarningService;
 import com.smart.system.service.IScStudyRecordService;
 
 @Service
@@ -17,6 +21,15 @@ public class ScStudyRecordServiceImpl implements IScStudyRecordService {
 
     @Autowired
     private ScResourceMapper scResourceMapper;
+
+    @Autowired
+    private IScLearningProfileService scLearningProfileService;
+
+    @Autowired
+    private IScLearningWarningService scLearningWarningService;
+
+    @Autowired
+    private IScLearningRecommendationService scLearningRecommendationService;
 
     @Override
     public ScStudyRecord selectScStudyRecordByRecordId(Long recordId) {
@@ -50,6 +63,7 @@ public class ScStudyRecordServiceImpl implements IScStudyRecordService {
 
     @Override
     public int recordBehavior(ScStudyRecord scStudyRecord) {
+        normalizeStudyRecord(scStudyRecord);
         if (scStudyRecord.getDurationSeconds() == null) {
             scStudyRecord.setDurationSeconds(0);
         }
@@ -68,6 +82,43 @@ public class ScStudyRecordServiceImpl implements IScStudyRecordService {
                 scResourceMapper.increaseFavoriteCount(scStudyRecord.getResourceId());
             }
         }
+        if (rows > 0 && scStudyRecord.getUserId() != null) {
+            scLearningProfileService.rebuildProfile(scStudyRecord.getUserId(), scStudyRecord.getCourseId());
+            scLearningWarningService.buildWarning(scStudyRecord.getUserId(), scStudyRecord.getCourseId());
+            scLearningRecommendationService.generateRecommendations(scStudyRecord.getUserId(), "home", 5);
+            scLearningRecommendationService.generateRecommendations(scStudyRecord.getUserId(), "workbench", 5);
+            if (scStudyRecord.getCourseId() != null) {
+                scLearningRecommendationService.generateRecommendations(scStudyRecord.getUserId(), "course", 5);
+            }
+        }
         return rows;
+    }
+
+    private void normalizeStudyRecord(ScStudyRecord scStudyRecord) {
+        if (scStudyRecord == null) {
+            return;
+        }
+        if (scStudyRecord.getProgressRate() != null) {
+            if (scStudyRecord.getProgressRate().compareTo(BigDecimal.ZERO) < 0) {
+                scStudyRecord.setProgressRate(BigDecimal.ZERO);
+            } else if (scStudyRecord.getProgressRate().compareTo(BigDecimal.valueOf(100)) > 0) {
+                scStudyRecord.setProgressRate(BigDecimal.valueOf(100));
+            }
+        }
+        if (StringUtils.isEmpty(scStudyRecord.getDeviceType())) {
+            scStudyRecord.setDeviceType("web");
+        }
+        if (StringUtils.isEmpty(scStudyRecord.getSourcePage())) {
+            scStudyRecord.setSourcePage("learning_center");
+        }
+        if (scStudyRecord.getCourseId() == null && scStudyRecord.getResourceId() != null) {
+            ScResource resource = scResourceMapper.selectScResourceByResourceId(scStudyRecord.getResourceId());
+            if (resource != null) {
+                scStudyRecord.setCourseId(resource.getCourseId());
+                if (scStudyRecord.getChapterId() == null) {
+                    scStudyRecord.setChapterId(resource.getChapterId());
+                }
+            }
+        }
     }
 }

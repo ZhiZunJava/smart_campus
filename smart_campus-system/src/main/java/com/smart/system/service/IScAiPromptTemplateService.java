@@ -6,6 +6,8 @@ import com.smart.system.domain.ScAiPromptTemplate;
 public interface IScAiPromptTemplateService {
     ScAiPromptTemplate selectScAiPromptTemplateByTemplateId(Long templateId);
 
+    ScAiPromptTemplate selectActiveTemplate(String bizType);
+
     List<ScAiPromptTemplate> selectScAiPromptTemplateList(ScAiPromptTemplate scAiPromptTemplate);
 
     int insertScAiPromptTemplate(ScAiPromptTemplate scAiPromptTemplate);

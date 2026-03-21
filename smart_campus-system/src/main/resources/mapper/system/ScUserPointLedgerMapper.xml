@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScUserPointLedgerMapper">
+  <resultMap type="ScUserPointLedger" id="ScUserPointLedgerResult">
+    <id property="ledgerId" column="ledger_id" />
+    <result property="userId" column="user_id" />
+    <result property="changeType" column="change_type" />
+    <result property="bizType" column="biz_type" />
+    <result property="bizId" column="biz_id" />
+    <result property="changePoints" column="change_points" />
+    <result property="balanceAfter" column="balance_after" />
+  </resultMap>
+
+  <select id="selectScUserPointLedgerList" parameterType="ScUserPointLedger" resultMap="ScUserPointLedgerResult">
+    select ledger_id, user_id, change_type, biz_type, biz_id, change_points, balance_after
+    from sc_user_point_ledger
+    <where>
+      <if test="userId != null">and user_id = #{userId}</if>
+      <if test="changeType != null and changeType != ''">and change_type = #{changeType}</if>
+      <if test="bizType != null and bizType != ''">and biz_type = #{bizType}</if>
+      <if test="bizId != null">and biz_id = #{bizId}</if>
+    </where>
+    order by ledger_id desc
+  </select>
+
+  <insert id="insertScUserPointLedger" parameterType="ScUserPointLedger" useGeneratedKeys="true" keyProperty="ledgerId">
+    insert into sc_user_point_ledger(user_id, change_type, biz_type, biz_id, change_points, balance_after, create_by, create_time, remark)
+    values(#{userId}, #{changeType}, #{bizType}, #{bizId}, #{changePoints}, #{balanceAfter}, #{createBy}, sysdate(), #{remark})
+  </insert>
+</mapper>
+

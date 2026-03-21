@@ -9,6 +9,7 @@ public class QuestionOptionVo {
     private Long optionId;
     private String optionKey;
     private String optionContent;
+    private String isRight;
 
     public Long getOptionId() {
         return optionId;
@@ -32,5 +33,13 @@ public class QuestionOptionVo {
 
     public void setOptionContent(String optionContent) {
         this.optionContent = optionContent;
+    }
+
+    public String getIsRight() {
+        return isRight;
+    }
+
+    public void setIsRight(String isRight) {
+        this.isRight = isRight;
     }
 }

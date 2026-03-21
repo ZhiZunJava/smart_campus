@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScExamBehaviorLogMapper">
+  <resultMap type="ScExamBehaviorLog" id="ScExamBehaviorLogResult">
+    <id property="id" column="id" />
+    <result property="sessionId" column="session_id" />
+    <result property="recordId" column="record_id" />
+    <result property="behaviorType" column="behavior_type" />
+    <result property="behaviorCount" column="behavior_count" />
+    <result property="behaviorTime" column="behavior_time" />
+    <result property="behaviorData" column="behavior_data" />
+  </resultMap>
+
+  <sql id="selectScExamBehaviorLogVo">
+    select id, session_id, record_id, behavior_type, behavior_count, behavior_time, behavior_data
+    from sc_exam_behavior_log
+  </sql>
+
+  <select id="selectScExamBehaviorLogList" parameterType="ScExamBehaviorLog" resultMap="ScExamBehaviorLogResult">
+    <include refid="selectScExamBehaviorLogVo" />
+    <where>
+      <if test="sessionId != null">
+        and session_id = #{sessionId}
+      </if>
+      <if test="recordId != null">
+        and record_id = #{recordId}
+      </if>
+      <if test="behaviorType != null and behaviorType != ''">
+        and behavior_type = #{behaviorType}
+      </if>
+    </where>
+    order by id desc
+  </select>
+
+  <insert id="insertScExamBehaviorLog" parameterType="ScExamBehaviorLog" useGeneratedKeys="true" keyProperty="id">
+    insert into sc_exam_behavior_log(session_id, record_id, behavior_type, behavior_count, behavior_time,
+    behavior_data, create_by, create_time, remark)
+    values(#{sessionId}, #{recordId}, #{behaviorType}, #{behaviorCount}, #{behaviorTime},
+    #{behaviorData}, #{createBy}, sysdate(), #{remark})
+  </insert>
+</mapper>

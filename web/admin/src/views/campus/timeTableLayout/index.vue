@@ -19,6 +19,8 @@
       <div class="toolbar-row">
         <el-input v-model="form.nameZh" placeholder="布局名称" style="width:260px" />
         <el-button type="primary" icon="Plus" @click="addUnit">新增节次</el-button>
+        <el-button icon="Clock" @click="appendPresetGroup('MORNING')">追加上午模板</el-button>
+        <el-button icon="Sunny" @click="appendPresetGroup('AFTERNOON')">追加下午模板</el-button>
         <el-button icon="RefreshLeft" @click="resetDefault">恢复默认布局</el-button>
         <el-button type="success" icon="Check" @click="submitForm">保存布局</el-button>
       </div>
@@ -44,6 +46,35 @@
         </el-card>
       </div>
 
+      <div class="layout-grid">
+        <el-card class="preview-card" shadow="never">
+          <template #header><div class="preview-card__title">时间轴预览</div></template>
+          <div class="timeline-preview">
+            <div v-for="group in timelineGroups" :key="group.dayPart" class="timeline-group">
+              <div class="timeline-group__head">
+                <strong>{{ group.nameZh }}</strong>
+                <span>{{ group.items.length }} 节</span>
+              </div>
+              <div class="timeline-group__body">
+                <div v-for="item in group.items" :key="`${group.dayPart}-${item.indexNo}`" class="timeline-chip">
+                  <strong>{{ item.nameZh || item.indexNo }}</strong>
+                  <span>第 {{ item.indexNo }} 节</span>
+                  <small>{{ item.startText }} - {{ item.endText }}</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </el-card>
+
+        <el-card class="preview-card" shadow="never">
+          <template #header><div class="preview-card__title">布局校验</div></template>
+          <div class="preview-notes">
+            <span v-if="!layoutWarnings.length" class="preview-note-ok">当前布局未发现明显问题，可以直接保存。</span>
+            <span v-for="warning in layoutWarnings" :key="warning" class="preview-note-warning">{{ warning }}</span>
+          </div>
+        </el-card>
+      </div>
+
       <el-table :data="form.courseUnitList" row-key="indexNo" class="unit-table">
         <el-table-column label="显示名称" min-width="120">
           <template #default="{ row }"><el-input v-model="row.nameZh" /></template>
@@ -60,8 +91,12 @@
         <el-table-column label="时段" width="160">
           <template #default="{ row }"><el-select v-model="row.dayPart" style="width:100%"><el-option label="上午" value="MORNING" /><el-option label="中午" value="NOON" /><el-option label="下午" value="AFTERNOON" /><el-option label="晚上" value="EVENING" /></el-select></template>
         </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
-          <template #default="{ $index }"><el-button link type="danger" icon="Delete" @click="removeUnit($index)">删除</el-button></template>
+        <el-table-column label="操作" width="180" fixed="right">
+          <template #default="{ $index }">
+            <el-button link type="primary" @click="moveUnit($index, -1)">上移</el-button>
+            <el-button link type="primary" @click="moveUnit($index, 1)">下移</el-button>
+            <el-button link type="danger" icon="Delete" @click="removeUnit($index)">删除</el-button>
+          </template>
         </el-table-column>
       </el-table>
     </el-card>
@@ -116,12 +151,65 @@ const printGroups = computed(() => {
     }, []),
   }))
 })
+const timelineGroups = computed(() => {
+  const order = ['MORNING', 'NOON', 'AFTERNOON', 'EVENING']
+  const labels: Record<string, string> = { MORNING: '上午', NOON: '中午', AFTERNOON: '下午', EVENING: '晚上' }
+  return order.map((dayPart) => ({
+    dayPart,
+    nameZh: labels[dayPart],
+    items: form.courseUnitList.filter((item:any) => (item.dayPart || 'MORNING') === dayPart).sort((a:any,b:any)=>Number(a.indexNo)-Number(b.indexNo)),
+  })).filter((group) => group.items.length)
+})
+const layoutWarnings = computed(() => {
+  const warnings: string[] = []
+  const units = [...form.courseUnitList].sort((a:any,b:any)=>Number(a.indexNo)-Number(b.indexNo))
+  const indexSet = new Set<number>()
+  units.forEach((item:any) => {
+    const indexNo = Number(item.indexNo)
+    if (!indexNo) warnings.push(`存在未配置节次编号的项：${item.nameZh || '未命名节次'}`)
+    if (indexSet.has(indexNo)) warnings.push(`第 ${indexNo} 节出现重复编号`)
+    indexSet.add(indexNo)
+    if (!item.startText || !item.endText) warnings.push(`第 ${indexNo || '-'} 节缺少开始或结束时间`)
+    if (item.startText && item.endText && toNumber(item.startText) >= toNumber(item.endText)) warnings.push(`第 ${indexNo || '-'} 节开始时间不能晚于结束时间`)
+  })
+  for (let i = 1; i < units.length; i++) {
+    const prev = units[i - 1]
+    const curr = units[i]
+    if (prev.dayPart === curr.dayPart && prev.endText && curr.startText && toNumber(prev.endText) > toNumber(curr.startText)) {
+      warnings.push(`第 ${prev.indexNo} 节与第 ${curr.indexNo} 节时间重叠`)
+    }
+  }
+  return Array.from(new Set(warnings))
+})
 
 function toText(value:number){ const hours = String(Math.floor(value / 100)).padStart(2,'0'); const minutes = String(value % 100).padStart(2,'0'); return `${hours}:${minutes}` }
 function toNumber(value:string){ const [hours, minutes] = String(value || '00:00').split(':').map((item)=>Number(item)); return (hours || 0) * 100 + (minutes || 0) }
 function normalizeUnits(){ form.courseUnitList.sort((a:any,b:any)=>Number(a.indexNo)-Number(b.indexNo)); form.courseUnitList.forEach((item:any,index:number)=>{ if(!item.nameZh) item.nameZh=String(index+1) }) }
 function addUnit(){ form.courseUnitList.push({ nameZh:String(form.courseUnitList.length+1), indexNo:form.courseUnitList.length+1, startText:'08:00', endText:'08:40', dayPart:'MORNING' }) }
 function removeUnit(index:number){ form.courseUnitList.splice(index,1) }
+function moveUnit(index:number, offset:number){
+  const target = index + offset
+  if(target < 0 || target >= form.courseUnitList.length) return
+  const current = form.courseUnitList[index]
+  form.courseUnitList.splice(index, 1)
+  form.courseUnitList.splice(target, 0, current)
+}
+function appendPresetGroup(dayPart:'MORNING'|'AFTERNOON'){
+  const presets: Record<string, any[]> = {
+    MORNING: [
+      { nameZh:'1', startText:'08:00', endText:'08:40', dayPart:'MORNING' },
+      { nameZh:'2', startText:'08:50', endText:'09:30', dayPart:'MORNING' },
+    ],
+    AFTERNOON: [
+      { nameZh:'5', startText:'14:00', endText:'14:40', dayPart:'AFTERNOON' },
+      { nameZh:'6', startText:'14:50', endText:'15:30', dayPart:'AFTERNOON' },
+    ],
+  }
+  const nextIndex = Math.max(0, ...form.courseUnitList.map((item:any)=>Number(item.indexNo) || 0)) + 1
+  presets[dayPart].forEach((item:any, idx:number) => {
+    form.courseUnitList.push({ ...item, indexNo: nextIndex + idx })
+  })
+}
 function applyLayout(data:any){
   form.id = data.id || 1
   form.nameZh = data.nameZh || '默认课表布局'
@@ -142,6 +230,10 @@ async function loadData(){
 
 async function submitForm(){
   normalizeUnits()
+  if (layoutWarnings.value.length) {
+    ElMessage.warning(layoutWarnings.value[0])
+    return
+  }
   const payload = {
     id: form.id,
     nameZh: form.nameZh,
@@ -179,6 +271,17 @@ onMounted(loadData)
 .preview-group{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:14px;background:#f3f7fd;color:#526076}
 .preview-group strong{color:#172033}
 .preview-notes span{padding:12px 14px;border-radius:14px;background:#f7fafc;color:#526076;line-height:1.7}
+.preview-note-ok{background:#eefbf3 !important;color:#1f7a45 !important}
+.preview-note-warning{background:#fff7ed !important;color:#9a3412 !important}
+.timeline-preview{display:flex;flex-direction:column;gap:14px}
+.timeline-group{padding:14px;border-radius:14px;background:#f8fbff;border:1px solid #e1ebf8}
+.timeline-group__head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.timeline-group__head strong{color:#172033}
+.timeline-group__head span{color:#667085;font-size:12px}
+.timeline-group__body{display:flex;flex-wrap:wrap;gap:10px}
+.timeline-chip{min-width:120px;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid #e5edf7;display:flex;flex-direction:column;gap:4px}
+.timeline-chip strong{color:#172033;font-size:13px}
+.timeline-chip span,.timeline-chip small{color:#667085}
 .unit-table :deep(.el-input-number){width:100%}
 @media (max-width: 1100px){.teaching-page-shell{grid-template-columns:1fr}.teaching-page-shell__stats{grid-template-columns:1fr}}
 @media (max-width: 960px){.layout-grid{grid-template-columns:1fr}}

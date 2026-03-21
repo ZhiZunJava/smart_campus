@@ -3,32 +3,91 @@
 <mapper namespace="com.smart.system.mapper.ScExamPaperMapper">
   <resultMap type="ScExamPaper" id="ScExamPaperResult">
     <id property="paperId" column="paper_id" />
+    <result property="parentPaperId" column="parent_paper_id" />
     <result property="paperName" column="paper_name" />
     <result property="courseId" column="course_id" />
     <result property="paperType" column="paper_type" />
+    <result property="paperLevel" column="paper_level" />
+    <result property="answerMode" column="answer_mode" />
+    <result property="paperWeight" column="paper_weight" />
+    <result property="sortNo" column="sort_no" />
     <result property="totalScore" column="total_score" />
     <result property="durationMinutes" column="duration_minutes" />
+    <result property="publishStatus" column="publish_status" />
+    <result property="publishStartTime" column="publish_start_time" />
+    <result property="publishEndTime" column="publish_end_time" />
+    <result property="strategyTemplateId" column="strategy_template_id" />
+    <result property="passScore" column="pass_score" />
+    <result property="markingMode" column="marking_mode" />
+    <result property="questionOrderMode" column="question_order_mode" />
+    <result property="allowReviewAnalysis" column="allow_review_analysis" />
+    <result property="sectionConfigJson" column="section_config_json" />
+    <result property="adaptiveRuleJson" column="adaptive_rule_json" />
     <result property="status" column="status" />
   </resultMap>
-  <sql id="selectScExamPaperVo">select paper_id, paper_name, course_id, paper_type, total_score,
-    duration_minutes, status from sc_exam_paper</sql>
+  <sql id="selectScExamPaperVo">select paper_id, parent_paper_id, paper_name, course_id, paper_type, paper_level,
+    answer_mode, paper_weight, sort_no, total_score,
+    duration_minutes, publish_status, publish_start_time, publish_end_time, strategy_template_id,
+    pass_score, marking_mode, question_order_mode, allow_review_analysis, section_config_json, adaptive_rule_json,
+    status from sc_exam_paper</sql>
   <select id="selectScExamPaperByPaperId" parameterType="Long" resultMap="ScExamPaperResult"><include
       refid="selectScExamPaperVo" /> where paper_id = #{paperId}</select>
-  <select id="selectScExamPaperList" parameterType="ScExamPaper" resultMap="ScExamPaperResult"><include
-      refid="selectScExamPaperVo" /><where><if test="courseId != null">and course_id = #{courseId}</if><if
-        test="paperName != null and paperName != ''">and paper_name like concat('%', #{paperName},
-    '%')</if><if test="paperType != null and paperType != ''">and paper_type = #{paperType}</if><if
-        test="status != null and status != ''">and status = #{status}</if></where> order by paper_id
-    desc</select>
+  <select id="selectScExamPaperList" parameterType="ScExamPaper" resultMap="ScExamPaperResult">
+    <include refid="selectScExamPaperVo" />
+    <where>
+      <if test="courseId != null">
+        and course_id = #{courseId}
+      </if>
+      <if test="parentPaperId != null">
+        and parent_paper_id = #{parentPaperId}
+      </if>
+      <if test="paperName != null and paperName != ''">
+        and paper_name like concat('%', #{paperName}, '%')
+      </if>
+      <if test="paperType != null and paperType != ''">
+        and paper_type = #{paperType}
+      </if>
+      <if test="paperLevel != null and paperLevel != ''">
+        and paper_level = #{paperLevel}
+      </if>
+      <if test="publishStatus != null and publishStatus != ''">
+        and publish_status = #{publishStatus}
+      </if>
+      <if test="status != null and status != ''">
+        and status = #{status}
+      </if>
+    </where>
+    order by parent_paper_id asc, sort_no asc, paper_id desc
+  </select>
   <insert id="insertScExamPaper" parameterType="ScExamPaper" useGeneratedKeys="true"
-    keyProperty="paperId">insert into sc_exam_paper(paper_name, course_id, paper_type, total_score,
-    duration_minutes, status, create_by, create_time, remark) values(#{paperName}, #{courseId},
-    #{paperType}, #{totalScore}, #{durationMinutes}, #{status}, #{createBy}, sysdate(), #{remark})</insert>
+    keyProperty="paperId">insert into sc_exam_paper(parent_paper_id, paper_name, course_id, paper_type, paper_level,
+    answer_mode, paper_weight, sort_no, total_score, duration_minutes, publish_status, publish_start_time,
+    publish_end_time, strategy_template_id, pass_score, marking_mode, question_order_mode, allow_review_analysis,
+    section_config_json, adaptive_rule_json, status, create_by, create_time, remark)
+    values(#{parentPaperId}, #{paperName}, #{courseId}, #{paperType}, #{paperLevel}, #{answerMode},
+    #{paperWeight}, #{sortNo}, #{totalScore}, #{durationMinutes}, #{publishStatus}, #{publishStartTime},
+    #{publishEndTime}, #{strategyTemplateId}, #{passScore}, #{markingMode}, #{questionOrderMode},
+    #{allowReviewAnalysis}, #{sectionConfigJson}, #{adaptiveRuleJson}, #{status}, #{createBy}, sysdate(),
+    #{remark})</insert>
   <update id="updateScExamPaper" parameterType="ScExamPaper">update sc_exam_paper <set><if
+        test="parentPaperId != null">parent_paper_id = #{parentPaperId},</if><if
         test="paperName != null">paper_name = #{paperName},</if><if test="courseId != null">course_id
     = #{courseId},</if><if test="paperType != null">paper_type = #{paperType},</if><if
-        test="totalScore != null">total_score = #{totalScore},</if><if
+        test="paperLevel != null">paper_level = #{paperLevel},</if><if
+        test="answerMode != null">answer_mode = #{answerMode},</if><if
+        test="paperWeight != null">paper_weight = #{paperWeight},</if><if
+        test="sortNo != null">sort_no = #{sortNo},</if><if test="totalScore != null">total_score = #{totalScore},</if><if
         test="durationMinutes != null">duration_minutes = #{durationMinutes},</if><if
+        test="publishStatus != null">publish_status = #{publishStatus},</if><if
+        test="publishStartTime != null">publish_start_time = #{publishStartTime},</if><if
+        test="publishEndTime != null">publish_end_time = #{publishEndTime},</if><if
+        test="strategyTemplateId != null">strategy_template_id = #{strategyTemplateId},</if><if
+        test="passScore != null">pass_score = #{passScore},</if><if
+        test="markingMode != null">marking_mode = #{markingMode},</if><if
+        test="questionOrderMode != null">question_order_mode = #{questionOrderMode},</if><if
+        test="allowReviewAnalysis != null">allow_review_analysis = #{allowReviewAnalysis},</if><if
+        test="sectionConfigJson != null">section_config_json = #{sectionConfigJson},</if><if
+        test="adaptiveRuleJson != null">adaptive_rule_json = #{adaptiveRuleJson},</if><if
         test="status != null">status = #{status},</if><if test="updateBy != null">update_by =
     #{updateBy},</if><if test="remark != null">remark = #{remark},</if>update_time = sysdate()</set>
     where paper_id = #{paperId}</update>

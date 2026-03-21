@@ -2,6 +2,7 @@ package com.smart.system.service;
 
 import java.util.List;
 import com.smart.system.domain.ScResource;
+import com.smart.system.domain.campusvo.ResourceOperationOverviewVo;
 
 public interface IScResourceService {
     ScResource selectScResourceByResourceId(Long resourceId);
@@ -15,4 +16,6 @@ public interface IScResourceService {
     int deleteScResourceByResourceIds(Long[] resourceIds);
 
     int deleteScResourceByResourceId(Long resourceId);
+
+    ResourceOperationOverviewVo getResourceOperationOverview(Long courseId, Integer limit);
 }

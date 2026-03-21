@@ -9,6 +9,7 @@ public class CourseScheduleAutoArrangeDto {
     private Long[] classCourseIds;
     private Integer[] preferredSessionDurations;
     private String[] excludedDayParts;
+    private Integer[] excludedWeekDays;
     private CourseScheduleAutoArrangeItemDto[] items;
 
     public Long getTermId() {
@@ -75,6 +76,14 @@ public class CourseScheduleAutoArrangeDto {
         this.excludedDayParts = excludedDayParts;
     }
 
+    public Integer[] getExcludedWeekDays() {
+        return excludedWeekDays;
+    }
+
+    public void setExcludedWeekDays(Integer[] excludedWeekDays) {
+        this.excludedWeekDays = excludedWeekDays;
+    }
+
     public CourseScheduleAutoArrangeItemDto[] getItems() {
         return items;
     }
@@ -89,6 +98,8 @@ public class CourseScheduleAutoArrangeDto {
         private String weeksJson;
         private Integer maxWeeklySections;
         private Long classroomId;
+        private Integer[] excludedWeekDays;
+        private String[] excludedDayParts;
 
         public Long getClassCourseId() {
             return classCourseId;
@@ -128,6 +139,22 @@ public class CourseScheduleAutoArrangeDto {
 
         public void setClassroomId(Long classroomId) {
             this.classroomId = classroomId;
+        }
+
+        public Integer[] getExcludedWeekDays() {
+            return excludedWeekDays;
+        }
+
+        public void setExcludedWeekDays(Integer[] excludedWeekDays) {
+            this.excludedWeekDays = excludedWeekDays;
+        }
+
+        public String[] getExcludedDayParts() {
+            return excludedDayParts;
+        }
+
+        public void setExcludedDayParts(String[] excludedDayParts) {
+            this.excludedDayParts = excludedDayParts;
         }
     }
 }

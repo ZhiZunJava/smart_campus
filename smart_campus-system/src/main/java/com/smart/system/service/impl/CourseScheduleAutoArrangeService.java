@@ -59,9 +59,11 @@ public class CourseScheduleAutoArrangeService {
         boolean clearExistingSchedules = Boolean.TRUE.equals(request.getClearExistingSchedules());
         List<Integer> preferredDurations = normalizePreferredDurations(request.getPreferredSessionDurations());
         Set<String> excludedDayParts = normalizeExcludedDayParts(request.getExcludedDayParts());
+        Set<Integer> excludedWeekDays = normalizeExcludedWeekDays(request.getExcludedWeekDays());
         Map<Long, CourseScheduleAutoArrangeItemDto> itemConfigMap = buildItemConfigMap(request.getItems());
 
-        List<Integer> sectionUnits = loadSectionUnits(excludedDayParts);
+        Map<Integer, String> sectionDayPartMap = loadSectionDayPartMap();
+        List<Integer> sectionUnits = filterSectionUnits(sectionDayPartMap, excludedDayParts);
         if (sectionUnits.isEmpty()) {
             throw new ServiceException("课表布局未配置有效节次，无法自动排课");
         }
@@ -90,7 +92,7 @@ public class CourseScheduleAutoArrangeService {
 
         Map<Long, Integer> existingWeeklySections = calculateExistingWeeklySections(termExistingSchedules);
         List<LessonTask> lessonTasks = buildLessonTasks(classCourses, requestedCourseIds, existingWeeklySections, term,
-                activeClassrooms, itemConfigMap, preferredDurations);
+                activeClassrooms, itemConfigMap, preferredDurations, excludedWeekDays, excludedDayParts);
 
         CourseScheduleAutoArrangeVo result = new CourseScheduleAutoArrangeVo();
         result.setTermId(term.getTermId());
@@ -115,9 +117,9 @@ public class CourseScheduleAutoArrangeService {
                         .collect(Collectors.toMap(ScClassCourse::getId, item -> item, (left, right) -> left));
         List<ScCourseSchedule> lockedSchedules = clearExistingSchedules ? new ArrayList<>() : termExistingSchedules;
         GeneticSolution best = runGeneticAlgorithm(lessonTasks, activeClassrooms, sectionUnits, lockedSchedules,
-                classCourseMap, populationSize, generationCount, mutationRate);
+                classCourseMap, sectionDayPartMap, populationSize, generationCount, mutationRate);
         List<LessonAssignment> validAssignments = collectValidAssignments(best, lessonTasks, activeClassrooms,
-                lockedSchedules, classCourseMap);
+                lockedSchedules, classCourseMap, sectionDayPartMap);
 
         result.setBestFitnessScore(best.fitnessScore);
         result.setArrangedLessonTasks(validAssignments.size());
@@ -182,8 +184,16 @@ public class CourseScheduleAutoArrangeService {
             schedule.setClassroomName(classroom.getClassroomName());
             schedule.setBuildingName(classroom.getBuildingName());
             schedule.setCampusName(classroom.getCampusName());
-            schedule.setWeeksText(buildWeeksText(classCourse, term));
-            schedule.setWeeksJson(buildWeeksJsonFromText(schedule.getWeeksText()));
+            String weeksText = StringUtils.defaultIfEmpty(String.valueOf(item.get("weeksText")), buildWeeksText(classCourse, term));
+            if ("null".equalsIgnoreCase(weeksText)) {
+                weeksText = buildWeeksText(classCourse, term);
+            }
+            schedule.setWeeksText(weeksText);
+            String weeksJson = item.get("weeksJson") == null ? null : String.valueOf(item.get("weeksJson"));
+            if (StringUtils.isEmpty(weeksJson) || "null".equalsIgnoreCase(weeksJson)) {
+                weeksJson = buildWeeksJsonFromText(schedule.getWeeksText());
+            }
+            schedule.setWeeksJson(weeksJson);
             schedule.setStatus("0");
             schedule.setCreateBy(operator);
             schedule.setRemark("遗传算法自动排课生成");
@@ -210,7 +220,7 @@ public class CourseScheduleAutoArrangeService {
         return Math.min(resolved, 1D);
     }
 
-    private List<Integer> loadSectionUnits(Set<String> excludedDayParts) {
+    private Map<Integer, String> loadSectionDayPartMap() {
         String configValue = configService.selectConfigByKey(CONFIG_KEY);
         if (StringUtils.isNotEmpty(configValue)) {
             try {
@@ -219,32 +229,40 @@ public class CourseScheduleAutoArrangeService {
                         });
                 Object unitsObject = compact.get("u");
                 if (unitsObject instanceof List<?> units) {
-                    List<Integer> result = new ArrayList<>();
+                    Map<Integer, String> result = new LinkedHashMap<>();
                     for (Object unitObject : units) {
                         if (!(unitObject instanceof List<?> unit) || unit.size() < 2) {
                             continue;
                         }
                         String encodedDayPart = unit.size() > 4 ? String.valueOf(unit.get(4)) : "M";
                         String dayPart = decodeDayPart(encodedDayPart);
-                        if (excludedDayParts.contains(dayPart)) {
-                            continue;
-                        }
                         Object index = unit.get(1);
                         if (index != null) {
-                            result.add(Integer.parseInt(String.valueOf(index)));
+                            result.put(Integer.parseInt(String.valueOf(index)), dayPart);
                         }
                     }
-                    return result.stream().distinct().sorted().collect(Collectors.toList());
+                    if (!result.isEmpty()) {
+                        return result;
+                    }
                 }
             } catch (Exception ignored) {
             }
         }
-        List<Integer> defaults = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12);
-        if (excludedDayParts.isEmpty()) {
-            return defaults;
+        Map<Integer, String> defaults = new LinkedHashMap<>();
+        for (int unit = 1; unit <= 12; unit++) {
+            defaults.put(unit, resolveDefaultDayPart(unit));
         }
-        return defaults.stream()
-                .filter(unit -> !excludedDayParts.contains(resolveDefaultDayPart(unit)))
+        return defaults;
+    }
+
+    private List<Integer> filterSectionUnits(Map<Integer, String> sectionDayPartMap, Set<String> excludedDayParts) {
+        if (sectionDayPartMap == null || sectionDayPartMap.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return sectionDayPartMap.entrySet().stream()
+                .filter(entry -> !excludedDayParts.contains(StringUtils.defaultIfEmpty(entry.getValue(), "MORNING")))
+                .map(Map.Entry::getKey)
+                .sorted()
                 .collect(Collectors.toList());
     }
 
@@ -269,7 +287,9 @@ public class CourseScheduleAutoArrangeService {
             ScSchoolTerm term,
             List<ScClassroom> classrooms,
             Map<Long, CourseScheduleAutoArrangeItemDto> itemConfigMap,
-            List<Integer> preferredDurations) {
+            List<Integer> preferredDurations,
+            Set<Integer> globalExcludedWeekDays,
+            Set<String> globalExcludedDayParts) {
         List<LessonTask> tasks = new ArrayList<>();
         if (classCourses == null) {
             return tasks;
@@ -286,6 +306,25 @@ public class CourseScheduleAutoArrangeService {
             }
 
             CourseScheduleAutoArrangeItemDto itemConfig = itemConfigMap.get(item.getId());
+            Set<Integer> excludedWeekDays = new LinkedHashSet<>(globalExcludedWeekDays == null
+                    ? Collections.emptySet()
+                    : globalExcludedWeekDays);
+            Set<String> excludedDayParts = new LinkedHashSet<>(globalExcludedDayParts == null
+                    ? Collections.emptySet()
+                    : globalExcludedDayParts);
+            if (itemConfig != null && itemConfig.getExcludedWeekDays() != null) {
+                excludedWeekDays.addAll(Arrays.stream(itemConfig.getExcludedWeekDays())
+                        .filter(Objects::nonNull)
+                        .map(Integer::intValue)
+                        .filter(weekDay -> weekDay >= 1 && weekDay <= 7)
+                        .collect(Collectors.toCollection(LinkedHashSet::new)));
+            }
+            if (itemConfig != null && itemConfig.getExcludedDayParts() != null) {
+                excludedDayParts.addAll(Arrays.stream(itemConfig.getExcludedDayParts())
+                        .filter(StringUtils::isNotEmpty)
+                        .map(value -> value.trim().toUpperCase())
+                        .collect(Collectors.toCollection(LinkedHashSet::new)));
+            }
             int weeklySections = resolveWeeklySections(item, term);
             if (itemConfig != null && itemConfig.getMaxWeeklySections() != null
                     && itemConfig.getMaxWeeklySections() > 0) {
@@ -326,6 +365,8 @@ public class CourseScheduleAutoArrangeService {
                 task.weeksText = weeksText;
                 task.preferredClassroomIds = preferredClassrooms;
                 task.fixedClassroom = assignedClassroomId != null;
+                task.excludedWeekDays = excludedWeekDays;
+                task.excludedDayParts = excludedDayParts;
                 task.priorityScore = (item.getRequiredFlag() != null && "Y".equalsIgnoreCase(item.getRequiredFlag())
                         ? 10
                         : 0)
@@ -538,6 +579,17 @@ public class CourseScheduleAutoArrangeService {
                 .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
+    private Set<Integer> normalizeExcludedWeekDays(Integer[] excludedWeekDays) {
+        if (excludedWeekDays == null || excludedWeekDays.length == 0) {
+            return Collections.emptySet();
+        }
+        return Arrays.stream(excludedWeekDays)
+                .filter(Objects::nonNull)
+                .map(Integer::intValue)
+                .filter(item -> item >= 1 && item <= 7)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
     private String decodeDayPart(String value) {
         return switch (StringUtils.defaultIfEmpty(value, "M")) {
             case "N" -> "NOON";
@@ -586,14 +638,15 @@ public class CourseScheduleAutoArrangeService {
             List<Integer> sectionUnits,
             List<ScCourseSchedule> lockedSchedules,
             Map<Long, ScClassCourse> classCourseMap,
+            Map<Integer, String> sectionDayPartMap,
             int populationSize,
             int generationCount,
             double mutationRate) {
         Random random = ThreadLocalRandom.current();
         List<GeneticSolution> population = new ArrayList<>();
         for (int index = 0; index < populationSize; index++) {
-            GeneticSolution solution = createRandomSolution(tasks, classrooms, sectionUnits, random);
-            evaluate(solution, tasks, classrooms, lockedSchedules, classCourseMap);
+            GeneticSolution solution = createRandomSolution(tasks, classrooms, sectionUnits, random, sectionDayPartMap);
+            evaluate(solution, tasks, classrooms, lockedSchedules, classCourseMap, sectionDayPartMap);
             population.add(solution);
         }
 
@@ -618,54 +671,79 @@ public class CourseScheduleAutoArrangeService {
                 GeneticSolution parentA = selectParent(population, random);
                 GeneticSolution parentB = selectParent(population, random);
                 GeneticSolution child = crossover(parentA, parentB, random);
-                mutate(child, tasks, classrooms, sectionUnits, mutationRate, random);
-                evaluate(child, tasks, classrooms, lockedSchedules, classCourseMap);
+                mutate(child, tasks, classrooms, sectionUnits, mutationRate, random, sectionDayPartMap);
+                evaluate(child, tasks, classrooms, lockedSchedules, classCourseMap, sectionDayPartMap);
                 nextPopulation.add(child);
             }
             population = nextPopulation;
         }
 
-        evaluate(best, tasks, classrooms, lockedSchedules, classCourseMap);
+        evaluate(best, tasks, classrooms, lockedSchedules, classCourseMap, sectionDayPartMap);
         return best;
     }
 
     private GeneticSolution createRandomSolution(List<LessonTask> tasks, List<ScClassroom> classrooms,
-            List<Integer> sectionUnits, Random random) {
+            List<Integer> sectionUnits, Random random, Map<Integer, String> sectionDayPartMap) {
         GeneticSolution solution = new GeneticSolution();
         for (LessonTask task : tasks) {
-            solution.assignments.put(task.taskId, randomAssignment(task, classrooms, sectionUnits, random));
+            solution.assignments.put(task.taskId, randomAssignment(task, classrooms, sectionUnits, random, sectionDayPartMap));
         }
         return solution;
     }
 
     private LessonAssignment randomAssignment(LessonTask task, List<ScClassroom> classrooms, List<Integer> sectionUnits,
-            Random random) {
+            Random random, Map<Integer, String> sectionDayPartMap) {
         LessonAssignment assignment = new LessonAssignment();
         assignment.taskId = task.taskId;
-        assignment.weekDay = random.nextInt(7) + 1;
-        assignment.startSection = pickStartSection(task.expectedDuration, sectionUnits, random);
+        assignment.weekDay = pickWeekDay(task, random);
+        assignment.startSection = pickStartSection(task, sectionUnits, random, sectionDayPartMap);
         assignment.endSection = assignment.startSection + task.expectedDuration - 1;
         assignment.classroomId = pickClassroom(task, classrooms, random);
         return assignment;
     }
 
-    private int pickStartSection(int duration, List<Integer> sectionUnits, Random random) {
+    private Integer pickWeekDay(LessonTask task, Random random) {
+        List<Integer> allowedWeekDays = resolveAllowedWeekDays(task);
+        if (allowedWeekDays.isEmpty()) {
+            return random.nextInt(7) + 1;
+        }
+        return allowedWeekDays.get(random.nextInt(allowedWeekDays.size()));
+    }
+
+    private List<Integer> resolveAllowedWeekDays(LessonTask task) {
+        Set<Integer> excluded = task == null || task.excludedWeekDays == null
+                ? Collections.emptySet()
+                : task.excludedWeekDays;
+        List<Integer> result = new ArrayList<>();
+        for (int weekDay = 1; weekDay <= 7; weekDay++) {
+            if (!excluded.contains(weekDay)) {
+                result.add(weekDay);
+            }
+        }
+        return result;
+    }
+
+    private int pickStartSection(LessonTask task, List<Integer> sectionUnits, Random random,
+            Map<Integer, String> sectionDayPartMap) {
         List<Integer> candidates = new ArrayList<>();
         Set<Integer> sections = new HashSet<>(sectionUnits);
         for (Integer start : sectionUnits) {
             boolean available = true;
-            for (int offset = 0; offset < duration; offset++) {
+            for (int offset = 0; offset < task.expectedDuration; offset++) {
                 if (!sections.contains(start + offset)) {
                     available = false;
                     break;
                 }
+            }
+            if (available && isExcludedDayPartAssignment(start, task.expectedDuration, task, sectionDayPartMap)) {
+                available = false;
             }
             if (available) {
                 candidates.add(start);
             }
         }
         List<Integer> preferredCandidates = candidates.stream()
-                .filter(start -> isStandardBlockStart(start, duration, sectionUnits))
+                .filter(start -> isStandardBlockStart(start, task.expectedDuration, sectionUnits))
                 .collect(Collectors.toList());
         if (!preferredCandidates.isEmpty()) {
             candidates = preferredCandidates;
@@ -674,6 +752,21 @@ public class CourseScheduleAutoArrangeService {
             return sectionUnits.get(0);
         }
         return candidates.get(random.nextInt(candidates.size()));
+    }
+
+    private boolean isExcludedDayPartAssignment(Integer startSection, int duration, LessonTask task,
+            Map<Integer, String> sectionDayPartMap) {
+        if (task == null || task.excludedDayParts == null || task.excludedDayParts.isEmpty()) {
+            return false;
+        }
+        for (int offset = 0; offset < duration; offset++) {
+            int section = (startSection == null ? 0 : startSection) + offset;
+            String dayPart = StringUtils.defaultIfEmpty(sectionDayPartMap.get(section), resolveDefaultDayPart(section));
+            if (task.excludedDayParts.contains(dayPart)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean isStandardBlockStart(Integer start, int duration, List<Integer> sectionUnits) {
@@ -735,7 +828,8 @@ public class CourseScheduleAutoArrangeService {
             List<LessonTask> tasks,
             List<ScClassroom> classrooms,
             List<ScCourseSchedule> lockedSchedules,
-            Map<Long, ScClassCourse> classCourseMap) {
+            Map<Long, ScClassCourse> classCourseMap,
+            Map<Integer, String> sectionDayPartMap) {
         Map<String, LessonTask> taskMap = tasks.stream().collect(Collectors.toMap(item -> item.taskId, item -> item));
         Map<Long, ScClassroom> classroomMap = classrooms.stream()
                 .filter(item -> item.getClassroomId() != null)
@@ -745,6 +839,7 @@ public class CourseScheduleAutoArrangeService {
         Map<String, List<LessonAssignment>> slotMap = new HashMap<>();
         Map<Long, Integer> classDailyCount = new HashMap<>();
         Map<Long, Set<Integer>> classDays = new HashMap<>();
+        Map<Long, Integer> classCourseDailyCount = new HashMap<>();
 
         for (LessonAssignment assignment : solution.assignments.values()) {
             LessonTask task = taskMap.get(assignment.taskId);
@@ -752,6 +847,12 @@ public class CourseScheduleAutoArrangeService {
                 continue;
             }
             score += 120D;
+            if (task.excludedWeekDays != null && task.excludedWeekDays.contains(assignment.weekDay)) {
+                score -= 220D;
+            }
+            if (isExcludedDayPartAssignment(assignment.startSection, assignment.getDuration(), task, sectionDayPartMap)) {
+                score -= 220D;
+            }
             if (assignment.weekDay == null || assignment.weekDay < 1 || assignment.weekDay > 7) {
                 score -= 200D;
             }
@@ -787,6 +888,10 @@ public class CourseScheduleAutoArrangeService {
                 classDailyCount.merge(classDailyKey, assignment.getDuration(), Integer::sum);
                 classDays.computeIfAbsent(task.classId, key -> new LinkedHashSet<>()).add(assignment.weekDay);
             }
+            if (task.classCourseId != null) {
+                long classCourseDailyKey = task.classCourseId * 10 + assignment.weekDay;
+                classCourseDailyCount.merge(classCourseDailyKey, 1, Integer::sum);
+            }
         }
 
         for (List<LessonAssignment> sameSlotAssignments : slotMap.values()) {
@@ -821,6 +926,11 @@ public class CourseScheduleAutoArrangeService {
         }
         for (Set<Integer> days : classDays.values()) {
             score += Math.min(days.size(), 5) * 4D;
+        }
+        for (Integer count : classCourseDailyCount.values()) {
+            if (count > 1) {
+                score -= (count - 1) * 36D;
+            }
         }
 
         for (LessonAssignment assignment : solution.assignments.values()) {
@@ -890,7 +1000,8 @@ public class CourseScheduleAutoArrangeService {
             List<ScClassroom> classrooms,
             List<Integer> sectionUnits,
             double mutationRate,
-            Random random) {
+            Random random,
+            Map<Integer, String> sectionDayPartMap) {
         Map<String, LessonTask> taskMap = tasks.stream().collect(Collectors.toMap(item -> item.taskId, item -> item));
         for (Map.Entry<String, LessonAssignment> entry : solution.assignments.entrySet()) {
             if (random.nextDouble() > mutationRate) {
@@ -902,20 +1013,20 @@ public class CourseScheduleAutoArrangeService {
             }
             LessonAssignment assignment = entry.getValue();
             if (task.fixedClassroom) {
-                assignment.weekDay = random.nextInt(7) + 1;
-                assignment.startSection = pickStartSection(task.expectedDuration, sectionUnits, random);
+                assignment.weekDay = pickWeekDay(task, random);
+                assignment.startSection = pickStartSection(task, sectionUnits, random, sectionDayPartMap);
                 assignment.endSection = assignment.startSection + task.expectedDuration - 1;
             } else {
                 int action = random.nextInt(3);
                 if (action == 0) {
-                    assignment.weekDay = random.nextInt(7) + 1;
-                    assignment.startSection = pickStartSection(task.expectedDuration, sectionUnits, random);
+                    assignment.weekDay = pickWeekDay(task, random);
+                    assignment.startSection = pickStartSection(task, sectionUnits, random, sectionDayPartMap);
                     assignment.endSection = assignment.startSection + task.expectedDuration - 1;
                 } else if (action == 1) {
                     assignment.classroomId = pickClassroom(task, classrooms, random);
                 } else {
-                    assignment.weekDay = random.nextInt(7) + 1;
-                    assignment.startSection = pickStartSection(task.expectedDuration, sectionUnits, random);
+                    assignment.weekDay = pickWeekDay(task, random);
+                    assignment.startSection = pickStartSection(task, sectionUnits, random, sectionDayPartMap);
                     assignment.endSection = assignment.startSection + task.expectedDuration - 1;
                     assignment.classroomId = pickClassroom(task, classrooms, random);
                 }
@@ -927,7 +1038,8 @@ public class CourseScheduleAutoArrangeService {
             List<LessonTask> tasks,
             List<ScClassroom> classrooms,
             List<ScCourseSchedule> lockedSchedules,
-            Map<Long, ScClassCourse> classCourseMap) {
+            Map<Long, ScClassCourse> classCourseMap,
+            Map<Integer, String> sectionDayPartMap) {
         Map<String, LessonTask> taskMap = tasks.stream().collect(Collectors.toMap(item -> item.taskId, item -> item));
         Map<Long, ScClassroom> classroomMap = classrooms.stream()
                 .filter(item -> item.getClassroomId() != null)
@@ -939,7 +1051,7 @@ public class CourseScheduleAutoArrangeService {
         for (LessonAssignment assignment : orderedAssignments) {
             LessonTask task = taskMap.get(assignment.taskId);
             if (task == null || !isAssignmentValid(assignment, task, accepted, lockedSchedules, classroomMap, taskMap,
-                    classCourseMap)) {
+                    classCourseMap, sectionDayPartMap)) {
                 continue;
             }
             accepted.add(assignment.copy());
@@ -953,11 +1065,18 @@ public class CourseScheduleAutoArrangeService {
             List<ScCourseSchedule> lockedSchedules,
             Map<Long, ScClassroom> classroomMap,
             Map<String, LessonTask> taskMap,
-            Map<Long, ScClassCourse> classCourseMap) {
+            Map<Long, ScClassCourse> classCourseMap,
+            Map<Integer, String> sectionDayPartMap) {
         if (assignment.weekDay == null || assignment.startSection == null || assignment.endSection == null) {
             return false;
         }
         if (assignment.weekDay < 1 || assignment.weekDay > 7 || assignment.startSection > assignment.endSection) {
+            return false;
+        }
+        if (task.excludedWeekDays != null && task.excludedWeekDays.contains(assignment.weekDay)) {
+            return false;
+        }
+        if (isExcludedDayPartAssignment(assignment.startSection, assignment.getDuration(), task, sectionDayPartMap)) {
             return false;
         }
 
@@ -1070,8 +1189,11 @@ public class CourseScheduleAutoArrangeService {
             result.put("courseName", task.courseName);
             result.put("teacherName", task.teacherName);
             result.put("weeksText", task.weeksText);
+            result.put("weeksJson", buildWeeksJsonFromText(task.weeksText));
             result.put("studentCount", task.studentCount);
             result.put("courseCategory", task.courseCategory);
+            result.put("excludedWeekDays", task.excludedWeekDays);
+            result.put("excludedDayParts", task.excludedDayParts);
         }
         if (classroom != null) {
             result.put("classroomName", classroom.getClassroomName());
@@ -1234,6 +1356,8 @@ public class CourseScheduleAutoArrangeService {
         private int priorityScore;
         private String weeksText;
         private List<Long> preferredClassroomIds = new ArrayList<>();
+        private Set<Integer> excludedWeekDays = new LinkedHashSet<>();
+        private Set<String> excludedDayParts = new LinkedHashSet<>();
         private boolean fixedClassroom;
     }
 

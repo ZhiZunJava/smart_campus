@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+@source "../**/*.{vue,js,ts,jsx,tsx}";
+@source "../../index.html";
+
+@theme {
+  --font-sans: "MiSans", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+
+  --color-brand-50: #f5f8ff;
+  --color-brand-100: #ebf1ff;
+  --color-brand-200: #d8e5ff;
+  --color-brand-300: #b9d0ff;
+  --color-brand-400: #8cb0ff;
+  --color-brand-500: #5b8cff;
+  --color-brand-600: #2f6bff;
+  --color-brand-700: #1f57df;
+  --color-brand-800: #1845b0;
+  --color-brand-900: #153b91;
+
+  --color-surface-50: #f7f9fc;
+  --color-surface-100: #f1f4f8;
+  --color-surface-200: #dce4ee;
+  --color-surface-700: #6a7b90;
+  --color-surface-900: #1f2f43;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --shadow-soft: 0 4px 12px rgba(15, 23, 42, 0.04);
+  --shadow-card: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+  }
+
+  body {
+    color: var(--portal-text);
+    background: var(--portal-bg);
+  }
+}
+
+@layer components {
+  .tw-card {
+    border-radius: var(--portal-radius-md);
+    border: 1px solid var(--portal-border);
+    background: var(--portal-card-solid);
+    box-shadow: var(--shadow-card);
+  }
+
+  .tw-surface {
+    border-radius: var(--portal-radius-sm);
+    border: 1px solid var(--portal-border);
+    background: var(--portal-surface-bg);
+  }
+}

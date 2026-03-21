@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScExamAnswerDraftMapper">
+  <resultMap type="ScExamAnswerDraft" id="ScExamAnswerDraftResult">
+    <id property="draftId" column="draft_id" />
+    <result property="recordId" column="record_id" />
+    <result property="sessionId" column="session_id" />
+    <result property="sessionPaperId" column="session_paper_id" />
+    <result property="questionId" column="question_id" />
+    <result property="userId" column="user_id" />
+    <result property="userAnswer" column="user_answer" />
+    <result property="saveCount" column="save_count" />
+    <result property="lastSaveTime" column="last_save_time" />
+    <result property="status" column="status" />
+  </resultMap>
+
+  <sql id="selectScExamAnswerDraftVo">
+    select draft_id, record_id, session_id, session_paper_id, question_id, user_id, user_answer,
+    save_count, last_save_time, status
+    from sc_exam_answer_draft
+  </sql>
+
+  <select id="selectScExamAnswerDraftByRecordAndQuestion" resultMap="ScExamAnswerDraftResult">
+    <include refid="selectScExamAnswerDraftVo" />
+    where record_id = #{param1} and question_id = #{param2}
+    limit 1
+  </select>
+
+  <select id="selectScExamAnswerDraftList" parameterType="ScExamAnswerDraft" resultMap="ScExamAnswerDraftResult">
+    <include refid="selectScExamAnswerDraftVo" />
+    <where>
+      <if test="recordId != null">
+        and record_id = #{recordId}
+      </if>
+      <if test="sessionId != null">
+        and session_id = #{sessionId}
+      </if>
+      <if test="sessionPaperId != null">
+        and session_paper_id = #{sessionPaperId}
+      </if>
+      <if test="userId != null">
+        and user_id = #{userId}
+      </if>
+      <if test="status != null and status != ''">
+        and status = #{status}
+      </if>
+    </where>
+    order by last_save_time desc, draft_id desc
+  </select>
+
+  <insert id="insertScExamAnswerDraft" parameterType="ScExamAnswerDraft" useGeneratedKeys="true" keyProperty="draftId">
+    insert into sc_exam_answer_draft(record_id, session_id, session_paper_id, question_id, user_id, user_answer,
+    save_count, last_save_time, status, create_by, create_time, remark)
+    values(#{recordId}, #{sessionId}, #{sessionPaperId}, #{questionId}, #{userId}, #{userAnswer},
+    #{saveCount}, #{lastSaveTime}, #{status}, #{createBy}, sysdate(), #{remark})
+  </insert>
+
+  <update id="updateScExamAnswerDraft" parameterType="ScExamAnswerDraft">
+    update sc_exam_answer_draft
+    <set>
+      <if test="sessionId != null">session_id = #{sessionId},</if>
+      <if test="sessionPaperId != null">session_paper_id = #{sessionPaperId},</if>
+      <if test="userId != null">user_id = #{userId},</if>
+      <if test="userAnswer != null">user_answer = #{userAnswer},</if>
+      <if test="saveCount != null">save_count = #{saveCount},</if>
+      <if test="lastSaveTime != null">last_save_time = #{lastSaveTime},</if>
+      <if test="status != null">status = #{status},</if>
+      <if test="updateBy != null">update_by = #{updateBy},</if>
+      update_time = sysdate()
+    </set>
+    where draft_id = #{draftId}
+  </update>
+
+  <delete id="deleteScExamAnswerDraftByRecordId" parameterType="Long">
+    delete from sc_exam_answer_draft where record_id = #{recordId}
+  </delete>
+</mapper>

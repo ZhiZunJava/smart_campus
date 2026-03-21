@@ -14,6 +14,7 @@ public class ScQuestionBank extends BaseEntity {
     private static final long serialVersionUID = 1L;
 
     private Long questionId;
+    private Long catalogId;
     private Long courseId;
     private Long chapterId;
     private Long knowledgePointId;
@@ -23,6 +24,9 @@ public class ScQuestionBank extends BaseEntity {
     private String answer;
     private String analysis;
     private String source;
+    private String questionTags;
+    private String materialContent;
+    private String sourceBatchNo;
     private BigDecimal qualityScore;
     private String status;
 
@@ -32,6 +36,14 @@ public class ScQuestionBank extends BaseEntity {
 
     public void setQuestionId(Long questionId) {
         this.questionId = questionId;
+    }
+
+    public Long getCatalogId() {
+        return catalogId;
+    }
+
+    public void setCatalogId(Long catalogId) {
+        this.catalogId = catalogId;
     }
 
     public Long getCourseId() {
@@ -106,6 +118,30 @@ public class ScQuestionBank extends BaseEntity {
         this.source = source;
     }
 
+    public String getQuestionTags() {
+        return questionTags;
+    }
+
+    public void setQuestionTags(String questionTags) {
+        this.questionTags = questionTags;
+    }
+
+    public String getMaterialContent() {
+        return materialContent;
+    }
+
+    public void setMaterialContent(String materialContent) {
+        this.materialContent = materialContent;
+    }
+
+    public String getSourceBatchNo() {
+        return sourceBatchNo;
+    }
+
+    public void setSourceBatchNo(String sourceBatchNo) {
+        this.sourceBatchNo = sourceBatchNo;
+    }
+
     public BigDecimal getQualityScore() {
         return qualityScore;
     }
@@ -126,6 +162,7 @@ public class ScQuestionBank extends BaseEntity {
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.MULTI_LINE_STYLE)
                 .append("questionId", getQuestionId())
+                .append("catalogId", getCatalogId())
                 .append("courseId", getCourseId())
                 .append("chapterId", getChapterId())
                 .append("knowledgePointId", getKnowledgePointId())
@@ -135,6 +172,9 @@ public class ScQuestionBank extends BaseEntity {
                 .append("answer", getAnswer())
                 .append("analysis", getAnalysis())
                 .append("source", getSource())
+                .append("questionTags", getQuestionTags())
+                .append("materialContent", getMaterialContent())
+                .append("sourceBatchNo", getSourceBatchNo())
                 .append("qualityScore", getQualityScore())
                 .append("status", getStatus())
                 .toString();

@@ -1,15 +1,18 @@
 import { defineStore } from 'pinia'
 import Cookies from 'js-cookie'
 import { getCodeImg, getInfo, login, logout } from '@/api/auth'
+import { listExamRecord } from '@/api/portal'
 
 const TokenKey = 'Student-Token'
 const LastPortalRoleKey = 'Portal-Last-Role'
+const DismissedOngoingExamKey = 'Portal-Dismissed-Ongoing-Exam'
 
 interface PortalUserState {
   token: string
   user: any
   roles: string[]
   permissions: string[]
+  ongoingExam: any | null
   captchaEnabled: boolean
   codeUrl: string
   uuid: string
@@ -21,6 +24,7 @@ const usePortalUserStore = defineStore('portal-user', {
     user: null,
     roles: [],
     permissions: [],
+    ongoingExam: null,
     captchaEnabled: true,
     codeUrl: '',
     uuid: '',
@@ -51,6 +55,36 @@ const usePortalUserStore = defineStore('portal-user', {
     setPreferredPortalRole(role: string) {
       sessionStorage.setItem(LastPortalRoleKey, role)
     },
+    setOngoingExam(record: any | null) {
+      this.ongoingExam = record || null
+      if (!record) {
+        sessionStorage.removeItem(DismissedOngoingExamKey)
+      }
+    },
+    dismissOngoingExam(recordId?: number | string) {
+      if (!recordId) return
+      sessionStorage.setItem(DismissedOngoingExamKey, String(recordId))
+    },
+    isOngoingExamDismissed(recordId?: number | string) {
+      if (!recordId) return false
+      return sessionStorage.getItem(DismissedOngoingExamKey) === String(recordId)
+    },
+    async loadOngoingExam() {
+      const canUseStudentPortal = this.availablePortalRoles.includes('student')
+      if (!this.token || !this.user?.userId || !canUseStudentPortal) {
+        this.setOngoingExam(null)
+        return null
+      }
+      try {
+        const res = await listExamRecord({ pageNum: 1, pageSize: 10 })
+        const ongoing = (res.rows || []).find((item: any) => item.examStatus === 'ONGOING') || null
+        this.setOngoingExam(ongoing)
+        return ongoing
+      } catch {
+        this.setOngoingExam(null)
+        return null
+      }
+    },
     async loadCaptcha() {
       const res = await getCodeImg()
       this.captchaEnabled = res.captchaEnabled !== false
@@ -73,6 +107,7 @@ const usePortalUserStore = defineStore('portal-user', {
       if (!sessionStorage.getItem(LastPortalRoleKey)) {
         this.setPreferredPortalRole(this.availablePortalRoles[0] || 'student')
       }
+      await this.loadOngoingExam()
       return res
     },
     async refreshUserInfo() {
@@ -84,8 +119,10 @@ const usePortalUserStore = defineStore('portal-user', {
       this.user = null
       this.roles = []
       this.permissions = []
+      this.ongoingExam = null
       Cookies.remove(TokenKey)
       sessionStorage.removeItem(LastPortalRoleKey)
+      sessionStorage.removeItem(DismissedOngoingExamKey)
     }
   }
 })

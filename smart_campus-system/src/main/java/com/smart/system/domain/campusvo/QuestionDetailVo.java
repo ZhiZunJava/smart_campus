@@ -19,6 +19,9 @@ public class QuestionDetailVo {
     private String answer;
     private String analysis;
     private String source;
+    private String questionTags;
+    private String materialContent;
+    private String sourceBatchNo;
     private BigDecimal qualityScore;
     private String status;
     private List<QuestionOptionVo> options;
@@ -101,6 +104,30 @@ public class QuestionDetailVo {
 
     public void setSource(String source) {
         this.source = source;
+    }
+
+    public String getQuestionTags() {
+        return questionTags;
+    }
+
+    public void setQuestionTags(String questionTags) {
+        this.questionTags = questionTags;
+    }
+
+    public String getMaterialContent() {
+        return materialContent;
+    }
+
+    public void setMaterialContent(String materialContent) {
+        this.materialContent = materialContent;
+    }
+
+    public String getSourceBatchNo() {
+        return sourceBatchNo;
+    }
+
+    public void setSourceBatchNo(String sourceBatchNo) {
+        this.sourceBatchNo = sourceBatchNo;
     }
 
     public BigDecimal getQualityScore() {

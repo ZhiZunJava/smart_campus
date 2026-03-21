@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.net.http.HttpClient;
+import java.net.http.HttpClient.Version;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
@@ -16,6 +17,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -35,7 +38,14 @@ import com.smart.system.service.IScAiTaskLogService;
 
 @Service
 public class OpenAiCompatibleGatewayServiceImpl implements IAiGatewayService {
-    private final HttpClient httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(20)).build();
+    private static final Logger log = LoggerFactory.getLogger(OpenAiCompatibleGatewayServiceImpl.class);
+    private static final int MAX_RETRY_TIMES = 2;
+    private static final long RETRY_SLEEP_MILLIS = 800L;
+
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(20))
+            .version(Version.HTTP_2)
+            .build();
 
     @Autowired
     private IScAiModelConfigService scAiModelConfigService;
@@ -102,7 +112,7 @@ public class OpenAiCompatibleGatewayServiceImpl implements IAiGatewayService {
         context.startedAt = System.currentTimeMillis();
         context.taskLog = new ScAiTaskLog();
         context.taskLog.setBizType(StringUtils.isEmpty(requestDto.getBizType()) ? "ai_chat" : requestDto.getBizType());
-        context.taskLog.setBizId(modelConfig.getModelId());
+        context.taskLog.setBizId(resolveBizId(requestDto, modelConfig));
         context.taskLog.setModelId(modelConfig.getModelId());
         context.taskLog.setTaskStatus("RUNNING");
         return context;
@@ -113,8 +123,8 @@ public class OpenAiCompatibleGatewayServiceImpl implements IAiGatewayService {
             String payload = buildChatPayload(context.actualModelCode, context.requestDto);
             context.taskLog.setRequestPayload(payload);
             HttpRequest request = buildRequest(context.modelConfig, payload);
-            HttpResponse<String> response = httpClient.send(request,
-                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            HttpResponse<String> response = sendWithRetry(context, request,
+                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8), "普通对话");
             context.taskLog.setResponsePayload(response.body());
             context.taskLog.setDurationMs((int) (System.currentTimeMillis() - context.startedAt));
 
@@ -147,7 +157,8 @@ public class OpenAiCompatibleGatewayServiceImpl implements IAiGatewayService {
             String payload = buildChatPayload(context.actualModelCode, context.requestDto);
             context.taskLog.setRequestPayload(payload);
             HttpRequest request = buildRequest(context.modelConfig, payload);
-            HttpResponse<InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+            HttpResponse<InputStream> response = sendWithRetry(context, request, HttpResponse.BodyHandlers.ofInputStream(),
+                    "流式对话");
             context.taskLog.setDurationMs((int) (System.currentTimeMillis() - context.startedAt));
 
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
@@ -213,6 +224,87 @@ public class OpenAiCompatibleGatewayServiceImpl implements IAiGatewayService {
                 .build();
     }
 
+    private <T> HttpResponse<T> sendWithRetry(ExecutionContext context, HttpRequest request,
+            HttpResponse.BodyHandler<T> bodyHandler, String scene) throws IOException, InterruptedException {
+        IOException lastIoException = null;
+        InterruptedException lastInterruptedException = null;
+        Integer lastRetryableStatus = null;
+        for (int attempt = 1; attempt <= MAX_RETRY_TIMES + 1; attempt++) {
+            try {
+                HttpResponse<T> response = httpClient.send(request, bodyHandler);
+                if (!isRetryableStatus(response.statusCode()) || attempt > MAX_RETRY_TIMES) {
+                    if (attempt > 1) {
+                        appendRetryTrace(context, scene + "第" + attempt + "次请求成功");
+                    }
+                    return response;
+                }
+                lastRetryableStatus = response.statusCode();
+                appendRetryTrace(context, scene + "第" + attempt + "次请求返回可重试状态码: " + response.statusCode());
+                log.warn("AI {}第{}次请求返回可重试状态码，bizType={}, modelId={}, status={}", scene, attempt,
+                        context.requestDto.getBizType(), context.modelConfig.getModelId(), response.statusCode());
+            } catch (IOException e) {
+                if (!isRetryableException(e) || attempt > MAX_RETRY_TIMES) {
+                    throw e;
+                }
+                lastIoException = e;
+                appendRetryTrace(context, scene + "第" + attempt + "次请求异常，准备重试: " + e.getMessage());
+                log.warn("AI {}第{}次请求异常，准备重试，bizType={}, modelId={}, message={}", scene, attempt,
+                        context.requestDto.getBizType(), context.modelConfig.getModelId(), e.getMessage());
+            } catch (InterruptedException e) {
+                if (attempt > MAX_RETRY_TIMES) {
+                    throw e;
+                }
+                lastInterruptedException = e;
+                appendRetryTrace(context, scene + "第" + attempt + "次请求被中断，准备重试: " + e.getMessage());
+                log.warn("AI {}第{}次请求被中断，准备重试，bizType={}, modelId={}, message={}", scene, attempt,
+                        context.requestDto.getBizType(), context.modelConfig.getModelId(), e.getMessage());
+            }
+            sleepBeforeRetry();
+        }
+        if (lastIoException != null) {
+            throw lastIoException;
+        }
+        if (lastInterruptedException != null) {
+            throw lastInterruptedException;
+        }
+        throw new IOException("AI请求失败，重试后仍未成功，最后状态码: " + lastRetryableStatus);
+    }
+
+    private boolean isRetryableStatus(int statusCode) {
+        return statusCode == 408 || statusCode == 409 || statusCode == 425 || statusCode == 429 || statusCode >= 500;
+    }
+
+    private boolean isRetryableException(IOException e) {
+        String message = e.getMessage();
+        if (StringUtils.isEmpty(message)) {
+            return false;
+        }
+        String normalized = message.toLowerCase();
+        return normalized.contains("rst_stream")
+                || normalized.contains("stream was reset")
+                || normalized.contains("connection reset")
+                || normalized.contains("connection aborted")
+                || normalized.contains("broken pipe")
+                || normalized.contains("timeout")
+                || normalized.contains("temporarily unavailable");
+    }
+
+    private void sleepBeforeRetry() throws InterruptedException {
+        Thread.sleep(RETRY_SLEEP_MILLIS);
+    }
+
+    private void appendRetryTrace(ExecutionContext context, String message) {
+        if (context == null || context.taskLog == null) {
+            return;
+        }
+        String existing = context.taskLog.getResponsePayload();
+        if (StringUtils.isEmpty(existing)) {
+            context.taskLog.setResponsePayload("[retry] " + message);
+            return;
+        }
+        context.taskLog.setResponsePayload(existing + "\n[retry] " + message);
+    }
+
     private AiChatResponseVo buildResponse(ExecutionContext context, String content, String reasoningContent,
             int totalTokens) {
         AiChatResponseVo vo = new AiChatResponseVo();
@@ -256,7 +348,7 @@ public class OpenAiCompatibleGatewayServiceImpl implements IAiGatewayService {
         Map<String, Object> body = new HashMap<>();
         body.put("model", modelCode);
         body.put("temperature", BigDecimal.valueOf(0.3));
-        body.put("max_tokens", 1024);
+        body.put("max_tokens", resolveMaxTokens(requestDto));
         body.put("stream", Boolean.TRUE.equals(requestDto.getStream()));
         body.put("enable_thinking", Boolean.TRUE.equals(requestDto.getDeepThinking()));
         if (Boolean.TRUE.equals(requestDto.getStream())) {
@@ -266,6 +358,121 @@ public class OpenAiCompatibleGatewayServiceImpl implements IAiGatewayService {
         }
         body.put("messages", buildMessages(requestDto));
         return objectMapper.writeValueAsString(body);
+    }
+
+    private int resolveMaxTokens(AiChatRequestDto requestDto) {
+        String bizType = requestDto == null || requestDto.getBizType() == null ? "" : requestDto.getBizType();
+        if ("exam_question_generate".equalsIgnoreCase(bizType)) {
+            return resolveExamGenerateMaxTokens(requestDto);
+        }
+        if ("learning_profile_analysis".equalsIgnoreCase(bizType) || "resource_analysis".equalsIgnoreCase(bizType)) {
+            return 512;
+        }
+        return 1024;
+    }
+
+    private int resolveExamGenerateMaxTokens(AiChatRequestDto requestDto) {
+        int questionCount = 5;
+        try {
+            if (requestDto != null && StringUtils.isNotEmpty(requestDto.getUserPrompt())) {
+                JsonNode root = objectMapper.readTree(requestDto.getUserPrompt());
+                questionCount = Math.max(1, root.path("count").asInt(5));
+            }
+        } catch (Exception ignored) {
+        }
+
+        if (questionCount <= 2) {
+            return 3600;
+        }
+        if (questionCount <= 5) {
+            return 6400;
+        }
+        if (questionCount <= 8) {
+            return 8400;
+        }
+        return 10400;
+    }
+
+    private Long resolveBizId(AiChatRequestDto requestDto, ScAiModelConfig modelConfig) {
+        if (requestDto == null) {
+            return modelConfig == null ? null : modelConfig.getModelId();
+        }
+        String bizType = StringUtils.defaultIfEmpty(requestDto.getBizType(), "ai_chat");
+        try {
+            if (StringUtils.isNotEmpty(requestDto.getUserPrompt())) {
+                JsonNode root = objectMapper.readTree(requestDto.getUserPrompt());
+                if ("learning_profile_analysis".equalsIgnoreCase(bizType)) {
+                    Long courseId = asLong(root.path("courseId"));
+                    if (courseId != null) {
+                        return courseId;
+                    }
+                    courseId = asLong(root.path("diagnosis").path("courseId"));
+                    if (courseId != null) {
+                        return courseId;
+                    }
+                    Long userId = asLong(root.path("userId"));
+                    if (userId != null) {
+                        return userId;
+                    }
+                }
+                if ("resource_analysis".equalsIgnoreCase(bizType)) {
+                    Long resourceId = asLong(root.path("resourceId"));
+                    if (resourceId != null) {
+                        return resourceId;
+                    }
+                    Long courseId = asLong(root.path("courseId"));
+                    if (courseId != null) {
+                        return courseId;
+                    }
+                }
+                if ("teaching_admin".equalsIgnoreCase(bizType)) {
+                    JsonNode currentForm = root.path("currentForm");
+                    Long value = firstNonNull(
+                            asLong(currentForm.path("knowledgePointId")),
+                            asLong(currentForm.path("courseId")),
+                            asLong(currentForm.path("classId")),
+                            asLong(currentForm.path("termId")),
+                            asLong(currentForm.path("teacherId")),
+                            asLong(currentForm.path("studentUserId")));
+                    if (value != null) {
+                        return value;
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return modelConfig == null ? null : modelConfig.getModelId();
+    }
+
+    private Long asLong(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return null;
+        }
+        try {
+            if (node.isNumber()) {
+                return node.asLong();
+            }
+            String value = node.asText();
+            if (StringUtils.isEmpty(value)) {
+                return null;
+            }
+            return Long.valueOf(value.trim());
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    @SafeVarargs
+    private final <T> T firstNonNull(T... values) {
+        if (values == null) {
+            return null;
+        }
+        for (T value : values) {
+            if (value != null) {
+                return value;
+            }
+        }
+        return null;
     }
 
     private List<Map<String, Object>> buildMessages(AiChatRequestDto requestDto) {

@@ -1,6 +1,7 @@
 package com.smart.system.domain.campusvo;
 
 import java.math.BigDecimal;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -10,13 +11,29 @@ import java.util.List;
  */
 public class ExamPaperDetailVo {
     private Long paperId;
+    private Long parentPaperId;
     private String paperName;
     private Long courseId;
     private String paperType;
+    private String paperLevel;
+    private String answerMode;
+    private BigDecimal paperWeight;
+    private Integer sortNo;
     private BigDecimal totalScore;
     private Integer durationMinutes;
+    private String publishStatus;
+    private Date publishStartTime;
+    private Date publishEndTime;
+    private Long strategyTemplateId;
+    private BigDecimal passScore;
+    private String markingMode;
+    private String questionOrderMode;
+    private String allowReviewAnalysis;
+    private String sectionConfigJson;
+    private String adaptiveRuleJson;
     private String status;
     private List<ExamPaperQuestionDetailVo> questions;
+    private List<ExamPaperDetailVo> subPapers;
 
     public Long getPaperId() {
         return paperId;
@@ -24,6 +41,14 @@ public class ExamPaperDetailVo {
 
     public void setPaperId(Long paperId) {
         this.paperId = paperId;
+    }
+
+    public Long getParentPaperId() {
+        return parentPaperId;
+    }
+
+    public void setParentPaperId(Long parentPaperId) {
+        this.parentPaperId = parentPaperId;
     }
 
     public String getPaperName() {
@@ -50,6 +75,38 @@ public class ExamPaperDetailVo {
         this.paperType = paperType;
     }
 
+    public String getPaperLevel() {
+        return paperLevel;
+    }
+
+    public void setPaperLevel(String paperLevel) {
+        this.paperLevel = paperLevel;
+    }
+
+    public String getAnswerMode() {
+        return answerMode;
+    }
+
+    public void setAnswerMode(String answerMode) {
+        this.answerMode = answerMode;
+    }
+
+    public BigDecimal getPaperWeight() {
+        return paperWeight;
+    }
+
+    public void setPaperWeight(BigDecimal paperWeight) {
+        this.paperWeight = paperWeight;
+    }
+
+    public Integer getSortNo() {
+        return sortNo;
+    }
+
+    public void setSortNo(Integer sortNo) {
+        this.sortNo = sortNo;
+    }
+
     public BigDecimal getTotalScore() {
         return totalScore;
     }
@@ -66,6 +123,86 @@ public class ExamPaperDetailVo {
         this.durationMinutes = durationMinutes;
     }
 
+    public String getPublishStatus() {
+        return publishStatus;
+    }
+
+    public void setPublishStatus(String publishStatus) {
+        this.publishStatus = publishStatus;
+    }
+
+    public Date getPublishStartTime() {
+        return publishStartTime;
+    }
+
+    public void setPublishStartTime(Date publishStartTime) {
+        this.publishStartTime = publishStartTime;
+    }
+
+    public Date getPublishEndTime() {
+        return publishEndTime;
+    }
+
+    public void setPublishEndTime(Date publishEndTime) {
+        this.publishEndTime = publishEndTime;
+    }
+
+    public Long getStrategyTemplateId() {
+        return strategyTemplateId;
+    }
+
+    public void setStrategyTemplateId(Long strategyTemplateId) {
+        this.strategyTemplateId = strategyTemplateId;
+    }
+
+    public BigDecimal getPassScore() {
+        return passScore;
+    }
+
+    public void setPassScore(BigDecimal passScore) {
+        this.passScore = passScore;
+    }
+
+    public String getMarkingMode() {
+        return markingMode;
+    }
+
+    public void setMarkingMode(String markingMode) {
+        this.markingMode = markingMode;
+    }
+
+    public String getQuestionOrderMode() {
+        return questionOrderMode;
+    }
+
+    public void setQuestionOrderMode(String questionOrderMode) {
+        this.questionOrderMode = questionOrderMode;
+    }
+
+    public String getAllowReviewAnalysis() {
+        return allowReviewAnalysis;
+    }
+
+    public void setAllowReviewAnalysis(String allowReviewAnalysis) {
+        this.allowReviewAnalysis = allowReviewAnalysis;
+    }
+
+    public String getSectionConfigJson() {
+        return sectionConfigJson;
+    }
+
+    public void setSectionConfigJson(String sectionConfigJson) {
+        this.sectionConfigJson = sectionConfigJson;
+    }
+
+    public String getAdaptiveRuleJson() {
+        return adaptiveRuleJson;
+    }
+
+    public void setAdaptiveRuleJson(String adaptiveRuleJson) {
+        this.adaptiveRuleJson = adaptiveRuleJson;
+    }
+
     public String getStatus() {
         return status;
     }
@@ -80,5 +217,13 @@ public class ExamPaperDetailVo {
 
     public void setQuestions(List<ExamPaperQuestionDetailVo> questions) {
         this.questions = questions;
+    }
+
+    public List<ExamPaperDetailVo> getSubPapers() {
+        return subPapers;
+    }
+
+    public void setSubPapers(List<ExamPaperDetailVo> subPapers) {
+        this.subPapers = subPapers;
     }
 }

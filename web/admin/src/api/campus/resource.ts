@@ -15,6 +15,14 @@ export function getResource(resourceId: number) {
   })
 }
 
+export function getResourceOperationOverview(params: any) {
+  return request({
+    url: '/campus/resource/operation/overview',
+    method: 'get',
+    params,
+  })
+}
+
 export function addResource(data: any) {
   return request({
     url: '/campus/resource',

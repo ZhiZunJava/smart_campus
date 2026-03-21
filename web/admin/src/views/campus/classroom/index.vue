@@ -14,9 +14,9 @@
           style="width:220px"
         />
       </el-form-item>
-      <el-form-item label="楼栋">
-        <el-select v-model="queryParams.buildingName" filterable clearable placeholder="请选择楼栋" style="width:220px">
-          <el-option v-for="item in buildingOptions" :key="`query-building-${item}`" :label="item" :value="item" />
+      <el-form-item label="教学楼">
+        <el-select v-model="queryParams.buildingName" filterable clearable placeholder="请选择教学楼" style="width:220px">
+          <el-option v-for="item in buildingOptions" :key="`query-building-${item.value}`" :label="item.label" :value="item.value" />
         </el-select>
       </el-form-item>
       <el-form-item label="校区">
@@ -46,10 +46,16 @@
 
     <el-table v-loading="loading" :data="dataList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" />
-      <el-table-column label="教室名称" prop="classroomName" min-width="180" />
+      <el-table-column label="教室名称" prop="classroomName" min-width="160" />
       <el-table-column label="所属部门" min-width="180"><template #default="{ row }">{{ row.deptName || '-' }}</template></el-table-column>
-      <el-table-column label="楼栋" prop="buildingName" min-width="160" />
-      <el-table-column label="校区" prop="campusName" min-width="120" />
+      <el-table-column label="位置" min-width="240">
+        <template #default="{ row }">
+          <div class="position-cell">
+            <strong>{{ formatLocationLine(row) }}</strong>
+            <span>{{ formatClassroomPreview(row) }}</span>
+          </div>
+        </template>
+      </el-table-column>
       <el-table-column label="容量" prop="capacity" width="100" />
       <el-table-column label="类型" prop="roomType" min-width="120" />
       <el-table-column label="状态" width="100"><template #default="{ row }"><el-tag :type="row.status === '0' ? 'success' : 'danger'">{{ row.status === '0' ? '正常' : '停用' }}</el-tag></template></el-table-column>
@@ -73,17 +79,15 @@
             style="width:100%"
           />
         </el-form-item>
-        <el-form-item label="楼栋">
+        <el-form-item label="教学楼">
           <el-select
             v-model="form.buildingName"
             filterable
-            allow-create
-            default-first-option
             clearable
-            placeholder="请选择或输入楼栋"
+            placeholder="请选择教学楼"
             style="width:100%"
           >
-            <el-option v-for="item in filteredBuildingOptions" :key="`form-building-${item}`" :label="item" :value="item" />
+            <el-option v-for="item in filteredBuildingOptions" :key="`form-building-${item.value}`" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="校区">
@@ -113,7 +117,10 @@
         <el-form-item label="状态"><el-select v-model="form.status" style="width:100%"><el-option label="正常" value="0" /><el-option label="停用" value="1" /></el-select></el-form-item>
         <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" rows="3" /></el-form-item>
         <div class="classroom-form-preview">
-          预览位置：{{ formatClassroomPreview(form) }}
+          预览位置：{{ formatLocationLine(form) || '--' }}
+        </div>
+        <div class="classroom-form-preview classroom-form-preview--muted">
+          展示摘要：{{ formatClassroomPreview(form) }}
         </div>
       </el-form>
       <template #footer><el-button @click="open=false">取消</el-button><el-button type="primary" @click="submitForm">确定</el-button></template>
@@ -129,20 +136,19 @@ import { addClassroom, delClassroom, listClassroom, updateClassroom } from '@/ap
 import { deptTreeSelect } from '@/api/system/user'
 
 const { proxy } = getCurrentInstance() as any
-const { campus_area_type, classroom_room_type } = proxy.useDict('campus_area_type', 'classroom_room_type')
+const { campus_area_type, classroom_room_type, campus_building_type } = proxy.useDict('campus_area_type', 'classroom_room_type', 'campus_building_type')
 const loading=ref(false), showSearch=ref(true), total=ref(0), open=ref(false), title=ref(''), ids=ref<any[]>([]), single=ref(true), multiple=ref(true), dataList=ref<any[]>([])
 const allClassrooms = ref<any[]>([])
 const deptOptions=ref<any[]>([])
 const queryParams=reactive<any>({ pageNum:1,pageSize:10,classroomName:undefined,deptId:undefined,buildingName:undefined,campusName:undefined,roomType:undefined })
 const form=reactive<any>({})
-const buildingOptions = computed(() => uniqueOptions(allClassrooms.value.map((item:any) => item.buildingName)))
+const buildingOptions = computed(() => {
+  const dictOptions = (campus_building_type.value || []).map((item:any) => ({ label: item.label, value: item.value }))
+  if (dictOptions.length) return dictOptions
+  return uniqueOptions(allClassrooms.value.map((item:any) => item.buildingName)).map((item:any) => ({ label: item, value: item }))
+})
 const filteredBuildingOptions = computed(() => {
-  if (!form.campusName) return buildingOptions.value
-  return uniqueOptions(
-    allClassrooms.value
-      .filter((item:any) => item.campusName === form.campusName)
-      .map((item:any) => item.buildingName)
-  )
+  return buildingOptions.value
 })
 const currentFilterTags = computed(() => {
   const tags: Array<{ label: string }> = []
@@ -152,7 +158,7 @@ const currentFilterTags = computed(() => {
   if (deptLabel) tags.push({ label: `部门：${deptLabel}` })
   if (campusLabel) tags.push({ label: `校区：${campusLabel}` })
   if (roomTypeLabel) tags.push({ label: `类型：${roomTypeLabel}` })
-  if (queryParams.buildingName) tags.push({ label: `楼栋：${queryParams.buildingName}` })
+  if (queryParams.buildingName) tags.push({ label: `教学楼：${queryParams.buildingName}` })
   return tags
 })
 
@@ -190,8 +196,11 @@ function joinUniqueParts(parts: any[]) {
   })
   return result.join(' · ')
 }
+function formatLocationLine(item: any) {
+  return joinUniqueParts([item?.campusName, item?.buildingName, item?.classroomName]) || '--'
+}
 function formatClassroomPreview(item: any) {
-  return joinUniqueParts([item?.deptName, item?.campusName, item?.buildingName, item?.classroomName]) || '--'
+  return joinUniqueParts([item?.deptName, item?.campusName, item?.buildingName, item?.classroomName, item?.roomType]) || '--'
 }
 async function submitForm(){
   form.classroomName = String(form.classroomName || '').trim()
@@ -216,4 +225,8 @@ onMounted(async()=>{ resetForm(); await loadDictionaryOptions(); getList() })
   font-size:12px;
   line-height:1.6;
 }
+.classroom-form-preview--muted{color:#98a2b3}
+.position-cell{display:flex;flex-direction:column;gap:4px}
+.position-cell strong{color:#172033;font-size:13px}
+.position-cell span{color:#667085;font-size:12px}
 </style>

@@ -201,7 +201,7 @@ async function handleAutoArrange(){
   if(!classCourseIds.length){ ElMessage.warning('当前没有匹配到班级课程，无法自动排课'); return }
   const termId = rows.find((item:any)=> classCourseIds.includes(item.id))?.termId
   if(!termId){ ElMessage.warning('未找到班级课程所属学期，无法自动排课'); return }
-  await autoArrangeCourseSchedule({ termId, classCourseIds, clearExistingSchedules:false, populationSize:60, generationCount:120, mutationRate:0.12 })
+  await autoArrangeCourseSchedule({ termId, classCourseIds, clearExistingSchedules:false, populationSize:60, generationCount:120, mutationRate:0.12, excludedWeekDays:[6,7], excludedDayParts:['NOON', 'EVENING'] })
   ElMessage.success('已触发遗传算法自动排课')
 }
 async function loadOptions(){

@@ -31,7 +31,9 @@ const routes = [
       { path: 'resources', component: () => import('@/views/student/Resources.vue'), meta: { title: '资源中心' } },
       { path: 'recommendations', component: () => import('@/views/student/Recommendations.vue'), meta: { title: '个性推荐' } },
       { path: 'qa', component: () => import('@/views/student/Qa.vue'), meta: { title: '智能问答', hideBanner: true } },
+      { path: 'plaza', component: () => import('@/views/student/ChallengePlaza.vue'), meta: { title: '任务中心' } },
       { path: 'exams', component: () => import('@/views/student/Exams.vue'), meta: { title: '我的考试' } },
+      { path: 'exams/session/:recordId', component: () => import('@/views/student/ExamSession.vue'), meta: { title: '在线考试', workspace: true, transition: 'portal-workspace-fade' } },
       { path: 'wrongbook', component: () => import('@/views/student/wrongbook/index.vue'), meta: { title: '我的错题本' } }
     ]
   },

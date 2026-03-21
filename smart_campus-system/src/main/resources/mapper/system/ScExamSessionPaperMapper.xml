@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScExamSessionPaperMapper">
+  <resultMap type="ScExamSessionPaper" id="ScExamSessionPaperResult">
+    <id property="id" column="id" />
+    <result property="sessionId" column="session_id" />
+    <result property="paperId" column="paper_id" />
+    <result property="parentPaperId" column="parent_paper_id" />
+    <result property="paperLevel" column="paper_level" />
+    <result property="answerMode" column="answer_mode" />
+    <result property="paperWeight" column="paper_weight" />
+    <result property="sortNo" column="sort_no" />
+    <result property="paperStatus" column="paper_status" />
+    <result property="startTime" column="start_time" />
+    <result property="submitTime" column="submit_time" />
+    <result property="score" column="score" />
+    <result property="correctRate" column="correct_rate" />
+  </resultMap>
+
+  <sql id="selectScExamSessionPaperVo">
+    select id, session_id, paper_id, parent_paper_id, paper_level, answer_mode, paper_weight, sort_no,
+    paper_status, start_time, submit_time, score, correct_rate
+    from sc_exam_session_paper
+  </sql>
+
+  <select id="selectScExamSessionPaperById" parameterType="Long" resultMap="ScExamSessionPaperResult">
+    <include refid="selectScExamSessionPaperVo" />
+    where id = #{id}
+  </select>
+
+  <select id="selectScExamSessionPaperBySessionAndPaper" resultMap="ScExamSessionPaperResult">
+    <include refid="selectScExamSessionPaperVo" />
+    where session_id = #{param1} and paper_id = #{param2}
+    limit 1
+  </select>
+
+  <select id="selectScExamSessionPaperList" parameterType="ScExamSessionPaper" resultMap="ScExamSessionPaperResult">
+    <include refid="selectScExamSessionPaperVo" />
+    <where>
+      <if test="sessionId != null">
+        and session_id = #{sessionId}
+      </if>
+      <if test="paperId != null">
+        and paper_id = #{paperId}
+      </if>
+      <if test="parentPaperId != null">
+        and parent_paper_id = #{parentPaperId}
+      </if>
+      <if test="paperLevel != null and paperLevel != ''">
+        and paper_level = #{paperLevel}
+      </if>
+    </where>
+    order by sort_no asc, id asc
+  </select>
+
+  <insert id="insertScExamSessionPaper" parameterType="ScExamSessionPaper" useGeneratedKeys="true" keyProperty="id">
+    insert into sc_exam_session_paper(session_id, paper_id, parent_paper_id, paper_level, answer_mode, paper_weight,
+    sort_no, paper_status, start_time, submit_time, score, correct_rate, create_by, create_time, remark)
+    values(#{sessionId}, #{paperId}, #{parentPaperId}, #{paperLevel}, #{answerMode}, #{paperWeight},
+    #{sortNo}, #{paperStatus}, #{startTime}, #{submitTime}, #{score}, #{correctRate}, #{createBy}, sysdate(), #{remark})
+  </insert>
+
+  <update id="updateScExamSessionPaper" parameterType="ScExamSessionPaper">
+    update sc_exam_session_paper
+    <set>
+      <if test="paperStatus != null">paper_status = #{paperStatus},</if>
+      <if test="startTime != null">start_time = #{startTime},</if>
+      <if test="submitTime != null">submit_time = #{submitTime},</if>
+      <if test="score != null">score = #{score},</if>
+      <if test="correctRate != null">correct_rate = #{correctRate},</if>
+      <if test="updateBy != null">update_by = #{updateBy},</if>
+      update_time = sysdate()
+    </set>
+    where id = #{id}
+  </update>
+</mapper>
+

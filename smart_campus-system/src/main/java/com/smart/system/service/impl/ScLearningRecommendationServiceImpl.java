@@ -10,17 +10,21 @@ import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.smart.common.utils.StringUtils;
+import com.smart.system.domain.ScExamPaper;
+import com.smart.system.domain.ScExamRecord;
 import com.smart.system.domain.ScLearningProfile;
 import com.smart.system.domain.ScLearningRecommendation;
 import com.smart.system.domain.ScResource;
 import com.smart.system.domain.ScStudyRecord;
 import com.smart.system.domain.ScWrongQuestionBook;
 import com.smart.system.domain.dto.RecommendationFeedbackDto;
+import com.smart.system.mapper.ScExamPaperMapper;
 import com.smart.system.mapper.ScLearningProfileMapper;
 import com.smart.system.mapper.ScLearningRecommendationMapper;
 import com.smart.system.mapper.ScResourceMapper;
 import com.smart.system.mapper.ScStudyRecordMapper;
 import com.smart.system.mapper.ScWrongQuestionBookMapper;
+import com.smart.system.service.IScExamRecordService;
 import com.smart.system.service.IScLearningRecommendationService;
 
 @Service
@@ -39,6 +43,12 @@ public class ScLearningRecommendationServiceImpl implements IScLearningRecommend
 
     @Autowired
     private ScWrongQuestionBookMapper scWrongQuestionBookMapper;
+
+    @Autowired
+    private IScExamRecordService scExamRecordService;
+
+    @Autowired
+    private ScExamPaperMapper scExamPaperMapper;
 
     @Override
     public ScLearningRecommendation selectScLearningRecommendationByRecommendId(Long recommendId) {
@@ -120,6 +130,7 @@ public class ScLearningRecommendationServiceImpl implements IScLearningRecommend
         wrongQuestionBookQuery.setUserId(userId);
         wrongQuestionBookQuery.setCourseId(courseId);
         int wrongQuestionCount = scWrongQuestionBookMapper.selectScWrongQuestionBookList(wrongQuestionBookQuery).size();
+        BigDecimal avgCorrectRate = avgCorrectRate(userId, courseId);
 
         ScResource resourceQuery = new ScResource();
         resourceQuery.setStatus("0");
@@ -140,16 +151,18 @@ public class ScLearningRecommendationServiceImpl implements IScLearningRecommend
             recommendation.setUserId(userId);
             recommendation.setBizType("resource");
             recommendation.setBizId(resource.getResourceId());
-            recommendation.setSourceType("rule");
+            recommendation.setSourceType("rule_behavior");
             recommendation.setSceneCode(resolvedSceneCode);
             recommendation.setExposeStatus("0");
             recommendation.setClickStatus("0");
             recommendation.setFeedbackStatus("0");
             recommendation.setExpireTime(new Date(System.currentTimeMillis() + 7L * 24 * 3600 * 1000));
             recommendation.setRecommendReason(buildReason(resource.getResourceType(), riskScore,
-                    learnedResourceIds.contains(resource.getResourceId()), wrongQuestionCount));
+                    learnedResourceIds.contains(resource.getResourceId()), wrongQuestionCount, avgCorrectRate,
+                    resolvedSceneCode));
             recommendation.setRecommendScore(buildScore(resource, riskScore, counter,
-                    learnedResourceIds.contains(resource.getResourceId()), wrongQuestionCount));
+                    learnedResourceIds.contains(resource.getResourceId()), wrongQuestionCount, avgCorrectRate,
+                    resolvedSceneCode));
             recommendation.setCreateBy("system");
             scLearningRecommendationMapper.insertScLearningRecommendation(recommendation);
             results.add(recommendation);
@@ -202,7 +215,14 @@ public class ScLearningRecommendationServiceImpl implements IScLearningRecommend
         return scLearningRecommendationMapper.updateScLearningRecommendation(recommendation);
     }
 
-    private String buildReason(String resourceType, BigDecimal riskScore, boolean learned, int wrongQuestionCount) {
+    private String buildReason(String resourceType, BigDecimal riskScore, boolean learned, int wrongQuestionCount,
+            BigDecimal avgCorrectRate, String sceneCode) {
+        if ("exam".equalsIgnoreCase(sceneCode) && avgCorrectRate.compareTo(BigDecimal.valueOf(65)) < 0) {
+            return "结合近期测验正确率，优先推荐适合考后巩固与错题修复的资源";
+        }
+        if ("workbench".equalsIgnoreCase(sceneCode) && !learned) {
+            return "结合当前工作台学习缺口，优先补齐尚未完成的关键资源";
+        }
         if (riskScore.compareTo(BigDecimal.valueOf(60)) >= 0) {
             return "基于近期学习活跃度偏低，优先推荐高质量资源进行巩固";
         }
@@ -215,26 +235,79 @@ public class ScLearningRecommendationServiceImpl implements IScLearningRecommend
         if ("video".equalsIgnoreCase(resourceType)) {
             return "基于你的课程学习进度，优先推荐适合当前阶段的视频资源";
         }
-        return "基于课程关联与资源质量评分生成推荐";
+        return "基于课程关联、资源热度与学习画像综合生成推荐";
     }
 
     private BigDecimal buildScore(ScResource resource, BigDecimal riskScore, int rankOffset, boolean learned,
-            int wrongQuestionCount) {
+            int wrongQuestionCount, BigDecimal avgCorrectRate, String sceneCode) {
         BigDecimal quality = resource.getQualityScore() == null ? BigDecimal.valueOf(60) : resource.getQualityScore();
         BigDecimal normalizedRiskScore = riskScore == null ? BigDecimal.ZERO : riskScore;
         BigDecimal score = quality.multiply(BigDecimal.valueOf(0.7))
-                .add(BigDecimal.valueOf(100).subtract(normalizedRiskScore).multiply(BigDecimal.valueOf(0.3)));
+                .add(BigDecimal.valueOf(100).subtract(normalizedRiskScore).multiply(BigDecimal.valueOf(0.3)))
+                .add(popularityScore(resource));
         if (!learned) {
             score = score.add(BigDecimal.valueOf(8));
+        } else {
+            score = score.subtract(BigDecimal.valueOf(6));
         }
         if (wrongQuestionCount >= 3) {
             score = score.add(BigDecimal.valueOf(5));
         }
+        if (avgCorrectRate.compareTo(BigDecimal.ZERO) > 0 && avgCorrectRate.compareTo(BigDecimal.valueOf(65)) < 0
+                && "question".equalsIgnoreCase(resource.getResourceType())) {
+            score = score.add(BigDecimal.valueOf(7));
+        }
         if ("video".equalsIgnoreCase(resource.getResourceType())) {
             score = score.add(BigDecimal.valueOf(2));
         }
+        if ("workbench".equalsIgnoreCase(sceneCode)) {
+            score = score.add(BigDecimal.valueOf(3));
+        }
+        if (!"1".equals(resource.getAuditStatus())) {
+            score = score.subtract(BigDecimal.valueOf(30));
+        }
         score = score.subtract(BigDecimal.valueOf(rankOffset * 2L));
         return score.max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal avgCorrectRate(Long userId, Long courseId) {
+        ScExamRecord query = new ScExamRecord();
+        query.setUserId(userId);
+        List<ScExamRecord> examRecords = scExamRecordService.selectScExamRecordList(query).stream()
+                .filter(item -> matchCourse(item, courseId))
+                .toList();
+        if (examRecords.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal total = BigDecimal.ZERO;
+        int count = 0;
+        for (ScExamRecord examRecord : examRecords) {
+            if (examRecord.getCorrectRate() != null) {
+                total = total.add(examRecord.getCorrectRate());
+                count++;
+            }
+        }
+        return count == 0 ? BigDecimal.ZERO : total.divide(BigDecimal.valueOf(count), 2, RoundingMode.HALF_UP);
+    }
+
+    private boolean matchCourse(ScExamRecord record, Long courseId) {
+        if (courseId == null) {
+            return true;
+        }
+        if (record == null || record.getPaperId() == null) {
+            return false;
+        }
+        ScExamPaper paper = scExamPaperMapper.selectScExamPaperByPaperId(record.getPaperId());
+        return paper != null && courseId.equals(paper.getCourseId());
+    }
+
+    private BigDecimal popularityScore(ScResource resource) {
+        int views = resource.getViewCount() == null ? 0 : resource.getViewCount();
+        int downloads = resource.getDownloadCount() == null ? 0 : resource.getDownloadCount();
+        int favorites = resource.getFavoriteCount() == null ? 0 : resource.getFavoriteCount();
+        return BigDecimal.valueOf(views * 0.08 + downloads * 0.3 + favorites * 0.5)
+                .min(BigDecimal.valueOf(12))
+                .setScale(2, RoundingMode.HALF_UP);
     }
 
     private BigDecimal safeScore(ScLearningRecommendation recommendation) {

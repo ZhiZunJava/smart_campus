@@ -42,6 +42,28 @@
       </el-col>
     </el-row>
 
+    <el-row :gutter="16" class="summary-row" v-if="workbench?.behaviorStats">
+      <el-col :span="6"><el-card shadow="never"><div class="summary-label">学习行为数</div><div class="summary-value small">{{ workbench.behaviorStats.totalBehaviorCount || 0 }}</div></el-card></el-col>
+      <el-col :span="6"><el-card shadow="never"><div class="summary-label">学习天数</div><div class="summary-value small">{{ workbench.behaviorStats.studyDayCount || 0 }}</div></el-card></el-col>
+      <el-col :span="6"><el-card shadow="never"><div class="summary-label">已学资源</div><div class="summary-value small">{{ workbench.behaviorStats.learnedResourceCount || 0 }}</div></el-card></el-col>
+      <el-col :span="6"><el-card shadow="never"><div class="summary-label">错题数</div><div class="summary-value small warning">{{ workbench.behaviorStats.wrongQuestionCount || 0 }}</div></el-card></el-col>
+    </el-row>
+
+    <el-row :gutter="16" class="summary-row" v-if="workbench?.focusResources?.length">
+      <el-col :span="24">
+        <el-card shadow="never">
+          <template #header><span>当前重点资源</span></template>
+          <div class="focus-grid">
+            <div v-for="item in workbench.focusResources" :key="item.resourceId" class="focus-card">
+              <div class="focus-card__title">{{ item.resourceName }}</div>
+              <div class="focus-card__meta">推荐分 {{ item.recommendationScore }} · 热度 {{ item.heatScore || '--' }} · {{ item.resourceType }}</div>
+              <div class="focus-card__desc">{{ item.recommendationReason || item.summary || '暂无说明' }}</div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
     <el-table v-loading="loading" :data="reportList">
       <el-table-column label="报告ID" prop="reportId" width="100" />
       <el-table-column label="用户ID" prop="userId" width="90" />
@@ -155,6 +177,13 @@ onMounted(async () => {
 .summary-row { margin-bottom: 16px; }
 .summary-label { color: var(--el-text-color-secondary); }
 .summary-value { margin-top: 8px; font-size: 28px; font-weight: 700; color: var(--el-color-primary); }
+.summary-value.small { font-size: 24px; }
+.summary-value.warning { color: var(--el-color-warning); }
 .section-card { margin-top: 16px; }
 .json-block { margin: 0; white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.7; }
+.focus-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.focus-card { padding: 14px; border-radius: 12px; background: var(--el-fill-color-light); }
+.focus-card__title { font-weight: 600; color: var(--el-text-color-primary); }
+.focus-card__meta { margin-top: 6px; font-size: 12px; color: var(--el-color-primary); }
+.focus-card__desc { margin-top: 8px; line-height: 1.7; color: var(--el-text-color-secondary); }
 </style>

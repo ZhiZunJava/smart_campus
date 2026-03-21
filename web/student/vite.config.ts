@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from 'vite'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import vue from '@vitejs/plugin-vue'
+import tailwindcss from '@tailwindcss/vite'
 
 const baseUrl = 'http://localhost:8080'
 const rootDir = fileURLToPath(new URL('.', import.meta.url))
@@ -11,7 +12,7 @@ export default defineConfig(({ mode, command }) => {
   const { VITE_APP_ENV } = env
   return {
     base: VITE_APP_ENV === 'production' ? '/' : '/',
-    plugins: [vue()],
+    plugins: [vue(), tailwindcss()],
     resolve: {
       alias: {
         '@': resolve(rootDir, './src')

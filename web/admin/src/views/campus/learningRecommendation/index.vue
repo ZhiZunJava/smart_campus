@@ -8,7 +8,7 @@
       </el-form-item>
       <el-form-item label="场景">
         <el-select v-model="sceneCode" style="width: 180px">
-          <el-option v-for="scene in meta.supportedScenes || []" :key="scene" :label="scene" :value="scene" />
+          <el-option v-for="scene in meta.supportedScenes || []" :key="scene" :label="sceneLabel(scene)" :value="scene" />
         </el-select>
       </el-form-item>
       <el-form-item label="模式">
@@ -41,7 +41,9 @@
           <el-tag>{{ labelOf(meta.recommendationFeedbackStatuses, scope.row.feedbackStatus) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="场景" prop="sceneCode" width="120" />
+      <el-table-column label="场景" width="120">
+        <template #default="scope">{{ sceneLabel(scope.row.sceneCode) }}</template>
+      </el-table-column>
       <el-table-column label="过期时间" prop="expireTime" min-width="180" />
       <el-table-column label="操作" width="220" fixed="right">
         <template #default="scope">
@@ -84,6 +86,17 @@ const doneCount = computed(() => recommendationList.value.filter((item: any) => 
 
 function labelOf(map: Record<string, string>, value: string) {
   return map?.[value] || value || '--'
+}
+
+function sceneLabel(value: string) {
+  const labels: Record<string, string> = {
+    home: '首页推荐',
+    diagnosis: '学情诊断',
+    workbench: '学习工作台',
+    course: '课程学习',
+    exam: '考试巩固',
+  }
+  return labels[value] || value || '--'
 }
 
 async function getList() {

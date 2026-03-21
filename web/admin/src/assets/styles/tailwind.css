@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+@source "../**/*.{vue,js,ts,jsx,tsx}";
+@source "../../index.html";
+
+@theme {
+  --font-sans: "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-300: #93c5fd;
+  --color-brand-400: #60a5fa;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+  --color-brand-800: #1e40af;
+  --color-brand-900: #1e3a8a;
+
+  --color-surface-50: #f8fafc;
+  --color-surface-100: #f1f5f9;
+  --color-surface-200: #e2e8f0;
+  --color-surface-700: #475569;
+  --color-surface-900: #0f172a;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --shadow-soft: 0 8px 20px rgba(15, 23, 42, 0.04);
+  --shadow-card: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+  }
+
+  body {
+    color: var(--el-text-color-primary);
+    background: var(--el-bg-color-page);
+  }
+}
+
+@layer components {
+  .tw-card {
+    border-radius: var(--app-radius-md);
+    border: 1px solid var(--el-border-color-lighter);
+    background: var(--el-bg-color);
+    box-shadow: var(--shadow-card);
+  }
+
+  .tw-surface {
+    border-radius: var(--app-radius-sm);
+    border: 1px solid var(--el-border-color-light);
+    background: var(--el-fill-color-lighter);
+  }
+}

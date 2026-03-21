@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScQuestionCatalogMapper">
+  <resultMap type="ScQuestionCatalog" id="ScQuestionCatalogResult">
+    <id property="catalogId" column="catalog_id" />
+    <result property="catalogName" column="catalog_name" />
+    <result property="courseId" column="course_id" />
+    <result property="gradeId" column="grade_id" />
+    <result property="ownerUserId" column="owner_user_id" />
+    <result property="visibilityType" column="visibility_type" />
+    <result property="status" column="status" />
+    <result property="createBy" column="create_by" />
+    <result property="createTime" column="create_time" />
+    <result property="updateBy" column="update_by" />
+    <result property="updateTime" column="update_time" />
+    <result property="remark" column="remark" />
+  </resultMap>
+
+  <sql id="selectScQuestionCatalogVo">
+    select catalog_id, catalog_name, course_id, grade_id, owner_user_id, visibility_type, status,
+    create_by, create_time, update_by, update_time, remark
+    from sc_question_catalog
+  </sql>
+
+  <select id="selectScQuestionCatalogByCatalogId" parameterType="Long" resultMap="ScQuestionCatalogResult">
+    <include refid="selectScQuestionCatalogVo" />
+    where catalog_id = #{catalogId}
+  </select>
+
+  <select id="selectScQuestionCatalogList" parameterType="ScQuestionCatalog" resultMap="ScQuestionCatalogResult">
+    <include refid="selectScQuestionCatalogVo" />
+    <where>
+      <if test="catalogName != null and catalogName != ''">
+        and catalog_name like concat('%', #{catalogName}, '%')
+      </if>
+      <if test="courseId != null">
+        and course_id = #{courseId}
+      </if>
+      <if test="gradeId != null">
+        and grade_id = #{gradeId}
+      </if>
+      <if test="ownerUserId != null">
+        and owner_user_id = #{ownerUserId}
+      </if>
+      <if test="visibilityType != null and visibilityType != ''">
+        and visibility_type = #{visibilityType}
+      </if>
+      <if test="status != null and status != ''">
+        and status = #{status}
+      </if>
+    </where>
+    order by catalog_id desc
+  </select>
+
+  <insert id="insertScQuestionCatalog" parameterType="ScQuestionCatalog" useGeneratedKeys="true" keyProperty="catalogId">
+    insert into sc_question_catalog(catalog_name, course_id, grade_id, owner_user_id, visibility_type, status,
+    create_by, create_time, remark)
+    values(#{catalogName}, #{courseId}, #{gradeId}, #{ownerUserId}, #{visibilityType}, #{status},
+    #{createBy}, sysdate(), #{remark})
+  </insert>
+
+  <update id="updateScQuestionCatalog" parameterType="ScQuestionCatalog">
+    update sc_question_catalog
+    <set>
+      <if test="catalogName != null">catalog_name = #{catalogName},</if>
+      <if test="courseId != null">course_id = #{courseId},</if>
+      <if test="gradeId != null">grade_id = #{gradeId},</if>
+      <if test="ownerUserId != null">owner_user_id = #{ownerUserId},</if>
+      <if test="visibilityType != null">visibility_type = #{visibilityType},</if>
+      <if test="status != null">status = #{status},</if>
+      <if test="updateBy != null">update_by = #{updateBy},</if>
+      <if test="remark != null">remark = #{remark},</if>
+      update_time = sysdate()
+    </set>
+    where catalog_id = #{catalogId}
+  </update>
+
+  <delete id="deleteScQuestionCatalogByCatalogId" parameterType="Long">
+    delete from sc_question_catalog where catalog_id = #{catalogId}
+  </delete>
+
+  <delete id="deleteScQuestionCatalogByCatalogIds" parameterType="Long">
+    delete from sc_question_catalog where catalog_id in
+    <foreach item="catalogId" collection="array" open="(" separator="," close=")">
+      #{catalogId}
+    </foreach>
+  </delete>
+</mapper>
+

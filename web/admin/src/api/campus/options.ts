@@ -3,11 +3,37 @@ import { getUser } from '@/api/system/user'
 import { listAiModel } from '@/api/campus/ai'
 import { listCourse, listGrade, listClass, listSchoolTerm, listClassroom } from '@/api/campus/teaching'
 
+function joinLocationParts(parts: any[]) {
+  const result: string[] = []
+  parts.forEach((part) => {
+    const text = String(part || '').trim()
+    if (!text) return
+    if (result.some((item) => item === text || item.includes(text) || text.includes(item))) return
+    result.push(text)
+  })
+  return result.join(' / ')
+}
+
+function resolveUserTypeLabel(userType?: string) {
+  const labels: Record<string, string> = {
+    student: '学生',
+    teacher: '教师',
+    parent: '家长',
+    admin: '管理员',
+  }
+  return labels[String(userType || '').trim()] || '未分类'
+}
+
 export async function fetchUserOptions(userType?: 'student' | 'teacher' | 'parent' | 'admin') {
   const res = await listUser({ pageNum: 1, pageSize: 200, userType })
   return (res.rows || []).map((item: any) => ({
-    label: `${item.nickName || item.userName}（${item.userId}）`,
+    label: `${item.nickName || item.userName}（${item.userId}） · ${resolveUserTypeLabel(item.userType)}`,
+    shortLabel: `${item.nickName || item.userName}（${item.userId}）`,
     value: item.userId,
+    userType: item.userType,
+    userTypeLabel: resolveUserTypeLabel(item.userType),
+    nickName: item.nickName,
+    userName: item.userName,
   }))
 }
 
@@ -130,7 +156,7 @@ export async function fetchTermOptions() {
 export async function fetchClassroomOptions() {
   const res = await listClassroom({ pageNum: 1, pageSize: 500, status: '0' })
   return (res.rows || []).map((item: any) => ({
-    label: `${item.classroomName} · ${item.buildingName || '未配置楼栋'} · ${item.campusName || '未配置校区'}`,
+    label: joinLocationParts([item.campusName || '未配置校区', item.buildingName || '未配置教学楼', item.classroomName || '未命名教室']),
     value: item.classroomId,
     classroomName: item.classroomName,
     buildingName: item.buildingName,

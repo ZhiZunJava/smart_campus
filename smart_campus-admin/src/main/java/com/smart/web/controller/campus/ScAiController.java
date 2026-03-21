@@ -175,6 +175,9 @@ public class ScAiController extends BaseController {
     @GetMapping("/task/list")
     public TableDataInfo taskList(ScAiTaskLog scAiTaskLog) {
         startPage();
+        if (scAiTaskLog.getBizType() != null && scAiTaskLog.getBizType().trim().length() > 0) {
+            scAiTaskLog.setBizTypes(null);
+        }
         List<ScAiTaskLog> list = scAiTaskLogService.selectScAiTaskLogList(scAiTaskLog);
         return getDataTable(list);
     }

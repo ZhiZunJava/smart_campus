@@ -16,7 +16,9 @@ public class ScExamRecord extends BaseEntity {
     private static final long serialVersionUID = 1L;
 
     private Long recordId;
+    private Long sessionId;
     private Long paperId;
+    private String paperName;
     private Long userId;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date startTime;
@@ -36,12 +38,28 @@ public class ScExamRecord extends BaseEntity {
         this.recordId = recordId;
     }
 
+    public Long getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(Long sessionId) {
+        this.sessionId = sessionId;
+    }
+
     public Long getPaperId() {
         return paperId;
     }
 
     public void setPaperId(Long paperId) {
         this.paperId = paperId;
+    }
+
+    public String getPaperName() {
+        return paperName;
+    }
+
+    public void setPaperName(String paperName) {
+        this.paperName = paperName;
     }
 
     public Long getUserId() {
@@ -112,7 +130,9 @@ public class ScExamRecord extends BaseEntity {
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.MULTI_LINE_STYLE)
                 .append("recordId", getRecordId())
+                .append("sessionId", getSessionId())
                 .append("paperId", getPaperId())
+                .append("paperName", getPaperName())
                 .append("userId", getUserId())
                 .append("startTime", getStartTime())
                 .append("submitTime", getSubmitTime())

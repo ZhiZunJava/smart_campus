@@ -85,18 +85,24 @@ public class ScCourseScheduleServiceImpl implements IScCourseScheduleService {
         existingQuery.setTermId(request.getTermId());
         existingQuery.setStatus("0");
         List<ScCourseSchedule> existingSchedules = scCourseScheduleMapper.selectScCourseScheduleList(existingQuery);
+        Set<Long> targetClassCourseIds = resolveTargetClassCourseIds(request, classCourses);
+        List<ScCourseSchedule> targetExistingSchedules = existingSchedules.stream()
+                .filter(item -> item != null && item.getClassCourseId() != null)
+                .filter(item -> targetClassCourseIds.isEmpty() || targetClassCourseIds.contains(item.getClassCourseId()))
+                .collect(Collectors.toList());
 
         CourseScheduleAutoArrangeVo result = courseScheduleAutoArrangeService.autoArrange(request, classCourses,
                 classrooms, existingSchedules, term, operator);
 
-        if (Boolean.TRUE.equals(request.getClearExistingSchedules()) && !existingSchedules.isEmpty()) {
-            Long[] scheduleIds = existingSchedules.stream()
+        if (Boolean.TRUE.equals(request.getClearExistingSchedules()) && !targetExistingSchedules.isEmpty()) {
+            Long[] scheduleIds = targetExistingSchedules.stream()
                     .map(ScCourseSchedule::getScheduleId)
                     .filter(java.util.Objects::nonNull)
                     .toArray(Long[]::new);
             if (scheduleIds.length > 0) {
                 scCourseScheduleMapper.deleteScCourseScheduleByScheduleIds(scheduleIds);
             }
+            result.setClearedSchedules(scheduleIds.length);
         }
 
         List<ScCourseSchedule> schedulesToInsert = courseScheduleAutoArrangeService
@@ -170,6 +176,9 @@ public class ScCourseScheduleServiceImpl implements IScCourseScheduleService {
             if ("teacher".equals(conflictType)) {
                 throw new ServiceException("教师时间冲突：同一教师在相同星期、相同节次已存在排课");
             }
+            if ("class".equals(conflictType)) {
+                throw new ServiceException("班级时间冲突：同一班级在相同星期、相同节次已存在排课");
+            }
             throw new ServiceException("教室时间冲突：同一教室在相同星期、相同节次已存在排课");
         }
     }
@@ -179,7 +188,11 @@ public class ScCourseScheduleServiceImpl implements IScCourseScheduleService {
         if (Boolean.TRUE.equals(classroomConflict.get("hasConflict"))) {
             return classroomConflict;
         }
-        return findTeacherConflict(scCourseSchedule);
+        java.util.Map<String, Object> teacherConflict = findTeacherConflict(scCourseSchedule);
+        if (Boolean.TRUE.equals(teacherConflict.get("hasConflict"))) {
+            return teacherConflict;
+        }
+        return findClassConflict(scCourseSchedule);
     }
 
     private java.util.Map<String, Object> findClassroomConflict(ScCourseSchedule scCourseSchedule) {
@@ -276,6 +289,68 @@ public class ScCourseScheduleServiceImpl implements IScCourseScheduleService {
             result.put("classCourseName", StringUtils.defaultIfEmpty(existingClassCourse.getCourseName(),
                     String.valueOf(existing.getClassCourseId())));
             result.put("className", existingClassCourse.getClassName());
+            result.put("weekDay", existing.getWeekDay());
+            result.put("startSection", existing.getStartSection());
+            result.put("endSection", existing.getEndSection());
+            result.put("weeksText", existing.getWeeksText());
+            result.put("classroomName",
+                    StringUtils.defaultIfEmpty(existing.getClassroomName(), existing.getClassroom()));
+            result.put("buildingName", existing.getBuildingName());
+            result.put("campusName", existing.getCampusName());
+            break;
+        }
+        return result;
+    }
+
+    private java.util.Map<String, Object> findClassConflict(ScCourseSchedule scCourseSchedule) {
+        java.util.Map<String, Object> result = new LinkedHashMap<>();
+        result.put("hasConflict", false);
+        if (scCourseSchedule.getClassCourseId() == null || scCourseSchedule.getTermId() == null
+                || scCourseSchedule.getWeekDay() == null) {
+            return result;
+        }
+        if (!"0".equals(StringUtils.isEmpty(scCourseSchedule.getStatus()) ? "0" : scCourseSchedule.getStatus())) {
+            return result;
+        }
+        ScClassCourse currentClassCourse = scClassCourseMapper
+                .selectScClassCourseById(scCourseSchedule.getClassCourseId());
+        if (currentClassCourse == null || currentClassCourse.getClassId() == null) {
+            return result;
+        }
+        ScCourseSchedule query = new ScCourseSchedule();
+        query.setTermId(scCourseSchedule.getTermId());
+        query.setWeekDay(scCourseSchedule.getWeekDay());
+        query.setStatus("0");
+        List<ScCourseSchedule> existingList = scCourseScheduleMapper.selectScCourseScheduleList(query);
+        for (ScCourseSchedule existing : existingList) {
+            if (scCourseSchedule.getScheduleId() != null
+                    && scCourseSchedule.getScheduleId().equals(existing.getScheduleId())) {
+                continue;
+            }
+            if (!isSectionOverlap(scCourseSchedule, existing)) {
+                continue;
+            }
+            if (!isWeekOverlap(scCourseSchedule.getWeeksText(), scCourseSchedule.getWeeksJson(),
+                    existing.getWeeksText(), existing.getWeeksJson())) {
+                continue;
+            }
+            ScClassCourse existingClassCourse = scClassCourseMapper
+                    .selectScClassCourseById(existing.getClassCourseId());
+            if (existingClassCourse == null || existingClassCourse.getClassId() == null) {
+                continue;
+            }
+            if (!currentClassCourse.getClassId().equals(existingClassCourse.getClassId())) {
+                continue;
+            }
+            result.put("hasConflict", true);
+            result.put("conflictType", "class");
+            result.put("conflictScheduleId", existing.getScheduleId());
+            result.put("classId", existingClassCourse.getClassId());
+            result.put("className", existingClassCourse.getClassName());
+            result.put("classCourseId", existing.getClassCourseId());
+            result.put("classCourseName", StringUtils.defaultIfEmpty(existingClassCourse.getCourseName(),
+                    String.valueOf(existing.getClassCourseId())));
+            result.put("teacherName", existingClassCourse.getTeacherName());
             result.put("weekDay", existing.getWeekDay());
             result.put("startSection", existing.getStartSection());
             result.put("endSection", existing.getEndSection());
@@ -410,5 +485,23 @@ public class ScCourseScheduleServiceImpl implements IScCourseScheduleService {
             }
         }
         return weekSet;
+    }
+
+    private Set<Long> resolveTargetClassCourseIds(CourseScheduleAutoArrangeDto request, List<ScClassCourse> classCourses) {
+        Set<Long> requestedIds = request == null || request.getClassCourseIds() == null
+                ? Collections.emptySet()
+                : Arrays.stream(request.getClassCourseIds())
+                        .filter(java.util.Objects::nonNull)
+                        .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (!requestedIds.isEmpty()) {
+            return requestedIds;
+        }
+        if (classCourses == null) {
+            return Collections.emptySet();
+        }
+        return classCourses.stream()
+                .filter(item -> item != null && item.getId() != null)
+                .map(ScClassCourse::getId)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 }

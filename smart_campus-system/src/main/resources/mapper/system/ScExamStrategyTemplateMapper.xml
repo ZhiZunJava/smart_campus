@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScExamStrategyTemplateMapper">
+  <resultMap type="ScExamStrategyTemplate" id="ScExamStrategyTemplateResult">
+    <id property="templateId" column="template_id" />
+    <result property="templateName" column="template_name" />
+    <result property="courseId" column="course_id" />
+    <result property="templateType" column="template_type" />
+    <result property="ruleJson" column="rule_json" />
+    <result property="publishStatus" column="publish_status" />
+    <result property="status" column="status" />
+  </resultMap>
+  <sql id="selectScExamStrategyTemplateVo">select template_id, template_name, course_id, template_type,
+    rule_json, publish_status, status from sc_exam_strategy_template</sql>
+  <select id="selectScExamStrategyTemplateByTemplateId" parameterType="Long"
+    resultMap="ScExamStrategyTemplateResult"><include refid="selectScExamStrategyTemplateVo" /> where
+    template_id = #{templateId}</select>
+  <select id="selectScExamStrategyTemplateList" parameterType="ScExamStrategyTemplate"
+    resultMap="ScExamStrategyTemplateResult"><include refid="selectScExamStrategyTemplateVo" /><where><if
+        test="templateName != null and templateName != ''">and template_name like concat('%',
+    #{templateName}, '%')</if><if test="courseId != null">and course_id = #{courseId}</if><if
+        test="templateType != null and templateType != ''">and template_type = #{templateType}</if><if
+        test="publishStatus != null and publishStatus != ''">and publish_status = #{publishStatus}</if><if
+        test="status != null and status != ''">and status = #{status}</if></where> order by
+    template_id desc</select>
+  <insert id="insertScExamStrategyTemplate" parameterType="ScExamStrategyTemplate" useGeneratedKeys="true"
+    keyProperty="templateId">insert into sc_exam_strategy_template(template_name, course_id,
+    template_type, rule_json, publish_status, status, create_by, create_time, remark)
+    values(#{templateName}, #{courseId}, #{templateType}, #{ruleJson}, #{publishStatus}, #{status},
+    #{createBy}, sysdate(), #{remark})</insert>
+  <update id="updateScExamStrategyTemplate" parameterType="ScExamStrategyTemplate">update
+    sc_exam_strategy_template <set><if test="templateName != null">template_name = #{templateName},</if><if
+        test="courseId != null">course_id = #{courseId},</if><if test="templateType != null">template_type
+    = #{templateType},</if><if test="ruleJson != null">rule_json = #{ruleJson},</if><if
+        test="publishStatus != null">publish_status = #{publishStatus},</if><if test="status != null">status =
+    #{status},</if><if test="updateBy != null">update_by = #{updateBy},</if><if
+        test="remark != null">remark = #{remark},</if>update_time = sysdate()</set> where
+    template_id = #{templateId}</update>
+  <delete id="deleteScExamStrategyTemplateByTemplateId" parameterType="Long">delete from
+    sc_exam_strategy_template where template_id = #{templateId}</delete>
+  <delete id="deleteScExamStrategyTemplateByTemplateIds" parameterType="Long">delete from
+    sc_exam_strategy_template where template_id in <foreach item="templateId" collection="array"
+      open="(" separator="," close=")">#{templateId}</foreach></delete>
+</mapper>

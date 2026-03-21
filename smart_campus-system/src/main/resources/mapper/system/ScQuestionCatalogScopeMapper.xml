@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScQuestionCatalogScopeMapper">
+  <resultMap type="ScQuestionCatalogScope" id="ScQuestionCatalogScopeResult">
+    <id property="id" column="id" />
+    <result property="catalogId" column="catalog_id" />
+    <result property="scopeType" column="scope_type" />
+    <result property="scopeRefId" column="scope_ref_id" />
+    <result property="scopeRefName" column="scope_ref_name" />
+    <result property="permissionLevel" column="permission_level" />
+    <result property="status" column="status" />
+    <result property="createBy" column="create_by" />
+    <result property="createTime" column="create_time" />
+    <result property="updateBy" column="update_by" />
+    <result property="updateTime" column="update_time" />
+    <result property="remark" column="remark" />
+  </resultMap>
+
+  <sql id="selectScQuestionCatalogScopeVo">
+    select id, catalog_id, scope_type, scope_ref_id, scope_ref_name, permission_level, status,
+    create_by, create_time, update_by, update_time, remark
+    from sc_question_catalog_scope
+  </sql>
+
+  <select id="selectScQuestionCatalogScopeByCatalogId" parameterType="Long" resultMap="ScQuestionCatalogScopeResult">
+    <include refid="selectScQuestionCatalogScopeVo" />
+    where catalog_id = #{catalogId}
+    order by id asc
+  </select>
+
+  <insert id="insertScQuestionCatalogScope" parameterType="ScQuestionCatalogScope" useGeneratedKeys="true" keyProperty="id">
+    insert into sc_question_catalog_scope(catalog_id, scope_type, scope_ref_id, scope_ref_name, permission_level,
+    status, create_by, create_time, update_by, update_time, remark)
+    values(#{catalogId}, #{scopeType}, #{scopeRefId}, #{scopeRefName}, #{permissionLevel}, #{status},
+    #{createBy}, sysdate(), #{updateBy}, #{updateTime}, #{remark})
+  </insert>
+
+  <delete id="deleteScQuestionCatalogScopeByCatalogId" parameterType="Long">
+    delete from sc_question_catalog_scope where catalog_id = #{catalogId}
+  </delete>
+</mapper>

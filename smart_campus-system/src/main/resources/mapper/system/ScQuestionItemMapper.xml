@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScQuestionItemMapper">
+  <resultMap type="ScQuestionItem" id="ScQuestionItemResult">
+    <id property="itemId" column="item_id" />
+    <result property="courseId" column="course_id" />
+    <result property="defaultCatalogId" column="default_catalog_id" />
+    <result property="latestVersionId" column="latest_version_id" />
+    <result property="currentVersionNo" column="current_version_no" />
+    <result property="questionType" column="question_type" />
+    <result property="difficultyLevel" column="difficulty_level" />
+    <result property="sourceType" column="source_type" />
+    <result property="sourceRefId" column="source_ref_id" />
+    <result property="sourceBatchNo" column="source_batch_no" />
+    <result property="creatorUserId" column="creator_user_id" />
+    <result property="status" column="status" />
+  </resultMap>
+
+  <sql id="selectScQuestionItemVo">
+    select item_id, course_id, default_catalog_id, latest_version_id, current_version_no, question_type,
+    difficulty_level, source_type, source_ref_id, source_batch_no, creator_user_id, status
+    from sc_question_item
+  </sql>
+
+  <select id="selectScQuestionItemByItemId" parameterType="Long" resultMap="ScQuestionItemResult">
+    <include refid="selectScQuestionItemVo" />
+    where item_id = #{itemId}
+  </select>
+
+  <select id="selectScQuestionItemBySource" resultMap="ScQuestionItemResult">
+    <include refid="selectScQuestionItemVo" />
+    where source_type = #{sourceType} and source_ref_id = #{sourceRefId}
+    order by item_id desc
+    limit 1
+  </select>
+
+  <select id="selectScQuestionItemList" parameterType="ScQuestionItem" resultMap="ScQuestionItemResult">
+    <include refid="selectScQuestionItemVo" />
+    <where>
+      <if test="courseId != null">
+        and course_id = #{courseId}
+      </if>
+      <if test="defaultCatalogId != null">
+        and default_catalog_id = #{defaultCatalogId}
+      </if>
+      <if test="questionType != null and questionType != ''">
+        and question_type = #{questionType}
+      </if>
+      <if test="status != null and status != ''">
+        and status = #{status}
+      </if>
+    </where>
+    order by item_id desc
+  </select>
+
+  <insert id="insertScQuestionItem" parameterType="ScQuestionItem" useGeneratedKeys="true" keyProperty="itemId">
+    insert into sc_question_item(course_id, default_catalog_id, latest_version_id, current_version_no, question_type,
+    difficulty_level, source_type, source_ref_id, source_batch_no, creator_user_id, status, create_by, create_time, remark)
+    values(#{courseId}, #{defaultCatalogId}, #{latestVersionId}, #{currentVersionNo}, #{questionType},
+    #{difficultyLevel}, #{sourceType}, #{sourceRefId}, #{sourceBatchNo}, #{creatorUserId}, #{status},
+    #{createBy}, sysdate(), #{remark})
+  </insert>
+
+  <update id="updateScQuestionItem" parameterType="ScQuestionItem">
+    update sc_question_item
+    <set>
+      <if test="courseId != null">course_id = #{courseId},</if>
+      <if test="defaultCatalogId != null">default_catalog_id = #{defaultCatalogId},</if>
+      <if test="latestVersionId != null">latest_version_id = #{latestVersionId},</if>
+      <if test="currentVersionNo != null">current_version_no = #{currentVersionNo},</if>
+      <if test="questionType != null">question_type = #{questionType},</if>
+      <if test="difficultyLevel != null">difficulty_level = #{difficultyLevel},</if>
+      <if test="sourceType != null">source_type = #{sourceType},</if>
+      <if test="sourceRefId != null">source_ref_id = #{sourceRefId},</if>
+      <if test="sourceBatchNo != null">source_batch_no = #{sourceBatchNo},</if>
+      <if test="creatorUserId != null">creator_user_id = #{creatorUserId},</if>
+      <if test="status != null">status = #{status},</if>
+      <if test="updateBy != null">update_by = #{updateBy},</if>
+      <if test="remark != null">remark = #{remark},</if>
+      update_time = sysdate()
+    </set>
+    where item_id = #{itemId}
+  </update>
+</mapper>

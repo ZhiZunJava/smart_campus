@@ -20,13 +20,24 @@
   <select id="selectScCourseChapterByChapterId" parameterType="Long"
     resultMap="ScCourseChapterResult"><include refid="selectScCourseChapterVo" /> where chapter_id =
     #{chapterId}</select>
-  <select id="selectScCourseChapterList" parameterType="ScCourseChapter"
-    resultMap="ScCourseChapterResult"><include refid="selectScCourseChapterVo" /><where><if
-        test="courseId != null">and course_id = #{courseId}</if><if test="parentId != null">and
-    parent_id = #{parentId}</if><if test="chapterName != null and chapterName != ''">and
-    chapter_name like concat('%', #{chapterName}, '%')</if><if
-        test="status != null and status != ''">and status = #{status}</if></where> order by
-    chapter_order asc, chapter_id asc</select>
+  <select id="selectScCourseChapterList" parameterType="ScCourseChapter" resultMap="ScCourseChapterResult">
+    <include refid="selectScCourseChapterVo" />
+    <where>
+      <if test="courseId != null">
+        and course_id = #{courseId}
+      </if>
+      <if test="parentId != null">
+        and parent_id = #{parentId}
+      </if>
+      <if test="chapterName != null and chapterName != ''">
+        and chapter_name like concat('%', #{chapterName}, '%')
+      </if>
+      <if test="status != null and status != ''">
+        and status = #{status}
+      </if>
+    </where>
+    order by chapter_order asc, chapter_id asc
+  </select>
   <insert id="insertScCourseChapter" parameterType="ScCourseChapter" useGeneratedKeys="true"
     keyProperty="chapterId">insert into sc_course_chapter(course_id, parent_id, chapter_name,
     chapter_order, status, create_by, create_time, remark) values(#{courseId}, #{parentId},

@@ -245,27 +245,33 @@
         <div class="portal-topbar__notice-layout">
           <div class="portal-topbar__notice-list">
             <button
-              v-for="notice in notices"
-              :key="notice.noticeId"
+              v-for="message in messages"
+              :key="message.messageId"
               type="button"
               class="portal-topbar__notice-item"
-              @click="selectNotice(notice.noticeId)"
+              @click="selectMessage(message)"
             >
               <div class="portal-topbar__notice-head">
-                <strong>{{ notice.noticeTitle }}</strong>
-                <span>{{ notice.noticeType === '1' ? '通知' : '公告' }}</span>
+                <strong>{{ message.messageTitle }}</strong>
+                <span>{{ messageTypeLabel(message.messageType) }}</span>
               </div>
-              <p>{{ notice.noticeContent || '暂无内容摘要' }}</p>
+              <p>{{ message.messageContent || '暂无内容摘要' }}</p>
             </button>
-            <el-empty v-if="!noticeLoading && !notices.length" description="暂无新的消息提醒" />
+            <el-empty v-if="!noticeLoading && !messages.length" description="暂无新的消息提醒" />
           </div>
-          <div v-if="activeNotice" class="portal-topbar__notice-detail">
-            <h3>{{ activeNotice.noticeTitle }}</h3>
+          <div v-if="activeMessage" class="portal-topbar__notice-detail">
+            <h3>{{ activeMessage.messageTitle }}</h3>
             <div class="portal-topbar__notice-meta">
-              <span>{{ activeNotice.noticeType === '1' ? '通知' : '公告' }}</span>
-              <span>{{ activeNotice.createTime || '最近更新' }}</span>
+              <span>{{ messageTypeLabel(activeMessage.messageType) }}</span>
+              <span>{{ activeMessage.createTime || '最近更新' }}</span>
             </div>
-            <div class="portal-topbar__notice-content" v-html="activeNotice.noticeContent || '暂无详细内容'"></div>
+            <div class="portal-topbar__notice-content">{{ activeMessage.messageContent || '暂无详细内容' }}</div>
+            <div class="portal-topbar__form-footer" style="margin-top: 12px;" v-if="activeMessage.actionType === 'resumeExam'">
+              <el-button type="warning" plain @click="goMessageAction(activeMessage)">继续作答</el-button>
+            </div>
+            <div class="portal-topbar__form-footer" style="margin-top: 12px;" v-else-if="activeMessage.actionType === 'growth'">
+              <el-button type="primary" plain @click="goProfilePage">查看成长账户</el-button>
+            </div>
           </div>
         </div>
       </div>
@@ -291,7 +297,7 @@ import {
 } from '@element-plus/icons-vue'
 import usePortalUserStore from '@/store/user'
 import usePortalThemeStore from '@/store/theme'
-import { getPortalHelpCenter, getPortalNoticeDetail, listPortalNotice } from '@/api/portal'
+import { getPortalHelpCenter, getPortalMessageCenter } from '@/api/portal'
 
 interface MenuItem {
   title: string
@@ -349,8 +355,8 @@ const helpLoading = ref(false)
 const noticeLoading = ref(false)
 const helpSections = ref<Array<{ title: string; description: string; items: Array<{ title: string; content: string }> }>>([])
 const helpContact = ref('')
-const notices = ref<any[]>([])
-const activeNotice = ref<any>(null)
+const messages = ref<any[]>([])
+const activeMessage = ref<any>(null)
 
 const roleOptions = computed(() => {
   if (props.roleOptionsOverride.length) {
@@ -459,6 +465,12 @@ function showComingSoon(label: string) {
   ElMessage.info(`${label}功能正在完善中`)
 }
 
+function messageTypeLabel(type: string) {
+  if (type === 'EXAM_REMINDER') return '考试提醒'
+  if (type === 'ACHIEVEMENT') return '成就提醒'
+  return '系统通知'
+}
+
 async function openHelpCenter() {
   helpCenterVisible.value = true
   if (helpSections.value.length) return
@@ -474,23 +486,40 @@ async function openHelpCenter() {
 
 async function openNoticeCenter() {
   noticeVisible.value = true
-  if (!notices.value.length) {
+  if (!messages.value.length) {
     noticeLoading.value = true
     try {
-      const res = await listPortalNotice({ limit: 8 })
-      notices.value = res.data || []
+      const res = await getPortalMessageCenter({ userId: userStore.user?.userId })
+      messages.value = res.data || []
     } finally {
       noticeLoading.value = false
     }
   }
-  if (notices.value.length && !activeNotice.value) {
-    await selectNotice(notices.value[0].noticeId)
+  if (messages.value.length && !activeMessage.value) {
+    activeMessage.value = messages.value[0]
   }
 }
 
-async function selectNotice(noticeId: number) {
-  const detail = await getPortalNoticeDetail(noticeId)
-  activeNotice.value = detail.data || null
+function selectMessage(message: any) {
+  activeMessage.value = message || null
+  if (!message) return
+  if (message.actionType === 'resumeExam' && message.actionTarget) {
+    // keep detail open, actual jump left to user click
+    return
+  }
+}
+
+function goMessageAction(message: any) {
+  if (!message) return
+  if (message.actionType === 'resumeExam' && message.actionTarget) {
+    router.push({
+      path: `/student/exams/session/${message.actionTarget}`,
+      query: {
+        paperId: String(message.paperId || ''),
+      },
+    })
+    noticeVisible.value = false
+  }
 }
 
 function goProfilePage() {

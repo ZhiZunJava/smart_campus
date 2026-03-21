@@ -14,7 +14,7 @@
       <i ref="uploadRef" class="editor-img-uploader"></i>
     </el-upload>
   </div>
-  <div class="editor">
+  <div class="editor" :class="{ 'editor--hide-fillblank': !enableFillBlank }">
     <quill-editor
       ref="quillEditorRef"
       v-model:content="content"
@@ -35,6 +35,7 @@ import { getToken } from "@/utils/auth"
 import type { UploadFileResult } from '@/types/api/common'
 
 const { proxy } = getCurrentInstance()
+const emit = defineEmits(['update:modelValue', 'custom-action'])
 
 const quillEditorRef = ref()
 const uploadUrl = ref(import.meta.env.VITE_APP_BASE_API + "/common/upload") // 上传的图片服务器地址
@@ -71,8 +72,14 @@ const props = defineProps({
   type: {
     type: String,
     default: "url",
+  },
+  enableFillBlank: {
+    type: Boolean,
+    default: false,
   }
 })
+
+const enableFillBlank = computed(() => props.enableFillBlank)
 
 const options = ref({
   theme: "snow",
@@ -90,7 +97,7 @@ const options = ref({
       [{ color: [] }, { background: [] }],            // 字体颜色、字体背景颜色
       [{ align: [] }],                                // 对齐方式
       ["clean"],                                      // 清除文本格式
-      ["link", "image", "video"]                      // 链接、图片、视频
+      ["link", "image", "video", "fillblank"]         // 链接、图片、视频、自定义填空
     ],
   },
   placeholder: "请输入内容",
@@ -117,9 +124,9 @@ watch(() => props.modelValue, (v: string) => {
 
 // 如果设置了上传地址则自定义图片上传事件
 onMounted(() => {
+  const quill = quillEditorRef.value.getQuill()
+  const toolbar = quill.getModule("toolbar")
   if (props.type == 'url') {
-    let quill = quillEditorRef.value.getQuill()
-    let toolbar = quill.getModule("toolbar")
     toolbar.addHandler("image", (value: boolean) => {
       if (value) {
         proxy.$refs.uploadRef.click()
@@ -128,6 +135,11 @@ onMounted(() => {
       }
     })
     quill.root.addEventListener('paste', handlePasteCapture, true)
+  }
+  if (props.enableFillBlank) {
+    toolbar.addHandler("fillblank", () => {
+      emit('custom-action', 'fillBlank')
+    })
   }
 })
 
@@ -195,6 +207,10 @@ function insertImage(file: File) {
     handleUploadSuccess(res.data as UploadFileResult, file)
   })
 }
+
+defineExpose({
+  getQuill: () => quillEditorRef.value?.getQuill?.(),
+})
 </script>
 
 <style>
@@ -274,5 +290,18 @@ function insertImage(file: File) {
 .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="monospace"]::before,
 .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="monospace"]::before {
   content: "等宽字体";
+}
+.ql-snow .ql-toolbar button.ql-fillblank {
+  width: auto;
+  padding: 0 10px;
+  color: #409eff;
+}
+.ql-snow .ql-toolbar button.ql-fillblank::before {
+  content: "填空";
+  font-size: 13px;
+  font-weight: 600;
+}
+.editor--hide-fillblank :deep(.ql-fillblank) {
+  display: none;
 }
 </style>

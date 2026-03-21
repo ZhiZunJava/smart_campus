@@ -28,6 +28,8 @@
         <el-card shadow="never">
           <template #header><span>画像概览</span></template>
           <div v-if="dashboard.profile" class="profile-grid">
+            <div class="profile-hero">{{ diagnosis?.profile?.portraitTitle || '学习画像' }}</div>
+            <div class="profile-hero-desc">{{ diagnosis?.profile?.learningPattern || '待生成学习模式' }}</div>
             <div>能力等级：{{ dashboard.profile.abilityLevel }}</div>
             <div>活跃度：{{ dashboard.profile.activeScore }}</div>
             <div>专注度：{{ dashboard.profile.concentrationScore }}</div>
@@ -42,13 +44,22 @@
           <template #header><span>诊断结论</span></template>
           <template v-if="diagnosis">
             <el-alert :title="diagnosis.overallSummary" type="info" :closable="false" />
+            <el-card shadow="never" class="mt16 ai-panel" v-if="diagnosis.profile?.aiSummary">
+              <div class="ai-panel__title">AI画像解读</div>
+              <div class="ai-panel__summary">{{ diagnosis.profile.aiSummary }}</div>
+              <div class="ai-panel__meta">可信度 {{ diagnosis.profile.aiConfidence || '--' }} · {{ diagnosis.profile.learningPattern || '--' }}</div>
+            </el-card>
+            <div class="mt16">优势特征：</div>
+            <el-space wrap class="mt8">
+              <el-tag v-for="item in diagnosis.profile?.strengths || []" :key="item" type="success">{{ item }}</el-tag>
+            </el-space>
             <div class="mt16">风险标签：</div>
             <el-space wrap class="mt8">
               <el-tag v-for="item in diagnosis.riskTags || []" :key="item" type="danger">{{ item }}</el-tag>
             </el-space>
             <div class="mt16">建议动作：</div>
             <ul class="suggestion-list">
-              <li v-for="item in diagnosis.actionSuggestions || []" :key="item">{{ item }}</li>
+              <li v-for="item in diagnosis.profile?.aiSuggestions || diagnosis.actionSuggestions || []" :key="item">{{ item }}</li>
             </ul>
           </template>
           <el-empty v-else description="暂无诊断数据" />
@@ -156,5 +167,11 @@ onMounted(async () => {
 .mt16 { margin-top: 16px; }
 .mt8 { margin-top: 8px; }
 .profile-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; line-height: 1.9; }
+.profile-hero { grid-column: 1 / -1; font-size: 18px; font-weight: 700; color: var(--el-text-color-primary); }
+.profile-hero-desc { grid-column: 1 / -1; margin-top: -4px; color: var(--el-color-primary); font-size: 13px; }
+.ai-panel { margin-top: 16px; background: linear-gradient(180deg, #f7fbff 0%, #f3f7fd 100%); }
+.ai-panel__title { font-weight: 700; color: var(--el-text-color-primary); }
+.ai-panel__summary { margin-top: 8px; line-height: 1.8; color: var(--el-text-color-regular); }
+.ai-panel__meta { margin-top: 8px; font-size: 12px; color: var(--el-color-primary); }
 .suggestion-list { margin: 8px 0 0; padding-left: 18px; line-height: 1.9; }
 </style>

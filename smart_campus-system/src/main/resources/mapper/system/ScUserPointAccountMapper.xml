@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScUserPointAccountMapper">
+  <resultMap type="ScUserPointAccount" id="ScUserPointAccountResult">
+    <id property="id" column="id" />
+    <result property="userId" column="user_id" />
+    <result property="totalPoints" column="total_points" />
+    <result property="availablePoints" column="available_points" />
+    <result property="usedPoints" column="used_points" />
+    <result property="levelCode" column="level_code" />
+  </resultMap>
+
+  <select id="selectScUserPointAccountByUserId" parameterType="Long" resultMap="ScUserPointAccountResult">
+    select id, user_id, total_points, available_points, used_points, level_code
+    from sc_user_point_account
+    where user_id = #{userId}
+    limit 1
+  </select>
+
+  <insert id="insertScUserPointAccount" parameterType="ScUserPointAccount" useGeneratedKeys="true" keyProperty="id">
+    insert into sc_user_point_account(user_id, total_points, available_points, used_points, level_code, create_by, create_time, remark)
+    values(#{userId}, #{totalPoints}, #{availablePoints}, #{usedPoints}, #{levelCode}, #{createBy}, sysdate(), #{remark})
+  </insert>
+
+  <update id="updateScUserPointAccount" parameterType="ScUserPointAccount">
+    update sc_user_point_account
+    <set>
+      <if test="totalPoints != null">total_points = #{totalPoints},</if>
+      <if test="availablePoints != null">available_points = #{availablePoints},</if>
+      <if test="usedPoints != null">used_points = #{usedPoints},</if>
+      <if test="levelCode != null">level_code = #{levelCode},</if>
+      <if test="updateBy != null">update_by = #{updateBy},</if>
+      update_time = sysdate()
+    </set>
+    where id = #{id}
+  </update>
+</mapper>
+

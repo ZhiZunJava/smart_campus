@@ -28,6 +28,10 @@
           <span>档案完整度</span>
           <strong>{{ profileCompleteness }}%</strong>
         </div>
+        <div class="portal-hero__metric">
+          <span>成长等级</span>
+          <strong>{{ growth.account?.levelCode || 'L1' }}</strong>
+        </div>
       </div>
     </section>
 
@@ -46,6 +50,11 @@
         <div class="kpi-label">画像字段</div>
         <div class="kpi-value">{{ portraitCount }}</div>
         <div class="kpi-sub">学习目标、兴趣标签与学习风格</div>
+      </section>
+      <section class="portal-card profile-kpi-card">
+        <div class="kpi-label">累计积分</div>
+        <div class="kpi-value">{{ growth.account?.totalPoints || 0 }}</div>
+        <div class="kpi-sub">考试提交与任务完成会持续累积成长积分</div>
       </section>
     </div>
 
@@ -103,15 +112,68 @@
         </div>
       </section>
     </div>
+
+    <div class="portal-grid portal-grid-2 mt16">
+      <section class="portal-card">
+        <div class="portal-section-title">
+          <h3>成长账户</h3>
+          <p>积分、等级与可用成长值</p>
+        </div>
+        <div class="profile-grid">
+          <div class="profile-item"><span>累计积分</span><strong>{{ growth.account?.totalPoints || 0 }}</strong></div>
+          <div class="profile-item"><span>可用积分</span><strong>{{ growth.account?.availablePoints || 0 }}</strong></div>
+          <div class="profile-item"><span>已使用积分</span><strong>{{ growth.account?.usedPoints || 0 }}</strong></div>
+          <div class="profile-item"><span>成长等级</span><strong>{{ growth.account?.levelCode || 'L1' }}</strong></div>
+        </div>
+      </section>
+
+      <section class="portal-card">
+        <div class="portal-section-title">
+          <h3>已解锁成就</h3>
+          <p>考试、任务与成长阶段成就</p>
+        </div>
+        <div class="profile-achievement-list">
+          <div v-for="item in growth.achievements || []" :key="item.achievementId" class="profile-achievement">
+            <div class="profile-achievement__title">{{ item.achievementTitle }}</div>
+            <div class="profile-achievement__desc">{{ item.achievementDesc || '已达成成就' }}</div>
+            <div class="profile-achievement__meta">
+              <span>编码 {{ item.achievementCode }}</span>
+              <span>进度 {{ item.progressValue || 0 }}</span>
+              <span>达成 {{ item.earnedTime || '-' }}</span>
+            </div>
+          </div>
+          <el-empty v-if="!(growth.achievements || []).length" description="暂未解锁成就" />
+        </div>
+      </section>
+    </div>
+
+    <div class="portal-grid mt16">
+      <section class="portal-card">
+        <div class="portal-section-title">
+          <h3>最近积分流水</h3>
+          <p>查看最近的成长积分变化</p>
+        </div>
+        <el-table :data="growth.recentLedgers || []" size="small">
+          <el-table-column prop="bizType" label="业务类型" width="140" />
+          <el-table-column prop="changeType" label="变更类型" width="110" />
+          <el-table-column prop="changePoints" label="积分变化" width="100" />
+          <el-table-column prop="balanceAfter" label="余额" width="100" />
+          <el-table-column prop="remark" label="说明" min-width="220" show-overflow-tooltip />
+        </el-table>
+      </section>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { getPortalProfile } from '@/api/portal'
+import { getPortalGrowthSummary, getPortalProfile } from '@/api/portal'
+import usePortalUserStore from '@/store/user'
 
 const profile = ref<any>({})
 const roleGroup = ref('')
+const growth = ref<any>({ account: null, achievements: [], recentLedgers: [] })
+const userStore = usePortalUserStore()
 
 const sexLabel = computed(() => {
   const value = String(profile.value.sex ?? '2')
@@ -165,9 +227,13 @@ const parsedTags = computed(() =>
 )
 
 onMounted(async () => {
-  const res = await getPortalProfile()
-  profile.value = res.data?.user || {}
-  roleGroup.value = res.data?.roleGroup || ''
+  const [profileRes, growthRes] = await Promise.all([
+    getPortalProfile(),
+    getPortalGrowthSummary({ userId: userStore.user?.userId }),
+  ])
+  profile.value = profileRes.data?.user || {}
+  roleGroup.value = profileRes.data?.roleGroup || ''
+  growth.value = growthRes.data || { account: null, achievements: [], recentLedgers: [] }
 })
 </script>
 
@@ -293,6 +359,41 @@ onMounted(async () => {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.profile-achievement-list {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.profile-achievement {
+  padding: 14px;
+  border-radius: 6px;
+  background: var(--portal-surface-bg);
+  border: 1px solid var(--portal-border);
+}
+
+.profile-achievement__title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--portal-text);
+}
+
+.profile-achievement__desc {
+  margin-top: 6px;
+  color: var(--portal-text-secondary);
+  line-height: 1.8;
+  font-size: 13px;
+}
+
+.profile-achievement__meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  color: var(--portal-text-secondary);
+  font-size: 12px;
 }
 
 .profile-tag {
