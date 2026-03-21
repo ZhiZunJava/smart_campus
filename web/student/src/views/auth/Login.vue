@@ -92,7 +92,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from '@/utils/feedback'
 import { useRouter } from 'vue-router'
 import PortalTopBar from '@/components/PortalTopBar.vue'
 import usePortalUserStore from '@/store/user'
@@ -204,6 +204,11 @@ async function handleLogin() {
     await userStore.loadUserInfo()
     await router.replace(resolveRoleHome())
     ElMessage.success('登录成功')
+  } catch {
+    if (userStore.captchaEnabled) {
+      form.code = ''
+      await refreshCaptcha()
+    }
   } finally {
     loading.value = false
   }

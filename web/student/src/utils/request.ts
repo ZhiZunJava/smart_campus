@@ -1,5 +1,5 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios'
-import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
+import { ElMessage, ElMessageBox, ElNotification } from '@/utils/feedback'
 import { getToken, removeToken } from '@/utils/auth'
 import errorCode from '@/utils/errorCode'
 

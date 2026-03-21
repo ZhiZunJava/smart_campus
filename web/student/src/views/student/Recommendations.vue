@@ -38,7 +38,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from '@/utils/feedback'
 import { feedbackRecommendation, getAnalysisMeta, listActiveRecommendation } from '@/api/portal'
 import usePortalUserStore from '@/store/user'
 

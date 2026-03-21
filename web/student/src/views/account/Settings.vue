@@ -168,7 +168,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from '@/utils/feedback'
 import usePortalUserStore from '@/store/user'
 import { getPortalProfile, updatePortalPassword, updatePortalProfile } from '@/api/portal'
 

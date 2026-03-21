@@ -1,77 +1,113 @@
 <template>
-  <div class="portal-page service-home">
-    <section class="service-home__hero portal-card">
-      <div>
-        <div class="service-home__eyebrow">Student Portal</div>
-        <div class="service-home__title">学生服务大厅</div>
-        <p class="service-home__desc">
-          从课程、资源、考试、错题到任务挑战，所有学习服务集中在这里。你可以像使用完整校园门户一样，快速进入对应模块。
-        </p>
-      </div>
-      <div class="service-home__hero-stats">
-        <div class="service-home__hero-metric">
-          <span>能力等级</span>
-          <strong>{{ dashboard.profile?.abilityLevel || '--' }}</strong>
-        </div>
-        <div class="service-home__hero-metric">
-          <span>掌握度</span>
-          <strong>{{ dashboard.profile?.masteryScore || 0 }}</strong>
-        </div>
-      </div>
-    </section>
+  <div class="portal-page">
+    <section
+      class="relative min-h-[calc(100vh-92px)] overflow-hidden rounded-[28px] border border-white/25 bg-slate-900 shadow-[0_24px_60px_rgba(15,23,42,0.22)]"
+      :style="heroBackgroundStyle"
+    >
+      <div class="absolute inset-0 bg-[linear-gradient(90deg,rgba(3,36,35,0.76)_0%,rgba(6,78,75,0.5)_34%,rgba(10,16,32,0.12)_100%)]"></div>
+      <div class="absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(45,212,191,0.22),transparent_28%),radial-gradient(circle_at_84%_18%,rgba(255,255,255,0.14),transparent_16%),radial-gradient(circle_at_72%_72%,rgba(15,23,42,0.34),transparent_34%)]"></div>
 
-    <section class="portal-kpis">
-      <el-card class="portal-card portal-stat-card"><div class="label">学习行为</div><div class="value">{{ dashboard.studyRecordCount || 0 }}</div><div class="sub">累计行为采集次数</div></el-card>
-      <el-card class="portal-card portal-stat-card"><div class="label">考试记录</div><div class="value">{{ dashboard.examRecordCount || 0 }}</div><div class="sub">阶段考试与练习记录</div></el-card>
-      <el-card class="portal-card portal-stat-card"><div class="label">预警数量</div><div class="value">{{ dashboard.warningCount || 0 }}</div><div class="sub">待关注学情风险</div></el-card>
-      <el-card class="portal-card portal-stat-card"><div class="label">推荐资源</div><div class="value">{{ (workbench.activeRecommendations || []).length }}</div><div class="sub">当前推荐学习任务</div></el-card>
-    </section>
+      <div class="relative z-10 flex min-h-[calc(100vh-92px)] flex-col px-5 py-6 sm:px-8 lg:px-12 lg:py-10">
+        <div class="grid flex-1 gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(360px,520px)] lg:items-center xl:gap-12">
+          <div class="max-w-4xl self-center text-white">
+            <div class="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.28em] text-white/80 backdrop-blur-md">
+              <span class="h-2 w-2 rounded-full bg-emerald-300"></span>
+              Smart Campus Portal
+            </div>
 
-    <div class="service-group-grid mt20">
-      <section v-for="group in displayGroups" :key="group.key" class="service-group-card portal-card">
-        <div class="service-group-card__header">
-          <div>
-            <h3>{{ group.label }}</h3>
-            <p>{{ group.desc }}</p>
-          </div>
-          <i :class="group.icon"></i>
-        </div>
-        <div class="service-group-card__list">
-          <button v-for="item in group.items" :key="item.path" type="button" class="service-link" @click="go(item.path)">
-            <strong>{{ item.title }}</strong>
-            <span>{{ item.desc }}</span>
-          </button>
-        </div>
-      </section>
-    </div>
+            <div class="mt-6 max-w-3xl">
+              <p class="text-sm font-medium tracking-[0.22em] text-cyan-100/80">{{ greetingLabel }}</p>
+              <h1 class="mt-4 text-4xl font-light leading-tight text-white sm:text-5xl lg:text-6xl">
+                {{ userName }}
+                <span class="ml-0 block font-semibold text-white/95 sm:ml-3 sm:inline">{{ homeTitle }}</span>
+              </h1>
+              <div class="mt-6 h-px w-full max-w-2xl bg-white/25"></div>
+              <p class="mt-6 text-lg leading-9 text-white/92 sm:text-2xl">
+                {{ academicSummary }}
+              </p>
+              <div class="mt-4 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm text-white/82 sm:text-base">
+                <span>学习行为：{{ studyRecordText }}</span>
+                <span>能力等级：{{ dashboard.profile?.abilityLevel || '--' }}</span>
+                <span>掌握度：{{ dashboard.profile?.masteryScore || 0 }}</span>
+              </div>
+            </div>
 
-    <div class="portal-grid portal-grid-2 mt20">
-      <el-card class="portal-card portal-soft-card">
-        <template #header><span>诊断与建议</span></template>
-        <template v-if="diagnosis">
-          <el-alert :title="diagnosis.overallSummary" type="info" :closable="false" />
-          <div class="mt16">
-            <div class="service-subtitle">风险标签</div>
-            <div class="portal-chip-list">
-              <el-tag v-for="item in diagnosis.riskTags || []" :key="item" type="danger">{{ item }}</el-tag>
-              <el-tag v-if="!(diagnosis.riskTags || []).length" type="info">暂无明显风险标签</el-tag>
+            <div class="mt-8 flex flex-wrap items-center gap-4">
+              <button
+                type="button"
+                class="inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/55 bg-white/10 px-5 py-2.5 text-sm font-medium text-white backdrop-blur-md transition-all duration-200 hover:bg-white/18 focus:outline-none focus:ring-2 focus:ring-white/70"
+                @click="go('/student/recommendations')"
+              >
+                最近使用
+                <i class="ri-arrow-right-s-line text-lg"></i>
+              </button>
+              <button
+                type="button"
+                class="inline-flex cursor-pointer items-center gap-2 rounded-full border border-emerald-200/40 bg-emerald-300/15 px-5 py-2.5 text-sm font-medium text-emerald-50 backdrop-blur-md transition-all duration-200 hover:bg-emerald-300/25 focus:outline-none focus:ring-2 focus:ring-emerald-200/70"
+                @click="scrollToSection('insights')"
+              >
+                学情洞察
+                <i class="ri-bar-chart-box-line text-lg"></i>
+              </button>
             </div>
           </div>
-        </template>
-        <el-empty v-else description="暂无诊断数据" />
-      </el-card>
 
-      <el-card class="portal-card portal-soft-card">
-        <template #header><span>最近考试</span></template>
-        <el-table :data="workbench.recentExamRecords || []" size="small">
-          <el-table-column prop="recordId" label="记录ID" width="90" />
-          <el-table-column prop="score" label="得分" width="100" />
-          <el-table-column prop="correctRate" label="正确率" width="100" />
-          <el-table-column prop="submitTime" label="交卷时间" min-width="160" />
-        </el-table>
-        <el-empty v-if="!(workbench.recentExamRecords || []).length" description="暂无考试记录" />
-      </el-card>
-    </div>
+          <div class="flex justify-center lg:justify-end">
+            <div class="w-full max-w-[520px]">
+              <div class="mb-3 flex items-center justify-between px-1 text-white/90">
+                <span class="text-base font-medium">快捷入口</span>
+                <button
+                  type="button"
+                  class="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-white/25 bg-white/10 text-white/85 backdrop-blur-md transition-all duration-200 hover:bg-white/18 focus:outline-none focus:ring-2 focus:ring-white/70"
+                  @click="go('/student/dashboard')"
+                  aria-label="刷新首页视图"
+                >
+                  <i class="ri-settings-3-line text-base"></i>
+                </button>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                <button
+                  v-for="item in shortcutItems"
+                  :key="item.path"
+                  type="button"
+                  class="group flex aspect-square cursor-pointer flex-col items-center justify-center gap-4 overflow-hidden rounded-[22px] border border-white/18 bg-white/16 px-4 py-5 text-white shadow-[0_10px_28px_rgba(15,23,42,0.16)] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/22 hover:shadow-[0_18px_36px_rgba(15,23,42,0.22)] focus:outline-none focus:ring-2 focus:ring-white/70"
+                  @click="go(item.path)"
+                >
+                  <div
+                    class="relative flex h-16 w-16 items-center justify-center rounded-full text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]"
+                    :class="item.iconBgClass"
+                  >
+                    <i :class="[item.icon, 'text-[30px]']"></i>
+                  </div>
+                  <div class="space-y-1 text-center">
+                    <div class="text-lg font-medium leading-none text-white">{{ item.title }}</div>
+                    <p class="line-clamp-2 min-h-10 text-xs leading-5 text-white/72">{{ item.desc }}</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pointer-events-none absolute right-4 top-1/2 hidden -translate-y-1/2 xl:block">
+          <div class="pointer-events-auto flex flex-col gap-5 rounded-[28px] border border-white/18 bg-black/18 px-4 py-5 backdrop-blur-xl">
+            <button
+              v-for="action in sideActions"
+              :key="action.key"
+              type="button"
+              class="group flex w-20 cursor-pointer flex-col items-center gap-3 rounded-[20px] px-3 py-3 text-white transition-colors duration-200 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/70"
+              @click="handleSideAction(action)"
+            >
+              <span class="flex h-14 w-14 items-center justify-center rounded-full bg-white/92 text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.18)]">
+                <i :class="[action.icon, 'text-2xl']"></i>
+              </span>
+              <span class="text-center text-sm leading-5 text-white/88">{{ action.label }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -79,84 +115,194 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getLearningDiagnosis, getLearningWorkbench, getStudentDashboard } from '@/api/portal'
+import heroImage from '@/assets/img/login-background.jpg'
 import usePortalUserStore from '@/store/user'
+
+type ShortcutItem = {
+  title: string
+  desc: string
+  path: string
+  icon: string
+  iconBgClass: string
+}
+
+type SideAction = {
+  key: string
+  label: string
+  icon: string
+  type: 'route' | 'scroll'
+  target: string
+}
 
 const router = useRouter()
 const userStore = usePortalUserStore()
+
 const dashboard = ref<any>({})
 const diagnosis = ref<any>(null)
 const workbench = ref<any>({ activeRecommendations: [], recentStudyRecords: [], recentExamRecords: [], recentWarnings: [] })
-const latestOngoingRecord = computed(() => userStore.ongoingExam)
 
-const groups = [
+const insightsSection = ref<HTMLElement | null>(null)
+const examSection = ref<HTMLElement | null>(null)
+
+const shortcutItems: ShortcutItem[] = [
   {
-    key: 'general',
-    label: '综合服务',
-    desc: '学习入口、资源与智能辅助统一收口。',
-    icon: 'ri-service-line',
-    items: [
-      { title: '学习首页', path: '/student/dashboard', desc: '诊断、工作台与关键指标' },
-      { title: '资源中心', path: '/student/resources', desc: '筛选资源并记录学习行为' },
-      { title: '智能问答', path: '/student/qa', desc: '基于课程与学习问题问答' },
-    ],
+    title: '学习总览',
+    desc: '查看首页诊断与学习态势',
+    path: '/student/dashboard',
+    icon: 'ri-home-5-line',
+    iconBgClass: 'bg-[linear-gradient(180deg,#e7bf9a_0%,#cb8f68_100%)]',
   },
   {
-    key: 'course',
-    label: '课程与选课',
-    desc: '围绕课程、课表与学习路径组织学习任务。',
+    title: '我的课表',
+    desc: '按周查看课程安排',
+    path: '/student/schedule',
+    icon: 'ri-calendar-schedule-line',
+    iconBgClass: 'bg-[linear-gradient(180deg,#9fe7da_0%,#4fcab2_100%)]',
+  },
+  {
+    title: '我的课程',
+    desc: '进入学期课程与班级课程',
+    path: '/student/courses',
     icon: 'ri-book-open-line',
-    items: [
-      { title: '我的课程', path: '/student/courses', desc: '查看学期课程与班级课程' },
-      { title: '我的课表', path: '/student/schedule', desc: '按周查看课程安排' },
-      { title: '个性推荐', path: '/student/recommendations', desc: '主动反馈推荐结果' },
-    ],
+    iconBgClass: 'bg-[linear-gradient(180deg,#d3ceff_0%,#9f94f5_100%)]',
   },
   {
-    key: 'plaza',
-    label: '任务与挑战',
-    desc: '进入开放挑战和通用任务广场，扩展综合能力。',
+    title: '资源中心',
+    desc: '检索学习资源并跟踪行为',
+    path: '/student/resources',
+    icon: 'ri-folder-chart-line',
+    iconBgClass: 'bg-[linear-gradient(180deg,#aedbfd_0%,#58b4fb_100%)]',
+  },
+  {
+    title: '任务广场',
+    desc: '查看挑战任务与通用题目',
+    path: '/student/plaza',
     icon: 'ri-rocket-2-line',
-    items: [
-      { title: '任务广场', path: '/student/plaza', desc: '浏览通用试卷、开放挑战与通用题目' },
-    ],
+    iconBgClass: 'bg-[linear-gradient(180deg,#f7b4bb_0%,#ff7575_100%)]',
   },
   {
-    key: 'growth',
-    label: '考试与成长',
-    desc: '沉淀考试记录、错题闭环与持续成长轨迹。',
-    icon: 'ri-medal-line',
-    items: [
-      { title: '继续考试', path: '/student/exams?resume=1&tab=papers', desc: '快速回到最近一场未完成考试' },
-      { title: '我的考试', path: '/student/exams', desc: '考试、记录与错题闭环' },
-      { title: '我的错题本', path: '/student/wrongbook', desc: '错题回顾与复盘' },
-    ],
+    title: '智能问答',
+    desc: '围绕课程问题快速求助',
+    path: '/student/qa',
+    icon: 'ri-message-3-line',
+    iconBgClass: 'bg-[linear-gradient(180deg,#f7c99d_0%,#ffa540_100%)]',
+  },
+  {
+    title: '个性推荐',
+    desc: '查看推荐资源与个性化建议',
+    path: '/student/recommendations',
+    icon: 'ri-lightbulb-flash-line',
+    iconBgClass: 'bg-[linear-gradient(180deg,#9fe7da_0%,#4fcab2_100%)]',
+  },
+  {
+    title: '我的考试',
+    desc: '进入考试记录与练习入口',
+    path: '/student/exams',
+    icon: 'ri-file-list-3-line',
+    iconBgClass: 'bg-[linear-gradient(180deg,#e7bf9a_0%,#cb8f68_100%)]',
+  },
+  {
+    title: '我的错题本',
+    desc: '复盘错题并持续巩固',
+    path: '/student/wrongbook',
+    icon: 'ri-booklet-line',
+    iconBgClass: 'bg-[linear-gradient(180deg,#f7b4bb_0%,#ff7575_100%)]',
   },
 ]
 
-const displayGroups = computed(() =>
-  groups.map((group) => {
-    if (group.key !== 'growth' || latestOngoingRecord.value) {
-      return group
-    }
-    return {
-      ...group,
-      items: group.items.filter((item) => item.title !== '继续考试'),
-    }
-  }),
-)
+const sideActions: SideAction[] = [
+  { key: 'todo', label: '我的推荐', icon: 'ri-task-line', type: 'route', target: '/student/recommendations' },
+  { key: 'exam', label: '最近考试', icon: 'ri-message-2-line', type: 'scroll', target: 'exams' },
+  { key: 'notice', label: '学情诊断', icon: 'ri-notification-3-line', type: 'scroll', target: 'insights' },
+]
+
+const userName = computed(() => userStore.user?.realName || userStore.user?.username || '同学')
+const homeTitle = computed(() => '欢迎回来')
+const studyRecordText = computed(() => {
+  const value = dashboard.value.studyRecordCount
+  return typeof value === 'number' ? `${value} 次` : '--'
+})
+
+const greetingLabel = computed(() => {
+  const hour = new Date().getHours()
+  if (hour < 6) return '凌晨好'
+  if (hour < 12) return '早上好'
+  if (hour < 14) return '中午好'
+  if (hour < 19) return '下午好'
+  return '晚上好'
+})
+
+const academicSummary = computed(() => {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = `${now.getMonth() + 1}`.padStart(2, '0')
+  const day = `${now.getDate()}`.padStart(2, '0')
+  const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+  return `${year}年${month}月${day}日 ${weekDays[now.getDay()]}，今天也适合把课程、资源与考试节奏安排好`
+})
+
+const summaryMetrics = computed(() => [
+  {
+    key: 'study',
+    label: '学习行为',
+    value: dashboard.value.studyRecordCount || 0,
+    desc: '累计行为采集次数',
+  },
+  {
+    key: 'exam',
+    label: '考试记录',
+    value: dashboard.value.examRecordCount || 0,
+    desc: '阶段考试与练习记录',
+  },
+  {
+    key: 'warning',
+    label: '预警数量',
+    value: dashboard.value.warningCount || 0,
+    desc: '需要优先关注的学情风险',
+  },
+  {
+    key: 'resource',
+    label: '推荐资源',
+    value: (workbench.value.activeRecommendations || []).length,
+    desc: '当前推荐学习任务',
+  },
+])
+
+const heroBackgroundStyle = computed(() => ({
+  backgroundImage: `linear-gradient(rgba(8, 46, 53, 0.18), rgba(8, 46, 53, 0.18)), url(${heroImage})`,
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
+}))
 
 function go(path: string) {
   router.push(path)
 }
 
+function scrollToSection(section: 'insights' | 'exams') {
+  const target = section === 'insights' ? insightsSection.value : examSection.value
+  target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function handleSideAction(action: SideAction) {
+  if (action.type === 'route') {
+    go(action.target)
+    return
+  }
+  if (action.target === 'exams' || action.target === 'insights') {
+    scrollToSection(action.target)
+  }
+}
+
 async function loadData() {
   const userId = userStore.user?.userId
   if (!userId) return
+
   const [dashboardRes, diagnosisRes, workbenchRes] = await Promise.all([
     getStudentDashboard({ userId, recommendLimit: 5 }),
     getLearningDiagnosis({ userId, recommendLimit: 5, autoGenerate: true }),
     getLearningWorkbench({ userId, limit: 5 }),
   ])
+
   dashboard.value = dashboardRes.data || {}
   diagnosis.value = diagnosisRes.data || null
   workbench.value = workbenchRes.data || {}
@@ -164,137 +310,3 @@ async function loadData() {
 
 onMounted(loadData)
 </script>
-
-<style scoped>
-.service-home__hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.7fr);
-  gap: 18px;
-  padding: 24px;
-  background:
-    radial-gradient(circle at top left, rgba(47, 107, 255, 0.12) 0%, rgba(47, 107, 255, 0) 32%),
-    linear-gradient(135deg, #ffffff 0%, #f5f9ff 100%);
-}
-.service-home__eyebrow {
-  display: inline-flex;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(49, 95, 202, 0.1);
-  color: #315fca;
-  font-size: 12px;
-  font-weight: 700;
-}
-.service-home__title {
-  margin-top: 12px;
-  font-size: 32px;
-  font-weight: 800;
-  color: var(--portal-text);
-}
-.service-home__desc {
-  margin-top: 10px;
-  max-width: 760px;
-  font-size: 14px;
-  line-height: 1.9;
-  color: var(--portal-text-secondary);
-}
-.service-home__hero-stats {
-  display: grid;
-  gap: 14px;
-}
-.service-home__hero-metric {
-  padding: 18px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid var(--portal-border);
-}
-.service-home__hero-metric span {
-  color: var(--portal-text-secondary);
-  font-size: 13px;
-}
-.service-home__hero-metric strong {
-  display: block;
-  margin-top: 8px;
-  font-size: 30px;
-  color: var(--portal-brand);
-}
-.service-group-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-}
-.service-group-card {
-  padding: 18px;
-}
-.service-group-card__header {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: flex-start;
-  margin-bottom: 16px;
-}
-.service-group-card__header h3 {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 800;
-  color: var(--portal-text);
-}
-.service-group-card__header p {
-  margin: 8px 0 0;
-  font-size: 13px;
-  line-height: 1.8;
-  color: var(--portal-text-secondary);
-}
-.service-group-card__header i {
-  font-size: 26px;
-  color: var(--portal-brand);
-}
-.service-group-card__list {
-  display: grid;
-  gap: 12px;
-}
-.service-link {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  padding: 12px 14px;
-  text-align: left;
-  border: 1px solid var(--portal-border);
-  border-radius: 14px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-  cursor: pointer;
-  transition: all .2s ease;
-}
-.service-link:hover {
-  transform: translateY(-1px);
-  border-color: var(--portal-border-strong);
-  box-shadow: var(--portal-shadow-soft);
-}
-.service-link strong {
-  font-size: 16px;
-  color: var(--portal-text);
-}
-.service-link span {
-  font-size: 12px;
-  line-height: 1.7;
-  color: var(--portal-text-secondary);
-}
-.service-subtitle {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--portal-text);
-}
-@media (max-width: 1200px) {
-  .service-group-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-@media (max-width: 960px) {
-  .service-home__hero {
-    grid-template-columns: 1fr;
-  }
-  .service-group-grid {
-    grid-template-columns: 1fr;
-  }
-}
-</style>

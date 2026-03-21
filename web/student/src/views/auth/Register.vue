@@ -167,7 +167,7 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox } from '@/utils/feedback'
 import { useRouter } from 'vue-router'
 import PortalTopBar from '@/components/PortalTopBar.vue'
 import usePortalUserStore from '@/store/user'

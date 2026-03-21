@@ -60,7 +60,7 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from '@/utils/feedback'
 import { fetchPortalCourseOptions, getResourceDetail, listResource, recordStudyBehavior } from '@/api/portal'
 import usePortalUserStore from '@/store/user'
 

@@ -287,7 +287,8 @@
 <script setup lang="ts">
 import 'highlight.js/styles/github-dark.css'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import { ElMessage, ElMessageBox, type ElMessageBoxOptions } from 'element-plus'
+import type { ElMessageBoxOptions } from 'element-plus'
+import { ElMessage, ElMessageBox } from '@/utils/feedback'
 import { getToken } from '@/utils/auth'
 import { normalizeQaErrorMessage, parseAssistantReferenceSource, parseQaAttachments } from '@/utils/qaMessage'
 import { renderQaMarkdown } from '@/utils/qaMarkdown'

@@ -203,7 +203,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from '@/utils/feedback'
 import { createWrongRetryPaper, fetchPortalCourseOptions, getWrongBookOverview, listWrongBook } from '@/api/portal'
 import usePortalUserStore from '@/store/user'
 

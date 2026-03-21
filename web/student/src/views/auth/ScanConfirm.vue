@@ -38,7 +38,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from '@/utils/feedback'
 import { confirmScanLogin, getCodeImg } from '@/api/auth'
 
 const route = useRoute()
@@ -87,6 +87,11 @@ async function handleConfirm() {
     })
     success.value = true
     ElMessage.success('扫码确认成功')
+  } catch {
+    if (captchaEnabled.value) {
+      form.code = ''
+      await loadCaptcha()
+    }
   } finally {
     loading.value = false
   }

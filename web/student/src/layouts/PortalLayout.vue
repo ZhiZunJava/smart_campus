@@ -57,7 +57,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { RouteLocationNormalizedLoaded } from 'vue-router'
-import { ElMessageBox } from 'element-plus'
+import { ElMessageBox } from '@/utils/feedback'
 import PortalTopBar from '@/components/PortalTopBar.vue'
 import usePortalUserStore from '@/store/user'
 
