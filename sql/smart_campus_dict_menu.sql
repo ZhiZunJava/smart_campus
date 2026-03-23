@@ -102,9 +102,7 @@ INSERT INTO `sys_menu` VALUES
 (2005, '智能测评', '2000', '5', 'exam',                 'campus/exam/index',            '', '', 1, 0, 'C', '0', '0', 'campus:exam:list',            'build', 'admin', NOW(), '', NULL, '智能测评菜单'),
 (2006, 'AI配置',   '2000', '6', 'ai',                   'campus/ai/index',              '', '', 1, 0, 'C', '0', '0', 'campus:ai:list',              'edit', 'admin', NOW(), '', NULL, 'AI配置菜单'),
 
-(2010, '学习画像查询', '2001', '1', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:learning:profile', '#', 'admin', NOW(), '', NULL, ''),
 (2011, '学习计划新增', '2001', '2', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:learning:plan:add', '#', 'admin', NOW(), '', NULL, ''),
-(2012, '学习推荐反馈', '2001', '3', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:learning:recommend:feedback', '#', 'admin', NOW(), '', NULL, ''),
 
 (2020, '资源查询', '2002', '1', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:resource:query', '#', 'admin', NOW(), '', NULL, ''),
 (2021, '资源新增', '2002', '2', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:resource:add', '#', 'admin', NOW(), '', NULL, ''),
@@ -112,8 +110,6 @@ INSERT INTO `sys_menu` VALUES
 (2023, '资源删除', '2002', '4', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:resource:remove', '#', 'admin', NOW(), '', NULL, ''),
 (2024, '资源审核', '2002', '5', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:resource:audit', '#', 'admin', NOW(), '', NULL, ''),
 
-(2030, '学情预警查询', '2003', '1', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:analysis:warning:list', '#', 'admin', NOW(), '', NULL, ''),
-(2031, '学情报告查看', '2003', '2', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:analysis:report:view', '#', 'admin', NOW(), '', NULL, ''),
 
 (2040, '问答会话查询', '2004', '1', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:qa:session:list', '#', 'admin', NOW(), '', NULL, ''),
 (2041, '发起问答',     '2004', '2', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:qa:ask', '#', 'admin', NOW(), '', NULL, ''),

@@ -66,8 +66,6 @@ public class CampusDetailServiceImpl implements ICampusDetailService {
         vo.setQuestionType(question.getQuestionType());
         vo.setDifficultyLevel(question.getDifficultyLevel());
         vo.setStem(question.getStem());
-        vo.setAnswer(question.getAnswer());
-        vo.setAnalysis(question.getAnalysis());
         vo.setSource(question.getSource());
         vo.setQualityScore(question.getQualityScore());
         vo.setStatus(question.getStatus());

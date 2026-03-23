@@ -103,14 +103,17 @@ public class ScExamAnalysisServiceImpl implements IScExamAnalysisService {
         if (record == null) {
             throw new ServiceException("考试记录不存在");
         }
+        ScExamPaper paper = scExamPaperMapper.selectScExamPaperByPaperId(record.getPaperId());
         List<ScExamAnswer> answers = scExamAnswerMapper.selectScExamAnswerByRecordId(recordId);
         ScExamSession session = record.getSessionId() == null ? null
                 : scExamSessionMapper.selectScExamSessionBySessionId(record.getSessionId());
         List<ScExamSessionPaper> sessionPapers = loadSessionPapers(record.getSessionId());
+        boolean allowViewScoreSummary = paper == null || !"0".equals(paper.getAllowViewScore());
+        boolean allowViewAnswerAnalysis = paper == null || !"0".equals(paper.getAllowReviewAnalysis());
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("record", record);
+        result.put("record", sanitizeRecordDetail(record, allowViewScoreSummary));
         result.put("session", session);
-        result.put("answers", answers);
+        result.put("answers", sanitizeRecordAnswers(answers, allowViewScoreSummary, allowViewAnswerAnalysis));
         result.put("questionTypeStats", buildQuestionTypeStats(answers));
         result.put("knowledgePointStats", buildKnowledgePointStats(answers));
         result.put("subPaperStats", buildSessionPaperStats(sessionPapers));
@@ -127,7 +130,7 @@ public class ScExamAnalysisServiceImpl implements IScExamAnalysisService {
         }
         ScExamSession session = record.getSessionId() == null ? null
                 : scExamSessionMapper.selectScExamSessionBySessionId(record.getSessionId());
-        ExamPaperDetailVo paperDetail = scExamManageService.selectPaperDetail(record.getPaperId());
+        ExamPaperDetailVo paperDetail = sanitizePaperDetail(scExamManageService.selectPaperDetail(record.getPaperId()));
         List<ScExamSessionPaper> sessionPapers = loadSessionPapers(record.getSessionId());
         List<ScExamAnswer> answers = scExamAnswerMapper.selectScExamAnswerByRecordId(recordId);
         List<ScExamAnswerDraft> drafts = loadDrafts(recordId);
@@ -171,7 +174,7 @@ public class ScExamAnalysisServiceImpl implements IScExamAnalysisService {
         }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("wrong", wrong);
-        result.put("question", scExamManageService.selectQuestionDetail(wrong.getQuestionId()));
+        result.put("question", sanitizeQuestionDetail(scExamManageService.selectQuestionDetail(wrong.getQuestionId())));
         return result;
     }
 
@@ -189,9 +192,13 @@ public class ScExamAnalysisServiceImpl implements IScExamAnalysisService {
         paperUpsertDto.setCourseId(dto.getCourseId());
         paperUpsertDto.setPaperType("fixed");
         paperUpsertDto.setDurationMinutes(dto.getDurationMinutes() == null ? 45 : dto.getDurationMinutes());
-        paperUpsertDto.setPublishStatus("draft");
+        paperUpsertDto.setPublishStatus("published");
+        paperUpsertDto.setPublishStartTime(new java.util.Date());
         paperUpsertDto.setStatus("0");
         paperUpsertDto.setRemark("错题回练自动生成");
+        paperUpsertDto.setAllowViewScore("1");
+        paperUpsertDto.setAllowReviewAnalysis("1");
+        paperUpsertDto.setQuestionNavigationMode("free");
         List<PaperQuestionConfigDto> questions = new ArrayList<>();
         for (int i = 0; i < questionIds.size(); i++) {
             PaperQuestionConfigDto config = new PaperQuestionConfigDto();
@@ -203,8 +210,20 @@ public class ScExamAnalysisServiceImpl implements IScExamAnalysisService {
         paperUpsertDto.setQuestions(questions);
         if (!Boolean.FALSE.equals(dto.getSavePaper())) {
             scExamManageService.savePaper(paperUpsertDto, operator);
+            ScExamPaper savedPaper = findLatestRetryPaper(dto.getCourseId(), paperUpsertDto.getPaperName());
+            if (savedPaper != null && savedPaper.getPaperId() != null) {
+                return sanitizePaperDetail(scExamManageService.selectPaperDetail(savedPaper.getPaperId()));
+            }
         }
         return buildPreviewPaper(paperUpsertDto);
+    }
+
+    private ScExamPaper findLatestRetryPaper(Long courseId, String paperName) {
+        ScExamPaper query = new ScExamPaper();
+        query.setCourseId(courseId);
+        query.setPaperName(paperName);
+        List<ScExamPaper> list = scExamPaperMapper.selectScExamPaperList(query);
+        return list == null || list.isEmpty() ? null : list.get(0);
     }
 
     private ExamPaperDetailVo buildPreviewPaper(PaperUpsertDto dto) {
@@ -222,11 +241,73 @@ public class ScExamAnalysisServiceImpl implements IScExamAnalysisService {
             detailVo.setQuestionId(item.getQuestionId());
             detailVo.setScore(item.getScore());
             detailVo.setSortNo(item.getSortNo());
-            detailVo.setQuestion(scExamManageService.selectQuestionDetail(item.getQuestionId()));
+            detailVo.setQuestion(sanitizeQuestionDetail(scExamManageService.selectQuestionDetail(item.getQuestionId())));
             details.add(detailVo);
         }
         result.setQuestions(details);
         return result;
+    }
+
+    private ExamPaperDetailVo sanitizePaperDetail(ExamPaperDetailVo paperDetail) {
+        if (paperDetail == null) {
+            return null;
+        }
+        if (paperDetail.getQuestions() != null) {
+            paperDetail.getQuestions().forEach(item -> {
+                if (item != null) {
+                    item.setQuestion(sanitizeQuestionDetail(item.getQuestion()));
+                }
+            });
+        }
+        if (paperDetail.getSubPapers() != null) {
+            paperDetail.getSubPapers().forEach(this::sanitizePaperDetail);
+        }
+        return paperDetail;
+    }
+
+    private com.smart.system.domain.campusvo.QuestionDetailVo sanitizeQuestionDetail(
+            com.smart.system.domain.campusvo.QuestionDetailVo questionDetail) {
+        if (questionDetail == null) {
+            return null;
+        }
+        questionDetail.setAnswer(null);
+        questionDetail.setAnalysis(null);
+        if (questionDetail.getOptions() != null) {
+            questionDetail.getOptions().forEach(option -> {
+                if (option != null) {
+                    option.setIsRight(null);
+                }
+            });
+        }
+        return questionDetail;
+    }
+
+    private ScExamRecord sanitizeRecordDetail(ScExamRecord record, boolean allowViewScore) {
+        if (record == null || allowViewScore) {
+            return record;
+        }
+        record.setScore(null);
+        record.setCorrectRate(null);
+        return record;
+    }
+
+    private List<ScExamAnswer> sanitizeRecordAnswers(List<ScExamAnswer> answers, boolean allowViewScoreSummary,
+            boolean allowViewAnswerAnalysis) {
+        if (answers == null) {
+            return answers;
+        }
+        answers.forEach(item -> {
+            if (item != null) {
+                if (!allowViewAnswerAnalysis) {
+                    item.setStandardAnswer(null);
+                    item.setAnalysis(null);
+                }
+                if (!allowViewScoreSummary) {
+                    item.setScore(null);
+                }
+            }
+        });
+        return answers;
     }
 
     private List<Long> resolveRetryQuestionIds(WrongQuestionRetryDto dto) {
@@ -406,8 +487,15 @@ public class ScExamAnalysisServiceImpl implements IScExamAnalysisService {
             return Collections.emptyList();
         }
         Map<Long, List<ScExamSessionPaper>> grouped = sessionPapers.stream()
+                // Sub-paper stats should only describe real layered sub-papers.
+                // For single-layer exams, the root paper itself is recorded in session papers,
+                // but it must not be surfaced as a "子卷" entry to the student UI.
                 .filter(item -> item.getPaperId() != null)
+                .filter(item -> "SUB".equalsIgnoreCase(StringUtils.defaultIfEmpty(item.getPaperLevel(), "")))
                 .collect(Collectors.groupingBy(ScExamSessionPaper::getPaperId, LinkedHashMap::new, Collectors.toList()));
+        if (grouped.isEmpty()) {
+            return Collections.emptyList();
+        }
         List<Map<String, Object>> result = new ArrayList<>();
         grouped.forEach((paperId, items) -> {
             Map<String, Object> row = new LinkedHashMap<>();

@@ -8,6 +8,9 @@ public class ExamAnswerDraftSaveDto {
     private Long questionId;
     private String userAnswer;
     private Long sessionPaperId;
+    private Integer focusLossCount;
+    private String focusLossSource;
+    private Long focusLossOccurredAt;
 
     public Long getRecordId() {
         return recordId;
@@ -39,5 +42,29 @@ public class ExamAnswerDraftSaveDto {
 
     public void setSessionPaperId(Long sessionPaperId) {
         this.sessionPaperId = sessionPaperId;
+    }
+
+    public Integer getFocusLossCount() {
+        return focusLossCount;
+    }
+
+    public void setFocusLossCount(Integer focusLossCount) {
+        this.focusLossCount = focusLossCount;
+    }
+
+    public String getFocusLossSource() {
+        return focusLossSource;
+    }
+
+    public void setFocusLossSource(String focusLossSource) {
+        this.focusLossSource = focusLossSource;
+    }
+
+    public Long getFocusLossOccurredAt() {
+        return focusLossOccurredAt;
+    }
+
+    public void setFocusLossOccurredAt(Long focusLossOccurredAt) {
+        this.focusLossOccurredAt = focusLossOccurredAt;
     }
 }

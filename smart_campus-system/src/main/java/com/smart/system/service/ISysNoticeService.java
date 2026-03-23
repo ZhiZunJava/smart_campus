@@ -1,6 +1,7 @@
 package com.smart.system.service;
 
 import java.util.List;
+import java.util.Map;
 import com.smart.system.domain.SysNotice;
 
 /**
@@ -57,4 +58,20 @@ public interface ISysNoticeService
      * @return 结果
      */
     public int deleteNoticeByIds(Long[] noticeIds);
+
+    /**
+     * 门户端查询消息列表
+     */
+    List<SysNotice> selectPortalNoticeList(Long userId, String receiverScope, String bizCategory, String readFlag,
+            String keyword, Integer limit);
+
+    /**
+     * 门户端查询消息统计
+     */
+    Map<String, Object> selectPortalNoticeStats(Long userId, String receiverScope);
+
+    /**
+     * 标记已读
+     */
+    int markNoticeRead(Long noticeId, Long userId, String operator);
 }

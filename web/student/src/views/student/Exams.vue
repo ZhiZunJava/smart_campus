@@ -1,48 +1,66 @@
 <template>
-  <div class="portal-page exam-hub">
-    <section class="exam-hero portal-card">
-      <div>
-        <div class="exam-hero__eyebrow">Assessment Hub</div>
-        <div class="exam-hero__title">智能评测中心</div>
-        <p class="exam-hero__desc">
+  <div class="portal-page exam-page">
+    <section class="exam-hero">
+      <div class="hero-content">
+        <div class="hero-eyebrow"><i class="ri-dashboard-3-line mr-1"></i>考试中心</div>
+        <div class="hero-title">智能评测中心</div>
+        <p class="hero-desc">
           在这里统一查看可参加考试、历史成绩、错题回流和答题反馈。每次测评都会沉淀成你后续练习和诊断的依据。
         </p>
-        <div class="exam-hero__actions">
+        <div class="hero-actions">
           <el-button type="primary" @click="activeTab = 'papers'">开始新测评</el-button>
-          <el-button plain @click="activeTab = 'records'">查看历史记录</el-button>
-          <el-button plain @click="goWrongbook">进入错题本</el-button>
+          <el-button @click="activeTab = 'records'">查看历史记录</el-button>
+          <el-button @click="goWrongbook">进入错题本</el-button>
         </div>
       </div>
-      <div class="exam-hero__stats">
-        <div class="exam-hero__metric">
+      <div class="hero-stats">
+        <div class="hero-metric">
           <span>最佳成绩</span>
           <strong>{{ bestScore }}</strong>
         </div>
-        <div class="exam-hero__metric">
+        <div class="hero-metric">
           <span>平均得分</span>
           <strong>{{ recordOverview.avgScore || 0 }}</strong>
-        </div>
-        <div class="exam-hero__metric">
-          <span>错题积累</span>
-          <strong>{{ wrongs.length }}</strong>
         </div>
       </div>
     </section>
 
-    <section class="portal-kpis">
-      <el-card class="portal-card portal-stat-card"><div class="label">可参加考试</div><div class="value">{{ availablePapers.length }}</div><div class="sub">当前开放试卷数量</div></el-card>
-      <el-card class="portal-card portal-stat-card"><div class="label">考试记录</div><div class="value">{{ records.length }}</div><div class="sub">最近考试与练习记录</div></el-card>
-      <el-card class="portal-card portal-stat-card"><div class="label">平均正确率</div><div class="value">{{ recordOverview.avgCorrectRate || 0 }}%</div><div class="sub">自动统计历史提交结果</div></el-card>
-      <el-card class="portal-card portal-stat-card"><div class="label">未掌握错题</div><div class="value">{{ unmasteredWrongCount }}</div><div class="sub">建议优先回练与复盘</div></el-card>
+    <section class="exam-kpis">
+      <div class="exam-kpi-card">
+        <div class="kpi-content">
+          <div class="kpi-label">可参加考试</div>
+          <div class="kpi-value text-primary">{{ availablePapers.length }}</div>
+          <div class="kpi-sub">当前开放试卷数量</div>
+        </div>
+      </div>
+      <div class="exam-kpi-card">
+        <div class="kpi-content">
+          <div class="kpi-label">考试记录</div>
+          <div class="kpi-value">{{ records.length }}</div>
+          <div class="kpi-sub">最近考试与练习记录</div>
+        </div>
+      </div>
+      <div class="exam-kpi-card">
+        <div class="kpi-content">
+          <div class="kpi-label">平均正确率</div>
+          <div class="kpi-value">{{ recordOverview.avgCorrectRate || 0 }}%</div>
+          <div class="kpi-sub">自动统计历史提交结果</div>
+        </div>
+      </div>
+      <div class="exam-kpi-card">
+        <div class="kpi-content">
+          <div class="kpi-label">未掌握错题</div>
+          <div class="kpi-value">{{ unmasteredWrongCount }}</div>
+          <div class="kpi-sub">建议优先回练与复盘</div>
+        </div>
+      </div>
     </section>
 
-    <el-card class="portal-card mt20">
-      <template #header>
-        <div class="exam-tabs-header">
-          <span>智能评测工作台</span>
-          <el-segmented v-model="activeTab" :options="tabOptions" />
-        </div>
-      </template>
+    <div class="exam-section-card mt20 pd-5">
+      <div class="section-header tabs-header">
+        <div class="section-title">智能评测工作台</div>
+        <el-segmented v-model="activeTab" :options="tabOptions" class="custom-segmented" />
+      </div>
 
       <el-alert
         v-if="activeTab === 'papers' && latestOngoingRecord"
@@ -76,39 +94,53 @@
                 <div class="exam-paper-card__title">{{ paper.paperName }}</div>
                 <div class="exam-paper-card__badges">
                   <el-tag v-if="ongoingRecordMap[paper.paperId]" type="warning" effect="plain">进行中</el-tag>
+                  <el-tag v-if="isWrongRetryPaper(paper)" type="danger" effect="plain">错题回练</el-tag>
                   <el-tag :type="paper.publishStatus === 'published' ? 'success' : 'warning'" effect="plain">
                     {{ publishStatusLabel(paper.publishStatus) }}
                   </el-tag>
                 </div>
               </div>
               <div class="exam-paper-card__meta">
-                <span>{{ courseLabel(paper.courseId) }}</span>
-                <span>{{ paperTypeLabel(paper.paperType) }}</span>
-                <span>{{ paper.durationMinutes || 0 }} 分钟</span>
-                <span>{{ paper.paperLevel || 'MAIN' }}</span>
+                <span class="meta-item">{{ courseLabel(paper.courseId) }}</span>
+                <span class="meta-divider"></span>
+                <span class="meta-item">{{ paperTypeLabel(paper.paperType) }}</span>
+                <span class="meta-divider"></span>
+                <span class="meta-item">{{ paper.durationMinutes || 0 }} 分钟</span>
+                <span class="meta-divider"></span>
+                <span class="meta-item">{{ paperLevelLabel(paper.paperLevel) }}</span>
               </div>
               <div class="exam-paper-card__stats">
-                <span>总分 {{ paper.totalScore || 0 }}</span>
-                <span>及格线 {{ paper.passScore || 60 }}</span>
-                <span v-if="paper.subPapers?.length">子卷 {{ paper.subPapers.length }}</span>
+                <span class="stat-item">总分 <strong class="stat-value">{{ paper.totalScore || 0 }}</strong></span>
+                <span class="stat-item">及格线 <strong class="stat-value">{{ paper.passScore || 60 }}</strong></span>
+                <span v-if="paper.subPapers?.length" class="stat-item">子卷 <strong class="stat-value">{{ paper.subPapers.length }}</strong></span>
+                <span v-if="Number(paper.maxAttemptCount || 0) > 0" class="stat-item">次数 <strong class="stat-value">{{ attemptSummary(paper) }}</strong></span>
               </div>
               <div v-if="ongoingRecordMap[paper.paperId]" class="exam-paper-card__resume">
                 已有未交卷记录，开始时间 {{ formatDateTime(ongoingRecordMap[paper.paperId]?.startTime) }}
+              </div>
+              <div v-else-if="isPaperAttemptLimitReached(paper)" class="exam-paper-card__resume">
+                当前试卷可参加次数已用完
+              </div>
+              <div v-else-if="isMakeupPaper(paper)" class="exam-paper-card__resume">
+                你已参加 {{ attemptCountMap[String(paper.paperId)] }}/{{ paper.maxAttemptCount }} 次，还可补考 {{ Number(paper.maxAttemptCount || 0) - (attemptCountMap[String(paper.paperId)] || 0) }} 次
+              </div>
+              <div v-else-if="(attemptCountMap[String(paper.paperId)] || 0) > 0" class="exam-paper-card__resume">
+                你已参加 {{ attemptCountMap[String(paper.paperId)] }} 次，可再次参加考试
               </div>
               <div class="exam-paper-card__actions">
                 <el-button
                   type="primary"
                   :loading="startingPaperId === paper.paperId"
-                  :disabled="startingPaperId === paper.paperId"
+                  :disabled="startingPaperId === paper.paperId || (!ongoingRecordMap[paper.paperId] && isPaperAttemptLimitReached(paper))"
                   @click="beginExam(paper)"
                 >
-                  {{ ongoingRecordMap[paper.paperId] ? '继续考试' : '开始考试' }}
+                  {{ ongoingRecordMap[paper.paperId] ? '继续考试' : (isPaperAttemptLimitReached(paper) ? '次数已用完' : (isMakeupPaper(paper) ? '去补考' : ((attemptCountMap[String(paper.paperId)] || 0) > 0 ? '再次考试' : '开始考试'))) }}
                 </el-button>
                 <el-button
                   link
                   type="primary"
                   :disabled="Boolean(ongoingRecordMap[paper.paperId])"
-                  @click="previewPaper(paper)"
+                  @click="openPreviewPage(paper)"
                 >
                   预览
                 </el-button>
@@ -129,13 +161,14 @@
             <article v-for="item in ongoingRecords" :key="item.recordId" class="exam-runtime-card">
               <div class="exam-runtime-card__title">{{ item.paperName || `试卷 ${item.paperId}` }}</div>
               <div class="exam-runtime-card__meta">
-                <span>开始于 {{ formatDateTime(item.startTime) }}</span>
-                <span>状态 {{ examStatusLabel(item.examStatus) }}</span>
+                <span class="meta-item">开始于 {{ formatDateTime(item.startTime) }}</span>
+                <span class="meta-divider"></span>
+                <span class="meta-item">状态 <el-tag size="small" :type="item.examStatus === 'ONGOING' ? 'warning' : 'info'" style="margin-left: 6px;">{{ examStatusLabel(item.examStatus) }}</el-tag></span>
               </div>
-              <div class="exam-runtime-card__stats">
-                <span>切屏 {{ item.session?.focusLossCount || 0 }}</span>
-                <span>异常 {{ item.session?.flaggedCount || 0 }}</span>
-                <span>子卷 {{ item.subPaperStats?.length || 0 }}</span>
+          <div class="exam-runtime-card__stats">
+                <span class="stat-item">切屏 <strong class="stat-value">{{ item.session?.focusLossCount || 0 }}</strong></span>
+                <span class="stat-item">异常 <strong class="stat-value">{{ item.session?.flaggedCount || 0 }}</strong></span>
+                <span class="stat-item">子卷 <strong class="stat-value">{{ item.subPaperStats?.length || 0 }}</strong></span>
               </div>
               <div class="exam-runtime-card__actions">
                 <el-button type="warning" plain size="small" @click="resumeExam(item)">继续作答</el-button>
@@ -154,24 +187,30 @@
               <div class="exam-panel__subtitle">点击一条记录，可查看详细作答和标准答案。</div>
             </div>
           </div>
-          <el-table v-loading="loadingRecord" :data="records" @row-click="viewRecordDetail">
+          <el-table v-loading="loadingRecord" :data="records" @row-click="viewRecordDetail" class="custom-table" style="width: 100%" :header-cell-style="{ background: '#fafafa', color: '#606266', fontWeight: 500 }">
             <el-table-column prop="paperName" label="试卷名称" min-width="180" show-overflow-tooltip />
+            <el-table-column label="标记" min-width="110">
+              <template #default="scope">
+                <el-tag v-if="isWrongRetryPaper(scope.row)" type="danger" effect="plain">错题回练</el-tag>
+                <span v-else>-</span>
+              </template>
+            </el-table-column>
             <el-table-column label="课程" min-width="160" show-overflow-tooltip>
               <template #default="scope">{{ courseLabel(scope.row.courseId) }}</template>
             </el-table-column>
-            <el-table-column prop="score" label="得分" width="100" />
-            <el-table-column prop="correctRate" label="正确率" width="100" />
-            <el-table-column label="状态" width="110">
+            <el-table-column prop="score" label="得分" min-width="90" />
+            <el-table-column prop="correctRate" label="正确率" min-width="100" />
+            <el-table-column label="状态" min-width="100">
               <template #default="scope">
                 <el-tag :type="scope.row.examStatus === 'SUBMITTED' ? 'success' : 'warning'">{{ examStatusLabel(scope.row.examStatus) }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="分层情况" min-width="180" show-overflow-tooltip>
+            <el-table-column label="分层情况" min-width="140" show-overflow-tooltip>
               <template #default="scope">
                 {{ scope.row.subPaperStats?.length ? `子卷 ${scope.row.subPaperStats.length} 个` : '单层试卷' }}
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="120">
+            <el-table-column label="操作" min-width="200">
               <template #default="scope">
                 <el-button
                   v-if="scope.row.examStatus === 'ONGOING'"
@@ -181,7 +220,10 @@
                 >
                   继续考试
                 </el-button>
-                <el-button v-else link type="primary" @click.stop="viewRecordDetail(scope.row)">查看详情</el-button>
+                <template v-else>
+                  <el-button link type="primary" @click.stop="viewRecordDetail(scope.row)">查看详情</el-button>
+                  <el-button link type="success" @click.stop="openRecordSessionResult(scope.row)">查看答卷</el-button>
+                </template>
               </template>
             </el-table-column>
           </el-table>
@@ -194,12 +236,12 @@
               <div class="exam-panel__subtitle">分层考试会在这里统计每个子卷的提交情况与得分表现。</div>
             </div>
           </div>
-          <el-table :data="recordOverview.subPaperStats || []" size="small" border>
-            <el-table-column prop="paperName" label="子试卷" min-width="160" show-overflow-tooltip />
-            <el-table-column prop="submittedCount" label="已提交" width="90" />
-            <el-table-column prop="skippedCount" label="跳过" width="90" />
-            <el-table-column prop="avgScore" label="平均得分" width="110" />
-            <el-table-column prop="avgCorrectRate" label="平均正确率" width="120" />
+          <el-table :data="recordOverview.subPaperStats || []" class="custom-table" style="width: 100%" :header-cell-style="{ background: '#fafafa', color: '#606266', fontWeight: 500 }">
+            <el-table-column prop="paperName" label="子试卷" min-width="140" show-overflow-tooltip />
+            <el-table-column prop="submittedCount" label="已提交" min-width="90" />
+            <el-table-column prop="skippedCount" label="跳过" min-width="90" />
+            <el-table-column prop="avgScore" label="平均得分" min-width="100" />
+            <el-table-column prop="avgCorrectRate" label="平均正确率" min-width="110" />
           </el-table>
         </section>
       </div>
@@ -212,12 +254,12 @@
               <div class="exam-panel__subtitle">错题会自动回流到这里，支持后续进入错题本继续回练。</div>
             </div>
           </div>
-          <el-table :data="wrongs" size="small" border>
-            <el-table-column prop="questionId" label="题目ID" width="90" />
+          <el-table :data="wrongs" class="custom-table" style="width: 100%" :header-cell-style="{ background: '#fafafa', color: '#606266', fontWeight: 500 }">
+            <el-table-column prop="questionId" label="题目ID" min-width="90" />
             <el-table-column label="课程" min-width="160"><template #default="scope">{{ courseLabel(scope.row.courseId) }}</template></el-table-column>
             <el-table-column label="知识点" min-width="160"><template #default="scope">{{ knowledgePointLabel(scope.row.knowledgePointId) }}</template></el-table-column>
-            <el-table-column prop="wrongCount" label="错误次数" width="100" />
-            <el-table-column label="掌握状态" width="100">
+            <el-table-column prop="wrongCount" label="错误次数" min-width="100" />
+            <el-table-column label="掌握状态" min-width="100">
               <template #default="scope">
                 <el-tag :type="scope.row.masteryStatus === '1' ? 'success' : 'warning'">{{ scope.row.masteryStatus === '1' ? '已掌握' : '未掌握' }}</el-tag>
               </template>
@@ -232,52 +274,165 @@
               <div class="exam-panel__subtitle">帮助你快速聚焦薄弱知识点。</div>
             </div>
           </div>
-          <el-table :data="recordOverview.knowledgePointStats || []" size="small" border>
+          <el-table :data="recordOverview.knowledgePointStats || []" class="custom-table" style="width: 100%" :header-cell-style="{ background: '#fafafa', color: '#606266', fontWeight: 500 }">
             <el-table-column label="知识点" min-width="160">
               <template #default="scope">{{ scope.row.knowledgePointName || knowledgePointLabel(scope.row.knowledgePointId) }}</template>
             </el-table-column>
-            <el-table-column prop="totalCount" label="总题数" width="100" />
-            <el-table-column prop="correctCount" label="答对数" width="100" />
+            <el-table-column prop="totalCount" label="总题数" min-width="90" />
+            <el-table-column prop="correctCount" label="答对数" min-width="90" />
           </el-table>
         </section>
       </div>
-    </el-card>
+    </div>
 
-    <el-dialog v-model="previewOpen" :title="previewPaperData.paperName || '试卷预览'" width="980px" top="4vh">
-      <div class="preview-head">
-        <span>{{ courseLabel(previewPaperData.courseId) }}</span>
-        <span>{{ previewPaperData.durationMinutes || 0 }} 分钟</span>
-        <span>总分 {{ previewPaperData.totalScore || 0 }}</span>
+    <el-dialog v-model="previewOpen" :title="previewPaperData.paperName || '试卷预览'" width="1120px" top="4vh" class="exam-preview-dialog" append-to-body>
+      <div class="exam-preview-shell">
+        <section class="exam-preview-summary">
+          <div class="exam-preview-summary__main">
+            <div class="exam-preview-summary__eyebrow">试卷导览</div>
+            <h3 class="exam-preview-summary__title">{{ previewPaperData.paperName || '未命名试卷' }}</h3>
+            <p class="exam-preview-summary__desc">这里展示试卷结构、题型分布和题目预览，不展示答案、解析与正确项。</p>
+          </div>
+          <div class="exam-preview-summary__stats">
+            <div class="exam-preview-stat">
+              <span>课程</span>
+              <strong>{{ courseLabel(previewPaperData.courseId) }}</strong>
+            </div>
+            <div class="exam-preview-stat">
+              <span>时长</span>
+              <strong>{{ previewPaperData.durationMinutes || 0 }} 分钟</strong>
+            </div>
+            <div class="exam-preview-stat">
+              <span>总分</span>
+              <strong>{{ previewPaperData.totalScore || 0 }}</strong>
+            </div>
+            <div class="exam-preview-stat">
+              <span>题目数</span>
+              <strong>{{ previewQuestionCount }}</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="exam-preview-outline mt20">
+          <div class="exam-preview-outline__title">题型分布</div>
+          <div class="exam-preview-outline__grid">
+            <div v-for="group in previewQuestionGroups" :key="group.type" class="exam-preview-outline__card">
+              <div class="exam-preview-outline__type">{{ questionTypeLabel(group.type) }}</div>
+              <div class="exam-preview-outline__meta">{{ group.questions.length }} 题</div>
+              <div class="exam-preview-outline__score">{{ group.totalScore }} 分</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="exam-preview-list mt20">
+          <div v-for="group in previewQuestionGroups" :key="group.type" class="exam-preview-group">
+            <div class="exam-preview-group__header">
+              <div class="exam-preview-group__title">{{ questionTypeLabel(group.type) }}</div>
+              <div class="exam-preview-group__meta">{{ group.questions.length }} 题 / {{ group.totalScore }} 分</div>
+            </div>
+            <div class="exam-preview-question-list">
+              <article v-for="item in group.questions" :key="item.questionId" class="exam-preview-question">
+                <div class="exam-preview-question__top">
+                  <div class="exam-preview-question__index">第 {{ item.sortNo || item.order }} 题</div>
+                  <div class="exam-preview-question__score">{{ item.score || 0 }} 分</div>
+                </div>
+                <div class="exam-preview-question__stem">{{ stripHtml(item.question?.stem) || '题干暂未维护' }}</div>
+                <div v-if="(item.question?.options || []).length" class="exam-preview-question__options">
+                  <div v-for="opt in item.question?.options || []" :key="opt.optionId || opt.optionKey" class="exam-preview-option">
+                    <span class="exam-preview-option__key">{{ opt.optionKey }}.</span>
+                    <span class="exam-preview-option__content">{{ opt.optionContent }}</span>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <div class="exam-preview-actions mt20">
+          <el-button
+            v-if="previewPaperData.paperId"
+            type="primary"
+            :disabled="Boolean(ongoingRecordMap[previewPaperData.paperId]) || isPaperAttemptLimitReached(previewPaperData)"
+            @click="beginExam(previewPaperData)"
+          >
+            {{ ongoingRecordMap[previewPaperData.paperId] ? '继续考试' : (isPaperAttemptLimitReached(previewPaperData) ? '次数已用完' : (isMakeupPaper(previewPaperData) ? '去补考' : ((attemptCountMap[String(previewPaperData.paperId)] || 0) > 0 ? '再次考试' : '开始考试'))) }}
+          </el-button>
+          <el-button v-if="previewPaperData.paperId" plain @click="previewOpen = false">关闭预览</el-button>
+        </div>
       </div>
-      <el-table :data="previewPaperData.questions || []" border class="mt20">
-        <el-table-column prop="sortNo" label="序号" width="90" />
-        <el-table-column label="题型" width="110">
-          <template #default="scope">{{ questionTypeLabel(scope.row.question?.questionType) }}</template>
-        </el-table-column>
-        <el-table-column label="题干" min-width="360" show-overflow-tooltip>
-          <template #default="scope">{{ stripHtml(scope.row.question?.stem) }}</template>
-        </el-table-column>
-        <el-table-column prop="score" label="分值" width="90" />
-      </el-table>
     </el-dialog>
 
-    <el-dialog v-model="recordDetailOpen" title="作答详情" width="1120px">
-      <el-descriptions :column="2" border>
-        <el-descriptions-item label="试卷">{{ currentRecordDetail.record?.paperName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="得分">{{ currentRecordDetail.record?.score || 0 }}</el-descriptions-item>
-        <el-descriptions-item label="正确率">{{ currentRecordDetail.record?.correctRate || 0 }}%</el-descriptions-item>
-        <el-descriptions-item label="状态">{{ currentRecordDetail.record?.examStatus || '-' }}</el-descriptions-item>
-      </el-descriptions>
-      <el-table :data="currentRecordDetail.subPaperStats || []" border class="mt20">
+    <el-dialog v-model="recordDetailOpen" title="作答详情" width="min(1360px, 96vw)" class="exam-record-detail-dialog" append-to-body>
+      <section class="record-detail-hero">
+        <div class="record-detail-hero__main">
+          <div class="record-detail-hero__eyebrow">答卷概览</div>
+          <h3 class="record-detail-hero__title">{{ currentRecordDetail.record?.paperName || '未命名试卷' }}</h3>
+          <p class="record-detail-hero__desc">
+            {{ currentRecordDetail.allowViewAnswerAnalysis ? '这里展示本次答卷的总体成绩、题型表现与逐题解析。' : '这里展示本次答卷的总体信息，答案与解析未开放。' }}
+          </p>
+        </div>
+        <div class="record-detail-hero__stats">
+          <div class="record-detail-hero__stat">
+            <span>得分</span>
+            <strong>{{ currentRecordDetail.allowViewScoreSummary ? (currentRecordDetail.record?.score || 0) : '暂不开放' }}</strong>
+          </div>
+          <div class="record-detail-hero__stat">
+            <span>正确率</span>
+            <strong>{{ currentRecordDetail.allowViewScoreSummary ? `${currentRecordDetail.record?.correctRate || 0}%` : '暂不开放' }}</strong>
+          </div>
+          <div class="record-detail-hero__stat">
+            <span>状态</span>
+            <strong>{{ examStatusLabel(currentRecordDetail.record?.examStatus) }}</strong>
+          </div>
+          <div class="record-detail-hero__stat">
+            <span>记录类型</span>
+            <strong>{{ isWrongRetryPaper(currentRecordDetail.record) ? '错题回练' : '正式考试' }}</strong>
+          </div>
+        </div>
+      </section>
+      <div class="record-detail-actions mt20">
+        <el-button type="primary" @click="openRecordSessionResult(currentRecordDetail.record)">查看完整答卷</el-button>
+      </div>
+      <section v-if="currentRecordDetail.allowViewScoreSummary" class="record-detail-insights">
+        <div class="record-detail-insights__card">
+          <span>总题数</span>
+          <strong>{{ recordAnswerCount }}</strong>
+        </div>
+        <div class="record-detail-insights__card">
+          <span>答对题数</span>
+          <strong>{{ recordCorrectCount }}</strong>
+        </div>
+        <div class="record-detail-insights__card">
+          <span>错题数</span>
+          <strong>{{ recordWrongCount }}</strong>
+        </div>
+        <div class="record-detail-insights__card">
+          <span>子卷数</span>
+          <strong>{{ currentRecordDetail.subPaperStats?.length || 0 }}</strong>
+        </div>
+      </section>
+      <el-table v-if="currentRecordDetail.allowViewScoreSummary" :data="currentRecordDetail.subPaperStats || []" border class="mt20">
         <el-table-column prop="paperName" label="子试卷" min-width="180" />
-        <el-table-column prop="paperLevel" label="层级" width="100" />
-        <el-table-column prop="answerMode" label="模式" width="100" />
+        <el-table-column label="层级" width="100">
+          <template #default="scope">{{ paperLevelLabel(scope.row.paperLevel) }}</template>
+        </el-table-column>
+        <el-table-column label="模式" width="100">
+          <template #default="scope">{{ answerModeLabel(scope.row.answerMode) }}</template>
+        </el-table-column>
         <el-table-column prop="submittedCount" label="已提交" width="90" />
         <el-table-column prop="skippedCount" label="跳过" width="90" />
         <el-table-column prop="avgScore" label="平均得分" width="110" />
         <el-table-column prop="avgCorrectRate" label="平均正确率" width="120" />
       </el-table>
-      <el-collapse class="mt20">
+      <el-alert v-else type="info" :closable="false" class="mt20" title="当前试卷暂未开放总成绩查看。" />
+      <section v-if="currentRecordDetail.allowViewAnswerAnalysis && groupedRecordAnswers.length" class="record-detail-type-summary mt20">
+        <div v-for="group in groupedRecordAnswers" :key="group.questionType" class="record-detail-type-summary__card">
+          <div class="record-detail-type-summary__title">{{ questionTypeLabel(group.questionType) }}</div>
+          <div class="record-detail-type-summary__meta">{{ group.answers.length }} 题</div>
+          <div class="record-detail-type-summary__value">正确 {{ group.correctCount }} 题</div>
+        </div>
+      </section>
+      <el-collapse v-if="currentRecordDetail.allowViewAnswerAnalysis" class="mt20">
         <el-collapse-item
           v-for="group in groupedRecordAnswers"
           :key="group.questionType"
@@ -390,6 +545,35 @@ const groupedRecordAnswers = computed(() => {
   })
   return Array.from(groups.values())
 })
+const recordAnswerCount = computed(() => (currentRecordDetail.value.answers || []).length)
+const recordCorrectCount = computed(() => (currentRecordDetail.value.answers || []).filter((item: any) => item.isCorrect === '1').length)
+const recordWrongCount = computed(() => Math.max(0, recordAnswerCount.value - recordCorrectCount.value))
+const attemptCountMap = computed(() =>
+  records.value.reduce((acc: Record<string, number>, item: any) => {
+    const key = String(item.paperId || '')
+    if (!key) return acc
+    acc[key] = (acc[key] || 0) + 1
+    return acc
+  }, {}),
+)
+const previewQuestionCount = computed(() => (previewPaperData.value.questions || []).length)
+const previewQuestionGroups = computed(() => {
+  const groups = new Map<string, { type: string; totalScore: number; questions: any[] }>()
+  ;(previewPaperData.value.questions || []).forEach((item: any, index: number) => {
+    const type = String(item?.question?.questionType || 'unknown')
+    if (!groups.has(type)) {
+      groups.set(type, { type, totalScore: 0, questions: [] })
+    }
+    const group = groups.get(type)!
+    const normalizedItem = {
+      ...item,
+      order: index + 1,
+    }
+    group.questions.push(normalizedItem)
+    group.totalScore += Number(item?.score || 0)
+  })
+  return Array.from(groups.values())
+})
 
 function stripHtml(value: string) {
   return String(value || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
@@ -409,6 +593,39 @@ function questionTypeLabel(type: string) {
 
 function examStatusLabel(status: string) {
   return ({ ONGOING: '进行中', SUBMITTED: '已提交' } as any)[status] || status || '-'
+}
+
+function paperLevelLabel(level?: string) {
+  return ({ MAIN: '主卷', SUB: '子卷' } as Record<string, string>)[String(level || '').toUpperCase()] || level || '-'
+}
+
+function answerModeLabel(modeValue?: string) {
+  return ({ AUTO: '自动', MANUAL: '手动', ADAPTIVE: '自适应', REQUIRED: '必答', OPTIONAL: '选答' } as Record<string, string>)[String(modeValue || '').toUpperCase()] || modeValue || '-'
+}
+
+function attemptSummary(paper: any) {
+  const maxAttemptCount = Number(paper?.maxAttemptCount || 0)
+  if (maxAttemptCount <= 0) return '不限'
+  const usedCount = attemptCountMap.value[String(paper?.paperId || '')] || 0
+  return `${usedCount}/${maxAttemptCount}`
+}
+
+function isPaperAttemptLimitReached(paper: any) {
+  const maxAttemptCount = Number(paper?.maxAttemptCount || 0)
+  if (maxAttemptCount <= 0) return false
+  const usedCount = attemptCountMap.value[String(paper?.paperId || '')] || 0
+  return usedCount >= maxAttemptCount
+}
+
+function isMakeupPaper(paper: any) {
+  const maxAttemptCount = Number(paper?.maxAttemptCount || 0)
+  const usedCount = attemptCountMap.value[String(paper?.paperId || '')] || 0
+  return maxAttemptCount > 0 && usedCount > 0 && usedCount < maxAttemptCount
+}
+
+function isWrongRetryPaper(paper: any) {
+  const name = String(paper?.paperName || '')
+  return name.includes('错题回练')
 }
 
 function formatDateTime(value: string) {
@@ -473,18 +690,20 @@ async function loadRecords() {
   }
 }
 
-async function previewPaper(row: any) {
+function openPreviewPage(row: any) {
   if (ongoingRecordMap.value[row.paperId]) {
     ElMessage.warning('该试卷已有未完成考试，请直接继续作答')
     return
   }
-  const res = await getPaperDetail(row.paperId)
-  previewPaperData.value = res.data || {}
-  previewOpen.value = true
+  router.push(`/student/exams/preview/${row.paperId}`)
 }
 
 async function beginExam(row: any) {
   if (startingPaperId.value === row.paperId) return
+  if (!ongoingRecordMap.value[row.paperId] && isPaperAttemptLimitReached(row)) {
+    ElMessage.warning('该试卷可参加次数已用完')
+    return
+  }
   startingPaperId.value = row.paperId
   try {
     const startRes = await startExam({ paperId: row.paperId })
@@ -523,19 +742,33 @@ async function viewRecordDetail(row: any) {
   ])
   const recordData = recordRes.data || {}
   const paperData = paperRes.data || {}
-  const allowReviewAnalysis = paperData.allowReviewAnalysis === '1'
+  const allowViewScoreSummary = paperData.allowViewScore !== '0'
+  const allowViewAnswerAnalysis = paperData.allowReviewAnalysis === '1'
   currentRecordDetail.value = {
     ...recordData,
     paper: paperData,
-    allowReviewAnalysis,
+    allowViewScoreSummary,
+    allowViewAnswerAnalysis,
     subPaperStats: recordData.subPaperStats || [],
     answers: (recordData.answers || []).map((item: any) => ({
       ...item,
-      standardAnswer: allowReviewAnalysis ? item.standardAnswer : '当前试卷未开放标准答案回看',
-      analysis: allowReviewAnalysis ? item.analysis : '当前试卷未开放解析回看',
+      standardAnswer: allowViewAnswerAnalysis ? item.standardAnswer : '当前试卷未开放标准答案回看',
+      analysis: allowViewAnswerAnalysis ? item.analysis : '当前试卷未开放解析回看',
     })),
   }
   recordDetailOpen.value = true
+}
+
+function openRecordSessionResult(row: any) {
+  if (!row?.recordId) return
+  recordDetailOpen.value = false
+  router.push({
+    path: `/student/exams/session/${row.recordId}`,
+    query: {
+      paperId: String(row.paperId || ''),
+      mode: 'result',
+    },
+  })
 }
 
 function goWrongbook() {
@@ -559,7 +792,7 @@ onMounted(async () => {
     const matchedPaper = papers.value.find((item: any) => Number(item.paperId) === previewPaperId)
     if (matchedPaper && !ongoingRecordMap.value[matchedPaper.paperId]) {
       activeTab.value = 'papers'
-      await previewPaper(matchedPaper)
+      openPreviewPage(matchedPaper)
     }
   }
   if (route.query.resume === '1' && latestOngoingRecord.value) {
@@ -569,206 +802,798 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.exam-hub .portal-card {
-  overflow: hidden;
+.custom-table {
+  --el-table-border-color: #e2e8f0;
+  --el-table-header-bg-color: #f8fafc;
 }
+
+.exam-page {
+  padding: 24px;
+}
+
 .exam-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
-  gap: 18px;
-  padding: 16px 18px;
-  background: #fff;
-  border: 1px solid #d7dee9;
-  border-radius: 6px;
+  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.8fr);
+  gap: 24px;
+  padding: 32px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+  position: relative;
 }
-.exam-hero__eyebrow {
-  display: inline-flex;
-  padding: 2px 8px;
-  border-radius: 4px;
-  background: #eef4ff;
-  color: #315fca;
-  font-size: 12px;
-  font-weight: 700;
+
+.exam-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%);
+  border-radius: 16px 16px 0 0;
 }
-.exam-hero__title {
-  margin-top: 12px;
-  font-size: 30px;
-  font-weight: 800;
-  color: var(--portal-text);
-}
-.exam-hero__desc {
-  margin-top: 10px;
-  max-width: 760px;
-  font-size: 14px;
-  line-height: 1.9;
-  color: var(--portal-text-secondary);
-}
-.exam-hero__actions {
-  margin-top: 18px;
+
+.hero-content {
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+}
+
+.hero-eyebrow {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  letter-spacing: 0.5px;
+}
+
+.hero-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 12px;
+  line-height: 1.3;
+}
+
+.hero-desc {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #64748b;
+  max-width: 800px;
+  margin: 0;
+}
+
+.hero-actions {
+  margin-top: 24px;
+  display: flex;
+  gap: 16px;
   flex-wrap: wrap;
 }
-.exam-hero__stats {
+
+.hero-actions .el-button {
+  padding: 10px 20px;
+  font-size: 14px;
+  border-radius: 6px;
+  height: auto;
+}
+
+.hero-stats {
   display: grid;
-  gap: 14px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
 }
-.exam-hero__metric {
-  padding: 14px;
-  border-radius: 4px;
-  background: #fafbfd;
-  border: 1px solid #d7dee9;
+
+.hero-metric {
+  background: #f8fafc;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-.exam-hero__metric span {
-  color: var(--portal-text-secondary);
+
+.hero-metric:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+.hero-metric span {
+  color: #64748b;
   font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
-.exam-hero__metric strong {
-  display: block;
-  margin-top: 8px;
-  font-size: 30px;
-  color: var(--portal-brand);
+
+.hero-metric strong {
+  font-size: 28px;
+  color: #3b82f6;
+  font-weight: 800;
+  line-height: 1;
 }
-.exam-tabs-header {
+
+.exam-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.exam-kpi-card {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 20px;
+  display: flex;
+  align-items: flex-start;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.02);
+}
+
+.exam-kpi-card:hover {
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+  transform: translateY(-2px);
+  border-color: #cbd5e1;
+}
+
+.kpi-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  width: 100%;
+}
+
+.kpi-label {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.kpi-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+}
+
+.kpi-value.text-primary {
+  color: #3b82f6;
+}
+
+.kpi-sub {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.exam-section-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 32px;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+}
+
+.tabs-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 16px;
+  margin-bottom: 32px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e2e8f0;
 }
+
+.section-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.custom-segmented {
+  --el-segmented-item-selected-bg-color: #3b82f6;
+  --el-segmented-item-selected-color: #ffffff;
+  padding: 4px;
+  border-radius: 8px;
+  background-color: #f1f5f9;
+}
+
 .exam-workbench {
   display: grid;
-  grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.9fr);
-  gap: 16px;
+  grid-template-columns: minmax(0, 1.8fr) minmax(340px, 1fr);
+  gap: 24px;
 }
+
 .exam-panel {
-  padding: 16px;
-  border-radius: 6px;
-  background: #fff;
-  border: 1px solid #d7dee9;
-}
-.exam-panel--primary {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
+
 .exam-panel--side {
   align-self: start;
+  background: #f8fafc;
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid #f1f5f9;
 }
+
 .exam-ongoing-alert {
-  margin-bottom: 14px;
+  margin-bottom: 24px;
+  border-radius: 12px;
+  border: 1px solid #fde68a;
+  background-color: #fffbeb;
 }
+
 .exam-ongoing-alert__content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   flex-wrap: wrap;
+  color: #92400e;
+  font-weight: 500;
 }
-.exam-panel--soft {
-  background: #fafbfd;
-}
+
 .exam-panel__header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  margin-bottom: 14px;
+  margin-bottom: 24px;
 }
+
 .exam-panel__title {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 800;
-  color: var(--portal-text);
+  color: #0f172a;
 }
+
 .exam-panel__subtitle {
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--portal-text-secondary);
+  margin-top: 8px;
+  font-size: 14px;
+  color: #64748b;
 }
+
 .exam-paper-grid {
   display: grid;
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 20px;
 }
+
 .exam-paper-card {
-  padding: 16px;
-  border-radius: 6px;
-  background: #fff;
-  border: 1px solid #d7dee9;
+  padding: 24px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.02);
+  display: flex;
+  flex-direction: column;
 }
+
+.exam-paper-card:hover {
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+  transform: translateY(-2px);
+  border-color: #cbd5e1;
+}
+
 .exam-paper-card__head {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 12px;
+  gap: 16px;
 }
+
 .exam-paper-card__badges {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-end;
 }
+
 .exam-paper-card__title {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 800;
-  color: var(--portal-text);
-  line-height: 1.6;
+  color: #0f172a;
+  line-height: 1.4;
 }
-.exam-paper-card__meta,
-.exam-paper-card__stats {
-  margin-top: 10px;
+
+.exam-paper-card__meta {
+  margin-top: 16px;
   display: flex;
-  gap: 12px;
+  align-items: center;
   flex-wrap: wrap;
-  color: var(--portal-text-secondary);
-  font-size: 12px;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
 }
+
+.meta-item {
+  display: inline-flex;
+  align-items: center;
+}
+
+.meta-divider {
+  width: 1px;
+  height: 14px;
+  background-color: #cbd5e1;
+  margin: 0 12px;
+}
+
+.exam-paper-card__stats {
+  margin-top: 16px;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  color: #64748b;
+  font-size: 14px;
+  background: #f8fafc;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #f1f5f9;
+}
+
+.stat-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.stat-value {
+  font-size: 16px;
+  color: #0f172a;
+  font-weight: 800;
+}
+
 .exam-paper-card__actions {
-  margin-top: 14px;
+  margin-top: 24px;
   display: flex;
   gap: 12px;
   align-items: center;
 }
-.exam-paper-card__resume {
-  margin-top: 10px;
-  font-size: 12px;
-  color: #d97706;
+
+.exam-paper-card__actions .el-button {
+  padding: 10px 20px;
+  border-radius: 8px;
+  height: auto;
 }
+
+.exam-paper-card__resume {
+  margin-top: 16px;
+  font-size: 14px;
+  color: #d97706;
+  background: #fffbeb;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #fef3c7;
+  font-weight: 500;
+}
+
 .exam-runtime-list {
   display: grid;
-  gap: 12px;
+  gap: 16px;
 }
+
 .exam-runtime-card {
-  padding: 14px;
-  border-radius: 6px;
-  background: #fff;
-  border: 1px solid #d7dee9;
+  padding: 24px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.02);
 }
+
+.exam-runtime-card:hover {
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+  transform: translateY(-2px);
+  border-color: #cbd5e1;
+}
+
 .exam-runtime-card__title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--portal-text);
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
 }
-.exam-runtime-card__meta,
-.exam-runtime-card__stats {
-  margin-top: 8px;
+
+.exam-runtime-card__meta {
+  margin-top: 12px;
   display: flex;
-  gap: 10px;
+  align-items: center;
   flex-wrap: wrap;
-  color: var(--portal-text-secondary);
-  font-size: 12px;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
 }
+
+.exam-runtime-card__stats {
+  margin-top: 16px;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  color: #64748b;
+  font-size: 14px;
+  background: #f8fafc;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #f1f5f9;
+}
+
 .exam-runtime-card__actions {
-  margin-top: 10px;
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
 }
-@media (max-width: 1100px) {
-  .exam-workbench {
-    grid-template-columns: 1fr;
-  }
-}
+
 .preview-head,
 .exam-dialog-head {
   display: flex;
-  gap: 18px;
+  gap: 20px;
   flex-wrap: wrap;
   font-weight: 600;
+  color: #303133;
+  font-size: 15px;
+  background: #fafafa;
+  padding: 16px;
+  border-radius: 6px;
+  border: 1px solid #ebeef5;
 }
+
+.record-detail-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.exam-record-detail-dialog :deep(.el-dialog__body) {
+  max-height: calc(90vh - 110px);
+  overflow: auto;
+}
+
+.record-detail-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.9fr);
+  gap: 20px;
+  padding: 22px 24px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f8fbff 0%, #ffffff 100%);
+  border: 1px solid #dbeafe;
+}
+
+.record-detail-hero__eyebrow {
+  display: inline-flex;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.record-detail-hero__title {
+  margin: 14px 0 10px;
+  color: #0f172a;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.record-detail-hero__desc {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.record-detail-hero__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.record-detail-hero__stat {
+  padding: 16px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.record-detail-hero__stat span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.record-detail-hero__stat strong {
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.record-detail-insights {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.record-detail-insights__card {
+  padding: 16px 18px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.record-detail-insights__card span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.record-detail-insights__card strong {
+  color: #0f172a;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.record-detail-type-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.record-detail-type-summary__card {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.record-detail-type-summary__title {
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.record-detail-type-summary__meta {
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.record-detail-type-summary__value {
+  margin-top: 6px;
+  color: #2563eb;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.exam-preview-shell {
+  display: flex;
+  flex-direction: column;
+}
+
+.exam-preview-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.9fr);
+  gap: 20px;
+  padding: 24px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f8fbff 0%, #ffffff 100%);
+  border: 1px solid #dbeafe;
+}
+
+.exam-preview-summary__eyebrow {
+  display: inline-flex;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.exam-preview-summary__title {
+  margin: 14px 0 10px;
+  color: #0f172a;
+  font-size: 24px;
+  line-height: 1.35;
+  font-weight: 800;
+}
+
+.exam-preview-summary__desc {
+  margin: 0;
+  color: #64748b;
+  line-height: 1.8;
+  font-size: 14px;
+}
+
+.exam-preview-summary__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.exam-preview-stat {
+  padding: 16px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.exam-preview-stat span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.exam-preview-stat strong {
+  color: #0f172a;
+  font-size: 18px;
+  line-height: 1.3;
+  font-weight: 700;
+}
+
+.exam-preview-outline__title {
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+
+.exam-preview-outline__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.exam-preview-outline__card {
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+}
+
+.exam-preview-outline__type {
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.exam-preview-outline__meta {
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.exam-preview-outline__score {
+  margin-top: 6px;
+  color: #2563eb;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.exam-preview-group + .exam-preview-group {
+  margin-top: 24px;
+}
+
+.exam-preview-group__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  gap: 12px;
+}
+
+.exam-preview-group__title {
+  color: #0f172a;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.exam-preview-group__meta {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.exam-preview-question-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.exam-preview-question {
+  padding: 18px 20px;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03);
+}
+
+.exam-preview-question__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.exam-preview-question__index {
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.exam-preview-question__score {
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.exam-preview-question__stem {
+  margin-top: 14px;
+  color: #0f172a;
+  font-size: 15px;
+  line-height: 1.8;
+}
+
+.exam-preview-question__options {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.exam-preview-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.exam-preview-option__key {
+  color: #2563eb;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.exam-preview-option__content {
+  color: #334155;
+  line-height: 1.6;
+}
+
+.exam-preview-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
 .exam-dialog-body {
   display: flex;
   flex-direction: column;
@@ -776,34 +1601,65 @@ onMounted(async () => {
   max-height: 72vh;
   overflow: auto;
 }
+
 .exam-question-card {
-  padding: 18px;
-  border: 1px solid var(--portal-border);
-  border-radius: 6px;
+  padding: 20px;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
   background: #fff;
 }
+
 .exam-question-card__top {
   display: flex;
   justify-content: space-between;
   gap: 16px;
   align-items: flex-start;
 }
+
 .exam-question-title {
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 1.8;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.6;
+  color: #303133;
 }
+
 .exam-question-score {
-  color: var(--portal-text-secondary);
-  font-size: 13px;
+  color: #909399;
+  font-size: 14px;
   white-space: nowrap;
 }
+
 .exam-options {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 12px;
+  gap: 12px;
+  margin-top: 16px;
 }
+
+@media (max-width: 1200px) {
+  .exam-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .exam-preview-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .record-detail-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .record-detail-insights {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1100px) {
+  .exam-workbench {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 960px) {
   .exam-hero {
     grid-template-columns: 1fr;

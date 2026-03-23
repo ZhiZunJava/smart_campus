@@ -21,12 +21,24 @@
     q.analysis from sc_exam_answer a left join sc_question_bank q on a.question_id = q.question_id</sql>
   <select id="selectScExamAnswerByAnswerId" parameterType="Long" resultMap="ScExamAnswerResult"><include
       refid="selectScExamAnswerVo" /> where a.answer_id = #{answerId}</select>
-  <select id="selectScExamAnswerList" parameterType="ScExamAnswer" resultMap="ScExamAnswerResult"><include
-      refid="selectScExamAnswerVo" /><where><if test="sessionId != null">and a.session_id = #{sessionId}</if><if
-        test="sessionPaperId != null">and a.session_paper_id = #{sessionPaperId}</if><if
-        test="recordId != null">and a.record_id = #{recordId}</if><if
-        test="questionId != null">and a.question_id = #{questionId}</if></where> order by a.answer_id
-    asc</select>
+  <select id="selectScExamAnswerList" parameterType="ScExamAnswer" resultMap="ScExamAnswerResult">
+    <include refid="selectScExamAnswerVo" />
+    <where>
+      <if test="sessionId != null">
+        and a.session_id = #{sessionId}
+      </if>
+      <if test="sessionPaperId != null">
+        and a.session_paper_id = #{sessionPaperId}
+      </if>
+      <if test="recordId != null">
+        and a.record_id = #{recordId}
+      </if>
+      <if test="questionId != null">
+        and a.question_id = #{questionId}
+      </if>
+    </where>
+    order by a.answer_id asc
+  </select>
   <select id="selectScExamAnswerByRecordId" parameterType="Long" resultMap="ScExamAnswerResult"><include
       refid="selectScExamAnswerVo" /> where a.record_id = #{recordId} order by a.answer_id asc</select>
   <insert id="insertScExamAnswer" parameterType="ScExamAnswer" useGeneratedKeys="true"

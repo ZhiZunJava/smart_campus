@@ -2,18 +2,24 @@
   <header ref="topbarRef" class="portal-topbar" :class="{ 'is-menu-open': isMenuOpen }">
     <div class="portal-topbar__inner">
       <div class="portal-topbar__left">
-        <button v-if="showMenu && menuItems.length" type="button" class="portal-topbar__menu-trigger" @click="toggleMenu">
-          <el-icon><Menu /></el-icon>
-          <span>{{ isMenuOpen ? '收起菜单' : '菜单' }}</span>
-        </button>
+        <div 
+          class="portal-topbar__menu-trigger-wrapper" 
+          @mouseenter="openMenu" 
+          @mouseleave="closeMenuTimer"
+        >
+          <button v-if="showMenu && menuItems.length" type="button" class="portal-topbar__menu-trigger" @click="toggleMenu">
+            <el-icon><Menu /></el-icon>
+            <span>菜单</span>
+          </button>
+        </div>
 
         <div class="portal-topbar__brand" @click="goHome">
           <div class="portal-topbar__logo">
             <i class="portal-topbar__logo-main ri-graduation-cap-line"></i>
           </div>
           <div class="portal-topbar__brand-text">
-            <strong>校园智学</strong>
-            <span>Campus Learning</span>
+            <strong>教务管理信息系统</strong>
+            <span>Course Management Information System</span>
           </div>
         </div>
       </div>
@@ -42,30 +48,27 @@
             @mouseenter="searchPanelHover = true"
             @mouseleave="searchPanelHover = false"
           >
-            <button
-              v-for="item in filteredMenuItems"
-              :key="item.path"
-              type="button"
-              class="portal-topbar__search-item"
-              @click="handleSearchSelect(item.path)"
-            >
-              <strong>{{ item.title }}</strong>
-              <span>{{ item.desc || '点击进入功能页面' }}</span>
-            </button>
-            <div v-if="!filteredMenuItems.length" class="portal-topbar__search-empty">未匹配到相关菜单</div>
+            <el-scrollbar max-height="400px">
+              <button
+                v-for="item in filteredMenuItems"
+                :key="item.path"
+                type="button"
+                class="portal-topbar__search-item"
+                @click="handleSearchSelect(item.path)"
+              >
+                <strong>
+                  <span v-if="searchKeyword" class="search-highlight-wrapper">
+                    <template v-for="(part, index) in highlightText(item.title, searchKeyword)" :key="index">
+                      <span v-if="part.isHighlight" class="search-highlight">{{ part.text }}</span>
+                      <template v-else>{{ part.text }}</template>
+                    </template>
+                  </span>
+                  <template v-else>{{ item.title }}</template>
+                </strong>
+              </button>
+              <div v-if="!filteredMenuItems.length" class="portal-topbar__search-empty">未匹配到相关菜单</div>
+            </el-scrollbar>
           </div>
-        </div>
-
-        <div v-if="showUserPanel" class="portal-topbar__icon-group">
-          <button type="button" class="portal-topbar__icon-btn" title="返回首页" @click="goHome">
-            <el-icon><House /></el-icon>
-          </button>
-          <button type="button" class="portal-topbar__icon-btn" title="帮助中心" @click="openHelpCenter">
-            <el-icon><QuestionFilled /></el-icon>
-          </button>
-          <button type="button" class="portal-topbar__icon-btn" title="消息提醒" @click="openNoticeCenter">
-            <el-icon><Bell /></el-icon>
-          </button>
         </div>
 
         <el-dropdown
@@ -105,22 +108,7 @@
                 <span>{{ currentRoleLabel }}</span>
               </div>
 
-              <div v-if="themeStore.themes.length > 1" class="portal-topbar__theme-panel">
-                <div class="portal-topbar__theme-title">主题色</div>
-                <button
-                  v-for="theme in themeStore.themes"
-                  :key="theme.name"
-                  type="button"
-                  class="portal-topbar__theme-chip"
-                  :class="{ 'is-active': theme.name === themeStore.activeTheme }"
-                  @click.stop="themeStore.setTheme(theme.name)"
-                >
-                  <span class="portal-topbar__theme-dot" :style="{ background: theme.color }"></span>
-                  <span>{{ theme.label }}</span>
-                </button>
-              </div>
-
-              <el-dropdown-item divided @click="goProfilePage">
+              <el-dropdown-item @click="goProfilePage">
                 <el-icon><Files /></el-icon>
                 <span>我的档案</span>
               </el-dropdown-item>
@@ -158,33 +146,38 @@
     </div>
 
     <transition name="portal-menu-overlay">
-      <div v-if="showMenu && menuItems.length && isMenuOpen" class="portal-topbar__menu-overlay" @click.self="closeMenu">
-        <section class="portal-topbar__menu-surface" @click.stop>
-          <aside class="portal-topbar__menu-aside">
-            <div class="portal-topbar__menu-aside-title">{{ currentRoleMenuTitle }}</div>
-          </aside>
-
-          <div class="portal-topbar__menu-content">
-            <section
-              v-for="group in normalizedGroups"
-              :key="group.key"
-              class="portal-topbar__menu-group"
-            >
-              <div class="portal-topbar__menu-card">
-                <h3>{{ group.label }}</h3>
-                <button
-                  v-for="item in group.items"
-                  :key="item.path"
-                  type="button"
-                  class="portal-topbar__menu-link"
-                  :class="{ 'is-active': item.path === activePath }"
-                  @click="handleNav(item.path)"
-                >
-                  <strong>{{ item.title }}</strong>
-                  <span>{{ item.desc || '进入对应功能模块' }}</span>
-                </button>
+      <div v-if="showMenu && menuItems.length && isMenuOpen" class="portal-topbar__menu-overlay" @click.self="closeMenu" @mouseenter="closeMenuTimer" @mouseleave="closeMenuTimer">
+        <section class="portal-topbar__menu-surface" @click.stop @mouseenter="cancelCloseTimer" @mouseleave="closeMenuTimer">
+          <div class="portal-topbar__menu-content" @mouseenter="cancelCloseTimer">
+            <div class="portal-topbar__menu-filter"></div>
+            <aside class="menu-side-wrapper">
+              <div class="menu-side-item active">
+                <el-icon><Grid /></el-icon>
+                <span>{{ currentRoleLabel }}全部服务</span>
               </div>
-            </section>
+            </aside>
+            <div class="second-menu-wrapper">
+              <section
+                v-for="group in normalizedGroups"
+                :key="group.key"
+                class="portal-topbar__menu-group"
+              >
+                <h3>{{ group.label }}</h3>
+                <div class="portal-topbar__menu-links">
+                  <button
+                    v-for="item in group.items"
+                    :key="item.path"
+                    type="button"
+                    class="portal-topbar__menu-link"
+                    :class="{ 'is-active': item.path === activePath }"
+                    @click="handleNav(item.path)"
+                  >
+                    <strong>{{ item.title }}</strong>
+                    <span>{{ item.desc || '点击进入对应功能页面' }}</span>
+                  </button>
+                </div>
+              </section>
+            </div>
           </div>
         </section>
       </div>
@@ -242,22 +235,45 @@
             <p>集中查看近期通知公告，并快速浏览详细内容。</p>
           </div>
         </section>
+        <div class="portal-topbar__notice-filter">
+          <button
+            type="button"
+            class="portal-topbar__notice-filter-btn"
+            :class="{ 'is-active': noticeFilter === 'unread' }"
+            @click="noticeFilter = 'unread'"
+          >
+            未读({{ unreadMessages.length }})
+          </button>
+          <button
+            type="button"
+            class="portal-topbar__notice-filter-btn"
+            :class="{ 'is-active': noticeFilter === 'read' }"
+            @click="noticeFilter = 'read'"
+          >
+            已读({{ readMessages.length }})
+          </button>
+        </div>
         <div class="portal-topbar__notice-layout">
           <div class="portal-topbar__notice-list">
             <button
-              v-for="message in messages"
+              v-for="message in filteredMessages"
               :key="message.messageId"
               type="button"
               class="portal-topbar__notice-item"
               @click="selectMessage(message)"
             >
+              <div class="portal-topbar__notice-icon" :class="`is-${messageIconTone(message)}`">
+                <el-icon v-if="message.messageType === 'EXAM_REMINDER'"><Bell /></el-icon>
+                <el-icon v-else-if="message.messageType === 'ACHIEVEMENT'"><Grid /></el-icon>
+                <el-icon v-else><Files /></el-icon>
+              </div>
               <div class="portal-topbar__notice-head">
                 <strong>{{ message.messageTitle }}</strong>
                 <span>{{ messageTypeLabel(message.messageType) }}</span>
               </div>
               <p>{{ message.messageContent || '暂无内容摘要' }}</p>
             </button>
-            <el-empty v-if="!noticeLoading && !messages.length" description="暂无新的消息提醒" />
+            <el-empty v-if="!noticeLoading && !filteredMessages.length" :description="noticeFilter === 'unread' ? '暂无未读消息提醒' : '暂无已读消息提醒'" />
           </div>
           <div v-if="activeMessage" class="portal-topbar__notice-detail">
             <h3>{{ activeMessage.messageTitle }}</h3>
@@ -353,10 +369,16 @@ const helpCenterVisible = ref(false)
 const noticeVisible = ref(false)
 const helpLoading = ref(false)
 const noticeLoading = ref(false)
+let menuCloseTimer: number | null = null
 const helpSections = ref<Array<{ title: string; description: string; items: Array<{ title: string; content: string }> }>>([])
 const helpContact = ref('')
 const messages = ref<any[]>([])
 const activeMessage = ref<any>(null)
+const noticeFilter = ref<'unread' | 'read'>('unread')
+const localReadMessageIds = ref<string[]>([])
+const unreadMessages = computed(() => messages.value.filter((item: any) => !isMessageRead(item)))
+const readMessages = computed(() => messages.value.filter((item: any) => isMessageRead(item)))
+const filteredMessages = computed(() => noticeFilter.value === 'unread' ? unreadMessages.value : readMessages.value)
 
 const roleOptions = computed(() => {
   if (props.roleOptionsOverride.length) {
@@ -381,6 +403,7 @@ const userDisplayName = computed(() => userStore.user?.nickName || userStore.use
 const avatarText = computed(() => String(userDisplayName.value).slice(0, 1).toUpperCase())
 const isLoginRoute = computed(() => router.currentRoute.value.path === '/login')
 const isRegisterRoute = computed(() => router.currentRoute.value.path === '/register')
+const sideQuickItems = computed(() => props.menuItems.slice(0, 4))
 
 const filteredMenuItems = computed(() => {
   const keyword = searchKeyword.value.trim().toLowerCase()
@@ -430,9 +453,55 @@ function handleSearchSelect(path: string) {
   handleNav(path)
 }
 
+function highlightText(text: string, keyword: string) {
+  if (!keyword) return [{ text, isHighlight: false }]
+  const lowerText = text.toLowerCase()
+  const lowerKeyword = keyword.toLowerCase()
+  const result = []
+  let startIndex = 0
+  let index = lowerText.indexOf(lowerKeyword)
+  
+  while (index !== -1) {
+    if (index > startIndex) {
+      result.push({ text: text.substring(startIndex, index), isHighlight: false })
+    }
+    result.push({ text: text.substring(index, index + keyword.length), isHighlight: true })
+    startIndex = index + keyword.length
+    index = lowerText.indexOf(lowerKeyword, startIndex)
+  }
+  
+  if (startIndex < text.length) {
+    result.push({ text: text.substring(startIndex), isHighlight: false })
+  }
+  
+  return result
+}
+
 function toggleMenu() {
   isMenuOpen.value = !isMenuOpen.value
   closeSearchPanel()
+}
+
+function openMenu() {
+  if (props.showMenu && props.menuItems.length) {
+    cancelCloseTimer()
+    isMenuOpen.value = true
+    closeSearchPanel()
+  }
+}
+
+function closeMenuTimer() {
+  cancelCloseTimer()
+  menuCloseTimer = window.setTimeout(() => {
+    isMenuOpen.value = false
+  }, 250)
+}
+
+function cancelCloseTimer() {
+  if (menuCloseTimer) {
+    window.clearTimeout(menuCloseTimer)
+    menuCloseTimer = null
+  }
 }
 
 function closeMenu() {
@@ -468,7 +537,50 @@ function showComingSoon(label: string) {
 function messageTypeLabel(type: string) {
   if (type === 'EXAM_REMINDER') return '考试提醒'
   if (type === 'ACHIEVEMENT') return '成就提醒'
+  if (type === 'NOTICE') return '通知公告'
   return '系统通知'
+}
+
+function messageReadKey(message: any) {
+  return String(message?.messageId || message?.noticeId || message?.actionTarget || '')
+}
+
+function normalizeTopbarMessage(message: any, index: number) {
+  const key = String(message?.messageId || message?.noticeId || message?.actionTarget || `message-${index}`)
+  const hasServerReadState = message?.readFlag !== undefined
+  const isRead = hasServerReadState
+    ? String(message?.readFlag || '0') === '1'
+    : localReadMessageIds.value.includes(key)
+  return {
+    ...message,
+    messageId: key,
+    messageKind: message?.noticeType === '2'
+      ? 'NOTICE'
+      : message?.messageType === 'EXAM_REMINDER'
+        ? 'EXAM_REMINDER'
+        : message?.messageType === 'ACHIEVEMENT'
+          ? 'ACHIEVEMENT'
+          : 'SYSTEM',
+    isRead,
+  }
+}
+
+function isMessageRead(message: any) {
+  return Boolean(message?.isRead)
+}
+
+function markMessageRead(message: any) {
+  if (!message || message.noticeId || message.readFlag !== undefined) return
+  const key = messageReadKey(message)
+  if (!key || localReadMessageIds.value.includes(key)) return
+  localReadMessageIds.value = [...localReadMessageIds.value, key]
+  sessionStorage.setItem('portal-local-read-messages', JSON.stringify(localReadMessageIds.value))
+}
+
+function messageIconTone(message: any) {
+  if (message?.messageKind === 'ACHIEVEMENT') return 'success'
+  if (message?.messageKind === 'EXAM_REMINDER') return 'warning'
+  return 'info'
 }
 
 async function openHelpCenter() {
@@ -487,21 +599,22 @@ async function openHelpCenter() {
 async function openNoticeCenter() {
   noticeVisible.value = true
   if (!messages.value.length) {
-    noticeLoading.value = true
+      noticeLoading.value = true
     try {
-      const res = await getPortalMessageCenter({ userId: userStore.user?.userId })
-      messages.value = res.data || []
+      const res = await getPortalMessageCenter({ userId: userStore.user?.userId, limit: 12 })
+      messages.value = (res.data || []).map((item: any, index: number) => normalizeTopbarMessage(item, index))
     } finally {
       noticeLoading.value = false
     }
   }
-  if (messages.value.length && !activeMessage.value) {
-    activeMessage.value = messages.value[0]
+  if (filteredMessages.value.length) {
+    activeMessage.value = filteredMessages.value[0]
   }
 }
 
 function selectMessage(message: any) {
   activeMessage.value = message || null
+  markMessageRead(message)
   if (!message) return
   if (message.actionType === 'resumeExam' && message.actionTarget) {
     // keep detail open, actual jump left to user click
@@ -518,6 +631,11 @@ function goMessageAction(message: any) {
         paperId: String(message.paperId || ''),
       },
     })
+    noticeVisible.value = false
+    return
+  }
+  if (message.actionPath) {
+    router.push(message.actionPath)
     noticeVisible.value = false
   }
 }
@@ -541,6 +659,12 @@ function handleClickOutside(event: MouseEvent) {
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+  try {
+    const raw = sessionStorage.getItem('portal-local-read-messages')
+    localReadMessageIds.value = raw ? JSON.parse(raw) : []
+  } catch {
+    localReadMessageIds.value = []
+  }
 })
 
 onBeforeUnmount(() => {
@@ -551,18 +675,21 @@ onBeforeUnmount(() => {
 <style scoped>
 .portal-topbar {
   --topbar-height: 58px;
-  --auth-topbar-text: #24486f;
-  --auth-topbar-muted: rgba(58, 90, 126, 0.72);
-  --auth-topbar-line: rgba(126, 166, 214, 0.26);
-  --auth-topbar-surface: rgba(255, 255, 255, 0.52);
+  --auth-topbar-text: #ffffff;
+  --auth-topbar-muted: rgba(255, 255, 255, 0.72);
+  --auth-topbar-line: rgba(255, 255, 255, 0.12);
+  --auth-topbar-surface: rgba(255, 255, 255, 0.08);
+  --topbar-search-text: #ffffff;
+  --topbar-search-muted: rgba(255, 255, 255, 0.7);
+  --topbar-search-border: rgba(255, 255, 255, 0.2);
+  --topbar-search-surface: rgba(255, 255, 255, 0.15);
+  --topbar-search-surface-strong: rgba(255, 255, 255, 0.25);
   position: sticky;
   top: 0;
   z-index: 100;
   color: var(--auth-topbar-text);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.22) 100%);
-  box-shadow: 0 10px 26px rgba(63, 97, 145, 0.08);
-  backdrop-filter: blur(14px);
+  background: transparent;
+  box-shadow: none;
   overflow: visible;
 }
 
@@ -573,23 +700,23 @@ onBeforeUnmount(() => {
   right: 0;
   bottom: 0;
   height: 1px;
-  background: rgba(143, 176, 219, 0.34);
+  background: transparent;
 }
 
 .portal-topbar::before {
   content: '';
   position: absolute;
-  inset: 0 0 auto 0;
-  height: 1px;
-  background: rgba(255, 255, 255, 0.8);
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
   pointer-events: none;
+  z-index: 1;
 }
 
 .portal-topbar__inner {
   position: relative;
   z-index: 2;
   min-height: var(--topbar-height);
-  padding: 0 18px;
+  padding: 0 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -616,25 +743,23 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  height: 34px;
-  padding: 0 14px;
+  height: 32px;
+  padding: 0 12px;
   border: none;
   border-radius: 4px;
   color: inherit;
-  background: rgba(255, 255, 255, 0.68);
-  border: 1px solid var(--auth-topbar-line);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  transition: background-color .2s ease, border-color .2s ease, transform .2s ease;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background-color .2s ease, border-color .2s ease;
 }
 
 .portal-topbar__menu-trigger:hover,
 .portal-topbar.is-menu-open .portal-topbar__menu-trigger {
-  background: rgba(255, 255, 255, 0.82);
-  border-color: rgba(118, 160, 213, 0.34);
-  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .portal-topbar__brand {
@@ -655,8 +780,8 @@ onBeforeUnmount(() => {
 }
 
 .portal-topbar__logo-main {
-  font-size: 22px;
-  color: #315fca;
+  font-size: 20px;
+  color: #fff;
   line-height: 1;
 }
 
@@ -667,12 +792,12 @@ onBeforeUnmount(() => {
 }
 
 .portal-topbar__brand-text strong {
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.1;
   letter-spacing: 0;
   color: var(--auth-topbar-text);
   white-space: nowrap;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .portal-topbar__brand-text span {
@@ -686,36 +811,38 @@ onBeforeUnmount(() => {
 
 .portal-topbar__search {
   position: relative;
-  width: min(260px, 20vw);
+  width: 240px;
   z-index: 120;
 }
 
 .portal-topbar__search :deep(.el-input__wrapper) {
   height: 32px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.92);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
   box-shadow: none;
-  border: 1px solid rgba(148, 180, 220, 0.24);
-  box-shadow: 0 6px 16px rgba(86, 119, 168, 0.06);
-  transition: border-color .2s ease, background-color .2s ease, box-shadow .2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: border-color .2s ease, background-color .2s ease;
 }
 
 .portal-topbar__search :deep(.el-input__inner),
 .portal-topbar__search :deep(.el-input__prefix) {
-  color: var(--auth-topbar-text);
+  color: #ffffff;
+  font-size: 13px;
 }
 
 .portal-topbar__search :deep(.el-input__inner::placeholder) {
-  color: color-mix(in srgb, var(--auth-topbar-text) 58%, transparent);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.portal-topbar__search :deep(.el-input__prefix) {
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .portal-topbar__search :deep(.el-input__wrapper.is-focus),
 .portal-topbar__search :deep(.el-input__wrapper:hover) {
-  background: #fff;
-  border-color: rgba(118, 160, 213, 0.34);
-  box-shadow:
-    0 0 0 3px rgba(130, 175, 230, 0.12),
-    0 8px 18px rgba(86, 119, 168, 0.08);
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: none;
 }
 
 .portal-topbar__search-panel {
@@ -724,13 +851,11 @@ onBeforeUnmount(() => {
   right: 0;
   width: 100%;
   min-width: 320px;
-  padding: 10px;
-  border-radius: 6px;
-  background:
-    linear-gradient(180deg, rgba(248, 251, 255, 0.96) 0%, rgba(239, 245, 253, 0.96) 100%);
-  border: 1px solid rgba(148, 180, 220, 0.24);
-  box-shadow: 0 14px 30px rgba(63, 97, 145, 0.12);
-  backdrop-filter: blur(14px);
+  padding: 4px;
+  border-radius: 4px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   z-index: 160;
 }
 
@@ -738,86 +863,64 @@ onBeforeUnmount(() => {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: 10px 12px;
+  gap: 0;
+  padding: 10px 16px;
   text-align: left;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  color: var(--auth-topbar-text);
+  border: none;
+  border-radius: 2px;
+  color: #334155;
   background: transparent;
   cursor: pointer;
-  transition: background-color .18s ease, border-color .18s ease, transform .18s ease;
+  transition: background-color .18s ease;
 }
 
 .portal-topbar__search-item:hover {
-  background: rgba(255, 255, 255, 0.78);
-  border-color: rgba(148, 180, 220, 0.18);
-  transform: translateY(-1px);
+  background: #f8fafc;
+  transform: none;
 }
 
 .portal-topbar__search-item strong {
   font-size: 14px;
   line-height: 1.35;
+  color: #334155;
+  font-weight: 500;
 }
 
-.portal-topbar__search-item span {
-  color: var(--auth-topbar-muted);
-  line-height: 1.45;
+.search-highlight {
+  color: #2563eb;
 }
 
 .portal-topbar__search-empty {
-  padding: 10px 12px;
-  font-size: 12px;
-  color: var(--auth-topbar-muted);
+  padding: 16px;
+  font-size: 13px;
+  color: #64748b;
+  text-align: center;
 }
 
 .portal-topbar__icon-group {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.52);
-  border: 1px solid rgba(138, 172, 220, 0.2);
+  display: none;
 }
 
-.portal-topbar__icon-btn,
-.portal-topbar__avatar {
-  width: 30px;
-  height: 30px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 50%;
-  color: var(--auth-topbar-text);
-  background: transparent;
-  cursor: pointer;
-  transition: background-color .2s ease;
-}
-
-.portal-topbar__icon-btn:hover,
-.portal-topbar__avatar:hover {
-  background: rgba(255, 255, 255, 0.72);
+.portal-topbar__icon-btn {
+  display: none;
 }
 
 .portal-topbar__role-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-width: 96px;
-  height: 34px;
-  padding: 0 14px;
+  min-width: 72px;
+  height: 32px;
+  padding: 0 12px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid var(--auth-topbar-line);
-  color: var(--auth-topbar-text);
-  font-size: 12px;
-  font-weight: 700;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
   white-space: nowrap;
   justify-content: center;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
-  transition: background-color .2s ease, border-color .2s ease, transform .2s ease;
+  transition: background-color .2s ease, border-color .2s ease;
   outline: none;
 }
 
@@ -835,9 +938,8 @@ onBeforeUnmount(() => {
 
 .portal-topbar__role-pill:hover,
 .portal-topbar__role-pill--switchable:focus-visible {
-  background: rgba(255, 255, 255, 0.84);
-  border-color: rgba(118, 160, 213, 0.34);
-  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .portal-topbar__role-pill:focus,
@@ -846,16 +948,30 @@ onBeforeUnmount(() => {
 .portal-topbar__guest-btn:focus-visible,
 .portal-topbar__menu-trigger:focus,
 .portal-topbar__menu-trigger:focus-visible,
-.portal-topbar__icon-btn:focus,
-.portal-topbar__icon-btn:focus-visible,
 .portal-topbar__avatar:focus,
 .portal-topbar__avatar:focus-visible {
   outline: none;
 }
 
 .portal-topbar__avatar {
-  background: rgba(255, 255, 255, 0.76);
-  font-weight: 700;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: background-color .2s ease, border-color .2s ease;
+}
+
+.portal-topbar__avatar:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .portal-topbar__guest-actions {
@@ -914,115 +1030,168 @@ onBeforeUnmount(() => {
   right: 0;
   top: var(--topbar-height);
   bottom: 0;
-  background: rgba(56, 82, 122, 0.1);
-  backdrop-filter: blur(6px);
+  background: rgba(15, 23, 42, 0.4);
 }
 
 .portal-topbar__menu-surface {
-  display: grid;
-  grid-template-columns: 180px minmax(0, 1fr);
-  min-height: 420px;
-  background:
-    linear-gradient(180deg, rgba(248, 251, 255, 0.97) 0%, rgba(239, 245, 253, 0.96) 100%);
-  color: var(--portal-text);
-  border-top: 1px solid rgba(148, 180, 220, 0.22);
-  box-shadow: 0 22px 42px rgba(63, 97, 145, 0.12);
-}
-
-.portal-topbar__menu-aside {
-  padding: 16px 0;
-  background: rgba(231, 239, 250, 0.92);
-  border-right: 1px solid rgba(148, 180, 220, 0.2);
-}
-
-.portal-topbar__menu-aside-title {
-  display: flex;
-  align-items: center;
-  height: 50px;
-  padding: 0 20px;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--portal-text);
-  background: rgba(255, 255, 255, 0.72);
-  border-left: 3px solid rgba(47, 107, 255, 0.4);
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 70vw;
+  max-width: 900px;
+  background: transparent;
+  color: #333;
+  padding: 0;
 }
 
 .portal-topbar__menu-content {
+  position: relative;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
-  align-content: start;
-  padding: 24px 24px 28px;
+  grid-template-columns: 240px minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border-radius: 0;
+  overflow: hidden;
+  isolation: isolate;
+  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.3);
+}
+
+.portal-topbar__menu-filter {
+  position: absolute;
+  inset: 0;
+  background: #ffffff;
+  z-index: 0;
+}
+
+.second-menu-wrapper {
+  position: relative;
+  z-index: 1;
+  padding: 32px 36px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 32px;
+  align-content: flex-start;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: auto;
 }
 
 .portal-topbar__menu-group {
-  min-width: 0;
+  flex: 0 1 calc(33.333% - 22px);
+  min-width: 160px;
+  padding: 0 0 10px;
 }
 
-.portal-topbar__menu-card {
-  height: 100%;
+.portal-topbar__menu-links {
   display: flex;
   flex-direction: column;
-  padding: 18px 18px 14px;
-  border: 1px solid rgba(148, 180, 220, 0.2);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.68);
-  box-shadow: 0 10px 24px rgba(63, 97, 145, 0.06);
+  gap: 8px;
 }
 
-.portal-topbar__menu-card h3 {
-  margin: 0 0 10px;
-  font-size: 17px;
-  font-weight: 700;
-  letter-spacing: 0.2px;
-  color: var(--portal-text);
+.portal-topbar__menu-group h3 {
+  margin: 0 0 12px;
+  padding: 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #64748b;
 }
 
 .portal-topbar__menu-link {
-  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  margin-bottom: 6px;
-  padding: 10px 12px;
-  text-align: left;
-  border: 1px solid transparent;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 2px;
   border-radius: 6px;
+  text-align: left;
+  border: none;
   background: transparent;
-  color: var(--portal-text);
+  color: #475569;
+  font-size: 14px;
   cursor: pointer;
-  transition: transform .18s ease, background-color .18s ease, border-color .18s ease, color .18s ease;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .portal-topbar__menu-link strong {
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1.4;
-  letter-spacing: 0.2px;
+  font-size: 14px;
+  line-height: 1.35;
+  color: #334155;
+  font-weight: 500;
+  transition: color 0.2s ease;
 }
 
 .portal-topbar__menu-link span {
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--portal-text-secondary);
+  display: none; /* Hide description to match Image 5 */
 }
 
 .portal-topbar__menu-link:hover,
 .portal-topbar__menu-link.is-active {
-  transform: translateY(-1px);
-  background: rgba(255, 255, 255, 0.9);
-  border-color: rgba(148, 180, 220, 0.24);
-  box-shadow: 0 10px 20px rgba(63, 97, 145, 0.08);
+  color: #2563eb;
+  background: #f1f5f9;
+  border-color: transparent;
+  box-shadow: none;
+  transform: none;
 }
 
 .portal-topbar__menu-link:hover strong,
 .portal-topbar__menu-link.is-active strong {
-  color: var(--portal-brand);
+  color: #2563eb;
+  font-weight: 600;
 }
 
-.portal-topbar__menu-link:hover span,
-.portal-topbar__menu-link.is-active span {
-  color: var(--portal-text-secondary);
+.menu-side-wrapper {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 16px;
+  padding: 0;
+  background: #f8fafc;
+  border-right: 1px solid #e2e8f0;
+  overflow-y: auto;
+}
+
+.menu-side-item {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  line-height: 2.5em;
+  color: #475569;
+  font-size: 14px;
+  position: relative;
+  text-decoration: none;
+  font-weight: 600;
+  min-height: 64px;
+  padding: 0 22px;
+  word-break: break-all;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.menu-side-item.active,
+.menu-side-item:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+.menu-side-item.active::after,
+.menu-side-item:hover::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: #2563eb;
+}
+
+.menu-side-item .el-icon {
+  font-size: 16px;
 }
 
 .portal-topbar__theme-panel {
@@ -1066,11 +1235,10 @@ onBeforeUnmount(() => {
 
 :global(.portal-topbar-user-dropdown.el-popper),
 :global(.portal-topbar-role-dropdown.el-popper) {
-  border-radius: 6px;
-  border: 1px solid #d9e1ec;
-  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.14);
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(14px);
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background: #ffffff;
   overflow: hidden;
 }
 
@@ -1080,92 +1248,91 @@ onBeforeUnmount(() => {
 }
 
 :global(.portal-topbar-role-dropdown .el-dropdown-menu) {
-  padding: 8px;
+  padding: 4px 0;
   background: transparent;
 }
 
 :global(.portal-topbar-role-dropdown .el-dropdown-menu__item) {
-  min-width: 110px;
+  min-width: 100px;
   min-height: 36px;
   justify-content: center;
   line-height: 1;
   font-size: 13px;
-  font-weight: 600;
-  border-radius: 4px;
-  color: #36506f;
+  font-weight: 500;
+  color: #334155;
 }
 
 :global(.portal-topbar-role-dropdown .el-dropdown-menu__item:not(.is-disabled):hover) {
-  background: #f3f7ff;
-  color: var(--portal-brand);
+  background: #f1f5f9;
+  color: #0f172a;
 }
 
 :global(.portal-topbar-role-dropdown .el-dropdown-menu__item.is-disabled) {
-  color: #9aaabc;
-  background: #f7f9fc;
+  color: #94a3b8;
+  background: #f8fafc;
 }
 
 :global(.portal-topbar-user-dropdown .el-dropdown-menu) {
   padding: 0;
-  min-width: 176px;
-  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  min-width: 140px;
+  background: #ffffff;
 }
 
 :global(.portal-topbar-user-dropdown .el-dropdown-menu__item) {
-  min-height: 42px;
-  padding: 0 14px;
-  gap: 10px;
-  color: #2f4458;
-  font-size: 14px;
-  font-weight: 600;
+  min-height: 40px;
+  padding: 0 16px;
+  gap: 8px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 :global(.portal-topbar-user-dropdown .el-dropdown-menu__item i),
 :global(.portal-topbar-user-dropdown .el-dropdown-menu__item .el-icon) {
-  color: #6f84a0;
-  font-size: 15px;
+  color: #64748b;
+  font-size: 14px;
 }
 
 :global(.portal-topbar-user-dropdown .el-dropdown-menu__item:not(.is-disabled):hover) {
-  background: #f3f7ff;
-  color: var(--portal-brand);
+  background: #f1f5f9;
+  color: #0f172a;
 }
 
 :global(.portal-topbar-user-dropdown .el-dropdown-menu__item:not(.is-disabled):hover i),
 :global(.portal-topbar-user-dropdown .el-dropdown-menu__item:not(.is-disabled):hover .el-icon) {
-  color: var(--portal-brand);
+  color: #0f172a;
 }
 
 :global(.portal-topbar-user-dropdown .el-dropdown-menu__item--divided) {
-  margin-top: 0;
+  margin-top: 4px;
+  border-top: 1px solid #e2e8f0;
 }
 
 :global(.portal-topbar-user-dropdown .el-dropdown-menu__item--divided::before) {
-  left: 14px;
-  right: 14px;
-  top: 0;
-  background-color: #edf2f7;
+  display: none;
 }
 
 .portal-topbar__dropdown-header {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 16px 14px 14px;
-  background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
-  border-bottom: 1px solid #edf2f7;
+  gap: 2px;
+  padding: 12px 16px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 4px;
 }
 
 .portal-topbar__dropdown-header strong {
-  font-size: 15px;
-  color: #233a53;
-  line-height: 1.3;
+  font-size: 14px;
+  color: #0f172a;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 .portal-topbar__dropdown-header span {
   font-size: 12px;
-  color: #708398;
-  line-height: 1.4;
+  color: #64748b;
+  line-height: 1.2;
 }
 
 .portal-topbar__drawer-body {
@@ -1249,6 +1416,31 @@ onBeforeUnmount(() => {
   color: var(--portal-text-secondary);
 }
 
+.portal-topbar__notice-filter {
+  display: inline-flex;
+  gap: 8px;
+  padding: 4px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  margin-bottom: 16px;
+}
+
+.portal-topbar__notice-filter-btn {
+  border: none;
+  background: transparent;
+  color: #606266;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.portal-topbar__notice-filter-btn.is-active {
+  background: var(--el-color-primary);
+  color: #fff;
+}
+
 .portal-topbar__notice-item {
   width: 100%;
   text-align: left;
@@ -1256,6 +1448,9 @@ onBeforeUnmount(() => {
   border: 1px solid var(--portal-border);
   border-radius: 8px;
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 12px;
   cursor: pointer;
   transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease;
 }
@@ -1283,6 +1478,32 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+}
+
+.portal-topbar__notice-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  border: 1px solid #e5e7eb;
+}
+
+.portal-topbar__notice-icon.is-warning {
+  background: #fff7ed;
+  color: #f59e0b;
+}
+
+.portal-topbar__notice-icon.is-success {
+  background: #f0fdf4;
+  color: #22c55e;
+}
+
+.portal-topbar__notice-icon.is-info {
+  background: #eff6ff;
+  color: #3b82f6;
 }
 
 .portal-topbar__notice-head strong {
@@ -1439,12 +1660,16 @@ onBeforeUnmount(() => {
   }
 
   .portal-topbar__menu-content {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
+    grid-template-columns: 164px minmax(0, 1fr);
+    width: calc(100vw - 10px);
   }
 
   .portal-topbar__notice-layout {
     grid-template-columns: 1fr;
+  }
+
+  .portal-topbar__menu-group {
+    flex-basis: calc(33.333% - 16px);
   }
 }
 
@@ -1472,16 +1697,41 @@ onBeforeUnmount(() => {
   }
 
   .portal-topbar__menu-surface {
-    grid-template-columns: 1fr;
-  }
-
-  .portal-topbar__menu-aside {
-    padding: 0;
+    padding: 0 0 16px;
   }
 
   .portal-topbar__menu-content {
     grid-template-columns: 1fr;
-    padding: 16px 16px 20px;
+    width: 100%;
+    min-height: calc(100vh - var(--topbar-height));
+    border-radius: 0;
+  }
+
+  .portal-topbar__menu-filter {
+    background:
+      linear-gradient(180deg, rgba(68, 92, 122, 0.78) 0%, rgba(88, 118, 151, 0.72) 22%, rgba(241, 246, 252, 0.95) 22%, rgba(241, 246, 252, 0.93) 100%);
+  }
+
+  .menu-side-wrapper {
+    gap: 10px;
+    padding: 16px 0 14px;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+  }
+
+  .second-menu-wrapper {
+    padding: 18px 16px 20px;
+  }
+
+  .portal-topbar__menu-group {
+    flex-basis: calc(50% - 12px);
+    min-width: 150px;
+  }
+}
+
+@media (max-width: 640px) {
+  .portal-topbar__menu-group {
+    flex-basis: 100%;
   }
 }
 </style>

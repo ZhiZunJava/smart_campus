@@ -1,168 +1,147 @@
 <template>
-  <div class="portal-page settings-page">
-    <section class="portal-hero settings-hero">
-      <div>
-        <div class="portal-hero__badge">Settings Center</div>
-        <div class="portal-hero__title">账号设置</div>
-        <p class="portal-hero__desc">统一管理个人资料、安全信息与使用偏好，后续可继续扩展更多配置分组。</p>
-      </div>
-      <div class="portal-hero__panel">
-        <div class="portal-hero__metric">
-          <span>当前模块</span>
-          <strong>{{ activeTabLabel }}</strong>
-        </div>
-        <div class="portal-hero__metric">
-          <span>配置分组</span>
-          <strong>资料 / 安全 / 偏好</strong>
-        </div>
-      </div>
-    </section>
+  <div class="portal-page settings-page !pb-5">
+    <div class="settings-header">
+      <h2>账号设置</h2>
+      <p>统一管理个人资料、安全信息与使用偏好，定制您的智慧校园体验。</p>
+    </div>
 
-    <section class="portal-card mt16 settings-shell">
-      <aside class="settings-sidebar">
-        <button
+    <div class="settings-main-container">
+      <div class="settings-sidebar">
+        <div
           v-for="tab in tabs"
           :key="tab.value"
-          type="button"
-          class="settings-sidebar__item"
+          class="sidebar-item"
           :class="{ 'is-active': activeTab === tab.value }"
           @click="activeTab = tab.value"
         >
-          <strong>{{ tab.label }}</strong>
-          <span>{{ tab.desc }}</span>
-        </button>
-      </aside>
+          <el-icon>
+            <User v-if="tab.value === 'profile'" />
+            <Lock v-else-if="tab.value === 'security'" />
+            <Setting v-else-if="tab.value === 'preferences'" />
+          </el-icon>
+          <span>{{ tab.label }}</span>
+        </div>
+      </div>
 
-      <section class="settings-content">
-        <section v-if="activeTab === 'profile'" class="settings-panel">
-          <div class="settings-panel__head">
-            <span class="settings-panel__eyebrow">Profile</span>
-            <h3>个人资料</h3>
-            <p>完善基础资料、联系信息与学习画像。</p>
-          </div>
-
-          <el-form ref="profileFormRef" :model="profileForm" :rules="profileRules" label-position="top" class="settings-form">
-            <div class="settings-grid">
-              <el-form-item label="昵称" prop="nickName">
-                <el-input v-model="profileForm.nickName" maxlength="30" />
-              </el-form-item>
-              <el-form-item label="真实姓名" prop="realName">
-                <el-input v-model="profileForm.realName" maxlength="30" />
-              </el-form-item>
-              <el-form-item label="手机号" prop="phonenumber">
-                <el-input v-model="profileForm.phonenumber" maxlength="11" />
-              </el-form-item>
-              <el-form-item label="邮箱" prop="email">
-                <el-input v-model="profileForm.email" maxlength="50" />
-              </el-form-item>
-              <el-form-item label="性别" prop="sex">
-                <el-select v-model="profileForm.sex" placeholder="请选择性别">
-                  <el-option label="男" value="0" />
-                  <el-option label="女" value="1" />
-                  <el-option label="未知" value="2" />
-                </el-select>
-              </el-form-item>
-              <el-form-item label="专业 / 学科" prop="major">
-                <el-input v-model="profileForm.major" maxlength="50" />
-              </el-form-item>
-              <el-form-item label="入学年份" prop="admissionYear">
-                <el-input v-model="profileForm.admissionYear" maxlength="4" />
-              </el-form-item>
-              <el-form-item label="学习风格" prop="learningStyle">
-                <el-input v-model="profileForm.learningStyle" maxlength="100" />
-              </el-form-item>
-              <el-form-item class="settings-grid__full" label="学习目标" prop="learningGoal">
-                <el-input v-model="profileForm.learningGoal" type="textarea" :rows="3" maxlength="200" show-word-limit />
-              </el-form-item>
-              <el-form-item class="settings-grid__full" label="兴趣标签" prop="interestTags">
-                <el-input v-model="profileForm.interestTags" maxlength="200" placeholder="多个标签请用逗号分隔" />
-              </el-form-item>
-            </div>
-          </el-form>
-
-          <div class="settings-actions">
-            <el-button type="primary" @click="submitProfile">保存资料</el-button>
-          </div>
-        </section>
-
-        <section v-else-if="activeTab === 'security'" class="settings-panel">
-          <div class="settings-panel__head">
-            <span class="settings-panel__eyebrow">Security</span>
-            <h3>账号安全</h3>
-            <p>维护密码强度与登录安全，便于后续扩展设备与登录记录配置。</p>
-          </div>
-
-          <div class="settings-security">
-            <div class="settings-security__summary">
-              <div class="security-chip">
-                <span>当前状态</span>
-                <strong>基础防护已启用</strong>
-              </div>
-              <div class="security-chip">
-                <span>建议操作</span>
-                <strong>定期更新密码</strong>
-              </div>
+      <div class="settings-content">
+        <transition name="el-fade-in-linear" mode="out-in">
+          <div v-if="activeTab === 'profile'" key="profile" class="settings-panel">
+            <div class="settings-panel-header">
+              <h3>个人资料</h3>
+              <p>完善基础资料、联系信息与学习偏好，便于系统提供更贴合的服务。</p>
             </div>
 
-            <el-form ref="passwordFormRef" :model="passwordForm" :rules="passwordRules" label-position="top" class="settings-form">
-              <div class="settings-grid">
+            <el-form ref="profileFormRef" :model="profileForm" :rules="profileRules" label-position="top" class="settings-form">
+              <el-row :gutter="32">
+                <el-col :span="12">
+                  <el-form-item label="昵称" prop="nickName">
+                    <el-input v-model="profileForm.nickName" maxlength="30" placeholder="请输入昵称" size="large" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="真实姓名" prop="realName">
+                    <el-input v-model="profileForm.realName" maxlength="30" placeholder="请输入真实姓名" size="large" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="手机号" prop="phonenumber">
+                    <el-input v-model="profileForm.phonenumber" maxlength="11" placeholder="请输入手机号" size="large" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="邮箱" prop="email">
+                    <el-input v-model="profileForm.email" maxlength="50" placeholder="请输入邮箱" size="large" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="性别" prop="sex">
+                    <el-select v-model="profileForm.sex" placeholder="请选择性别" class="w-full" size="large">
+                      <el-option label="男" value="0" />
+                      <el-option label="女" value="1" />
+                      <el-option label="未知" value="2" />
+                    </el-select>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="入学年份" prop="admissionYear">
+                    <el-input v-model="profileForm.admissionYear" maxlength="4" placeholder="例如: 2023" size="large" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="专业 / 学科" prop="major">
+                    <el-input v-model="profileForm.major" maxlength="50" placeholder="请输入专业或学科" size="large" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="学习风格" prop="learningStyle">
+                    <el-input v-model="profileForm.learningStyle" maxlength="100" placeholder="例如: 视觉型、听觉型" size="large" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="24">
+                  <el-form-item label="学习目标" prop="learningGoal">
+                    <el-input v-model="profileForm.learningGoal" type="textarea" :rows="4" maxlength="200" show-word-limit placeholder="简述您的学习目标" size="large" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="24">
+                  <el-form-item label="兴趣标签" prop="interestTags">
+                    <el-input v-model="profileForm.interestTags" maxlength="200" placeholder="多个标签请用逗号分隔，例如: 编程, 篮球, 阅读" size="large" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </el-form>
+
+            <div class="settings-actions">
+              <el-button type="primary" size="large" @click="submitProfile" class="submit-btn">保存资料</el-button>
+            </div>
+          </div>
+
+          <div v-else-if="activeTab === 'security'" key="security" class="settings-panel">
+            <div class="settings-panel-header">
+              <h3>账号安全</h3>
+              <p>维护密码强度与登录安全，保护您的账号不受未授权访问。</p>
+            </div>
+
+            <div class="security-status-cards mb-4">
+              <el-card shadow="never" class="status-card success-card">
+                <div class="status-icon success"><el-icon><CircleCheckFilled /></el-icon></div>
+                <div class="status-info">
+                  <h4>基础防护已启用</h4>
+                  <p>您的账号目前处于安全状态</p>
+                </div>
+              </el-card>
+              <el-card shadow="never" class="status-card warning-card">
+                <div class="status-icon warning"><el-icon><WarningFilled /></el-icon></div>
+                <div class="status-info">
+                  <h4>建议定期更新</h4>
+                  <p>建议每 3 个月更换一次密码</p>
+                </div>
+              </el-card>
+            </div>
+
+            <el-divider border-style="dashed" class="my-8" />
+
+            <div class="password-section">
+              <h4 class="section-title">修改密码</h4>
+              <el-form ref="passwordFormRef" :model="passwordForm" :rules="passwordRules" label-width="120px" label-position="left" class="password-form">
                 <el-form-item label="旧密码" prop="oldPassword">
-                  <el-input v-model="passwordForm.oldPassword" type="password" show-password />
+                  <el-input v-model="passwordForm.oldPassword" type="password" show-password placeholder="请输入当前密码" size="large" />
                 </el-form-item>
                 <el-form-item label="新密码" prop="newPassword">
-                  <el-input v-model="passwordForm.newPassword" type="password" show-password />
+                  <el-input v-model="passwordForm.newPassword" type="password" show-password placeholder="请输入新密码（至少6位）" size="large" />
                 </el-form-item>
-                <el-form-item label="确认密码" prop="confirmPassword">
-                  <el-input v-model="passwordForm.confirmPassword" type="password" show-password />
+                <el-form-item label="确认新密码" prop="confirmPassword">
+                  <el-input v-model="passwordForm.confirmPassword" type="password" show-password placeholder="请再次输入新密码" size="large" />
                 </el-form-item>
-              </div>
-            </el-form>
-          </div>
-
-          <div class="settings-actions">
-            <el-button @click="resetPasswordForm">重置</el-button>
-            <el-button type="primary" plain @click="submitPassword">更新密码</el-button>
-          </div>
-        </section>
-
-        <section v-else class="settings-panel">
-          <div class="settings-panel__head">
-            <span class="settings-panel__eyebrow">Preferences</span>
-            <h3>使用偏好</h3>
-            <p>维护默认角色、显示方式与提醒选项，后续可继续扩展更多系统偏好。</p>
-          </div>
-
-          <div class="settings-grid">
-            <div class="pref-card">
-              <span>默认角色</span>
-              <el-select v-model="preferredRole" placeholder="请选择默认角色">
-                <el-option label="学生端" value="student" />
-                <el-option label="教师端" value="teacher" />
-                <el-option label="家长端" value="parent" />
-              </el-select>
-            </div>
-            <div class="pref-card">
-              <span>通知提醒</span>
-              <div class="pref-card__control">
-                <el-switch v-model="notifyEnabled" />
-                <small>控制页面内提醒与提示展示</small>
-              </div>
-            </div>
-            <div class="pref-card">
-              <span>紧凑模式</span>
-              <div class="pref-card__control">
-                <el-switch v-model="compactEnabled" />
-                <small>减少卡片与内容区留白，提升信息密度</small>
-              </div>
+                <el-form-item class="mt-8">
+                  <el-button size="large" @click="resetPasswordForm">重置</el-button>
+                  <el-button type="primary" size="large" @click="submitPassword">更新密码</el-button>
+                </el-form-item>
+              </el-form>
             </div>
           </div>
-
-          <div class="settings-actions">
-            <el-button type="primary" @click="savePreferences">保存偏好</el-button>
-          </div>
-        </section>
-      </section>
-    </section>
+        </transition>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -171,19 +150,16 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from '@/utils/feedback'
 import usePortalUserStore from '@/store/user'
 import { getPortalProfile, updatePortalPassword, updatePortalProfile } from '@/api/portal'
+import { User, Lock, CircleCheckFilled, WarningFilled } from '@element-plus/icons-vue'
 
 const userStore = usePortalUserStore()
 const profileFormRef = ref()
 const passwordFormRef = ref()
-const activeTab = ref<'profile' | 'security' | 'preferences'>('profile')
-const preferredRole = ref(userStore.preferredPortalRole)
-const notifyEnabled = ref(localStorage.getItem('portal-notify-enabled') !== '0')
-const compactEnabled = ref(localStorage.getItem('portal-compact-enabled') === '1')
+const activeTab = ref<'profile' | 'security'>('profile')
 
 const tabs = [
-  { value: 'profile', label: '个人资料', desc: '基础资料与学习画像' },
+  { value: 'profile', label: '个人资料', desc: '基础资料与学习偏好' },
   { value: 'security', label: '账号安全', desc: '密码与安全维护' },
-  { value: 'preferences', label: '使用偏好', desc: '角色与界面偏好' },
 ] as const
 
 const activeTabLabel = computed(() => tabs.find((tab) => tab.value === activeTab.value)?.label || '个人资料')
@@ -277,190 +253,242 @@ async function submitPassword() {
   resetPasswordForm()
 }
 
-function savePreferences() {
-  userStore.setPreferredPortalRole(preferredRole.value)
-  localStorage.setItem('portal-notify-enabled', notifyEnabled.value ? '1' : '0')
-  localStorage.setItem('portal-compact-enabled', compactEnabled.value ? '1' : '0')
-  ElMessage.success('使用偏好已保存')
-}
-
 onMounted(async () => {
   await loadProfile()
 })
 </script>
 
 <style scoped>
-.settings-hero {
-  align-items: stretch;
+.settings-page {
+  padding: 24px;
+  background: transparent;
 }
 
-.settings-shell {
-  display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  overflow: hidden;
+.settings-header {
+  margin-bottom: 24px;
+}
+
+.settings-header h2 {
+  margin: 0 0 8px 0;
+  font-size: 22px;
+  color: var(--portal-text);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.settings-header p {
+  margin: 0;
+  color: var(--portal-text-secondary);
+  font-size: 14px;
+}
+
+.settings-main-container {
+  display: flex;
+  align-items: flex-start;
+  min-height: calc(100vh - 220px);
 }
 
 .settings-sidebar {
-  padding: 16px;
-  border-right: 1px solid var(--portal-border);
-  background: var(--portal-surface-bg);
-  display: grid;
-  align-content: start;
-  gap: 8px;
+  width: 240px;
+  padding-right: 32px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 24px;
 }
 
-.settings-sidebar__item {
+.sidebar-item {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px 14px;
-  border-radius: 6px;
-  border: 1px solid transparent;
-  background: transparent;
-  text-align: left;
+  align-items: center;
+  padding: 14px 20px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background-color .2s ease, border-color .2s ease, transform .2s ease;
+  color: var(--portal-text-secondary);
+  font-size: 15px;
+  margin-bottom: 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.settings-sidebar__item strong {
-  font-size: 14px;
+.sidebar-item:hover {
+  background: #f0f2f5;
   color: var(--portal-text);
 }
 
-.settings-sidebar__item span {
-  font-size: 12px;
-  color: var(--portal-text-secondary);
-  line-height: 1.6;
+.sidebar-item.is-active {
+  background: var(--portal-brand-light, #e6f1fc);
+  color: var(--portal-brand);
+  font-weight: 500;
 }
 
-.settings-sidebar__item:hover,
-.settings-sidebar__item.is-active {
-  background: #fff;
-  border-color: var(--portal-border);
-  transform: translateY(-1px);
+.sidebar-item .el-icon {
+  margin-right: 12px;
+  font-size: 18px;
 }
 
 .settings-content {
-  min-width: 0;
-  padding: 16px;
+  flex: 1;
+  padding: 0 0 80px 40px;
+  border-left: 1px solid #ebeef5;
+  position: relative;
 }
 
 .settings-panel {
-  display: grid;
-  gap: 14px;
+  max-width: 800px;
 }
 
-.settings-panel__eyebrow {
-  display: inline-flex;
-  align-items: center;
-  width: fit-content;
-  min-height: 24px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: var(--portal-brand-light);
-  color: var(--portal-brand);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .08em;
-  text-transform: uppercase;
+.settings-panel-header {
+  margin-bottom: 40px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #ebeef5;
 }
 
-.settings-panel__head h3 {
-  margin: 0;
-  font-size: 18px;
+.settings-panel-header h3 {
+  margin: 0 0 10px 0;
+  font-size: 20px;
   color: var(--portal-text);
+  font-weight: 600;
 }
 
-.settings-panel__head p {
-  margin: 6px 0 0;
-  font-size: 13px;
+.settings-panel-header p {
+  margin: 0;
+  font-size: 14px;
   color: var(--portal-text-secondary);
-  line-height: 1.7;
 }
 
-.settings-form {
-  margin-top: 2px;
+.w-full {
+  width: 100%;
 }
 
-.settings-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px 14px;
-}
-
-.settings-grid__full {
-  grid-column: 1 / -1;
+.settings-form :deep(.el-form-item__label) {
+  font-weight: 500;
+  color: var(--portal-text);
+  padding-bottom: 8px;
 }
 
 .settings-actions {
+  margin-top: 40px;
   display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 4px;
+  justify-content: flex-start;
 }
 
-.settings-security {
-  display: grid;
-  gap: 14px;
+.submit-btn {
+  padding: 0 32px;
+  font-weight: 500;
+  border-radius: 8px;
 }
 
-.settings-security__summary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.security-chip,
-.pref-card {
+/* Security Status Cards */
+.security-status-cards {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px;
-  border-radius: 6px;
-  background: var(--portal-surface-bg);
-  border: 1px solid var(--portal-border);
+  gap: 20px;
 }
 
-.security-chip span,
-.pref-card span {
-  font-size: 13px;
+.status-card {
+  flex: 1;
+  border-radius: 12px;
+  border: 1px solid #ebeef5;
+  background: #fdfdfe;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.status-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.success-card {
+  border-left: 4px solid var(--portal-success, #67c23a);
+}
+
+.warning-card {
+  border-left: 4px solid var(--portal-warning, #e6a23c);
+}
+
+.status-card :deep(.el-card__body) {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 24px;
+}
+
+.status-icon {
+  font-size: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-icon.success {
+  color: var(--portal-success, #67c23a);
+}
+
+.status-icon.warning {
+  color: var(--portal-warning, #e6a23c);
+}
+
+.status-info h4 {
+  margin: 0 0 6px 0;
+  font-size: 16px;
+  color: var(--portal-text);
   font-weight: 600;
+}
+
+.status-info p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--portal-text-secondary);
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--portal-text);
+  margin-bottom: 24px;
+}
+
+.password-form {
+  max-width: 500px;
+}
+
+.password-form :deep(.el-form-item__label) {
+  font-weight: 500;
   color: var(--portal-text);
 }
 
-.security-chip strong {
-  font-size: 18px;
-  color: var(--portal-brand);
+.my-8 {
+  margin: 32px 0;
 }
 
-.pref-card__control {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.mt-8 {
+  margin-top: 32px;
 }
 
-.pref-card__control small {
-  color: var(--portal-text-secondary);
-  line-height: 1.6;
-}
-
-@media (max-width: 1100px) {
-  .settings-shell {
-    grid-template-columns: 1fr;
+@media (max-width: 768px) {
+  .settings-main-container {
+    flex-direction: column;
   }
-
+  
   .settings-sidebar {
-    border-right: none;
-    border-bottom: 1px solid var(--portal-border);
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    padding: 0 0 16px 0;
+    position: static;
+    display: flex;
+    overflow-x: auto;
   }
-}
-
-@media (max-width: 900px) {
-  .settings-grid,
-  .settings-security__summary,
-  .settings-sidebar {
-    grid-template-columns: 1fr;
+  
+  .sidebar-item {
+    margin-bottom: 0;
+    margin-right: 8px;
+    white-space: nowrap;
+  }
+  
+  .security-status-cards {
+    flex-direction: column;
+  }
+  
+  .settings-content {
+    padding: 24px 0 60px 0;
+    border-left: none;
+    border-top: 1px solid #ebeef5;
   }
 }
 </style>

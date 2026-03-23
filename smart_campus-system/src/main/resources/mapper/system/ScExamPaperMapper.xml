@@ -20,7 +20,14 @@
     <result property="passScore" column="pass_score" />
     <result property="markingMode" column="marking_mode" />
     <result property="questionOrderMode" column="question_order_mode" />
+    <result property="questionNavigationMode" column="question_navigation_mode" />
     <result property="allowReviewAnalysis" column="allow_review_analysis" />
+    <result property="antiCheatEnabled" column="anti_cheat_enabled" />
+    <result property="maxFocusLossCount" column="max_focus_loss_count" />
+    <result property="autoSubmitOnFocusLossLimit" column="auto_submit_on_focus_loss_limit" />
+    <result property="allowCopyPaste" column="allow_copy_paste" />
+    <result property="maxAttemptCount" column="max_attempt_count" />
+    <result property="allowViewScore" column="allow_view_score" />
     <result property="sectionConfigJson" column="section_config_json" />
     <result property="adaptiveRuleJson" column="adaptive_rule_json" />
     <result property="status" column="status" />
@@ -28,7 +35,9 @@
   <sql id="selectScExamPaperVo">select paper_id, parent_paper_id, paper_name, course_id, paper_type, paper_level,
     answer_mode, paper_weight, sort_no, total_score,
     duration_minutes, publish_status, publish_start_time, publish_end_time, strategy_template_id,
-    pass_score, marking_mode, question_order_mode, allow_review_analysis, section_config_json, adaptive_rule_json,
+    pass_score, marking_mode, question_order_mode, question_navigation_mode, allow_review_analysis, anti_cheat_enabled, max_focus_loss_count,
+    auto_submit_on_focus_loss_limit, allow_copy_paste, max_attempt_count, allow_view_score,
+    section_config_json, adaptive_rule_json,
     status from sc_exam_paper</sql>
   <select id="selectScExamPaperByPaperId" parameterType="Long" resultMap="ScExamPaperResult"><include
       refid="selectScExamPaperVo" /> where paper_id = #{paperId}</select>
@@ -62,12 +71,15 @@
   <insert id="insertScExamPaper" parameterType="ScExamPaper" useGeneratedKeys="true"
     keyProperty="paperId">insert into sc_exam_paper(parent_paper_id, paper_name, course_id, paper_type, paper_level,
     answer_mode, paper_weight, sort_no, total_score, duration_minutes, publish_status, publish_start_time,
-    publish_end_time, strategy_template_id, pass_score, marking_mode, question_order_mode, allow_review_analysis,
+    publish_end_time, strategy_template_id, pass_score, marking_mode, question_order_mode, question_navigation_mode, allow_review_analysis,
+    anti_cheat_enabled, max_focus_loss_count, auto_submit_on_focus_loss_limit, allow_copy_paste,
+    max_attempt_count, allow_view_score,
     section_config_json, adaptive_rule_json, status, create_by, create_time, remark)
     values(#{parentPaperId}, #{paperName}, #{courseId}, #{paperType}, #{paperLevel}, #{answerMode},
     #{paperWeight}, #{sortNo}, #{totalScore}, #{durationMinutes}, #{publishStatus}, #{publishStartTime},
-    #{publishEndTime}, #{strategyTemplateId}, #{passScore}, #{markingMode}, #{questionOrderMode},
-    #{allowReviewAnalysis}, #{sectionConfigJson}, #{adaptiveRuleJson}, #{status}, #{createBy}, sysdate(),
+    #{publishEndTime}, #{strategyTemplateId}, #{passScore}, #{markingMode}, #{questionOrderMode}, #{questionNavigationMode},
+    #{allowReviewAnalysis}, #{antiCheatEnabled}, #{maxFocusLossCount}, #{autoSubmitOnFocusLossLimit},
+    #{allowCopyPaste}, #{maxAttemptCount}, #{allowViewScore}, #{sectionConfigJson}, #{adaptiveRuleJson}, #{status}, #{createBy}, sysdate(),
     #{remark})</insert>
   <update id="updateScExamPaper" parameterType="ScExamPaper">update sc_exam_paper <set><if
         test="parentPaperId != null">parent_paper_id = #{parentPaperId},</if><if
@@ -85,7 +97,14 @@
         test="passScore != null">pass_score = #{passScore},</if><if
         test="markingMode != null">marking_mode = #{markingMode},</if><if
         test="questionOrderMode != null">question_order_mode = #{questionOrderMode},</if><if
+        test="questionNavigationMode != null">question_navigation_mode = #{questionNavigationMode},</if><if
         test="allowReviewAnalysis != null">allow_review_analysis = #{allowReviewAnalysis},</if><if
+        test="antiCheatEnabled != null">anti_cheat_enabled = #{antiCheatEnabled},</if><if
+        test="maxFocusLossCount != null">max_focus_loss_count = #{maxFocusLossCount},</if><if
+        test="autoSubmitOnFocusLossLimit != null">auto_submit_on_focus_loss_limit = #{autoSubmitOnFocusLossLimit},</if><if
+        test="allowCopyPaste != null">allow_copy_paste = #{allowCopyPaste},</if><if
+        test="maxAttemptCount != null">max_attempt_count = #{maxAttemptCount},</if><if
+        test="allowViewScore != null">allow_view_score = #{allowViewScore},</if><if
         test="sectionConfigJson != null">section_config_json = #{sectionConfigJson},</if><if
         test="adaptiveRuleJson != null">adaptive_rule_json = #{adaptiveRuleJson},</if><if
         test="status != null">status = #{status},</if><if test="updateBy != null">update_by =

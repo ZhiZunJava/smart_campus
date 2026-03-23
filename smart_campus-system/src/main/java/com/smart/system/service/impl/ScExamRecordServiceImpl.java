@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+
+import com.smart.common.exception.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.smart.system.domain.ScExamAnswer;
@@ -104,6 +106,10 @@ public class ScExamRecordServiceImpl implements IScExamRecordService {
 
     @Override
     public ScExamRecord startExam(Long paperId, Long userId) {
+        ScExamPaper paper = scExamPaperMapper.selectScExamPaperByPaperId(paperId);
+        if (paper == null) {
+            throw new ServiceException("试卷不存在");
+        }
         ScExamRecord query = new ScExamRecord();
         query.setPaperId(paperId);
         query.setUserId(userId);
@@ -111,6 +117,16 @@ public class ScExamRecordServiceImpl implements IScExamRecordService {
         List<ScExamRecord> ongoingRecords = scExamRecordMapper.selectScExamRecordList(query);
         if (ongoingRecords != null && !ongoingRecords.isEmpty()) {
             return ongoingRecords.get(0);
+        }
+        int maxAttemptCount = paper.getMaxAttemptCount() == null ? 0 : Math.max(0, paper.getMaxAttemptCount());
+        if (maxAttemptCount > 0) {
+            ScExamRecord attemptQuery = new ScExamRecord();
+            attemptQuery.setPaperId(paperId);
+            attemptQuery.setUserId(userId);
+            List<ScExamRecord> attempts = scExamRecordMapper.selectScExamRecordList(attemptQuery);
+            if (attempts != null && attempts.size() >= maxAttemptCount) {
+                throw new ServiceException("该试卷可参加次数已用完");
+            }
         }
         ScExamRecord record = new ScExamRecord();
         record.setPaperId(paperId);
@@ -134,11 +150,16 @@ public class ScExamRecordServiceImpl implements IScExamRecordService {
     @Override
     public ScExamAnswerDraft saveAnswerDraft(com.smart.system.domain.dto.ExamAnswerDraftSaveDto dto, Long userId,
             String operator) {
-        if (dto == null || dto.getRecordId() == null || dto.getQuestionId() == null) {
+        if (dto == null || dto.getRecordId() == null) {
             return null;
         }
         ScExamRecord record = scExamRecordMapper.selectScExamRecordByRecordId(dto.getRecordId());
         if (record == null || userId == null || !userId.equals(record.getUserId())) {
+            return null;
+        }
+        syncFocusLossCount(record, dto.getFocusLossCount(), dto.getFocusLossSource(), dto.getFocusLossOccurredAt(),
+                operator);
+        if (dto.getQuestionId() == null) {
             return null;
         }
         ScExamAnswerDraft draft = scExamAnswerDraftMapper.selectScExamAnswerDraftByRecordAndQuestion(dto.getRecordId(),
@@ -169,6 +190,35 @@ public class ScExamRecordServiceImpl implements IScExamRecordService {
         }
         insertBehaviorLog(record, "AUTO_SAVE", 1, "{\"questionId\":" + dto.getQuestionId() + "}");
         return draft;
+    }
+
+    private void syncFocusLossCount(ScExamRecord record, Integer latestFocusLossCount, String focusLossSource,
+            Long focusLossOccurredAt, String operator) {
+        if (record == null || record.getSessionId() == null || latestFocusLossCount == null) {
+            return;
+        }
+        int safeLatestCount = Math.max(0, latestFocusLossCount);
+        ScExamSession session = scExamSessionMapper.selectScExamSessionBySessionId(record.getSessionId());
+        if (session == null) {
+            return;
+        }
+        int currentCount = session.getFocusLossCount() == null ? 0 : Math.max(0, session.getFocusLossCount());
+        if (safeLatestCount <= currentCount) {
+            return;
+        }
+        session.setSessionId(record.getSessionId());
+        session.setFocusLossCount(safeLatestCount);
+        session.setUpdateBy(operator);
+        scExamSessionMapper.updateScExamSession(session);
+        for (int count = currentCount + 1; count <= safeLatestCount; count++) {
+            long occurredAt = focusLossOccurredAt == null ? System.currentTimeMillis() : focusLossOccurredAt;
+            String behaviorData = String.format(
+                    "{\"focusLossCount\":%d,\"sourceEvent\":\"%s\",\"occurredAt\":%d}",
+                    count,
+                    StringUtils.defaultIfEmpty(focusLossSource, "unknown"),
+                    occurredAt);
+            insertBehaviorLog(record, "FOCUS_LOSS", 1, behaviorData, new Date(occurredAt));
+        }
     }
 
     @Override
@@ -508,21 +558,23 @@ public class ScExamRecordServiceImpl implements IScExamRecordService {
             return;
         }
         insertBehaviorLog(record, "MANUAL_SUBMIT", 1, record.getAnalysisJson());
-        if (focusLossCount != null && focusLossCount > 0) {
-            insertBehaviorLog(record, "FOCUS_LOSS", focusLossCount, record.getAnalysisJson());
-        }
         if (flaggedCount != null && flaggedCount > 0) {
             insertBehaviorLog(record, "FLAGGED", flaggedCount, record.getAnalysisJson());
         }
     }
 
     private void insertBehaviorLog(ScExamRecord record, String behaviorType, Integer behaviorCount, String behaviorData) {
+        insertBehaviorLog(record, behaviorType, behaviorCount, behaviorData, new Date());
+    }
+
+    private void insertBehaviorLog(ScExamRecord record, String behaviorType, Integer behaviorCount, String behaviorData,
+            Date behaviorTime) {
         ScExamBehaviorLog log = new ScExamBehaviorLog();
         log.setSessionId(record.getSessionId());
         log.setRecordId(record.getRecordId());
         log.setBehaviorType(behaviorType);
         log.setBehaviorCount(behaviorCount == null ? 1 : behaviorCount);
-        log.setBehaviorTime(new Date());
+        log.setBehaviorTime(behaviorTime == null ? new Date() : behaviorTime);
         log.setBehaviorData(behaviorData);
         scExamBehaviorLogMapper.insertScExamBehaviorLog(log);
     }

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScLearningTaskSubmissionMapper">
+    <resultMap type="ScLearningTaskSubmission" id="ScLearningTaskSubmissionResult">
+        <id property="submissionId" column="submission_id" />
+        <result property="dispatchId" column="dispatch_id" />
+        <result property="taskId" column="task_id" />
+        <result property="userId" column="user_id" />
+        <result property="submitContent" column="submit_content" />
+        <result property="attachmentUrls" column="attachment_urls" />
+        <result property="submitTime" column="submit_time" />
+        <result property="reviewStatus" column="review_status" />
+        <result property="score" column="score" />
+        <result property="teacherFeedback" column="teacher_feedback" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+    </resultMap>
+
+    <sql id="selectScLearningTaskSubmissionVo">
+        select submission_id, dispatch_id, task_id, user_id, submit_content, attachment_urls, submit_time,
+               review_status, score, teacher_feedback, create_by, create_time, update_by, update_time
+        from sc_learning_task_submission
+    </sql>
+
+    <select id="selectScLearningTaskSubmissionBySubmissionId" parameterType="Long" resultMap="ScLearningTaskSubmissionResult">
+        <include refid="selectScLearningTaskSubmissionVo" />
+        where submission_id = #{submissionId}
+    </select>
+
+    <select id="selectScLearningTaskSubmissionList" parameterType="ScLearningTaskSubmission" resultMap="ScLearningTaskSubmissionResult">
+        <include refid="selectScLearningTaskSubmissionVo" />
+        <where>
+            <if test="dispatchId != null">and dispatch_id = #{dispatchId}</if>
+            <if test="taskId != null">and task_id = #{taskId}</if>
+            <if test="userId != null">and user_id = #{userId}</if>
+            <if test="reviewStatus != null and reviewStatus != ''">and review_status = #{reviewStatus}</if>
+        </where>
+        order by submission_id desc
+    </select>
+
+    <select id="selectByDispatchId" parameterType="Long" resultMap="ScLearningTaskSubmissionResult">
+        <include refid="selectScLearningTaskSubmissionVo" />
+        where dispatch_id = #{dispatchId}
+        limit 1
+    </select>
+
+    <insert id="insertScLearningTaskSubmission" parameterType="ScLearningTaskSubmission" useGeneratedKeys="true" keyProperty="submissionId">
+        insert into sc_learning_task_submission(
+            dispatch_id, task_id, user_id, submit_content, attachment_urls, submit_time,
+            review_status, score, teacher_feedback, create_by, create_time
+        ) values (
+            #{dispatchId}, #{taskId}, #{userId}, #{submitContent}, #{attachmentUrls}, #{submitTime},
+            #{reviewStatus}, #{score}, #{teacherFeedback}, #{createBy}, sysdate()
+        )
+    </insert>
+
+    <update id="updateScLearningTaskSubmission" parameterType="ScLearningTaskSubmission">
+        update sc_learning_task_submission
+        <set>
+            <if test="dispatchId != null">dispatch_id = #{dispatchId},</if>
+            <if test="taskId != null">task_id = #{taskId},</if>
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="submitContent != null">submit_content = #{submitContent},</if>
+            <if test="attachmentUrls != null">attachment_urls = #{attachmentUrls},</if>
+            <if test="submitTime != null">submit_time = #{submitTime},</if>
+            <if test="reviewStatus != null">review_status = #{reviewStatus},</if>
+            <if test="score != null">score = #{score},</if>
+            <if test="teacherFeedback != null">teacher_feedback = #{teacherFeedback},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where submission_id = #{submissionId}
+    </update>
+
+    <delete id="deleteScLearningTaskSubmissionBySubmissionId" parameterType="Long">
+        delete from sc_learning_task_submission where submission_id = #{submissionId}
+    </delete>
+
+    <delete id="deleteScLearningTaskSubmissionBySubmissionIds" parameterType="Long">
+        delete from sc_learning_task_submission where submission_id in
+        <foreach item="submissionId" collection="array" open="(" separator="," close=")">
+            #{submissionId}
+        </foreach>
+    </delete>
+</mapper>

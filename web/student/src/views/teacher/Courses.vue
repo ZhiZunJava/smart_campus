@@ -12,7 +12,7 @@
       <el-card class="portal-card portal-stat-card"><div class="label">学期</div><div class="value">{{ currentTermLabel }}</div><div class="sub">支持学期切换</div></el-card>
     </section>
 
-    <el-card class="portal-card">
+    <div class="portal-card">
       <div class="course-filter">
         <el-select v-model="queryParams.termId" filterable clearable placeholder="选择学期" style="width: 240px" @change="loadCourses">
           <el-option v-for="item in termOptions" :key="item.value" :label="item.label" :value="item.value" />
@@ -39,7 +39,7 @@
         <el-table-column label="课程简介" prop="intro" min-width="260" show-overflow-tooltip />
       </el-table>
       <el-empty v-if="!loading && !filteredCourses.length" description="当前学期暂无授课安排" />
-    </el-card>
+    </div>
   </div>
 </template>
 

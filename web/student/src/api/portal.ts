@@ -24,6 +24,18 @@ export function getPortalMessageCenter(params: any) {
   return request({ url: '/campus/portal/student/messages', method: 'get', params })
 }
 
+export function getPortalMessageOverview(params: any) {
+  return request({ url: '/campus/portal/student/message-center', method: 'get', params })
+}
+
+export function getPortalUnreadMessages(params: any) {
+  return request({ url: '/campus/portal/student/messages', method: 'get', params })
+}
+
+export function markPortalMessageRead(noticeId: number) {
+  return request({ url: `/campus/portal/student/message-center/${noticeId}/read`, method: 'put' })
+}
+
 export function getPortalProfile() {
   return request({ url: '/campus/portal/profile', method: 'get' })
 }
@@ -64,40 +76,12 @@ export function getPortalParentSchedule(params: any) {
   return request({ url: '/campus/portal/parent/child-schedule', method: 'get', params })
 }
 
-export function getLearningDiagnosis(params: any) {
-  return request({ url: '/campus/analysis/diagnosis', method: 'get', params })
-}
-
-export function getLearningWorkbench(params: any) {
-  return request({ url: '/campus/analysis/workbench', method: 'get', params })
-}
-
-export function getAnalysisMeta() {
-  return request({ url: '/campus/analysis/meta', method: 'get' })
-}
-
 export function listResource(query: any) {
   return request({ url: '/campus/portal/learning/resource/list', method: 'get', params: query })
 }
 
-export function recordStudyBehavior(data: any) {
-  return request({ url: '/campus/studyRecord/recordBehavior', method: 'post', data })
-}
-
 export function getResourceDetail(resourceId: number) {
   return request({ url: `/campus/portal/learning/resource/${resourceId}`, method: 'get' })
-}
-
-export function listRecommendation(query: any) {
-  return request({ url: '/campus/portal/learning/recommendation/list', method: 'get', params: query })
-}
-
-export function listActiveRecommendation(query: any) {
-  return request({ url: '/campus/portal/learning/recommendation/active', method: 'get', params: query })
-}
-
-export function feedbackRecommendation(data: any) {
-  return request({ url: '/campus/portal/learning/recommendation/feedback', method: 'post', data })
 }
 
 export function listQaSession(query: any) {
@@ -248,6 +232,35 @@ export function getPortalTaskCenter(params: any) {
   return request({ url: '/campus/portal/student/tasks', method: 'get', params })
 }
 
+export function markPortalTaskRead(dispatchId: number) {
+  return request({ url: `/campus/portal/student/task-dispatch/${dispatchId}/read`, method: 'put' })
+}
+
+export function completePortalTask(dispatchId: number, data?: any) {
+  return request({ url: `/campus/portal/student/task-dispatch/${dispatchId}/complete`, method: 'put', data })
+}
+
+export function getPortalTaskDetail(dispatchId: number) {
+  return request({ url: `/campus/portal/student/task-dispatch/${dispatchId}/detail`, method: 'get' })
+}
+
+export function submitPortalTask(dispatchId: number, data: any) {
+  return request({ url: `/campus/portal/student/task-dispatch/${dispatchId}/submit`, method: 'put', data })
+}
+
+export function uploadPortalTaskAttachment(file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request({
+    url: '/common/upload',
+    method: 'post',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
+
 export function getPortalMySchedule(params: any) {
   return request({ url: '/campus/portal/student/my-schedule', method: 'get', params })
 }
@@ -266,15 +279,22 @@ export async function fetchPortalUserOptions(userType?: string) {
 
 export async function fetchPortalCourseOptions(userId?: number) {
   try {
-    if (userId) {
-      const res = await listPortalMyCourses({ userId })
-      return (res.data || res || []).map((item: any) => ({
-        label: `${item.courseName}（${item.courseId}）`,
-        value: item.courseId,
-      }))
-    }
-    const res = await listCourse({ pageNum: 1, pageSize: 200 })
-    return (res.rows || []).map((item: any) => ({
+    if (!userId) return []
+    const res = await listPortalMyCourses({ userId })
+    return (res.data || res || []).map((item: any) => ({
+      label: `${item.courseName}（${item.courseId}）`,
+      value: item.courseId,
+    }))
+  } catch {
+    return []
+  }
+}
+
+export async function fetchPortalCourseCatalogOptions(userId?: number) {
+  try {
+    if (!userId) return []
+    const res = await listPortalMyCourses({ userId })
+    return (res.data || res || []).map((item: any) => ({
       label: `${item.courseName}（${item.courseId}）`,
       value: item.courseId,
     }))
@@ -307,12 +327,4 @@ export async function fetchPortalStudentKnowledgePointOptions(userId?: number, c
   } catch {
     return []
   }
-}
-
-export function listWarning(query: any) {
-  return request({ url: '/campus/portal/learning/warning/list', method: 'get', params: query })
-}
-
-export function listReport(query: any) {
-  return request({ url: '/campus/portal/learning/report/list', method: 'get', params: query })
 }

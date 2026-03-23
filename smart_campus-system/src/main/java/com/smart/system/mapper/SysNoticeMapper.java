@@ -1,6 +1,8 @@
 package com.smart.system.mapper;
 
 import java.util.List;
+import java.util.Map;
+import org.apache.ibatis.annotations.Param;
 import com.smart.system.domain.SysNotice;
 
 /**
@@ -57,4 +59,20 @@ public interface SysNoticeMapper
      * @return 结果
      */
     public int deleteNoticeByIds(Long[] noticeIds);
+
+    /**
+     * 门户端查询消息中心列表
+     */
+    List<SysNotice> selectPortalNoticeList(@Param("userId") Long userId,
+            @Param("receiverScope") String receiverScope,
+            @Param("bizCategory") String bizCategory,
+            @Param("readFlag") String readFlag,
+            @Param("keyword") String keyword,
+            @Param("limit") Integer limit);
+
+    /**
+     * 门户端查询消息中心统计
+     */
+    Map<String, Object> selectPortalNoticeStats(@Param("userId") Long userId,
+            @Param("receiverScope") String receiverScope);
 }

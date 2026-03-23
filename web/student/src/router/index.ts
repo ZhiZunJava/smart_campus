@@ -29,11 +29,14 @@ const routes = [
       { path: 'courses', component: () => import('@/views/student/Courses.vue'), meta: { title: '我的课程' } },
       { path: 'schedule', component: () => import('@/views/student/Schedule.vue'), meta: { title: '我的课表' } },
       { path: 'resources', component: () => import('@/views/student/Resources.vue'), meta: { title: '资源中心' } },
-      { path: 'recommendations', component: () => import('@/views/student/Recommendations.vue'), meta: { title: '个性推荐' } },
       { path: 'qa', component: () => import('@/views/student/Qa.vue'), meta: { title: '智能问答', hideBanner: true } },
       { path: 'plaza', component: () => import('@/views/student/ChallengePlaza.vue'), meta: { title: '任务中心' } },
+      { path: 'messages', component: () => import('@/views/student/Messages.vue'), meta: { title: '消息中心', hideShortcut: true } },
+      { path: 'notices', component: () => import('@/views/student/Notices.vue'), meta: { title: '消息中心', hideShortcut: true } },
+      { path: 'tasks/:dispatchId', component: () => import('@/views/student/TaskDetail.vue'), meta: { title: '任务详情', hideShortcut: true } },
       { path: 'exams', component: () => import('@/views/student/Exams.vue'), meta: { title: '我的考试' } },
-      { path: 'exams/session/:recordId', component: () => import('@/views/student/ExamSession.vue'), meta: { title: '在线考试', workspace: true, transition: 'portal-workspace-fade' } },
+      { path: 'exams/preview/:paperId', component: () => import('@/views/student/ExamPreviewPage.vue'), meta: { title: '试卷预览' } },
+      { path: 'exams/session/:recordId', component: () => import('@/views/student/ExamSession.vue'), meta: { title: '在线考试' } },
       { path: 'wrongbook', component: () => import('@/views/student/wrongbook/index.vue'), meta: { title: '我的错题本' } }
     ]
   },
@@ -45,8 +48,7 @@ const routes = [
       { path: 'dashboard', component: () => import('@/views/teacher/Dashboard.vue'), meta: { title: '教学概览' } },
       { path: 'courses', component: () => import('@/views/teacher/Courses.vue'), meta: { title: '课程管理' } },
       { path: 'schedule', component: () => import('@/views/teacher/Schedule.vue'), meta: { title: '我的课表' } },
-      { path: 'resources', component: () => import('@/views/teacher/Resources.vue'), meta: { title: '教学资源' } },
-      { path: 'warnings', component: () => import('@/views/teacher/Warnings.vue'), meta: { title: '学情预警' } }
+      { path: 'resources', component: () => import('@/views/teacher/Resources.vue'), meta: { title: '教学资源' } }
     ]
   },
   {
@@ -56,9 +58,7 @@ const routes = [
     children: [
       { path: 'dashboard', component: () => import('@/views/parent/Dashboard.vue'), meta: { title: '孩子概览' } },
       { path: 'courses', component: () => import('@/views/parent/Courses.vue'), meta: { title: '孩子课程' } },
-      { path: 'schedule', component: () => import('@/views/parent/Schedule.vue'), meta: { title: '孩子课表' } },
-      { path: 'warnings', component: () => import('@/views/parent/Warnings.vue'), meta: { title: '预警提醒' } },
-      { path: 'reports', component: () => import('@/views/parent/Reports.vue'), meta: { title: '学习报告' } }
+      { path: 'schedule', component: () => import('@/views/parent/Schedule.vue'), meta: { title: '孩子课表' } }
     ]
   }
 ]

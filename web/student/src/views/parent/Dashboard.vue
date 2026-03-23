@@ -5,26 +5,26 @@
         <div class="service-home__eyebrow">Parent Portal</div>
         <div class="service-home__title">家长服务大厅</div>
         <p class="service-home__desc">
-          围绕孩子课程、课表、预警与学习报告，构建一个更清晰的家校协同入口，让你一进系统就知道该看什么、先做什么。
+          现在只保留课程、课表和考试相关的常用服务，让家长端聚焦在真正需要查看的信息上。
         </p>
       </div>
       <div class="service-home__hero-stats">
         <div class="service-home__hero-metric">
-          <span>能力等级</span>
-          <strong>{{ data.profile?.abilityLevel || '--' }}</strong>
+          <span>考试记录</span>
+          <strong>{{ data.examRecordCount || 0 }}</strong>
         </div>
         <div class="service-home__hero-metric">
-          <span>风险分</span>
-          <strong>{{ data.profile?.riskScore || 0 }}</strong>
+          <span>绑定学生</span>
+          <strong>{{ data.studentUserId || '--' }}</strong>
         </div>
       </div>
     </section>
 
     <section class="portal-kpis">
-      <el-card class="portal-card portal-stat-card"><div class="label">学习行为</div><div class="value">{{ data.studyRecordCount || 0 }}</div><div class="sub">近期学习行为采集</div></el-card>
       <el-card class="portal-card portal-stat-card"><div class="label">考试记录</div><div class="value">{{ data.examRecordCount || 0 }}</div><div class="sub">近期考试与练习情况</div></el-card>
-      <el-card class="portal-card portal-stat-card"><div class="label">预警数量</div><div class="value">{{ data.warningCount || 0 }}</div><div class="sub">需要重点关注的提醒</div></el-card>
-      <el-card class="portal-card portal-stat-card"><div class="label">掌握度</div><div class="value">{{ data.profile?.masteryScore || 0 }}</div><div class="sub">当前学习掌握情况</div></el-card>
+      <el-card class="portal-card portal-stat-card"><div class="label">绑定学生</div><div class="value">{{ data.studentUserId || '--' }}</div><div class="sub">当前查看的学生账号</div></el-card>
+      <el-card class="portal-card portal-stat-card"><div class="label">家长账号</div><div class="value">{{ data.parentUserId || '--' }}</div><div class="sub">当前登录家长身份</div></el-card>
+      <el-card class="portal-card portal-stat-card"><div class="label">服务状态</div><div class="value">精简</div><div class="sub">已移除画像、预警与报告</div></el-card>
     </section>
 
     <div class="service-group-grid mt20">
@@ -44,32 +44,6 @@
         </div>
       </section>
     </div>
-
-    <div class="portal-grid portal-grid-2 mt20">
-      <el-card class="portal-card portal-soft-card">
-        <template #header><span>画像摘要</span></template>
-        <div v-if="data.profile" class="portal-grid portal-grid-2">
-          <div class="portal-surface">活跃度：{{ data.profile.activeScore }}</div>
-          <div class="portal-surface">掌握度：{{ data.profile.masteryScore }}</div>
-          <div class="portal-surface">能力等级：{{ data.profile.abilityLevel }}</div>
-          <div class="portal-surface">风险分：{{ data.profile.riskScore }}</div>
-        </div>
-        <el-empty v-else description="暂无画像数据" />
-      </el-card>
-      <el-card class="portal-card portal-soft-card">
-        <template #header><span>近期预警</span></template>
-        <el-table :data="data.warnings || []" size="small">
-          <el-table-column prop="warningType" label="预警类型" width="120" />
-          <el-table-column label="等级" width="100">
-            <template #default="scope">
-              <el-tag :type="scope.row.warningLevel === 'HIGH' ? 'danger' : scope.row.warningLevel === 'MEDIUM' ? 'warning' : 'success'">{{ warningLevelLabel(scope.row.warningLevel) }}</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="warningContent" label="预警内容" min-width="220" show-overflow-tooltip />
-        </el-table>
-        <el-empty v-if="!(data.warnings || []).length" description="暂无预警提醒" />
-      </el-card>
-    </div>
   </div>
 </template>
 
@@ -83,18 +57,14 @@ const router = useRouter()
 const userStore = usePortalUserStore()
 const data = ref<any>({})
 
-function warningLevelLabel(level: string) {
-  return ({ LOW: '低风险', MEDIUM: '中风险', HIGH: '高风险' } as any)[level] || level || '-'
-}
-
 const groups = [
   {
     key: 'general',
     label: '综合服务',
-    desc: '统一掌握孩子的学情概况与家校协同入口。',
+    desc: '保留家长最常用的课程与概览入口。',
     icon: 'ri-home-heart-line',
     items: [
-      { title: '孩子概览', path: '/parent/dashboard', desc: '孩子学情、建议与提醒' },
+      { title: '孩子概览', path: '/parent/dashboard', desc: '查看孩子课程与考试概况' },
     ],
   },
   {
@@ -105,16 +75,6 @@ const groups = [
     items: [
       { title: '孩子课程', path: '/parent/courses', desc: '查看孩子当前学期课程' },
       { title: '孩子课表', path: '/parent/schedule', desc: '按周查看孩子课程安排' },
-    ],
-  },
-  {
-    key: 'growth',
-    label: '成绩与成长',
-    desc: '围绕预警、报告和成长轨迹进行陪伴。',
-    icon: 'ri-heart-pulse-line',
-    items: [
-      { title: '预警提醒', path: '/parent/warnings', desc: '查看近期风险与干预建议' },
-      { title: '学习报告', path: '/parent/reports', desc: '查看阶段学习报告' },
     ],
   },
 ]
@@ -189,7 +149,7 @@ onMounted(loadData)
 }
 .service-group-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 .service-group-card {
@@ -249,11 +209,12 @@ onMounted(loadData)
   line-height: 1.7;
   color: var(--portal-text-secondary);
 }
-@media (max-width: 1200px) {
-  .service-group-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
 @media (max-width: 960px) {
-  .service-home__hero { grid-template-columns: 1fr; }
-  .service-group-grid { grid-template-columns: 1fr; }
+  .service-home__hero {
+    grid-template-columns: 1fr;
+  }
+  .service-group-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

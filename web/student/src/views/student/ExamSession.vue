@@ -1,235 +1,342 @@
 <template>
-  <div class="exam-session-page">
-    <section class="exam-session-shell" :class="{ 'is-result-mode': mode === 'result' }" v-loading="loading">
-      <template v-if="mode === 'exam' && questionList.length">
-        <aside class="exam-session-sidebar portal-card">
-          <div class="exam-session-sidebar__header">
-            <div class="exam-session-sidebar__eyebrow">Runtime Exam</div>
-            <h1 class="exam-session-sidebar__title">{{ paper.paperName || '在线考试' }}</h1>
-            <p class="exam-session-sidebar__desc">
-              系统已接入自动保存、分题提交和子卷提交。建议完成当前子卷后再进入下一阶段。
-            </p>
+  <div class="exam-session-page" :class="{ 'is-result-mode': mode === 'result' }" v-loading="loading">
+    <template v-if="mode === 'exam' && questionList.length">
+      <!-- Top Header -->
+      <header class="exam-header">
+        <div class="exam-header-left">
+          <div class="exam-header-eyebrow"><i class="ri-edit-box-line mr-1"></i>在线考试</div>
+          <h1 class="exam-title">{{ paper.paperName || '在线考试' }}</h1>
+          <div class="exam-meta">
+            <el-tag effect="plain" type="info" size="small">{{ courseLabel(paper.courseId) }}</el-tag>
+            <span class="meta-item">总分 {{ paper.totalScore || 0 }}</span>
+            <span class="meta-item" v-if="activeSessionPaper">当前阶段: {{ paperStatusLabel(activeSessionPaper.paperStatus) }}</span>
           </div>
+        </div>
+        
+        <div class="exam-header-center">
+          <div class="exam-timer" :class="{ 'is-warning': remainingSeconds <= 300 }">
+            <div class="timer-label">剩余时间</div>
+            <div class="timer-value">{{ formatDuration(remainingSeconds) }}</div>
+          </div>
+        </div>
 
-          <div class="exam-session-timer">
-            <div class="exam-session-timer__label">剩余时间</div>
-            <div class="exam-session-timer__value" :class="{ 'is-warning': remainingSeconds <= 300 }">
-              {{ formatDuration(remainingSeconds) }}
+        <div class="exam-header-right">
+          <div class="draft-status">
+            <span class="draft-dot" :class="{ 'is-saving': draftSaving }"></span>
+            <span class="draft-text">{{ draftHint }}</span>
+          </div>
+          <div class="header-actions">
+            <el-button plain @click="goBackToHub">暂存并离开</el-button>
+            <el-button type="primary" :loading="submitting" @click="confirmSubmit">立即交卷</el-button>
+          </div>
+        </div>
+      </header>
+
+      <el-alert
+        v-if="showUrgentWarning"
+        type="warning"
+        :closable="false"
+        class="exam-urgent-alert mt-4"
+        title="距离考试结束不足 5 分钟，请尽快完成检查并提交试卷。"
+        show-icon
+      />
+
+      <div class="exam-main-layout mt-4">
+        <!-- Question Area (Left/Center) -->
+        <main class="exam-content-area">
+          <article v-if="currentQuestion" class="exam-question-sheet">
+            <div class="sheet-header">
+              <div class="sheet-header-left">
+                <div class="question-index">第 {{ currentQuestionIndex + 1 }} 题</div>
+                <div class="question-type">{{ questionTypeLabel(currentQuestion.question?.questionType) }}</div>
+              </div>
+              <div class="sheet-header-right">
+                <div class="question-score">{{ currentQuestion.score || 0 }} 分</div>
+              </div>
+            </div>
+
+            <div class="question-stem">
+              {{ stripHtml(currentQuestion.question?.stem) }}
+            </div>
+
+            <div v-if="currentQuestion.question?.questionType === 'single'" class="question-body">
+              <el-radio-group v-model="answerMap[currentQuestion.questionId]" class="exam-options-group">
+                <el-radio
+                  v-for="opt in currentQuestion.question?.options || []"
+                  :key="opt.optionId"
+                  :label="opt.optionKey"
+                  class="exam-option-item"
+                  :class="{ 'is-selected': answerMap[currentQuestion.questionId] === opt.optionKey }"
+                >
+                  <span class="option-key">{{ opt.optionKey }}.</span>
+                  <span class="option-content">{{ opt.optionContent }}</span>
+                </el-radio>
+              </el-radio-group>
+            </div>
+
+            <div v-else-if="currentQuestion.question?.questionType === 'multiple'" class="question-body">
+              <el-checkbox-group v-model="multiAnswerMap[currentQuestion.questionId]" class="exam-options-group">
+                <el-checkbox
+                  v-for="opt in currentQuestion.question?.options || []"
+                  :key="opt.optionId"
+                  :label="opt.optionKey"
+                  class="exam-option-item"
+                  :class="{ 'is-selected': (multiAnswerMap[currentQuestion.questionId] || []).includes(opt.optionKey) }"
+                >
+                  <span class="option-key">{{ opt.optionKey }}.</span>
+                  <span class="option-content">{{ opt.optionContent }}</span>
+                </el-checkbox>
+              </el-checkbox-group>
+            </div>
+
+            <div v-else class="question-body">
+              <el-input
+                v-model="answerMap[currentQuestion.questionId]"
+                type="textarea"
+                :rows="6"
+                placeholder="请输入你的答案..."
+                class="exam-textarea"
+              />
+            </div>
+
+            <div class="sheet-footer">
+              <el-button size="large" :disabled="!canGoPrevious" @click="goToQuestion(currentQuestionIndex - 1)">上一题</el-button>
+              
+              <div class="sheet-footer-center">
+                <el-button plain :type="isFlagged(currentQuestion.questionId) ? 'warning' : 'default'" @click="toggleFlagCurrentQuestion">
+                  {{ isFlagged(currentQuestion.questionId) ? '取消标记' : '标记本题' }}
+                </el-button>
+                <el-button plain type="primary" :loading="questionSubmitting" @click="submitCurrentQuestion">提交本题</el-button>
+              </div>
+
+              <el-button size="large" type="primary" :disabled="!canGoNext" @click="goToQuestion(currentQuestionIndex + 1)">下一题</el-button>
+            </div>
+          </article>
+        </main>
+
+        <!-- Sidebar (Right) -->
+        <aside class="exam-sidebar">
+          <!-- Stats -->
+          <div class="sidebar-card">
+            <div class="sidebar-title">答题进度</div>
+            <div class="progress-stats">
+              <div class="stat-box">
+                <div class="stat-val">{{ questionCount }}</div>
+                <div class="stat-lbl">总题数</div>
+              </div>
+              <div class="stat-box text-success">
+                <div class="stat-val">{{ answeredCount }}</div>
+                <div class="stat-lbl">已作答</div>
+              </div>
+              <div class="stat-box text-warning">
+                <div class="stat-val">{{ unansweredCount }}</div>
+                <div class="stat-lbl">未作答</div>
+              </div>
+            </div>
+          <div class="monitor-stats mt-3">
+              <span>切屏: {{ focusLossCount }}次<span v-if="antiCheatEnabled"> / {{ maxFocusLossCount }}次</span></span>
+              <el-divider direction="vertical" />
+              <span>标记: {{ flaggedCount }}题</span>
             </div>
           </div>
 
-          <div class="exam-session-stats">
-            <div class="exam-session-stat"><span>总题数</span><strong>{{ questionCount }}</strong></div>
-            <div class="exam-session-stat"><span>已作答</span><strong>{{ answeredCount }}</strong></div>
-            <div class="exam-session-stat"><span>未作答</span><strong>{{ unansweredCount }}</strong></div>
-            <div class="exam-session-stat"><span>当前子卷</span><strong>{{ currentSessionPaperLabel }}</strong></div>
-            <div class="exam-session-stat"><span>切屏次数</span><strong>{{ focusLossCount }}</strong></div>
-            <div class="exam-session-stat"><span>异常标记</span><strong>{{ flaggedCount }}</strong></div>
-          </div>
-
-          <div class="exam-session-actions">
-            <el-button plain @click="goBackToHub">返回评测中心</el-button>
+          <!-- Subpapers -->
+          <div v-if="sessionPapers.length > 1" class="sidebar-card mt-4">
+            <div class="sidebar-title">试卷结构</div>
+            <div class="subpaper-list">
+              <div
+                v-for="item in sessionPapers"
+                :key="item.id"
+                class="subpaper-item"
+                :class="{
+                  'is-active': activeSessionPaper?.id === item.id,
+                  'is-done': item.paperStatus === 'SUBMITTED'
+                }"
+                @click="activateSessionPaper(item.id)"
+              >
+                <div class="subpaper-name">{{ paperNameMap[item.paperId] || `试卷 ${item.paperId}` }}</div>
+                <div class="subpaper-status">
+                  <el-tag size="small" :type="item.paperStatus === 'SUBMITTED' ? 'success' : 'info'">{{ paperStatusLabel(item.paperStatus) }}</el-tag>
+                </div>
+              </div>
+            </div>
             <el-button
               v-if="activeSessionPaper?.paperLevel === 'SUB'"
               type="warning"
               plain
+              class="w-full mt-3"
               :loading="subPaperSubmitting"
               @click="submitCurrentSubPaper"
             >
               提交当前子卷
             </el-button>
-            <el-button type="primary" :loading="submitting" @click="confirmSubmit">立即交卷</el-button>
           </div>
 
-          <div class="exam-session-card">
-            <div class="exam-session-card__title">子卷状态</div>
-            <div class="exam-subpaper-list">
-              <button
-                v-for="item in sessionPapers"
-                :key="item.id"
-                type="button"
-                class="exam-subpaper-item"
-                :class="{
-                  'is-current': activeSessionPaper?.id === item.id,
-                  'is-submitted': item.paperStatus === 'SUBMITTED',
-                  'is-pending': item.paperStatus === 'PENDING',
-                }"
-                @click="activateSessionPaper(item.id)"
-              >
-                <div class="exam-subpaper-item__name">{{ paperNameMap[item.paperId] || `试卷 ${item.paperId}` }}</div>
-                <div class="exam-subpaper-item__meta">
-                  <span>{{ item.paperLevel }}</span>
-                  <span>{{ item.answerMode }}</span>
-                  <span>{{ item.paperStatus }}</span>
-                </div>
-              </button>
+          <!-- Palette -->
+          <div class="sidebar-card mt-4 flex-1">
+            <div class="sidebar-title">答题卡</div>
+            <div class="palette-legend">
+              <span class="legend-item"><i class="legend-dot is-answered"></i>已答</span>
+              <span class="legend-item"><i class="legend-dot is-unanswered"></i>未答</span>
+              <span class="legend-item"><i class="legend-dot is-flagged"></i>标记</span>
+              <span class="legend-item"><i class="legend-dot is-current"></i>当前</span>
             </div>
-          </div>
-
-          <div class="exam-session-card">
-            <div class="exam-session-card__title">答题卡</div>
-            <div class="exam-session-palette">
-              <button
-                v-for="item in currentSessionPaperQuestions"
-                :key="item.questionId"
-                type="button"
-                class="exam-session-palette__item"
-                :class="{
-                  'is-current': currentQuestionIndex === item.index,
-                  'is-answered': item.answered,
-                  'is-flagged': item.flagged,
-                }"
-                @click="goToQuestion(item.index)"
-              >
-                {{ item.order }}
-              </button>
+            <div class="palette-container mt-3">
+              <template v-for="(group, type) in groupedPaletteQuestions" :key="type">
+                <div class="palette-group">
+                  <div class="palette-group-title">{{ questionTypeLabel(String(type)) }}</div>
+                  <div class="palette-grid">
+                    <button
+                      v-for="item in group"
+                      :key="item.questionId"
+                      type="button"
+                      class="palette-btn"
+                      :class="{
+                        'is-current': currentQuestionIndex === item.index,
+                        'is-answered': item.answered,
+                        'is-flagged': item.flagged,
+                        'is-disabled': !canNavigateToQuestion(item.index),
+                      }"
+                      :disabled="!canNavigateToQuestion(item.index)"
+                      @click="goToQuestion(item.index)"
+                    >
+                      {{ item.order }}
+                    </button>
+                  </div>
+                </div>
+              </template>
             </div>
           </div>
         </aside>
+      </div>
+    </template>
 
-        <section class="exam-session-main">
-          <el-alert
-            v-if="showUrgentWarning"
-            type="warning"
-            :closable="false"
-            class="exam-session-warning"
-            title="距离考试结束不足 5 分钟，请尽快完成检查并提交试卷。"
-          />
+    <template v-else-if="mode === 'result'">
+      <header class="exam-header">
+        <div class="exam-header-left">
+          <div class="exam-header-eyebrow"><i class="ri-bar-chart-box-line mr-1"></i>考试结果</div>
+          <h1 class="exam-title">{{ resultPaper.paperName || '考试结果' }}</h1>
+          <div class="exam-meta">
+            <span class="meta-item">{{ canViewScoreSummary ? '本次考试已提交，你可以查看总成绩与作答结果。' : '本次考试已提交，当前试卷暂未开放总成绩查看。' }}</span>
+          </div>
+        </div>
+        <div class="exam-header-right">
+          <div class="header-actions">
+            <el-button plain @click="goBackToHub">返回列表</el-button>
+          </div>
+        </div>
+      </header>
 
-          <div class="exam-session-topbar portal-card">
-            <div class="exam-session-topbar__meta">
-              <span>{{ courseLabel(paper.courseId) }}</span>
-              <span>{{ paper.durationMinutes || 0 }} 分钟</span>
-              <span>总分 {{ paper.totalScore || 0 }}</span>
-              <span v-if="activeSessionPaper">子卷状态 {{ activeSessionPaper.paperStatus }}</span>
+      <div class="exam-main-layout mt-4">
+        <!-- Main Area (Questions & Results) -->
+        <main class="exam-content-area">
+          <div v-if="canViewAnswerAnalysis" class="exam-result-list">
+            <article v-for="(item, index) in filteredResultAnswers" :key="item.questionId" class="exam-question-sheet">
+              <div class="sheet-header">
+                <div class="sheet-header-left">
+                  <div class="question-index">第 {{ index + 1 }} 题</div>
+                  <div class="question-type">{{ questionTypeLabel(item.questionType) }}</div>
+                </div>
+                <div class="sheet-header-right">
+                  <div class="question-score-badge" :class="{ 'is-wrong': item.isCorrect !== '1', 'is-correct': item.isCorrect === '1' }">
+                    <i :class="item.isCorrect === '1' ? 'ri-check-line' : 'ri-close-line'"></i>
+                    <span>得分: {{ item.score || 0 }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="question-stem">{{ stripHtml(item.stem) || '题干暂未维护' }}</div>
+
+              <div class="exam-result-answers mt-4">
+                <div class="answer-box">
+                  <div class="answer-label">我的答案</div>
+                  <div class="answer-content" :class="item.isCorrect === '1' ? 'text-success' : 'text-danger'">
+                    {{ item.userAnswer || '未作答' }}
+                  </div>
+                </div>
+                <div class="answer-box">
+                  <div class="answer-label">标准答案</div>
+                  <div class="answer-content text-primary">
+                    {{ item.standardAnswer || '暂无标准答案' }}
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="item.analysis" class="exam-result-analysis mt-4">
+                <div class="analysis-label">解析</div>
+                <div class="analysis-content">{{ item.analysis }}</div>
+              </div>
+            </article>
+          </div>
+          <el-empty v-else description="当前试卷未开放答案与解析查看" />
+        </main>
+
+        <!-- Sidebar -->
+        <aside class="exam-sidebar">
+          <div v-if="canViewScoreSummary" class="sidebar-card">
+            <div class="sidebar-title">成绩概览</div>
+            <div class="progress-stats">
+              <div class="stat-box">
+                <div class="stat-val text-primary">{{ resultRecord.record?.score || 0 }}</div>
+                <div class="stat-lbl">总得分</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-val text-success">{{ resultRecord.record?.correctRate || 0 }}%</div>
+                <div class="stat-lbl">正确率</div>
+              </div>
             </div>
-            <div class="exam-session-topbar__draft">
-              <el-tag effect="plain" type="info">已接入后端草稿</el-tag>
-              <span>{{ draftHint }}</span>
+            <div class="progress-stats mt-3">
+              <div class="stat-box">
+                <div class="stat-val">{{ resultQuestionCount }}</div>
+                <div class="stat-lbl">总题数</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-val text-danger">{{ resultWrongCount }}</div>
+                <div class="stat-lbl">错题数</div>
+              </div>
             </div>
           </div>
 
-          <article v-if="currentQuestion" class="exam-question-sheet portal-card">
-            <div class="exam-question-sheet__progress">
-              <span>当前子卷</span>
-              <strong>{{ currentSessionPaperLabel }}</strong>
-            </div>
-
-            <div class="exam-question-sheet__header">
-              <div>
-                <div class="exam-question-sheet__index">第 {{ currentQuestionIndex + 1 }} 题</div>
-                <div class="exam-question-sheet__type">{{ questionTypeLabel(currentQuestion.question?.questionType) }}</div>
+          <div v-if="canViewScoreSummary && resultRecord.subPaperStats?.length" class="sidebar-card mt-4">
+            <div class="sidebar-title">子卷统计</div>
+            <div class="subpaper-list">
+              <div v-for="sub in resultRecord.subPaperStats" :key="sub.paperName" class="subpaper-item is-active">
+                <div class="subpaper-name">{{ sub.paperName }}</div>
+                <div class="subpaper-status">
+                  <span class="text-primary font-bold">{{ sub.avgScore }}分</span>
+                </div>
               </div>
-              <div class="exam-question-sheet__score">{{ currentQuestion.score || 0 }} 分</div>
-            </div>
-
-            <div class="exam-question-sheet__stem">
-              {{ stripHtml(currentQuestion.question?.stem) }}
-            </div>
-
-            <div v-if="currentQuestion.question?.questionType === 'single'" class="exam-question-sheet__body">
-              <el-radio-group v-model="answerMap[currentQuestion.questionId]" class="exam-options">
-                <el-radio
-                  v-for="opt in currentQuestion.question?.options || []"
-                  :key="opt.optionId"
-                  :label="opt.optionKey"
-                  class="exam-option"
-                >
-                  {{ opt.optionKey }}. {{ opt.optionContent }}
-                </el-radio>
-              </el-radio-group>
-            </div>
-
-            <div v-else-if="currentQuestion.question?.questionType === 'multiple'" class="exam-question-sheet__body">
-              <el-checkbox-group v-model="multiAnswerMap[currentQuestion.questionId]" class="exam-options">
-                <el-checkbox
-                  v-for="opt in currentQuestion.question?.options || []"
-                  :key="opt.optionId"
-                  :label="opt.optionKey"
-                  class="exam-option"
-                >
-                  {{ opt.optionKey }}. {{ opt.optionContent }}
-                </el-checkbox>
-              </el-checkbox-group>
-            </div>
-
-            <div v-else class="exam-question-sheet__body">
-              <el-input
-                v-model="answerMap[currentQuestion.questionId]"
-                type="textarea"
-                :rows="4"
-                placeholder="请输入你的答案"
-              />
-            </div>
-
-            <div class="exam-question-sheet__footer">
-              <el-button :disabled="currentQuestionIndex <= 0" @click="goToQuestion(currentQuestionIndex - 1)">上一题</el-button>
-              <div class="exam-question-sheet__footer-meta">
-                <el-button link type="info" :loading="draftSaving" @click="saveCurrentDraft">保存草稿</el-button>
-                <el-button link type="primary" :loading="questionSubmitting" @click="submitCurrentQuestion">提交本题</el-button>
-                <el-tag :type="isAnswered(currentQuestion) ? 'success' : 'warning'" effect="plain">
-                  {{ isAnswered(currentQuestion) ? '已作答' : '未作答' }}
-                </el-tag>
-                <el-button link type="primary" @click="toggleFlagCurrentQuestion">
-                  {{ isFlagged(currentQuestion.questionId) ? '取消标记' : '标记稍后检查' }}
-                </el-button>
-              </div>
-              <el-button type="primary" :disabled="currentQuestionIndex >= currentSessionPaperQuestions.length - 1" @click="goToQuestion(currentQuestionIndex + 1)">下一题</el-button>
-            </div>
-          </article>
-        </section>
-      </template>
-
-      <template v-else-if="mode === 'result'">
-        <section class="exam-result-shell">
-          <div class="exam-result-hero portal-card">
-            <div>
-              <div class="exam-result-hero__eyebrow">Submitted</div>
-              <h1 class="exam-result-hero__title">{{ resultPaper.paperName || '考试结果' }}</h1>
-              <p class="exam-result-hero__desc">本次考试已提交。你可以查看整卷结果、分层子卷统计和逐题回看信息。</p>
-            </div>
-            <div class="exam-result-hero__stats">
-              <div class="exam-result-metric"><span>总得分</span><strong>{{ resultRecord.record?.score || 0 }}</strong></div>
-              <div class="exam-result-metric"><span>正确率</span><strong>{{ resultRecord.record?.correctRate || 0 }}%</strong></div>
-              <div class="exam-result-metric"><span>子卷数</span><strong>{{ resultRecord.subPaperStats?.length || 0 }}</strong></div>
             </div>
           </div>
 
-          <el-table :data="resultRecord.subPaperStats || []" border class="portal-card">
-            <el-table-column prop="paperName" label="子试卷" min-width="180" />
-            <el-table-column prop="paperLevel" label="层级" width="100" />
-            <el-table-column prop="answerMode" label="模式" width="110" />
-            <el-table-column prop="submittedCount" label="已提交" width="100" />
-            <el-table-column prop="skippedCount" label="跳过" width="100" />
-            <el-table-column prop="avgScore" label="平均得分" width="120" />
-            <el-table-column prop="avgCorrectRate" label="平均正确率" width="120" />
-          </el-table>
+          <div v-if="canViewScoreSummary && resultTypePerformance.length" class="sidebar-card mt-4">
+            <div class="sidebar-title">题型表现</div>
+            <div class="subpaper-list">
+              <div v-for="item in resultTypePerformance" :key="item.type" class="subpaper-item">
+                <div class="subpaper-name">
+                  <div>{{ questionTypeLabel(item.type) }}</div>
+                  <div class="text-xs text-gray-500 mt-1">{{ item.count }}题 / 正确{{ item.correct }}题</div>
+                </div>
+                <div class="subpaper-status">
+                  <span :class="item.correctRate >= 60 ? 'text-success' : 'text-danger'" class="font-bold">{{ item.correctRate }}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
-          <el-table :data="filteredResultAnswers" border class="portal-card exam-result-table">
-            <el-table-column prop="questionId" label="题目ID" width="90" />
-            <el-table-column label="题型" width="110">
-              <template #default="scope">{{ questionTypeLabel(scope.row.questionType) }}</template>
-            </el-table-column>
-            <el-table-column label="题干" min-width="260" show-overflow-tooltip>
-              <template #default="scope">{{ stripHtml(scope.row.stem) }}</template>
-            </el-table-column>
-            <el-table-column prop="userAnswer" label="我的答案" min-width="160" show-overflow-tooltip />
-            <el-table-column prop="standardAnswer" label="标准答案" min-width="160" show-overflow-tooltip />
-            <el-table-column prop="analysis" label="解析" min-width="200" show-overflow-tooltip />
-            <el-table-column label="结果" width="100">
-              <template #default="scope">
-                <el-tag :type="scope.row.isCorrect === '1' ? 'success' : 'danger'">
-                  {{ scope.row.isCorrect === '1' ? '正确' : '错误' }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="score" label="得分" width="90" />
-          </el-table>
-        </section>
-      </template>
+          <div v-if="canViewScoreSummary" class="sidebar-card mt-4">
+            <div class="sidebar-title">结果总结</div>
+            <div class="text-sm text-gray-600 leading-relaxed">
+              <p>{{ resultSummaryText }}</p>
+              <p v-if="weakQuestionTypeText" class="mt-2 text-warning">薄弱题型：{{ weakQuestionTypeText }}</p>
+              <p v-if="canViewAnswerAnalysis && resultWrongCount > 0" class="mt-2 text-primary">建议优先复盘错题与解析，再回到错题本做针对性回练。</p>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </template>
 
-      <el-empty v-else description="考试数据加载失败或试卷内容为空" />
-    </section>
+    <el-empty v-else description="考试数据加载失败或试卷内容为空" />
   </div>
 </template>
 
@@ -277,6 +384,9 @@ const subPaperSubmitting = ref(false)
 const focusLossCount = ref(0)
 const timerId = ref<number | null>(null)
 const draftTimerId = ref<number | null>(null)
+const blurCheckTimerId = ref<number | null>(null)
+const focusLossTracked = ref(false)
+const clipboardWarningAt = ref(0)
 
 const recordId = computed(() => Number(route.params.recordId || 0))
 const paperId = computed(() => Number(route.query.paperId || 0))
@@ -288,6 +398,13 @@ const unansweredCount = computed(() => Math.max(0, questionCount.value - answere
 const currentQuestion = computed(() => currentSessionPaperQuestions.value[currentQuestionIndex.value] || null)
 const showUrgentWarning = computed(() => mode.value === 'exam' && remainingSeconds.value > 0 && remainingSeconds.value <= 300)
 const flaggedCount = computed(() => flaggedQuestionIds.value.length)
+const canViewScoreSummary = computed(() => String(resultPaper.value?.allowViewScore ?? '1') !== '0')
+const canViewAnswerAnalysis = computed(() => String(resultPaper.value?.allowReviewAnalysis ?? '1') !== '0')
+const antiCheatEnabled = computed(() => String(paper.value.antiCheatEnabled ?? '1') !== '0')
+const maxFocusLossCount = computed(() => Math.max(0, Number(paper.value.maxFocusLossCount ?? 5)))
+const autoSubmitOnFocusLossLimit = computed(() => String(paper.value.autoSubmitOnFocusLossLimit ?? '0') === '1')
+const allowCopyPaste = computed(() => String(paper.value.allowCopyPaste ?? '1') !== '0')
+const questionNavigationMode = computed(() => String(paper.value.questionNavigationMode || 'free'))
 const activeSessionPaper = computed(() =>
   sessionPapers.value.find((item: any) => Number(item.id) === Number(activeSessionPaperId.value)) || null,
 )
@@ -307,6 +424,19 @@ const currentSessionPaperQuestions = computed(() => {
     flagged: isFlagged(entry.questionId),
   }))
 })
+
+const groupedPaletteQuestions = computed(() => {
+  const groups: Record<string, any[]> = {}
+  currentSessionPaperQuestions.value.forEach((item: any) => {
+    const type = item.question?.questionType || 'unknown'
+    if (!groups[type]) {
+      groups[type] = []
+    }
+    groups[type].push(item)
+  })
+  return groups
+})
+
 const paperNameMap = computed(() => {
   const map: Record<string, string> = {}
   const walk = (node: any) => {
@@ -320,6 +450,58 @@ const paperNameMap = computed(() => {
   return map
 })
 const filteredResultAnswers = computed(() => resultRecord.value.answers || [])
+const resultQuestionCount = computed(() => filteredResultAnswers.value.length)
+const resultCorrectCount = computed(() => filteredResultAnswers.value.filter((item: any) => item.isCorrect === '1').length)
+const resultWrongCount = computed(() => Math.max(0, resultQuestionCount.value - resultCorrectCount.value))
+const resultScoreRate = computed(() => {
+  const totalScore = Number(resultPaper.value?.totalScore || 0)
+  const score = Number(resultRecord.value?.record?.score || 0)
+  if (!totalScore) return 0
+  return Math.round((score / totalScore) * 100)
+})
+const resultTypePerformance = computed(() => {
+  const groups = new Map<string, { type: string; count: number; correct: number; correctRate: number }>()
+  filteredResultAnswers.value.forEach((item: any) => {
+    const type = String(item.questionType || 'unknown')
+    if (!groups.has(type)) {
+      groups.set(type, { type, count: 0, correct: 0, correctRate: 0 })
+    }
+    const group = groups.get(type)!
+    group.count += 1
+    if (item.isCorrect === '1') {
+      group.correct += 1
+    }
+    group.correctRate = Math.round((group.correct / group.count) * 100)
+  })
+  return Array.from(groups.values())
+})
+const weakQuestionTypeText = computed(() => {
+  if (!resultTypePerformance.value.length) return ''
+  const sorted = [...resultTypePerformance.value].sort((a, b) => a.correctRate - b.correctRate)
+  const weakest = sorted[0]
+  if (!weakest || weakest.correctRate >= 100) return ''
+  return `${questionTypeLabel(weakest.type)}（正确率 ${weakest.correctRate}%）`
+})
+const resultSummaryText = computed(() => {
+  if (!canViewScoreSummary.value) return '当前试卷未开放总成绩查看。'
+  if (resultWrongCount.value === 0) return '这次答卷表现很稳定，全部题目都已答对。'
+  return `本次共错 ${resultWrongCount.value} 题，整体得分率 ${resultScoreRate.value}%。`
+})
+const lockedQuestionIndex = computed(() => {
+  if (questionNavigationMode.value !== 'lock_after_answer' && questionNavigationMode.value !== 'strict_sequence') return 0
+  const firstUnanswered = currentSessionPaperQuestions.value.findIndex((item: any) => !item.answered)
+  return firstUnanswered >= 0 ? firstUnanswered : Math.max(0, currentSessionPaperQuestions.value.length - 1)
+})
+const canGoPrevious = computed(() => currentQuestionIndex.value > 0 && canNavigateToQuestion(currentQuestionIndex.value - 1))
+const currentQuestionSubmitted = computed(() => {
+  const questionId = currentQuestion.value?.questionId
+  return Boolean(questionId && runtimeData.value?.answerMap?.[questionId])
+})
+const canGoNext = computed(() => {
+  if (currentQuestionIndex.value >= currentSessionPaperQuestions.value.length - 1) return false
+  if (questionNavigationMode.value === 'strict_sequence') return currentQuestionSubmitted.value
+  return canNavigateToQuestion(currentQuestionIndex.value + 1)
+})
 
 function stripHtml(value: string) {
   return String(value || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
@@ -327,6 +509,18 @@ function stripHtml(value: string) {
 
 function questionTypeLabel(type: string) {
   return ({ single: '单选题', multiple: '多选题', judge: '判断题', fill: '填空题', essay: '简答题', material: '材料题', case: '案例题' } as any)[type] || type || '-'
+}
+
+function paperStatusLabel(status?: string) {
+  return ({ PENDING: '待作答', ONGOING: '进行中', SUBMITTED: '已提交', FINISHED: '已完成' } as Record<string, string>)[String(status || '').toUpperCase()] || status || '-'
+}
+
+function paperLevelLabel(level?: string) {
+  return ({ MAIN: '主卷', SUB: '子卷' } as Record<string, string>)[String(level || '').toUpperCase()] || level || '-'
+}
+
+function answerModeLabel(modeValue?: string) {
+  return ({ AUTO: '自动', MANUAL: '手动', ADAPTIVE: '自适应', REQUIRED: '必答', OPTIONAL: '选答' } as Record<string, string>)[String(modeValue || '').toUpperCase()] || modeValue || '-'
 }
 
 function courseLabel(courseId: number | string | undefined) {
@@ -354,12 +548,27 @@ function isFlagged(questionId?: number) {
   return questionId ? flaggedQuestionIds.value.includes(questionId) : false
 }
 
+function canNavigateToQuestion(index: number) {
+  const safeIndex = Math.max(0, Math.min(index, Math.max(0, questionCount.value - 1)))
+  if (questionNavigationMode.value === 'strict_sequence') return safeIndex === lockedQuestionIndex.value
+  if (questionNavigationMode.value !== 'lock_after_answer') return true
+  return safeIndex >= lockedQuestionIndex.value
+}
+
 function goToQuestion(index: number) {
   const safeIndex = Math.max(0, Math.min(index, Math.max(0, questionCount.value - 1)))
+  if (!canNavigateToQuestion(safeIndex)) {
+    ElMessage.warning(questionNavigationMode.value === 'strict_sequence' ? '当前试卷要求严格顺序作答，请先提交当前题目' : '当前试卷不允许返回已作答题目')
+    return
+  }
   currentQuestionIndex.value = safeIndex
 }
 
 function activateSessionPaper(sessionPaperId: number) {
+  if (questionNavigationMode.value === 'strict_sequence' && activeSessionPaper.value?.id !== sessionPaperId) {
+    ElMessage.warning('当前试卷要求严格顺序作答，请先完成当前子卷')
+    return
+  }
   activeSessionPaperId.value = sessionPaperId
   currentQuestionIndex.value = 0
 }
@@ -440,7 +649,10 @@ async function loadRuntime() {
   hydrateAnswers(runtimeData.value.answerMap || {}, runtimeData.value.draftMap || {})
   const currentPaper = runtimeData.value.currentSessionPaper || sessionPapers.value[0]
   activeSessionPaperId.value = currentPaper?.id || null
-  currentQuestionIndex.value = 0
+  currentQuestionIndex.value = questionNavigationMode.value === 'lock_after_answer' || questionNavigationMode.value === 'strict_sequence'
+    ? lockedQuestionIndex.value
+    : 0
+  focusLossTracked.value = false
   draftHint.value = runtimeData.value.drafts?.length ? '最近一次暂存：已从服务器恢复' : '最近一次暂存：未开始'
   startTimer(String(runtimeData.value.record?.startTime || route.query.startedAt || ''))
 }
@@ -487,6 +699,13 @@ function stopDraftTimer() {
   if (draftTimerId.value) {
     window.clearTimeout(draftTimerId.value)
     draftTimerId.value = null
+  }
+}
+
+function stopBlurCheckTimer() {
+  if (blurCheckTimerId.value) {
+    window.clearTimeout(blurCheckTimerId.value)
+    blurCheckTimerId.value = null
   }
 }
 
@@ -539,6 +758,14 @@ async function submitCurrentQuestion() {
     await submitExamQuestion(payload)
     ElMessage.success('本题已提交')
     await refreshDraftsOnly()
+    runtimeData.value.answerMap = {
+      ...(runtimeData.value.answerMap || {}),
+      [payload.questionId]: { userAnswer: payload.userAnswer },
+    }
+    if ((questionNavigationMode.value === 'lock_after_answer' || questionNavigationMode.value === 'strict_sequence')
+      && currentQuestionIndex.value < currentSessionPaperQuestions.value.length - 1) {
+      currentQuestionIndex.value = Math.max(currentQuestionIndex.value + 1, lockedQuestionIndex.value)
+    }
   } finally {
     questionSubmitting.value = false
   }
@@ -617,9 +844,65 @@ function goBackToHub() {
   router.push(mode.value === 'result' ? '/student/exams?tab=records' : '/student/exams?tab=papers')
 }
 
-function increaseFocusLoss() {
+function increaseFocusLoss(sourceEvent = 'unknown') {
   if (mode.value !== 'exam' || submitted.value || submitting.value) return
+  if (!antiCheatEnabled.value) return
+  if (focusLossTracked.value) return
+  focusLossTracked.value = true
   focusLossCount.value += 1
+  const occurredAt = Date.now()
+  saveExamDraft({
+    recordId: recordId.value,
+    focusLossCount: focusLossCount.value,
+    focusLossSource: sourceEvent,
+    focusLossOccurredAt: occurredAt,
+  }).catch(() => undefined)
+  if (maxFocusLossCount.value > 0 && focusLossCount.value >= maxFocusLossCount.value) {
+    if (autoSubmitOnFocusLossLimit.value) {
+      ElMessage.warning(`切屏次数已达到上限 ${maxFocusLossCount.value} 次，系统将自动交卷`)
+      submitCurrentExam(true).catch(() => undefined)
+      return
+    }
+    ElMessage.warning(`切屏次数已达到上限 ${maxFocusLossCount.value} 次，请不要再离开考试页面`)
+  }
+}
+
+function resetFocusLossTracking() {
+  focusLossTracked.value = false
+}
+
+function handleWindowBlur() {
+  if (mode.value !== 'exam' || submitted.value || submitting.value) return
+  stopBlurCheckTimer()
+  blurCheckTimerId.value = window.setTimeout(() => {
+    if (document.hidden || !document.hasFocus()) {
+      increaseFocusLoss('window_blur')
+    }
+    blurCheckTimerId.value = null
+  }, 80)
+}
+
+function handleWindowFocus() {
+  stopBlurCheckTimer()
+  resetFocusLossTracking()
+}
+
+function handleVisibilityChange() {
+  if (document.hidden) {
+    increaseFocusLoss('visibility_hidden')
+    return
+  }
+  stopBlurCheckTimer()
+  resetFocusLossTracking()
+}
+
+function handleClipboardBlocked(event: Event) {
+  if (mode.value !== 'exam' || submitted.value || allowCopyPaste.value) return
+  event.preventDefault()
+  const now = Date.now()
+  if (now - clipboardWarningAt.value < 1500) return
+  clipboardWarningAt.value = now
+  ElMessage.warning('当前考试已禁止复制、剪切和粘贴')
 }
 
 function handleBeforeUnload(event: BeforeUnloadEvent) {
@@ -645,17 +928,25 @@ watch(() => [recordId.value, paperId.value, route.query.mode], async () => {
 
 onMounted(() => {
   window.addEventListener('beforeunload', handleBeforeUnload)
-  window.addEventListener('blur', increaseFocusLoss)
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) increaseFocusLoss()
-  })
+  window.addEventListener('blur', handleWindowBlur)
+  window.addEventListener('focus', handleWindowFocus)
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+  document.addEventListener('copy', handleClipboardBlocked)
+  document.addEventListener('cut', handleClipboardBlocked)
+  document.addEventListener('paste', handleClipboardBlocked)
 })
 
 onBeforeUnmount(() => {
   stopTimer()
   stopDraftTimer()
+  stopBlurCheckTimer()
   window.removeEventListener('beforeunload', handleBeforeUnload)
-  window.removeEventListener('blur', increaseFocusLoss)
+  window.removeEventListener('blur', handleWindowBlur)
+  window.removeEventListener('focus', handleWindowFocus)
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+  document.removeEventListener('copy', handleClipboardBlocked)
+  document.removeEventListener('cut', handleClipboardBlocked)
+  document.removeEventListener('paste', handleClipboardBlocked)
 })
 
 onBeforeRouteLeave(async () => {
@@ -676,304 +967,876 @@ onBeforeRouteLeave(async () => {
 <style scoped>
 .exam-session-page {
   min-height: 100%;
+  padding: 0;
 }
-.exam-session-shell {
-  display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
-  gap: 16px;
-}
-.exam-session-shell.is-result-mode {
-  grid-template-columns: 1fr;
-}
-.exam-session-sidebar,
-.exam-session-topbar,
-.exam-question-sheet,
-.exam-result-hero,
-.exam-result-table {
-  border-radius: 6px;
-  border: 1px solid #d7dee9;
-  background: #fff;
-}
-.exam-session-sidebar {
-  position: sticky;
-  top: 16px;
-  align-self: start;
-  padding: 16px;
-}
-.exam-session-sidebar__eyebrow,
-.exam-result-hero__eyebrow {
-  display: inline-flex;
-  padding: 2px 8px;
-  border-radius: 4px;
-  background: #eef4ff;
-  color: #315fca;
-  font-size: 12px;
-  font-weight: 700;
-}
-.exam-session-sidebar__title,
-.exam-result-hero__title {
-  margin-top: 10px;
-  font-size: 24px;
-  line-height: 1.35;
-  font-weight: 800;
-  color: var(--portal-text);
-}
-.exam-session-sidebar__desc,
-.exam-result-hero__desc {
-  margin-top: 10px;
-  color: var(--portal-text-secondary);
-  line-height: 1.8;
-  font-size: 14px;
-}
-.exam-session-timer,
-.exam-session-card,
-.exam-session-stat,
-.exam-result-metric {
-  border-radius: 4px;
-  background: #fafbfd;
-  border: 1px solid #d7dee9;
-}
-.exam-session-timer {
-  margin-top: 16px;
-  padding: 14px 16px;
-}
-.exam-session-timer__label {
-  color: var(--portal-text-secondary);
-  font-size: 12px;
-}
-.exam-session-timer__value {
-  margin-top: 8px;
-  font-size: 28px;
-  font-weight: 800;
-}
-.exam-session-timer__value.is-warning {
-  color: #d97706;
-}
-.exam-session-stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 16px;
-}
-.exam-session-stat,
-.exam-result-metric {
-  padding: 12px;
-}
-.exam-session-stat span,
-.exam-result-metric span {
-  font-size: 12px;
-  color: var(--portal-text-secondary);
-}
-.exam-session-stat strong,
-.exam-result-metric strong {
-  display: block;
-  margin-top: 8px;
-  font-size: 22px;
-  color: var(--portal-brand);
-}
-.exam-session-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-top: 14px;
-}
-.exam-session-card {
-  margin-top: 16px;
-  padding: 12px;
-}
-.exam-session-card__title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--portal-text);
-}
-.exam-subpaper-list {
-  display: grid;
-  gap: 10px;
-  margin-top: 10px;
-}
-.exam-subpaper-item {
-  text-align: left;
-  border: 1px solid #d7dee9;
-  background: #fff;
-  border-radius: 4px;
-  padding: 10px;
-  cursor: pointer;
-}
-.exam-subpaper-item.is-current {
-  border-color: #315fca;
-  background: #eef4ff;
-}
-.exam-subpaper-item.is-submitted {
-  border-color: #16a34a;
-}
-.exam-subpaper-item.is-pending {
-  border-color: #d97706;
-}
-.exam-subpaper-item__name {
-  font-weight: 700;
-  color: var(--portal-text);
-}
-.exam-subpaper-item__meta {
-  margin-top: 6px;
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  color: var(--portal-text-secondary);
-  font-size: 12px;
-}
-.exam-session-palette {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 10px;
-}
-.exam-session-palette__item {
-  height: 36px;
-  border-radius: 4px;
-  border: 1px solid #d7dee9;
-  background: #fff;
-  color: var(--portal-text);
-  cursor: pointer;
-}
-.exam-session-palette__item.is-current {
-  border-color: #315fca;
-  background: #eef4ff;
-}
-.exam-session-palette__item.is-answered {
-  background: #315fca;
-  border-color: #315fca;
-  color: #fff;
-}
-.exam-session-palette__item.is-flagged:not(.is-current) {
-  border-color: #d97706;
-  background: #fff7ed;
-  color: #b45309;
-}
-.exam-session-topbar {
-  padding: 12px 16px;
+
+/* Header */
+.exam-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  padding: 24px 32px;
+  margin-bottom: 24px;
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+  position: relative;
+  overflow: hidden;
 }
-.exam-session-topbar__meta,
-.exam-session-topbar__draft {
-  display: flex;
-  gap: 14px;
-  flex-wrap: wrap;
-  color: var(--portal-text-secondary);
+
+.exam-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%);
+}
+
+.exam-header-left {
+  flex: 1;
+}
+
+.exam-header-eyebrow {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
   font-size: 13px;
-}
-.exam-question-sheet {
-  margin-top: 14px;
-  padding: 16px;
-}
-.exam-question-sheet__progress {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 14px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #e5eaf1;
-  color: var(--portal-text-secondary);
-  font-size: 12px;
-}
-.exam-question-sheet__header {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: flex-start;
-}
-.exam-question-sheet__index {
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--portal-text);
-}
-.exam-question-sheet__type {
-  margin-top: 4px;
-  color: var(--portal-text-secondary);
-  font-size: 12px;
-}
-.exam-question-sheet__score {
-  padding: 4px 10px;
-  border-radius: 4px;
-  background: #f5f8fd;
-  border: 1px solid #d7dee9;
-  color: #315fca;
   font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
 }
-.exam-question-sheet__stem {
-  margin-top: 14px;
-  line-height: 1.8;
-  color: var(--portal-text);
-  font-size: 14px;
+
+.exam-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 12px;
+  line-height: 1.4;
 }
-.exam-question-sheet__body {
-  margin-top: 14px;
-}
-.exam-options {
-  display: grid;
-  gap: 10px;
-}
-.exam-option {
-  margin-right: 0;
-  padding: 10px 12px;
-  border-radius: 4px;
-  border: 1px solid #d7dee9;
-  background: #fafbfd;
-}
-.exam-question-sheet__footer {
+
+.exam-meta {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
-  margin-top: 18px;
-  padding-top: 14px;
-  border-top: 1px solid #e5eaf1;
+  flex-wrap: wrap;
 }
-.exam-question-sheet__footer-meta {
+
+.meta-item {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  background: #f8fafc;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #f1f5f9;
+}
+
+.exam-header-center {
   flex: 1;
   display: flex;
   justify-content: center;
-  gap: 10px;
-  flex-wrap: wrap;
 }
-.exam-result-shell {
-  display: grid;
-  gap: 14px;
+
+.exam-timer {
+  text-align: center;
+  padding: 16px 32px;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  min-width: 200px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.02);
 }
-.exam-result-hero {
-  padding: 16px;
-  display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.9fr);
+
+.exam-timer.is-warning {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+.exam-timer.is-warning .timer-value {
+  color: #ef4444;
+}
+
+.exam-timer .timer-label {
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 6px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.exam-timer .timer-value {
+  font-size: 32px;
+  font-family: monospace;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+}
+
+.exam-header-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
   gap: 16px;
 }
+
+.draft-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+  background: #f8fafc;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid #f1f5f9;
+}
+
+.draft-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+}
+.draft-dot.is-saving {
+  background: #f59e0b;
+  animation: pulse 1.5s infinite;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.header-actions .el-button {
+  padding: 10px 24px;
+  font-size: 14px;
+  border-radius: 8px;
+}
+
+/* Main Layout */
+.exam-main-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+  align-items: start;
+}
+
+/* Question Area */
+.exam-question-sheet {
+  padding: 32px;
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+}
+
+.sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 20px;
+  border-bottom: 1px dashed #e2e8f0;
+  margin-bottom: 24px;
+}
+
+.sheet-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.question-index {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.question-type {
+  font-size: 13px;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 4px 12px;
+  border-radius: 6px;
+  display: inline-block;
+  width: fit-content;
+  font-weight: 600;
+}
+
+.question-score {
+  font-size: 14px;
+  font-weight: 700;
+  color: #3b82f6;
+  background: #eff6ff;
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1px solid #bfdbfe;
+}
+
+.question-stem {
+  font-size: 16px;
+  line-height: 1.8;
+  color: #0f172a;
+  margin-bottom: 32px;
+  font-weight: 500;
+}
+
+.exam-options-group {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+  width: 100%;
+}
+
+.exam-option-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  margin: 0 !important;
+  padding: 16px 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  transition: all 0.2s ease;
+  height: auto;
+  white-space: normal;
+}
+
+.exam-option-item :deep(.el-radio__label),
+.exam-option-item :deep(.el-checkbox__label) {
+  display: flex;
+  align-items: flex-start;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.6;
+  padding-left: 12px;
+  flex: 1;
+}
+
+.exam-option-item :deep(.el-radio__input),
+.exam-option-item :deep(.el-checkbox__input) {
+  margin-top: 4px;
+}
+
+.exam-option-item:hover {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+}
+
+.exam-option-item.is-selected {
+  background: #eff6ff;
+  border-color: #3b82f6;
+}
+
+.option-key {
+  color: #3b82f6;
+  font-weight: 800;
+  font-size: 15px;
+  flex-shrink: 0;
+  width: 28px;
+}
+
+.option-content {
+  color: #334155;
+  font-size: 15px;
+  line-height: 1.6;
+  flex: 1;
+}
+
+.sheet-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.sheet-footer-center {
+  display: flex;
+  gap: 16px;
+}
+
+.sheet-footer .el-button {
+  padding: 12px 28px;
+  font-size: 15px;
+  border-radius: 8px;
+  height: auto;
+}
+
+/* Sidebar */
+.exam-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sidebar-card {
+  padding: 24px;
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+}
+
+.sidebar-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 20px;
+  padding-left: 12px;
+  border-left: 4px solid #3b82f6;
+}
+
+.progress-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  text-align: center;
+}
+
+.stat-box {
+  background: #f8fafc;
+  padding: 16px 8px;
+  border-radius: 12px;
+  border: 1px solid #f1f5f9;
+}
+
+.stat-val {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+
+.stat-lbl {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.text-success .stat-val { color: #10b981; }
+.text-warning .stat-val { color: #f59e0b; }
+
+.monitor-stats {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  font-size: 13px;
+  color: #64748b;
+  background: #f8fafc;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px dashed #e2e8f0;
+}
+
+.subpaper-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.subpaper-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #ffffff;
+}
+
+.subpaper-item:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.subpaper-item.is-active {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.subpaper-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.palette-legend {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.legend-dot.is-answered { background: #3b82f6; }
+.legend-dot.is-unanswered { background: #ffffff; border: 1px solid #cbd5e1; }
+.legend-dot.is-flagged { background: #fef2f2; border: 1px solid #fecaca; }
+.legend-dot.is-current { background: #ffffff; border: 2px solid #3b82f6; }
+
+.palette-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.palette-group-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 14px;
+  padding-left: 10px;
+  border-left: 3px solid #3b82f6;
+  line-height: 1.2;
+}
+
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+
+.palette-btn {
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.palette-btn:hover {
+  border-color: #94a3b8;
+  color: #0f172a;
+  background: #f8fafc;
+}
+
+.palette-btn.is-answered {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #ffffff;
+}
+
+.palette-btn.is-flagged {
+  border-color: #fca5a5;
+  background: #fef2f2;
+  color: #ef4444;
+}
+
+.palette-btn.is-current {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px #eff6ff;
+}
+.palette-btn.is-current.is-answered {
+  background: #3b82f6;
+  color: #ffffff;
+}
+.palette-btn.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: #f1f5f9;
+  color: #cbd5e1;
+  background: #f8fafc;
+  box-shadow: none;
+}
+
+/* Result Mode Layout */
+.is-result-mode {
+  padding: 0;
+}
+
+.is-result-mode .exam-result-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.exam-result-hero {
+  padding: 32px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.9fr);
+  gap: 32px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.exam-result-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%);
+}
+
+.exam-result-hero__content {
+  display: flex;
+  flex-direction: column;
+}
+
+.exam-result-hero__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.exam-result-hero__eyebrow {
+  display: inline-flex;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.exam-result-hero__title {
+  margin: 16px 0 12px;
+  color: #0f172a;
+  font-size: 28px;
+  line-height: 1.4;
+  font-weight: 800;
+}
+
+.exam-result-hero__desc {
+  margin: 0;
+  color: #64748b;
+  line-height: 1.6;
+  font-size: 15px;
+}
+
 .exam-result-hero__stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 16px;
+  align-items: center;
 }
-@media (max-width: 1080px) {
-  .exam-session-shell {
-    grid-template-columns: 1fr;
-  }
-  .exam-session-sidebar {
-    position: static;
+
+.exam-result-metric {
+  padding: 20px;
+  text-align: center;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.exam-result-metric:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+.exam-result-metric span {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.exam-result-metric strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 24px;
+  color: #3b82f6;
+  font-weight: 800;
+}
+
+.exam-result-insights {
+  margin-top: 24px;
+  padding: 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+  border: 1px solid #e2e8f0;
+}
+
+.exam-result-insights__card {
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #f1f5f9;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.exam-result-insights__card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+.exam-result-insights__card span {
+  font-size: 14px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.exam-result-insights__card strong {
+  font-size: 28px;
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.exam-result-insights__card.text-success strong { color: #10b981; }
+.exam-result-insights__card.text-danger strong { color: #ef4444; }
+.exam-result-insights__card.text-primary strong { color: #3b82f6; }
+
+.exam-result-performance {
+  margin-top: 24px;
+  padding: 24px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+  border: 1px solid #e2e8f0;
+}
+
+.exam-result-performance__header {
+  margin-bottom: 20px;
+  padding-left: 12px;
+  border-left: 4px solid #3b82f6;
+}
+
+.exam-result-performance__title {
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.exam-result-performance__subtitle {
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.exam-result-performance__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.exam-result-performance__card {
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.02);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.exam-result-performance__type {
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.exam-result-performance__meta {
+  margin-top: 10px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.exam-result-performance__value {
+  margin-top: 12px;
+  color: #3b82f6;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.exam-result-summary {
+  margin-top: 24px;
+  padding: 24px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+  border: 1px solid #e2e8f0;
+}
+
+.exam-result-summary__title {
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 20px;
+  padding-left: 12px;
+  border-left: 4px solid #3b82f6;
+}
+
+.exam-result-summary__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.exam-result-summary__item {
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  font-size: 15px;
+  line-height: 1.6;
+  font-weight: 500;
+}
+
+.exam-result-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.exam-result-answers {
+  display: flex;
+  gap: 20px;
+}
+
+.answer-box {
+  flex: 1;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.answer-label {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.answer-content {
+  font-size: 16px;
+  font-weight: 700;
+  word-break: break-all;
+}
+
+.exam-result-analysis {
+  background: #f0fdfa;
+  border: 1px solid #fef3c7;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.analysis-label {
+  font-size: 13px;
+  color: #d97706;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.analysis-content {
+  font-size: 15px;
+  color: #92400e;
+  line-height: 1.6;
+}
+
+.question-score-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.question-score-badge i {
+  font-size: 16px;
+}
+
+.question-score-badge.is-correct {
+  color: #10b981;
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+.question-score-badge.is-wrong {
+  color: #ef4444;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.mt-3 { margin-top: 12px; }
+.mt-4 { margin-top: 16px; }
+.w-full { width: 100%; }
+.flex-1 { flex: 1; }
+.text-danger { color: #ef4444 !important; }
+.text-success { color: #10b981 !important; }
+.text-warning { color: #f59e0b !important; }
+
+@media (max-width: 1200px) {
+  .exam-main-layout {
+    grid-template-columns: minmax(0, 1fr) 280px;
   }
   .exam-result-hero {
     grid-template-columns: 1fr;
   }
+  .exam-result-insights {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
-@media (max-width: 768px) {
-  .exam-session-stats,
-  .exam-result-hero__stats {
+@media (max-width: 1024px) {
+  .exam-main-layout {
     grid-template-columns: 1fr;
   }
-  .exam-session-topbar,
-  .exam-question-sheet__footer {
+  .exam-header {
     flex-direction: column;
+    gap: 16px;
     align-items: flex-start;
+  }
+  .exam-header-center, .exam-header-right {
+    width: 100%;
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+  .header-actions {
+    margin-top: 12px;
   }
 }
 </style>

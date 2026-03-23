@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.SysNoticeReadMapper">
+
+    <resultMap type="SysNoticeRead" id="SysNoticeReadResult">
+        <id property="id" column="id" />
+        <result property="noticeId" column="notice_id" />
+        <result property="userId" column="user_id" />
+        <result property="readTime" column="read_time" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+    </resultMap>
+
+    <select id="selectByNoticeIdAndUserId" resultMap="SysNoticeReadResult">
+        select id, notice_id, user_id, read_time, create_by, create_time, update_by, update_time
+        from sys_notice_read
+        where notice_id = #{noticeId}
+          and user_id = #{userId}
+        limit 1
+    </select>
+
+    <insert id="insertOrUpdateNoticeRead" parameterType="SysNoticeRead">
+        insert into sys_notice_read (
+            notice_id, user_id, read_time, create_by, create_time, update_by, update_time
+        ) values (
+            #{noticeId}, #{userId}, #{readTime}, #{createBy}, sysdate(), #{updateBy}, sysdate()
+        )
+        on duplicate key update
+            read_time = values(read_time),
+            update_by = values(update_by),
+            update_time = values(update_time)
+    </insert>
+
+    <select id="selectReadNoticeIdsByUserId" resultType="Long">
+        select notice_id
+        from sys_notice_read
+        where user_id = #{userId}
+    </select>
+</mapper>

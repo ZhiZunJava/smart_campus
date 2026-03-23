@@ -5,7 +5,7 @@
       <el-tag type="primary">查看自己上传的资源与使用情况</el-tag>
     </div>
 
-    <el-card class="portal-card portal-soft-card">
+    <div class="portal-card portal-soft-card">
       <div class="portal-form-row">
         <el-select v-model="queryParams.uploaderId" filterable clearable placeholder="选择教师" style="width: 220px">
           <el-option v-for="item in teacherOptions" :key="item.value" :label="item.label" :value="item.value" />
@@ -19,18 +19,18 @@
         </el-select>
         <el-button type="primary" @click="getList">搜索</el-button>
       </div>
-    </el-card>
+    </div>
 
     <section class="portal-kpis">
-      <el-card class="portal-card portal-stat-card"><div class="label">资源数</div><div class="value">{{ resources.length }}</div><div class="sub">当前筛选下资源数量</div></el-card>
-      <el-card class="portal-card portal-stat-card"><div class="label">总浏览</div><div class="value">{{ totalViews }}</div><div class="sub">资源浏览总量</div></el-card>
-      <el-card class="portal-card portal-stat-card"><div class="label">总下载</div><div class="value">{{ totalDownloads }}</div><div class="sub">资源下载总量</div></el-card>
-      <el-card class="portal-card portal-stat-card"><div class="label">总收藏</div><div class="value">{{ totalFavorites }}</div><div class="sub">资源收藏总量</div></el-card>
+      <div class="portal-card portal-stat-card"><div class="label">资源数</div><div class="value">{{ resources.length }}</div><div class="sub">当前筛选下资源数量</div></div>
+      <div class="portal-card portal-stat-card"><div class="label">总浏览</div><div class="value">{{ totalViews }}</div><div class="sub">资源浏览总量</div></div>
+      <div class="portal-card portal-stat-card"><div class="label">总下载</div><div class="value">{{ totalDownloads }}</div><div class="sub">资源下载总量</div></div>
+      <div class="portal-card portal-stat-card"><div class="label">总收藏</div><div class="value">{{ totalFavorites }}</div><div class="sub">资源收藏总量</div></div>
     </section>
 
     <div class="portal-grid portal-grid-2 mt20">
-      <el-card class="portal-card">
-        <template #header><span>资源列表</span></template>
+      <div class="portal-card" style="padding: 20px;">
+        <div style="font-weight: 600; margin-bottom: 16px;">资源列表</div>
         <el-table v-loading="loading" :data="resources" @row-click="selectResource">
           <el-table-column prop="resourceId" label="资源ID" width="90" />
           <el-table-column prop="resourceName" label="资源名称" min-width="220" />
@@ -41,10 +41,10 @@
           <el-table-column prop="favoriteCount" label="收藏" width="90" />
         </el-table>
         <el-empty v-if="!loading && resources.length === 0" description="暂无资源数据" />
-      </el-card>
+      </div>
 
-      <el-card class="portal-card portal-soft-card">
-        <template #header><span>资源详情</span></template>
+      <div class="portal-card portal-soft-card" style="padding: 20px;">
+        <div style="font-weight: 600; margin-bottom: 16px;">资源详情</div>
         <template v-if="detail.resourceId">
           <div class="portal-surface">资源名称：{{ detail.resourceName }}</div>
           <div class="portal-grid portal-grid-2 mt16">
@@ -57,7 +57,7 @@
           <div class="portal-surface mt16">内容文本：{{ detail.contentText || '-' }}</div>
         </template>
         <el-empty v-else class="portal-empty" description="请选择一条资源查看详情" />
-      </el-card>
+      </div>
     </div>
   </div>
 </template>

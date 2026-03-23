@@ -10,6 +10,6 @@
 import type { RouteLocationNormalizedLoaded } from 'vue-router'
 
 function resolveTransitionName(route: RouteLocationNormalizedLoaded) {
-  return typeof route.meta.transition === 'string' ? route.meta.transition : 'app-shell-fade'
+  return typeof route.meta.transition === 'string' ? route.meta.transition : ''
 }
 </script>

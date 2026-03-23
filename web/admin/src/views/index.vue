@@ -27,7 +27,7 @@
                 </span>
               </div>
               <p class="max-w-3xl text-sm leading-7 text-slate-600 md:text-[15px]">
-                这里汇总了本学期最值得优先关注的校园运营信息。你可以快速查看排课进度、学情风险、用户规模和教学资源状态，并从首页直接进入对应模块处理事项。
+                这里汇总了本学期最值得优先关注的校园运营信息。你可以快速查看排课进度、用户规模、考试数据和教学资源状态，并从首页直接进入对应模块处理事项。
               </p>
             </div>
 
@@ -69,7 +69,7 @@
                 <div class="flex items-center justify-between">
                   <div>
                     <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">运营风险概览</div>
-                    <div class="mt-1 text-sm font-semibold text-slate-900">关注当前需要优先处理的排课与学情状态</div>
+                    <div class="mt-1 text-sm font-semibold text-slate-900">关注当前需要优先处理的排课与教学运行状态</div>
                   </div>
                   <span class="rounded-sm px-2.5 py-1 text-xs font-semibold" :class="riskBadgeClass">
                     {{ riskLabel }}
@@ -80,8 +80,8 @@
                   <div class="rounded-sm border border-slate-200 bg-slate-950 p-3 text-white">
                     <div class="flex items-start justify-between gap-3">
                       <div>
-                        <div class="text-xs uppercase tracking-[0.18em] text-slate-400">学情预警</div>
-                        <strong class="mt-2 block text-4xl font-black leading-none">{{ dashboard.warningCount || 0 }}</strong>
+                        <div class="text-xs uppercase tracking-[0.18em] text-slate-400">考试记录</div>
+                        <strong class="mt-2 block text-4xl font-black leading-none">{{ dashboard.examRecordCount || 0 }}</strong>
                       </div>
                       <i class="ri-alarm-warning-line text-lg text-amber-300"></i>
                     </div>
@@ -344,10 +344,10 @@ const currentTermLabel = computed(() => {
 })
 
 const warningHint = computed(() => {
-  const count = Number(dashboard.warningCount || 0)
-  if (count <= 0) return '当前没有学情预警'
-  if (count <= 5) return '建议今日内完成核查'
-  return '建议优先进入学情预警页处理'
+  const count = Number(dashboard.examRecordCount || 0)
+  if (count <= 0) return '当前还没有沉淀考试记录'
+  if (count <= 20) return '可以继续补充考试与测评数据'
+  return '考试数据沉淀稳定，可用于教学复盘'
 })
 
 const scheduleCoveragePercent = computed(() => {
@@ -363,7 +363,7 @@ const enabledTermPercent = computed(() => {
 })
 
 const warningRiskLevel = computed(() => {
-  const count = Number(dashboard.warningCount || 0)
+  const count = Number(metrics.pendingArrangeCount || 0)
   if (count <= 0) return 'stable'
   if (count <= 5) return 'attention'
   return 'urgent'
@@ -385,7 +385,7 @@ const headlineMetrics = computed(() => [
   { title: '用户总量', value: metrics.userTotal, desc: '当前平台已纳管的全部账号数量', icon: 'ri-team-line' },
   { title: '教学班关系', value: metrics.classCourseCount, desc: '已完成课程、班级与教师关联的教学班数量', icon: 'ri-node-tree' },
   { title: '排课记录', value: metrics.scheduleCount, desc: '本系统当前生成的正式排课记录总数', icon: 'ri-calendar-schedule-line' },
-  { title: '学习行为', value: dashboard.studyRecordCount || 0, desc: '已采集的学习过程数据，可用于学情分析', icon: 'ri-line-chart-line' },
+  { title: '考试记录', value: dashboard.examRecordCount || 0, desc: '当前已沉淀的考试与测评数据总量', icon: 'ri-file-chart-line' },
 ])
 
 const statusChips = computed(() => [
@@ -409,7 +409,7 @@ const statusChips = computed(() => [
 const topMetrics = computed(() => [
   { title: '已排课教学班', value: metrics.arrangedClassCourseCount, desc: '已经进入排课执行阶段的教学班数量。', icon: 'ri-checkbox-circle-line' },
   { title: '待排课教学班', value: metrics.pendingArrangeCount, desc: '仍有课时未排满，建议尽快补齐安排。', icon: 'ri-alarm-warning-line' },
-  { title: '学情预警', value: dashboard.warningCount || 0, desc: '需要及时跟进的学习风险提醒。', icon: 'ri-notification-3-line' },
+  { title: '考试记录', value: dashboard.examRecordCount || 0, desc: '当前已沉淀的考试与测评记录数量。', icon: 'ri-notification-3-line' },
   { title: '教室资源', value: metrics.classroomCount, desc: '当前可投入教学使用的教室资源数量。', icon: 'ri-building-4-line' },
 ])
 
@@ -463,13 +463,13 @@ const actionItems = computed(() => [
       : 'border-emerald-200 bg-emerald-50 text-emerald-900 hover:border-emerald-300 hover:shadow-[0_14px_30px_rgba(16,185,129,0.10)]',
   },
   {
-    title: '查看学情预警',
-    value: dashboard.warningCount || 0,
-    desc: '查看风险学生情况，并尽快安排预警处理。',
-    path: 'warning',
-    level: Number(dashboard.warningCount || 0) > 5 ? 'High' : 'Watch',
+    title: '查看考试记录',
+    value: dashboard.examRecordCount || 0,
+    desc: '进入考试记录模块查看测评沉淀情况。',
+    path: 'examRecord',
+    level: Number(dashboard.examRecordCount || 0) > 20 ? 'High' : 'Watch',
     icon: 'ri-alert-line',
-    className: Number(dashboard.warningCount || 0) > 5
+    className: Number(dashboard.examRecordCount || 0) > 20
       ? 'border-rose-200 bg-rose-50 text-rose-900 hover:border-rose-300 hover:shadow-[0_14px_30px_rgba(244,63,94,0.12)]'
       : 'border-cyan-200 bg-cyan-50 text-cyan-900 hover:border-cyan-300 hover:shadow-[0_14px_30px_rgba(8,145,178,0.10)]',
   },
@@ -497,16 +497,16 @@ const quickLinks = [
   { title: '用户与身份', desc: '查看并维护学生、教师、家长和后台账号', path: 'user', icon: 'ri-user-settings-line' },
   { title: '班级课程', desc: '管理教学班、任课教师和课时完成情况', path: 'classCourse', icon: 'ri-book-open-line' },
   { title: '排课表', desc: '处理手工排课、自动排课和课表调整', path: 'courseSchedule', icon: 'ri-calendar-2-line' },
-  { title: '学情预警', desc: '查看风险提醒并跟进预警处理进度', path: 'warning', icon: 'ri-radar-line' },
+  { title: '考试记录', desc: '查看考试与测评数据沉淀情况', path: 'examRecord', icon: 'ri-radar-line' },
 ]
 
 const focusTips = computed(() => [
   metrics.pendingArrangeCount > 0
     ? `还有 ${metrics.pendingArrangeCount} 个教学班的课时安排未完成，建议优先处理排课任务。`
     : '当前教学班排课整体平稳，可以把精力转向课程优化和教室资源调整。',
-  Number(dashboard.warningCount || 0) > 0
-    ? `当前有 ${dashboard.warningCount || 0} 条学情预警，建议结合学习行为和考试记录尽快跟进。`
-    : '当前没有新增学情预警，可以把注意力放在教学资源和排课质量检查上。',
+  Number(dashboard.examRecordCount || 0) > 0
+    ? `当前已有 ${dashboard.examRecordCount || 0} 条考试记录，可继续围绕成绩与题库质量做复盘。`
+    : '当前考试记录还比较少，可以优先完善考试与测评数据。',
   `目前平台共有 ${metrics.userTotal} 个账号、${metrics.classroomCount} 间教室和 ${metrics.scheduleCount} 条排课记录，整体运行情况一目了然。`,
 ])
 
@@ -516,7 +516,7 @@ const routePathMap: Record<string, string> = {
   courseSchedule: '/campus/courseSchedule',
   classSchedule: '/campus/classSchedule',
   classroom: '/campus/classroom',
-  warning: '/campus/analysis/warning',
+  examRecord: '/campus/exam/record',
 }
 
 function navigateTo(path: string) {

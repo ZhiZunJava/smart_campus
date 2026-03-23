@@ -1,10 +1,15 @@
 package com.smart.system.service.impl;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Date;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import com.smart.common.utils.StringUtils;
 import com.smart.system.domain.SysNotice;
+import com.smart.system.domain.SysNoticeRead;
 import com.smart.system.mapper.SysNoticeMapper;
+import com.smart.system.mapper.SysNoticeReadMapper;
 import com.smart.system.service.ISysNoticeService;
 
 /**
@@ -17,6 +22,9 @@ public class SysNoticeServiceImpl implements ISysNoticeService
 {
     @Autowired
     private SysNoticeMapper noticeMapper;
+
+    @Autowired
+    private SysNoticeReadMapper noticeReadMapper;
 
     /**
      * 查询公告信息
@@ -51,6 +59,7 @@ public class SysNoticeServiceImpl implements ISysNoticeService
     @Override
     public int insertNotice(SysNotice notice)
     {
+        normalizeNotice(notice);
         return noticeMapper.insertNotice(notice);
     }
 
@@ -63,6 +72,7 @@ public class SysNoticeServiceImpl implements ISysNoticeService
     @Override
     public int updateNotice(SysNotice notice)
     {
+        normalizeNotice(notice);
         return noticeMapper.updateNotice(notice);
     }
 
@@ -88,5 +98,63 @@ public class SysNoticeServiceImpl implements ISysNoticeService
     public int deleteNoticeByIds(Long[] noticeIds)
     {
         return noticeMapper.deleteNoticeByIds(noticeIds);
+    }
+
+    @Override
+    public List<SysNotice> selectPortalNoticeList(Long userId, String receiverScope, String bizCategory, String readFlag,
+            String keyword, Integer limit)
+    {
+        return noticeMapper.selectPortalNoticeList(userId, receiverScope, bizCategory, readFlag, keyword, limit);
+    }
+
+    @Override
+    public Map<String, Object> selectPortalNoticeStats(Long userId, String receiverScope)
+    {
+        return noticeMapper.selectPortalNoticeStats(userId, receiverScope);
+    }
+
+    @Override
+    public int markNoticeRead(Long noticeId, Long userId, String operator)
+    {
+        if (noticeId == null || userId == null)
+        {
+            return 0;
+        }
+        SysNoticeRead record = new SysNoticeRead();
+        record.setNoticeId(noticeId);
+        record.setUserId(userId);
+        record.setReadTime(new Date());
+        record.setCreateBy(operator);
+        record.setUpdateBy(operator);
+        return noticeReadMapper.insertOrUpdateNoticeRead(record);
+    }
+
+    private void normalizeNotice(SysNotice notice)
+    {
+        if (notice == null)
+        {
+            return;
+        }
+        if (StringUtils.isEmpty(notice.getBizCategory()))
+        {
+            notice.setBizCategory("NOTICE");
+        }
+        if (StringUtils.isEmpty(notice.getReceiverScope()))
+        {
+            notice.setReceiverScope("ALL");
+        }
+        if (StringUtils.isEmpty(notice.getPinned()))
+        {
+            notice.setPinned("0");
+        }
+        if (notice.getPublishTime() == null)
+        {
+            notice.setPublishTime(new Date());
+        }
+        if (StringUtils.isEmpty(notice.getNoticeSummary()) && StringUtils.isNotEmpty(notice.getNoticeContent()))
+        {
+            String plain = notice.getNoticeContent().replaceAll("<[^>]+>", " ").replaceAll("\\s+", " ").trim();
+            notice.setNoticeSummary(plain.length() > 120 ? plain.substring(0, 120) : plain);
+        }
     }
 }

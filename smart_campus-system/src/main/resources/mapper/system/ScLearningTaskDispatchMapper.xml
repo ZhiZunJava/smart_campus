@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScLearningTaskDispatchMapper">
+    <resultMap type="ScLearningTaskDispatch" id="ScLearningTaskDispatchResult">
+        <id property="dispatchId" column="dispatch_id" />
+        <result property="taskId" column="task_id" />
+        <result property="userId" column="user_id" />
+        <result property="dispatchStatus" column="dispatch_status" />
+        <result property="completionStatus" column="completion_status" />
+        <result property="completedTime" column="completed_time" />
+        <result property="readTime" column="read_time" />
+        <result property="completionRemark" column="completion_remark" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+    </resultMap>
+
+    <sql id="selectScLearningTaskDispatchVo">
+        select dispatch_id, task_id, user_id, dispatch_status, completion_status, completed_time, read_time,
+               completion_remark, create_by, create_time, update_by, update_time
+        from sc_learning_task_dispatch
+    </sql>
+
+    <select id="selectScLearningTaskDispatchByDispatchId" parameterType="Long" resultMap="ScLearningTaskDispatchResult">
+        <include refid="selectScLearningTaskDispatchVo" />
+        where dispatch_id = #{dispatchId}
+    </select>
+
+    <select id="selectScLearningTaskDispatchList" parameterType="ScLearningTaskDispatch" resultMap="ScLearningTaskDispatchResult">
+        <include refid="selectScLearningTaskDispatchVo" />
+        <where>
+            <if test="taskId != null">and task_id = #{taskId}</if>
+            <if test="userId != null">and user_id = #{userId}</if>
+            <if test="dispatchStatus != null and dispatchStatus != ''">and dispatch_status = #{dispatchStatus}</if>
+            <if test="completionStatus != null and completionStatus != ''">and completion_status = #{completionStatus}</if>
+        </where>
+        order by dispatch_id desc
+    </select>
+
+    <select id="selectByTaskIdAndUserId" resultMap="ScLearningTaskDispatchResult">
+        <include refid="selectScLearningTaskDispatchVo" />
+        where task_id = #{param1} and user_id = #{param2}
+        limit 1
+    </select>
+
+    <insert id="insertScLearningTaskDispatch" parameterType="ScLearningTaskDispatch" useGeneratedKeys="true" keyProperty="dispatchId">
+        insert into sc_learning_task_dispatch(
+            task_id, user_id, dispatch_status, completion_status, completed_time, read_time,
+            completion_remark, create_by, create_time
+        ) values (
+            #{taskId}, #{userId}, #{dispatchStatus}, #{completionStatus}, #{completedTime}, #{readTime},
+            #{completionRemark}, #{createBy}, sysdate()
+        )
+    </insert>
+
+    <update id="updateScLearningTaskDispatch" parameterType="ScLearningTaskDispatch">
+        update sc_learning_task_dispatch
+        <set>
+            <if test="taskId != null">task_id = #{taskId},</if>
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="dispatchStatus != null">dispatch_status = #{dispatchStatus},</if>
+            <if test="completionStatus != null">completion_status = #{completionStatus},</if>
+            <if test="completedTime != null">completed_time = #{completedTime},</if>
+            <if test="readTime != null">read_time = #{readTime},</if>
+            <if test="completionRemark != null">completion_remark = #{completionRemark},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where dispatch_id = #{dispatchId}
+    </update>
+
+    <delete id="deleteScLearningTaskDispatchByDispatchId" parameterType="Long">
+        delete from sc_learning_task_dispatch where dispatch_id = #{dispatchId}
+    </delete>
+
+    <delete id="deleteScLearningTaskDispatchByDispatchIds" parameterType="Long">
+        delete from sc_learning_task_dispatch where dispatch_id in
+        <foreach item="dispatchId" collection="array" open="(" separator="," close=")">
+            #{dispatchId}
+        </foreach>
+    </delete>
+</mapper>

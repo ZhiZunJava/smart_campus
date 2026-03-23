@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScLearningTaskMapper">
+    <resultMap type="ScLearningTask" id="ScLearningTaskResult">
+        <id property="taskId" column="task_id" />
+        <result property="taskTitle" column="task_title" />
+        <result property="taskType" column="task_type" />
+        <result property="bizType" column="biz_type" />
+        <result property="bizId" column="biz_id" />
+        <result property="courseId" column="course_id" />
+        <result property="classCourseId" column="class_course_id" />
+        <result property="termId" column="term_id" />
+        <result property="taskDesc" column="task_desc" />
+        <result property="priorityLevel" column="priority_level" />
+        <result property="actionType" column="action_type" />
+        <result property="actionPath" column="action_path" />
+        <result property="actionTargetId" column="action_target_id" />
+        <result property="publishTime" column="publish_time" />
+        <result property="startTime" column="start_time" />
+        <result property="dueTime" column="due_time" />
+        <result property="status" column="status" />
+        <result property="targetScope" column="target_scope" />
+        <result property="remark" column="remark" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+    </resultMap>
+
+    <sql id="selectScLearningTaskVo">
+        select task_id, task_title, task_type, biz_type, biz_id, course_id, class_course_id, term_id,
+               task_desc, priority_level, action_type, action_path, action_target_id, publish_time,
+               start_time, due_time, status, target_scope, remark, create_by, create_time, update_by, update_time
+        from sc_learning_task
+    </sql>
+
+    <select id="selectScLearningTaskByTaskId" parameterType="Long" resultMap="ScLearningTaskResult">
+        <include refid="selectScLearningTaskVo" />
+        where task_id = #{taskId}
+    </select>
+
+    <select id="selectScLearningTaskList" parameterType="ScLearningTask" resultMap="ScLearningTaskResult">
+        <include refid="selectScLearningTaskVo" />
+        <where>
+            <if test="taskTitle != null and taskTitle != ''">and task_title like concat('%', #{taskTitle}, '%')</if>
+            <if test="taskType != null and taskType != ''">and task_type = #{taskType}</if>
+            <if test="bizType != null and bizType != ''">and biz_type = #{bizType}</if>
+            <if test="courseId != null">and course_id = #{courseId}</if>
+            <if test="classCourseId != null">and class_course_id = #{classCourseId}</if>
+            <if test="termId != null">and term_id = #{termId}</if>
+            <if test="status != null and status != ''">and status = #{status}</if>
+        </where>
+        order by task_id desc
+    </select>
+
+    <insert id="insertScLearningTask" parameterType="ScLearningTask" useGeneratedKeys="true" keyProperty="taskId">
+        insert into sc_learning_task(
+            task_title, task_type, biz_type, biz_id, course_id, class_course_id, term_id,
+            task_desc, priority_level, action_type, action_path, action_target_id,
+            publish_time, start_time, due_time, status, target_scope, remark, create_by, create_time
+        ) values (
+            #{taskTitle}, #{taskType}, #{bizType}, #{bizId}, #{courseId}, #{classCourseId}, #{termId},
+            #{taskDesc}, #{priorityLevel}, #{actionType}, #{actionPath}, #{actionTargetId},
+            #{publishTime}, #{startTime}, #{dueTime}, #{status}, #{targetScope}, #{remark}, #{createBy}, sysdate()
+        )
+    </insert>
+
+    <update id="updateScLearningTask" parameterType="ScLearningTask">
+        update sc_learning_task
+        <set>
+            <if test="taskTitle != null">task_title = #{taskTitle},</if>
+            <if test="taskType != null">task_type = #{taskType},</if>
+            <if test="bizType != null">biz_type = #{bizType},</if>
+            <if test="bizId != null">biz_id = #{bizId},</if>
+            <if test="courseId != null">course_id = #{courseId},</if>
+            <if test="classCourseId != null">class_course_id = #{classCourseId},</if>
+            <if test="termId != null">term_id = #{termId},</if>
+            <if test="taskDesc != null">task_desc = #{taskDesc},</if>
+            <if test="priorityLevel != null">priority_level = #{priorityLevel},</if>
+            <if test="actionType != null">action_type = #{actionType},</if>
+            <if test="actionPath != null">action_path = #{actionPath},</if>
+            <if test="actionTargetId != null">action_target_id = #{actionTargetId},</if>
+            <if test="publishTime != null">publish_time = #{publishTime},</if>
+            <if test="startTime != null">start_time = #{startTime},</if>
+            <if test="dueTime != null">due_time = #{dueTime},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="targetScope != null">target_scope = #{targetScope},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where task_id = #{taskId}
+    </update>
+
+    <delete id="deleteScLearningTaskByTaskId" parameterType="Long">
+        delete from sc_learning_task where task_id = #{taskId}
+    </delete>
+
+    <delete id="deleteScLearningTaskByTaskIds" parameterType="Long">
+        delete from sc_learning_task where task_id in
+        <foreach item="taskId" collection="array" open="(" separator="," close=")">
+            #{taskId}
+        </foreach>
+    </delete>
+
+    <select id="selectUserDispatchedTasks" resultType="java.util.LinkedHashMap">
+        select
+            t.task_id as taskId,
+            t.task_title as taskTitle,
+            t.task_type as taskType,
+            t.task_desc as taskDesc,
+            t.priority_level as priorityLevel,
+            t.action_type as actionType,
+            t.action_path as actionPath,
+            t.action_target_id as actionTargetId,
+            t.publish_time as publishTime,
+            t.start_time as startTime,
+            t.due_time as dueTime,
+            t.biz_type as bizType,
+            t.biz_id as bizId,
+            t.course_id as courseId,
+            t.class_course_id as classCourseId,
+            t.term_id as termId,
+            d.dispatch_id as dispatchId,
+            d.user_id as userId,
+            d.dispatch_status as dispatchStatus,
+            d.completion_status as completionStatus,
+            d.completed_time as completedTime,
+            d.read_time as readTime,
+            d.completion_remark as completionRemark
+        from sc_learning_task_dispatch d
+        inner join sc_learning_task t on t.task_id = d.task_id
+        where d.user_id = #{userId}
+          and d.dispatch_status = '0'
+          and t.status = '0'
+          <if test="termId != null">and (t.term_id is null or t.term_id = #{termId})</if>
+        order by
+          case when d.completion_status = 'PENDING' then 0 else 1 end,
+          case when t.due_time is null then 1 else 0 end,
+          t.due_time asc,
+          t.task_id desc
+    </select>
+</mapper>

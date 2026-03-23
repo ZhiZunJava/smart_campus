@@ -1,10 +1,10 @@
 <template>
   <div class="portal-page schedule-page">
-    <div class="portal-section-title">
-      <h3>我的课表</h3>
+    <div class="schedule-header-user">
+      <h3>{{ userStore.user?.realName || userStore.user?.username || '程安宁' }}({{ userStore.user?.studentNo || '2401036049' }})</h3>
     </div>
 
-    <el-card class="portal-card schedule-shell">
+    <div class="schedule-content">
       <div class="schedule-filters">
         <el-select
           v-model="queryParams.termId"
@@ -33,22 +33,20 @@
         </el-select>
 
         <div class="schedule-actions">
-          <el-button type="success" @click="setCurrentWeek">本周</el-button>
-          <el-button type="success" plain @click="shiftWeek(-1)">上一周</el-button>
-          <el-button type="success" plain @click="shiftWeek(1)">下一周</el-button>
-          <el-button plain class="schedule-print-btn" @click="printSchedule">
-            <i class="ri-printer-line"></i>
-            <span>打印课表</span>
-          </el-button>
+          <el-button type="primary" @click="setCurrentWeek">本周</el-button>
+          <el-button type="primary" plain @click="shiftWeek(-1)">上一周</el-button>
+          <el-button type="primary" plain @click="shiftWeek(1)">下一周</el-button>
+          <span class="schedule-term-date">学期起始日期: {{ formatDate(currentTermMeta.startDate) || '2026.03.05' }}</span>
         </div>
 
-        <div class="schedule-meta">
-          <span class="schedule-meta__label">学期起始</span>
-          <span class="schedule-meta__value">{{ formatDate(currentTermMeta.startDate) || '-' }}</span>
+        <div class="schedule-actions-right">
+          <el-button type="primary" class="schedule-print-btn" @click="printSchedule">
+            打印
+          </el-button>
         </div>
       </div>
 
-      <div class="table-container">
+      <div class="table-container !pb-5">
         <div class="schedule-print-sheet">
           <div class="tableTopName">
             {{ printSchoolTitle }}
@@ -189,7 +187,7 @@
       </div>
 
       <el-empty v-if="!loading && !activities.length" description="当前条件下暂无课表数据" />
-    </el-card>
+    </div>
   </div>
 </template>
 
@@ -787,24 +785,36 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.schedule-shell {
-  overflow: hidden;
-  border: none;
-  border-radius: 0;
-  background:
-    radial-gradient(circle at top left, rgba(71, 140, 245, 0.14), transparent 28%),
-    radial-gradient(circle at top right, rgba(56, 200, 180, 0.12), transparent 26%),
-    linear-gradient(180deg, #fbfdff 0%, #f4f8fc 100%);
-  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.08);
-  padding: 4px 4px 10px;
+.schedule-page {
+  padding: 20px;
+  height: 100%;
+  background: #fff;
+  border-radius: 4px;
 }
 
-.table-container {
-  margin-top: 14px;
+.schedule-header-user {
+  margin-bottom: 16px;
+  padding: 0;
+}
+
+.schedule-header-user h3 {
+  font-size: 16px;
+  color: #333;
+  margin: 0;
+  font-weight: bold;
+}
+
+.schedule-content {
+  margin-top: 0;
+  padding: 0;
 }
 
 .schedule-print-sheet {
   display: none;
+}
+
+.table-container {
+  margin-top: 14px;
 }
 
 .schedule-filters {
@@ -812,6 +822,7 @@ onMounted(async () => {
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+  margin-bottom: 16px;
 }
 
 .schedule-select {
@@ -828,31 +839,21 @@ onMounted(async () => {
   gap: 8px;
 }
 
-.schedule-print-btn {
-  gap: 6px;
-}
-
-.schedule-meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: #526076;
+.schedule-term-date {
+  margin-left: 12px;
   font-size: 13px;
-  padding: 7px 14px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(210, 223, 238, 0.95);
+  color: #606266;
 }
 
-.schedule-meta__label {
-  color: #6b7a90;
-  font-size: 12px;
+.schedule-actions-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
-.schedule-meta__value {
-  color: #2f4d6f;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+.lab-checkbox {
+  margin-right: 8px;
 }
 
 .courseTable {

@@ -28,7 +28,14 @@ public class ExamPaperDetailVo {
     private BigDecimal passScore;
     private String markingMode;
     private String questionOrderMode;
+    private String questionNavigationMode;
     private String allowReviewAnalysis;
+    private String antiCheatEnabled;
+    private Integer maxFocusLossCount;
+    private String autoSubmitOnFocusLossLimit;
+    private String allowCopyPaste;
+    private Integer maxAttemptCount;
+    private String allowViewScore;
     private String sectionConfigJson;
     private String adaptiveRuleJson;
     private String status;
@@ -179,12 +186,68 @@ public class ExamPaperDetailVo {
         this.questionOrderMode = questionOrderMode;
     }
 
+    public String getQuestionNavigationMode() {
+        return questionNavigationMode;
+    }
+
+    public void setQuestionNavigationMode(String questionNavigationMode) {
+        this.questionNavigationMode = questionNavigationMode;
+    }
+
     public String getAllowReviewAnalysis() {
         return allowReviewAnalysis;
     }
 
     public void setAllowReviewAnalysis(String allowReviewAnalysis) {
         this.allowReviewAnalysis = allowReviewAnalysis;
+    }
+
+    public String getAntiCheatEnabled() {
+        return antiCheatEnabled;
+    }
+
+    public void setAntiCheatEnabled(String antiCheatEnabled) {
+        this.antiCheatEnabled = antiCheatEnabled;
+    }
+
+    public Integer getMaxFocusLossCount() {
+        return maxFocusLossCount;
+    }
+
+    public void setMaxFocusLossCount(Integer maxFocusLossCount) {
+        this.maxFocusLossCount = maxFocusLossCount;
+    }
+
+    public String getAutoSubmitOnFocusLossLimit() {
+        return autoSubmitOnFocusLossLimit;
+    }
+
+    public void setAutoSubmitOnFocusLossLimit(String autoSubmitOnFocusLossLimit) {
+        this.autoSubmitOnFocusLossLimit = autoSubmitOnFocusLossLimit;
+    }
+
+    public String getAllowCopyPaste() {
+        return allowCopyPaste;
+    }
+
+    public void setAllowCopyPaste(String allowCopyPaste) {
+        this.allowCopyPaste = allowCopyPaste;
+    }
+
+    public Integer getMaxAttemptCount() {
+        return maxAttemptCount;
+    }
+
+    public void setMaxAttemptCount(Integer maxAttemptCount) {
+        this.maxAttemptCount = maxAttemptCount;
+    }
+
+    public String getAllowViewScore() {
+        return allowViewScore;
+    }
+
+    public void setAllowViewScore(String allowViewScore) {
+        this.allowViewScore = allowViewScore;
     }
 
     public String getSectionConfigJson() {

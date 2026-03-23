@@ -38,6 +38,8 @@ import com.smart.system.domain.ScExamRecord;
 import com.smart.system.domain.ScKnowledgePoint;
 import com.smart.system.domain.ScQuestionBank;
 import com.smart.system.domain.ScSchoolTerm;
+import com.smart.system.domain.ScUserAchievement;
+import com.smart.system.domain.ScLearningTaskSubmission;
 import com.smart.system.domain.ScWrongQuestionBook;
 import com.smart.system.domain.ScParentStudentRel;
 import com.smart.system.domain.SysNotice;
@@ -49,6 +51,9 @@ import com.smart.system.service.IScCourseService;
 import com.smart.system.service.IScExamPaperService;
 import com.smart.system.service.IScExamRecordService;
 import com.smart.system.service.IScKnowledgePointService;
+import com.smart.system.service.IScLearningTaskService;
+import com.smart.system.service.IScLearningTaskDispatchService;
+import com.smart.system.service.IScLearningTaskSubmissionService;
 import com.smart.system.service.IScParentStudentRelService;
 import com.smart.system.service.IScQuestionBankService;
 import com.smart.system.service.IScSchoolTermService;
@@ -99,6 +104,15 @@ public class CampusPortalController extends BaseController {
 
     @Autowired
     private IScKnowledgePointService scKnowledgePointService;
+
+    @Autowired
+    private IScLearningTaskService scLearningTaskService;
+
+    @Autowired
+    private IScLearningTaskDispatchService scLearningTaskDispatchService;
+
+    @Autowired
+    private IScLearningTaskSubmissionService scLearningTaskSubmissionService;
 
     @Autowired
     private IScQuestionBankService scQuestionBankService;
@@ -284,10 +298,13 @@ public class CampusPortalController extends BaseController {
                 .map(item -> taskItem("exam-" + item.getPaperId(),
                         StringUtils.defaultIfEmpty(item.getPaperName(), "试卷 " + item.getPaperId()),
                         item.getCourseId() == null ? "开放考试任务，可自由参与。" : "课程考试任务，建议按课程进度完成。",
-                        "考试任务", "primary", "待处理",
+                        "考试任务", "EXAM", "primary", "待处理",
                         Arrays.asList((item.getDurationMinutes() == null ? 0 : item.getDurationMinutes()) + " 分钟",
                                 "总分 " + StringUtils.defaultIfEmpty(item.getTotalScore() == null ? null : item.getTotalScore().toPlainString(), "0")),
-                        actionItem("exam", item.getPaperId(), null)))
+                        actionItem("exam", item.getPaperId(), null, rowMap(
+                                "paperId", item.getPaperId(),
+                                "paperName", item.getPaperName(),
+                                "courseId", item.getCourseId()), "/student/exams")))
                 .collect(Collectors.toList());
 
         List<Map<String, Object>> wrongTasks = wrongs.stream()
@@ -295,10 +312,13 @@ public class CampusPortalController extends BaseController {
                 .map(item -> taskItem("wrong-" + item.getId(),
                         "错题回练 · 题目 " + item.getQuestionId(),
                         "建议优先复盘高频错题，再进行错题回练。",
-                        "错题任务", "warning", "1".equals(item.getMasteryStatus()) ? "已掌握" : "待巩固",
+                        "错题任务", "WRONG_BOOK", "warning", "1".equals(item.getMasteryStatus()) ? "已掌握" : "待巩固",
                         Arrays.asList("错误 " + defaultInt(item.getWrongCount()) + " 次",
                                 item.getCourseId() == null ? "通用题目" : "课程 " + item.getCourseId()),
-                        actionItem("wrongbook", null, null)))
+                        actionItem("wrongbook", item.getId(), null, rowMap(
+                                "wrongId", item.getId(),
+                                "questionId", item.getQuestionId(),
+                                "courseId", item.getCourseId()), "/student/wrongbook")))
                 .collect(Collectors.<Map<String, Object>>toList());
 
         List<Map<String, Object>> courseTasks = courseList.stream()
@@ -310,33 +330,56 @@ public class CampusPortalController extends BaseController {
                 .map(item -> taskItem("course-" + item.get("id"),
                         String.valueOf(item.get("courseName")) + " · 课程考试跟进",
                         "该课程已有考试相关数据，进入课程详情查看考试与统计概况。",
-                        "课程任务", "success", "进行中",
+                        resolveCourseTaskLabel((String) item.get("taskType")), resolveCourseTaskCode((String) item.get("taskType")), "success", "进行中",
                         Arrays.asList(StringUtils.defaultIfEmpty((String) item.get("courseCode"), "无课程编码"),
                                 StringUtils.defaultIfEmpty((String) item.get("termName"), "当前学期")),
-                        actionItem("course", asLong(item.get("id")), null)))
+                        actionItem("course", asLong(item.get("id")), null, rowMap(
+                                "classCourseId", asLong(item.get("id")),
+                                "courseId", asLong(item.get("courseId")),
+                                "courseName", item.get("courseName"),
+                                "taskType", item.get("taskType")), "/student/courses")))
+                .collect(Collectors.toList());
+
+        List<Map<String, Object>> manualTasks = scLearningTaskService.selectUserDispatchedTasks(userId, termId).stream()
+                .map(this::manualTaskItem)
                 .collect(Collectors.toList());
 
         List<Map<String, Object>> todoTasks = new ArrayList<>();
+        todoTasks.addAll(manualTasks.stream()
+                .filter(item -> !"COMPLETED".equals(String.valueOf(item.get("taskTypeCode"))))
+                .limit(4)
+                .collect(Collectors.toList()));
         records.stream()
                 .filter(item -> "ONGOING".equals(item.getExamStatus()))
                 .findFirst()
                 .ifPresent(item -> todoTasks.add(taskItem("ongoing-" + item.getRecordId(),
                         StringUtils.defaultIfEmpty(item.getPaperName(), "试卷 " + item.getPaperId()),
                         "你有一场未完成考试，建议优先继续作答。",
-                        "待办考试", "danger", "进行中",
+                        "待办考试", "EXAM_RESUME", "danger", "进行中",
                         Collections.singletonList("开始于 " + StringUtils.defaultIfEmpty(DateUtils.parseDateToStr("yyyy-MM-dd HH:mm:ss", item.getStartTime()), "-")),
-                        actionItem("resume", item.getPaperId(), item.getRecordId()))));
+                        actionItem("resume", item.getPaperId(), item.getRecordId(), rowMap(
+                                "recordId", item.getRecordId(),
+                                "paperId", item.getPaperId(),
+                                "paperName", item.getPaperName(),
+                                "startTime", item.getStartTime()), "/student/exams/session/" + item.getRecordId()))));
         todoTasks.addAll(wrongTasks.stream().limit(2).collect(Collectors.toList()));
         todoTasks.addAll(courseTasks.stream().limit(2).collect(Collectors.toList()));
 
         List<Map<String, Object>> recommendedTasks = new ArrayList<>();
+        recommendedTasks.addAll(manualTasks.stream()
+                .filter(item -> !"COMPLETED".equals(String.valueOf(item.get("taskTypeCode"))))
+                .limit(2)
+                .collect(Collectors.toList()));
         recommendedTasks.addAll(examTasks.stream().limit(2).collect(Collectors.toList()));
         List<Map<String, Object>> topWrongTasks = wrongs.stream().limit(2).map(item -> taskItem("topwrong-" + item.getQuestionId(),
                 "高频错题 · " + item.getQuestionId(),
                 "这道题在你的历史作答里属于高频失分，建议尽快回练。",
-                "薄弱项", "warning", "推荐",
+                "薄弱项", "WRONG_BOOK", "warning", "推荐",
                 Collections.singletonList("错误 " + defaultInt(item.getWrongCount()) + " 次"),
-                actionItem("wrongbook", null, null))).collect(Collectors.<Map<String, Object>>toList());
+                actionItem("wrongbook", item.getId(), null, rowMap(
+                        "wrongId", item.getId(),
+                        "questionId", item.getQuestionId(),
+                        "courseId", item.getCourseId()), "/student/wrongbook"))).collect(Collectors.<Map<String, Object>>toList());
         recommendedTasks.addAll(topWrongTasks);
         recommendedTasks.addAll(courseTasks.stream().skip(2).limit(2).collect(Collectors.toList()));
 
@@ -346,10 +389,16 @@ public class CampusPortalController extends BaseController {
                 .map(item -> taskItem("history-" + item.getRecordId(),
                         StringUtils.defaultIfEmpty(item.getPaperName(), "试卷 " + item.getPaperId()),
                         "历史考试记录，可回看作答详情与结果。",
-                        "已完成", "info", "已提交",
+                        "已完成", "EXAM_RECORD", "info", "已提交",
                         Collections.emptyList(),
-                        actionItem("record", item.getPaperId(), item.getRecordId())))
+                        actionItem("record", item.getPaperId(), item.getRecordId(), rowMap(
+                                "recordId", item.getRecordId(),
+                                "paperId", item.getPaperId(),
+                                "paperName", item.getPaperName()), "/student/exams?tab=records")))
                 .collect(Collectors.toList());
+        historyTasks.addAll(manualTasks.stream()
+                .filter(item -> "COMPLETED".equals(String.valueOf(item.get("taskTypeCode"))))
+                .collect(Collectors.toList()));
 
         Map<String, Object> stats = new LinkedHashMap<>();
         stats.put("examTaskCount", examTasks.size());
@@ -365,6 +414,7 @@ public class CampusPortalController extends BaseController {
         result.put("examTasks", examTasks);
         result.put("wrongTasks", wrongTasks);
         result.put("courseTasks", courseTasks);
+        result.put("manualTasks", manualTasks);
         result.put("stats", stats);
         return success(result);
     }
@@ -376,26 +426,92 @@ public class CampusPortalController extends BaseController {
     }
 
     @PreAuthorize("@ss.hasAnyRoles('student,admin')")
-    @GetMapping("/student/messages")
-    public AjaxResult studentMessages(@RequestParam Long userId) {
-        List<Map<String, Object>> result = new ArrayList<>();
+    @PutMapping("/student/task-dispatch/{dispatchId}/read")
+    public AjaxResult markStudentTaskRead(@PathVariable Long dispatchId) {
+        LoginUser loginUser = getLoginUser();
+        return toAjax(scLearningTaskDispatchService.markDispatchRead(dispatchId, loginUser.getUserId(), getUsername()));
+    }
 
-        SysNotice noticeQuery = new SysNotice();
-        noticeQuery.setStatus("0");
-        List<SysNotice> notices = noticeService.selectNoticeList(noticeQuery).stream()
-                .limit(6)
-                .collect(Collectors.toList());
+    @PreAuthorize("@ss.hasAnyRoles('student,admin')")
+    @PutMapping("/student/task-dispatch/{dispatchId}/complete")
+    public AjaxResult completeStudentTask(@PathVariable Long dispatchId, @RequestBody(required = false) Map<String, String> payload) {
+        LoginUser loginUser = getLoginUser();
+        String completionRemark = payload == null ? null : payload.get("completionRemark");
+        return toAjax(scLearningTaskDispatchService.completeDispatch(dispatchId, loginUser.getUserId(), completionRemark, getUsername()));
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('student,admin')")
+    @GetMapping("/student/task-dispatch/{dispatchId}/detail")
+    public AjaxResult studentTaskDispatchDetail(@PathVariable Long dispatchId) {
+        LoginUser loginUser = getLoginUser();
+        List<Map<String, Object>> tasks = scLearningTaskService.selectUserDispatchedTasks(loginUser.getUserId(), null);
+        Map<String, Object> detail = tasks.stream()
+                .filter(item -> Objects.equals(asLong(item.get("dispatchId")), dispatchId))
+                .findFirst()
+                .orElse(Collections.emptyMap());
+        if (detail.isEmpty()) {
+            return error("任务不存在或无权查看");
+        }
+        Map<String, Object> result = new LinkedHashMap<>(detail);
+        result.put("submission", scLearningTaskSubmissionService.selectByDispatchId(dispatchId));
+        return success(result);
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('student,admin')")
+    @PutMapping("/student/task-dispatch/{dispatchId}/submit")
+    public AjaxResult submitStudentTask(@PathVariable Long dispatchId, @RequestBody Map<String, Object> payload) {
+        LoginUser loginUser = getLoginUser();
+        List<Map<String, Object>> tasks = scLearningTaskService.selectUserDispatchedTasks(loginUser.getUserId(), null);
+        Map<String, Object> detail = tasks.stream()
+                .filter(item -> Objects.equals(asLong(item.get("dispatchId")), dispatchId))
+                .findFirst()
+                .orElse(Collections.emptyMap());
+        if (detail.isEmpty()) {
+            return error("任务不存在或无权提交");
+        }
+        String submitContent = payload == null ? null : String.valueOf(payload.getOrDefault("submitContent", ""));
+        String attachmentUrls = payload == null ? "[]" : String.valueOf(payload.getOrDefault("attachmentUrls", "[]"));
+        if (StringUtils.isEmpty(submitContent) && StringUtils.equals(attachmentUrls, "[]")) {
+            return error("提交内容不能为空");
+        }
+        Long taskId = asLong(detail.get("taskId"));
+        SysUser currentUser = userService.selectUserById(loginUser.getUserId());
+        ScLearningTaskSubmission submission = scLearningTaskSubmissionService.selectByDispatchId(dispatchId);
+        if (submission == null) {
+            submission = new com.smart.system.domain.ScLearningTaskSubmission();
+            submission.setDispatchId(dispatchId);
+            submission.setTaskId(taskId);
+            submission.setUserId(loginUser.getUserId());
+            submission.setSubmitContent(submitContent);
+            submission.setAttachmentUrls(attachmentUrls);
+            submission.setSubmitTime(new Date());
+            submission.setReviewStatus("PENDING");
+            submission.setCreateBy(getUsername());
+            scLearningTaskSubmissionService.insertScLearningTaskSubmission(submission);
+        } else {
+            submission.setSubmitContent(submitContent);
+            submission.setAttachmentUrls(attachmentUrls);
+            submission.setSubmitTime(new Date());
+            submission.setReviewStatus("PENDING");
+            submission.setUpdateBy(getUsername());
+            scLearningTaskSubmissionService.updateScLearningTaskSubmission(submission);
+        }
+        String completionRemark = StringUtils.defaultIfEmpty(currentUser == null ? null : currentUser.getRealName(), "学生") + "已提交任务";
+        scLearningTaskDispatchService.completeDispatch(dispatchId, loginUser.getUserId(), completionRemark, getUsername());
+        return success("提交成功");
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('student,admin')")
+    @GetMapping("/student/messages")
+    public AjaxResult studentMessages(@RequestParam Long userId,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false, defaultValue = "12") Integer limit) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        String receiverScope = "STUDENT";
+
+        List<SysNotice> notices = noticeService.selectPortalNoticeList(userId, receiverScope, "MESSAGE", "0", keyword, limit);
         for (SysNotice notice : notices) {
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("messageId", "notice-" + notice.getNoticeId());
-            item.put("messageType", "NOTICE");
-            item.put("messageTitle", notice.getNoticeTitle());
-            item.put("messageContent", notice.getNoticeContent());
-            item.put("createTime", notice.getCreateTime());
-            item.put("levelType", "INFO");
-            item.put("actionType", "notice");
-            item.put("actionTarget", notice.getNoticeId());
-            result.add(item);
+            result.add(toPortalNoticeItem(notice, "MESSAGE"));
         }
 
         ScExamRecord recordQuery = new ScExamRecord();
@@ -410,32 +526,60 @@ public class CampusPortalController extends BaseController {
                     message.put("messageType", "EXAM_REMINDER");
                     message.put("messageTitle", "考试进行中提醒");
                     message.put("messageContent", "你有一场未完成考试：" + StringUtils.defaultIfEmpty(item.getPaperName(), "试卷 " + item.getPaperId()));
+                    message.put("messageSummary", "未完成考试待继续作答");
                     message.put("createTime", item.getStartTime());
                     message.put("levelType", "WARNING");
                     message.put("actionType", "resumeExam");
                     message.put("actionTarget", item.getRecordId());
+                    message.put("bizCategory", "MESSAGE");
+                    message.put("readFlag", "0");
                     message.put("paperId", item.getPaperId());
                     result.add(message);
                 });
 
         Map<String, Object> growth = scUserGrowthService.buildGrowthSummary(userId);
         @SuppressWarnings("unchecked")
-        List<Map<String, Object>> achievements = (List<Map<String, Object>>) (List<?>) growth.getOrDefault("achievements", Collections.emptyList());
+        List<ScUserAchievement> achievements = (List<ScUserAchievement>) growth.getOrDefault("achievements", Collections.emptyList());
         achievements.stream().limit(3).forEach(item -> {
             Map<String, Object> message = new LinkedHashMap<>();
-            message.put("messageId", "achievement-" + item.get("achievementId"));
+            message.put("messageId", "achievement-" + item.getAchievementId());
             message.put("messageType", "ACHIEVEMENT");
-            message.put("messageTitle", StringUtils.defaultIfEmpty((String) item.get("achievementTitle"), "成就解锁"));
-            message.put("messageContent", StringUtils.defaultIfEmpty((String) item.get("achievementDesc"), "你已解锁新的成长成就"));
-            message.put("createTime", item.get("earnedTime"));
+            message.put("messageTitle", StringUtils.defaultIfEmpty(item.getAchievementTitle(), "成就解锁"));
+            message.put("messageContent", StringUtils.defaultIfEmpty(item.getAchievementDesc(), "你已解锁新的成长成就"));
+            message.put("messageSummary", StringUtils.defaultIfEmpty(item.getAchievementDesc(), "你已解锁新的成长成就"));
+            message.put("createTime", item.getEarnedTime());
             message.put("levelType", "SUCCESS");
             message.put("actionType", "growth");
-            message.put("actionTarget", item.get("achievementId"));
+            message.put("actionTarget", item.getAchievementId());
+            message.put("bizCategory", "MESSAGE");
+            message.put("readFlag", "0");
             result.add(message);
         });
 
-        result.sort((a, b) -> String.valueOf(b.get("createTime")).compareTo(String.valueOf(a.get("createTime"))));
+        result.sort(Comparator.comparing(item -> parseAnyDate(item.get("createTime")), Comparator.nullsLast(Comparator.reverseOrder())));
         return success(result.stream().limit(12).collect(Collectors.toList()));
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('student,admin')")
+    @GetMapping("/student/message-center")
+    public AjaxResult studentMessageCenter(@RequestParam Long userId,
+            @RequestParam(required = false) String keyword) {
+        String receiverScope = "STUDENT";
+        List<SysNotice> unreadMessages = noticeService.selectPortalNoticeList(userId, receiverScope, "MESSAGE", null, keyword, 100);
+        List<SysNotice> notices = noticeService.selectPortalNoticeList(userId, receiverScope, "NOTICE", null, keyword, 8);
+        Map<String, Object> stats = noticeService.selectPortalNoticeStats(userId, receiverScope);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("messages", unreadMessages.stream().map(item -> toPortalNoticeItem(item, "MESSAGE")).collect(Collectors.toList()));
+        result.put("notices", notices.stream().map(item -> toPortalNoticeItem(item, "NOTICE")).collect(Collectors.toList()));
+        result.put("stats", stats == null ? Collections.emptyMap() : stats);
+        return success(result);
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('student,admin')")
+    @PutMapping("/student/message-center/{noticeId}/read")
+    public AjaxResult markStudentMessageRead(@PathVariable Long noticeId) {
+        LoginUser loginUser = getLoginUser();
+        return toAjax(noticeService.markNoticeRead(noticeId, loginUser.getUserId(), getUsername()));
     }
 
     @PreAuthorize("@ss.hasAnyRoles('student,admin')")
@@ -646,29 +790,24 @@ public class CampusPortalController extends BaseController {
 
     @PreAuthorize("@ss.hasAnyRoles('student,teacher,parent,admin')")
     @GetMapping("/notice")
-    public AjaxResult noticeList(@RequestParam(required = false, defaultValue = "6") Integer limit) {
-        SysNotice query = new SysNotice();
-        query.setStatus("0");
-        List<SysNotice> notices = noticeService.selectNoticeList(query);
-        notices.sort(Comparator.comparing(SysNotice::getCreateTime, Comparator.nullsLast(Comparator.reverseOrder())));
-        List<Map<String, Object>> items = new ArrayList<>();
-        int max = Math.max(1, limit == null ? 6 : limit);
-        for (SysNotice notice : notices.stream().limit(max).toList()) {
-            Map<String, Object> item = new HashMap<>();
-            item.put("noticeId", notice.getNoticeId());
-            item.put("noticeTitle", notice.getNoticeTitle());
-            item.put("noticeType", notice.getNoticeType());
-            item.put("noticeContent", notice.getNoticeContent());
-            item.put("createTime", notice.getCreateTime());
-            items.add(item);
-        }
-        return success(items);
+    public AjaxResult noticeList(@RequestParam(required = false, defaultValue = "6") Integer limit,
+            @RequestParam(required = false) String keyword) {
+        LoginUser loginUser = getLoginUser();
+        String receiverScope = resolvePortalReceiverScope(loginUser);
+        List<SysNotice> notices = noticeService.selectPortalNoticeList(loginUser.getUserId(), receiverScope, "NOTICE", null, keyword, limit);
+        return success(notices.stream().map(item -> toPortalNoticeItem(item, "NOTICE")).collect(Collectors.toList()));
     }
 
     @PreAuthorize("@ss.hasAnyRoles('student,teacher,parent,admin')")
     @GetMapping("/notice/{noticeId}")
     public AjaxResult noticeDetail(@PathVariable Long noticeId) {
-        return success(noticeService.selectNoticeById(noticeId));
+        LoginUser loginUser = getLoginUser();
+        SysNotice notice = noticeService.selectNoticeById(noticeId);
+        if (notice == null) {
+            return error("通知公告不存在");
+        }
+        noticeService.markNoticeRead(noticeId, loginUser.getUserId(), getUsername());
+        return success(toPortalNoticeItem(notice, StringUtils.defaultIfEmpty(notice.getBizCategory(), "NOTICE")));
     }
 
     @PreAuthorize("@ss.hasAnyRoles('student,teacher,parent,admin')")
@@ -1109,26 +1248,217 @@ public class CampusPortalController extends BaseController {
         return Collections.emptyList();
     }
 
-    private Map<String, Object> taskItem(String key, String title, String desc, String tag, String tagType,
+    private Map<String, Object> taskItem(String key, String title, String desc, String tag, String taskTypeCode, String tagType,
             String status, List<String> meta, Map<String, Object> action) {
         Map<String, Object> item = new LinkedHashMap<>();
         item.put("key", key);
         item.put("title", title);
         item.put("desc", desc);
         item.put("tag", tag);
+        item.put("taskTypeCode", taskTypeCode);
         item.put("tagType", tagType);
         item.put("status", status);
         item.put("meta", meta == null ? Collections.emptyList() : meta);
+        item.put("jumpPath", action == null ? null : action.get("path"));
         item.put("action", action);
         return item;
     }
 
-    private Map<String, Object> actionItem(String type, Long paperId, Long recordId) {
+    private Map<String, Object> manualTaskItem(Map<String, Object> source) {
+        String completionStatus = String.valueOf(source.getOrDefault("completionStatus", "PENDING"));
+        String taskType = String.valueOf(source.getOrDefault("taskType", "COURSE"));
+        Long taskId = asLong(source.get("taskId"));
+        Long actionTargetId = asLong(source.get("actionTargetId"));
+        Long dispatchId = asLong(source.get("dispatchId"));
+        String path = StringUtils.defaultIfEmpty((String) source.get("actionPath"), "/student/plaza");
+        List<String> meta = new ArrayList<>();
+        if (source.get("dueTime") != null) {
+            Date dueDate = parseAnyDate(source.get("dueTime"));
+            if (dueDate != null) {
+                meta.add("截止 " + DateUtils.parseDateToStr("yyyy-MM-dd HH:mm", dueDate));
+            }
+        }
+        if (StringUtils.isNotEmpty((String) source.get("priorityLevel"))) {
+            meta.add("优先级 " + source.get("priorityLevel"));
+        }
+        return taskItem("manual-" + taskId + "-" + dispatchId,
+                StringUtils.defaultIfEmpty((String) source.get("taskTitle"), "学习任务"),
+                StringUtils.defaultIfEmpty((String) source.get("taskDesc"), "请按要求完成任务。"),
+                resolveManualTaskLabel(taskType),
+                "COMPLETED".equals(completionStatus) ? "COMPLETED" : taskType,
+                resolveManualTagType(completionStatus, taskType),
+                resolveManualStatusText(completionStatus, source.get("dueTime")),
+                meta,
+                actionItem(resolveManualActionType(path), actionTargetId, dispatchId, source, "/student/tasks/" + dispatchId));
+    }
+
+    private Map<String, Object> toPortalNoticeItem(SysNotice notice, String defaultCategory) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        String category = StringUtils.defaultIfEmpty(notice.getBizCategory(), defaultCategory);
+        item.put("noticeId", notice.getNoticeId());
+        item.put("messageId", "notice-" + notice.getNoticeId());
+        item.put("bizCategory", category);
+        item.put("messageType", "NOTICE".equals(category) ? "NOTICE" : "SYSTEM_MESSAGE");
+        item.put("messageTitle", notice.getNoticeTitle());
+        item.put("messageContent", notice.getNoticeContent());
+        item.put("messageSummary", StringUtils.defaultIfEmpty(notice.getNoticeSummary(), notice.getNoticeTitle()));
+        item.put("noticeType", notice.getNoticeType());
+        item.put("createTime", notice.getPublishTime() == null ? notice.getCreateTime() : notice.getPublishTime());
+        item.put("publishTime", notice.getPublishTime());
+        item.put("expireTime", notice.getExpireTime());
+        item.put("levelType", "1".equals(notice.getPinned()) ? "WARNING" : "INFO");
+        item.put("actionType", StringUtils.defaultIfEmpty(notice.getActionType(), "notice"));
+        item.put("actionPath", notice.getActionPath());
+        item.put("actionTarget", notice.getActionTargetId() == null ? notice.getNoticeId() : notice.getActionTargetId());
+        item.put("pinned", notice.getPinned());
+        item.put("readFlag", StringUtils.defaultIfEmpty(notice.getReadFlag(), "0"));
+        item.put("readTime", notice.getReadTime());
+        item.put("createBy", notice.getCreateBy());
+        return item;
+    }
+
+    private Map<String, Object> actionItem(String type, Long targetId, Long recordId, Map<String, Object> row, String path) {
         Map<String, Object> item = new LinkedHashMap<>();
         item.put("type", type);
-        item.put("paperId", paperId);
+        item.put("targetId", targetId);
         item.put("recordId", recordId);
+        item.put("path", path);
+        item.put("row", row == null ? Collections.emptyMap() : row);
         return item;
+    }
+
+    private Map<String, Object> rowMap(Object... kv) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        if (kv == null) {
+            return row;
+        }
+        for (int i = 0; i + 1 < kv.length; i += 2) {
+            row.put(String.valueOf(kv[i]), kv[i + 1]);
+        }
+        return row;
+    }
+
+    private String resolvePortalReceiverScope(LoginUser loginUser) {
+        if (loginUser == null || loginUser.getAuthorities() == null) {
+            return "ALL";
+        }
+        Set<String> authorities = loginUser.getAuthorities().stream()
+                .map(item -> item == null ? "" : item.getAuthority())
+                .collect(Collectors.toSet());
+        if (authorities.contains("ROLE_student")) {
+            return "STUDENT";
+        }
+        if (authorities.contains("ROLE_teacher")) {
+            return "TEACHER";
+        }
+        if (authorities.contains("ROLE_parent")) {
+            return "PARENT";
+        }
+        if (authorities.contains("ROLE_admin")) {
+            return "ADMIN";
+        }
+        return "ALL";
+    }
+
+    private String resolveCourseTaskLabel(String taskType) {
+        String code = resolveCourseTaskCode(taskType);
+        if ("HOMEWORK".equals(code)) {
+            return "作业任务";
+        }
+        if ("EXAM".equals(code)) {
+            return "考试任务";
+        }
+        if ("PRACTICE".equals(code)) {
+            return "实验任务";
+        }
+        return "课程任务";
+    }
+
+    private String resolveCourseTaskCode(String taskType) {
+        String normalized = StringUtils.upperCase(StringUtils.trimToEmpty(taskType));
+        if (StringUtils.containsAny(normalized, "作业", "HOMEWORK", "ASSIGNMENT")) {
+            return "HOMEWORK";
+        }
+        if (StringUtils.containsAny(normalized, "考试", "测验", "EXAM", "QUIZ", "TEST")) {
+            return "EXAM";
+        }
+        if (StringUtils.containsAny(normalized, "实验", "实践", "上机", "PRACTICE", "LAB")) {
+            return "PRACTICE";
+        }
+        return "COURSE";
+    }
+
+    private String resolveManualTaskLabel(String taskType) {
+        if ("HOMEWORK".equalsIgnoreCase(taskType)) {
+            return "作业任务";
+        }
+        if ("EXAM".equalsIgnoreCase(taskType)) {
+            return "考试任务";
+        }
+        if ("PRACTICE".equalsIgnoreCase(taskType)) {
+            return "实验任务";
+        }
+        if ("READING".equalsIgnoreCase(taskType)) {
+            return "阅读任务";
+        }
+        return "学习任务";
+    }
+
+    private String resolveManualTagType(String completionStatus, String taskType) {
+        if ("COMPLETED".equalsIgnoreCase(completionStatus)) {
+            return "success";
+        }
+        if ("EXAM".equalsIgnoreCase(taskType)) {
+            return "danger";
+        }
+        if ("HOMEWORK".equalsIgnoreCase(taskType)) {
+            return "warning";
+        }
+        if ("PRACTICE".equalsIgnoreCase(taskType)) {
+            return "primary";
+        }
+        return "info";
+    }
+
+    private String resolveManualStatusText(String completionStatus, Object dueTime) {
+        if ("COMPLETED".equalsIgnoreCase(completionStatus)) {
+            return "已完成";
+        }
+        Date dueDate = parseAnyDate(dueTime);
+        if (dueDate != null) {
+            return "截止 " + DateUtils.parseDateToStr("yyyy-MM-dd HH:mm", dueDate);
+        }
+        return "待处理";
+    }
+
+    private String resolveManualActionType(String path) {
+        if (StringUtils.contains(path, "/student/exams/session/")) {
+            return "resume";
+        }
+        if (StringUtils.contains(path, "/student/exams")) {
+            return "exam";
+        }
+        if (StringUtils.contains(path, "/student/wrongbook")) {
+            return "wrongbook";
+        }
+        if (StringUtils.contains(path, "/student/courses")) {
+            return "course";
+        }
+        return "custom";
+    }
+
+    private Date parseAnyDate(Object value) {
+        if (value instanceof Date) {
+            return (Date) value;
+        }
+        if (value == null) {
+            return null;
+        }
+        try {
+            return DateUtils.parseDate(String.valueOf(value));
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private Long asLong(Object value) {

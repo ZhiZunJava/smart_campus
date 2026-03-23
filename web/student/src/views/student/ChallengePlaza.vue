@@ -1,96 +1,134 @@
 <template>
-  <div class="portal-page plaza-page">
-    <section class="plaza-hero portal-card">
-      <div>
-        <div class="plaza-hero__eyebrow">Task Center</div>
-        <div class="plaza-hero__title">任务中心</div>
-        <p class="plaza-hero__desc">
-          统一聚合考试任务、课程任务、错题回练和开放挑战，让每天该做什么一目了然。
-        </p>
+  <div class="portal-page plaza-page" style="padding-bottom: 40px;">
+    <div class="portal-page-header">
+      <div class="portal-page-title">
+        <div class="portal-page-title-icon"></div>
+        <span>任务广场</span>
       </div>
-      <div class="plaza-hero__stats">
-        <div class="plaza-hero__metric">
-          <span>今日待办</span>
-          <strong>{{ todoTasks.length }}</strong>
-        </div>
-        <div class="plaza-hero__metric">
-          <span>推荐任务</span>
-          <strong>{{ recommendedTasks.length }}</strong>
-        </div>
+      <div class="portal-page-actions">
+        <el-tag effect="light" type="primary" class="page-meta-tag">按优先级与截止时间处理任务</el-tag>
       </div>
-    </section>
+    </div>
 
-    <section class="portal-kpis">
-      <el-card class="portal-card portal-stat-card"><div class="label">考试任务</div><div class="value">{{ examTasks.length }}</div><div class="sub">来自课程考试与开放考试</div></el-card>
-      <el-card class="portal-card portal-stat-card"><div class="label">错题任务</div><div class="value">{{ wrongTasks.length }}</div><div class="sub">来自错题回练与薄弱项</div></el-card>
-      <el-card class="portal-card portal-stat-card"><div class="label">课程任务</div><div class="value">{{ courseTasks.length }}</div><div class="sub">来自当前学期课程与课程详情</div></el-card>
-      <el-card class="portal-card portal-stat-card"><div class="label">开放挑战</div><div class="value">{{ generalPapers.length }}</div><div class="sub">不依赖课程即可参与</div></el-card>
+    <section class="plaza-kpis">
+      <div class="plaza-kpi-card">
+        <div class="kpi-content">
+          <div class="kpi-label">今日待办</div>
+          <div class="kpi-value text-primary">{{ todoTasks.length }}</div>
+          <div class="kpi-sub">紧急与即将截止</div>
+        </div>
+      </div>
+      <div class="plaza-kpi-card">
+        <div class="kpi-content">
+          <div class="kpi-label">本周作业</div>
+          <div class="kpi-value">{{ homeworkCount }}</div>
+          <div class="kpi-sub">需本周内提交</div>
+        </div>
+      </div>
+      <div class="plaza-kpi-card">
+        <div class="kpi-content">
+          <div class="kpi-label">即将考试</div>
+          <div class="kpi-value">{{ examCount }}</div>
+          <div class="kpi-sub">近3天内考试</div>
+        </div>
+      </div>
+      <div class="plaza-kpi-card">
+        <div class="kpi-content">
+          <div class="kpi-label">开放挑战</div>
+          <div class="kpi-value">{{ generalPapers.length }}</div>
+          <div class="kpi-sub">不依赖课程即可参与</div>
+        </div>
+      </div>
     </section>
 
     <div class="portal-grid portal-grid-2 mt20">
-      <el-card class="portal-card">
-        <template #header><span>今日待办</span></template>
+      <div class="plaza-section-card">
+        <div class="section-header">
+          <div class="section-title">今日待办</div>
+        </div>
         <div class="task-list">
-          <article v-for="task in todoTasks" :key="task.key" class="task-card task-card--todo">
-            <div class="task-card__head">
-              <div class="task-card__title">{{ task.title }}</div>
-              <el-tag :type="task.tagType" effect="plain">{{ task.tag }}</el-tag>
+          <article v-for="task in displayTodoTasks" :key="task.key" class="task-item task-item--todo">
+            <div class="task-item-main">
+              <div class="task-item-head">
+                <div class="task-item-title">{{ task.title }}</div>
+                <el-tag :type="task.tagType" effect="plain" size="small">{{ task.tag }}</el-tag>
+              </div>
+              <div class="task-item-desc">{{ task.desc }}</div>
+              <div class="task-item-meta">
+                <span v-for="meta in task.meta" :key="meta">{{ meta }}</span>
+              </div>
             </div>
-            <div class="task-card__desc">{{ task.desc }}</div>
-            <div class="task-card__meta">
-              <span v-for="meta in task.meta" :key="meta">{{ meta }}</span>
-            </div>
-            <div class="task-card__actions">
-              <el-button type="primary" size="small" @click="openTask(task)">立即处理</el-button>
+            <div class="task-item-actions">
+              <el-button type="primary" @click="openTask(task)">{{ task.actionLabel }}</el-button>
             </div>
           </article>
         </div>
-        <el-empty v-if="!todoTasks.length" description="今天没有待办任务" />
-      </el-card>
+        <el-empty v-if="!todoTasks.length" description="今天没有待办任务" :image-size="80" />
+      </div>
 
-      <el-card class="portal-card portal-soft-card">
-        <template #header><span>推荐任务</span></template>
+      <div class="plaza-section-card plaza-section-card--soft">
+        <div class="section-header">
+          <div class="section-title">推荐任务</div>
+        </div>
         <div class="task-list">
-          <article v-for="task in recommendedTasks" :key="task.key" class="task-card">
-            <div class="task-card__head">
-              <div class="task-card__title">{{ task.title }}</div>
-              <el-tag :type="task.tagType" effect="plain">{{ task.tag }}</el-tag>
+          <article v-for="task in displayRecommendedTasks" :key="task.key" class="task-item">
+            <div class="task-item-main">
+              <div class="task-item-head">
+                <div class="task-item-title">{{ task.title }}</div>
+                <el-tag :type="task.tagType" effect="plain" size="small">{{ task.tag }}</el-tag>
+              </div>
+              <div class="task-item-desc">{{ task.desc }}</div>
+              <div class="task-item-meta">
+                <span v-for="meta in task.meta" :key="meta">{{ meta }}</span>
+              </div>
             </div>
-            <div class="task-card__desc">{{ task.desc }}</div>
-            <div class="task-card__meta">
-              <span v-for="meta in task.meta" :key="meta">{{ meta }}</span>
-            </div>
-            <div class="task-card__actions">
-              <el-button plain size="small" @click="openTask(task)">查看</el-button>
+            <div class="task-item-actions">
+              <el-button type="primary" plain @click="openTask(task)">{{ task.actionLabel }}</el-button>
             </div>
           </article>
         </div>
-      </el-card>
+        <el-empty v-if="!recommendedTasks.length" description="暂无推荐任务" :image-size="80" />
+      </div>
     </div>
 
     <div class="portal-grid portal-grid-2 mt20">
-      <el-card class="portal-card">
-        <template #header><span>任务分类</span></template>
-        <el-table :data="taskBuckets" size="small" border>
-          <el-table-column prop="label" label="任务类型" min-width="140" />
-          <el-table-column prop="count" label="数量" width="90" />
-          <el-table-column prop="desc" label="说明" min-width="240" show-overflow-tooltip />
+      <div class="plaza-section-card">
+        <div class="section-header">
+          <div class="section-title">任务分类</div>
+        </div>
+        <el-table :data="taskBuckets" style="width: 100%" class="custom-table" :header-cell-style="{ background: '#fafafa', color: '#606266', fontWeight: 500 }">
+          <el-table-column prop="label" label="任务类型" min-width="120" />
+          <el-table-column prop="count" label="数量" min-width="100">
+            <template #default="scope">
+              <span class="count-badge" :class="{'is-zero': scope.row.count === 0}">{{ scope.row.count }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="desc" label="说明" min-width="200" show-overflow-tooltip />
         </el-table>
-      </el-card>
+      </div>
 
-      <el-card class="portal-card">
-        <template #header><span>历史任务</span></template>
-        <el-table :data="historyTasks" size="small" border>
-          <el-table-column prop="title" label="任务标题" min-width="220" show-overflow-tooltip />
-          <el-table-column prop="tag" label="类型" width="100" />
-          <el-table-column prop="status" label="状态" width="100" />
-          <el-table-column label="操作" width="120">
+      <div class="plaza-section-card">
+        <div class="section-header">
+          <div class="section-title">历史任务</div>
+        </div>
+        <el-table :data="historyTasks" style="width: 100%" class="custom-table" :header-cell-style="{ background: '#fafafa', color: '#606266', fontWeight: 500 }">
+          <el-table-column prop="title" label="任务标题" min-width="180" show-overflow-tooltip />
+          <el-table-column prop="tag" label="类型" min-width="90" />
+          <el-table-column prop="status" label="状态" min-width="100">
+            <template #default="scope">
+              <el-tag size="small" type="info" effect="plain">{{ scope.row.status }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" min-width="90" fixed="right">
             <template #default="scope">
               <el-button link type="primary" @click="openTask(scope.row)">查看</el-button>
             </template>
           </el-table-column>
+          <template #empty>
+            <el-empty description="暂无历史任务" :image-size="60" />
+          </template>
         </el-table>
-      </el-card>
+      </div>
     </div>
   </div>
 </template>
@@ -100,6 +138,8 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   getPortalTaskCenter,
+  listExamRecord,
+  markPortalTaskRead,
 } from '@/api/portal'
 import usePortalUserStore from '@/store/user'
 
@@ -107,6 +147,7 @@ const router = useRouter()
 const userStore = usePortalUserStore()
 const loading = ref(false)
 const taskCenter = ref<any>({})
+const examRecords = ref<any[]>([])
 
 const todoTasks = computed(() => taskCenter.value.todoTasks || [])
 const recommendedTasks = computed(() => taskCenter.value.recommendedTasks || [])
@@ -115,6 +156,48 @@ const examTasks = computed(() => taskCenter.value.examTasks || [])
 const wrongTasks = computed(() => taskCenter.value.wrongTasks || [])
 const courseTasks = computed(() => taskCenter.value.courseTasks || [])
 const generalPapers = computed(() => examTasks.value.filter((item: any) => item?.action?.paperId && item?.desc?.includes('开放考试')))
+const homeworkCount = computed(() => {
+  const statsCount = Number(taskCenter.value.stats?.homeworkTaskCount || 0)
+  if (statsCount > 0) return statsCount
+
+  const source = [...todoTasks.value, ...recommendedTasks.value]
+  return source.filter((item: any) => {
+    const tag = String(item?.tag || '').toUpperCase()
+    const type = String(item?.taskType || item?.action?.type || '').toUpperCase()
+    const text = `${item?.title || ''} ${item?.desc || ''} ${item?.tag || ''}`.toUpperCase()
+    return tag.includes('作业') || type === 'HOMEWORK' || text.includes('作业')
+  }).length
+})
+const examCount = computed(() => {
+  const statsCount = Number(taskCenter.value.stats?.examTaskCount || 0)
+  if (statsCount > 0) return statsCount
+
+  const source = [...todoTasks.value, ...recommendedTasks.value, ...examTasks.value]
+  return source.filter((item: any) => {
+    const tag = String(item?.tag || '').toUpperCase()
+    const type = String(item?.taskType || item?.action?.type || '').toUpperCase()
+    const text = `${item?.title || ''} ${item?.desc || ''} ${item?.tag || ''}`.toUpperCase()
+    return type === 'EXAM' || type === 'RESUME' || tag.includes('考试') || text.includes('考试')
+  }).length
+})
+const examAttemptCountMap = computed(() =>
+  examRecords.value.reduce((acc: Record<string, number>, item: any) => {
+    const key = String(item.paperId || '')
+    if (!key) return acc
+    acc[key] = (acc[key] || 0) + 1
+    return acc
+  }, {}),
+)
+const latestExamRecordMap = computed(() =>
+  examRecords.value.reduce((acc: Record<string, any>, item: any) => {
+    const key = String(item.paperId || '')
+    if (!key || acc[key]) return acc
+    acc[key] = item
+    return acc
+  }, {}),
+)
+const displayTodoTasks = computed(() => todoTasks.value.map((item: any) => decorateTask(item, '立即处理')))
+const displayRecommendedTasks = computed(() => recommendedTasks.value.map((item: any) => decorateTask(item, '查看详情')))
 const taskBuckets = computed(() => [
   { label: '考试任务', count: taskCenter.value.stats?.examTaskCount || 0, desc: '来自课程考试与开放考试' },
   { label: '错题任务', count: taskCenter.value.stats?.wrongTaskCount || 0, desc: '来自错题回练与薄弱项复盘' },
@@ -123,17 +206,24 @@ const taskBuckets = computed(() => [
 ])
 
 function openTask(task: any) {
-  const action = task?.action || {}
+  const rawTask = task?.raw || task
+  const action = rawTask?.action || {}
+  const dispatchId = Number(action?.row?.dispatchId || rawTask?.dispatchId || action?.dispatchId || 0)
+  if (dispatchId) {
+    markPortalTaskRead(dispatchId).catch(() => {})
+    router.push(`/student/tasks/${dispatchId}?from=plaza`)
+    return
+  }
   if (action.type === 'exam') {
     router.push('/student/exams')
     return
   }
-  if (action.type === 'resume' && action.row?.recordId) {
+  if (action.type === 'resume' && action.recordId) {
     router.push({
-      path: `/student/exams/session/${action.row.recordId}`,
+      path: `/student/exams/session/${action.recordId}`,
       query: {
-        paperId: String(action.row.paperId || ''),
-        startedAt: String(action.row.startTime || ''),
+        paperId: String(action.targetId || action.row?.paperId || ''),
+        startedAt: String(action.row?.startTime || ''),
       },
     })
     return
@@ -149,11 +239,39 @@ function openTask(task: any) {
   if (action.type === 'course') {
     router.push({
       path: '/student/courses',
-      query: action.paperId ? { openCourseId: String(action.paperId) } : {},
+      query: action.targetId ? { openCourseId: String(action.targetId) } : {},
     })
     return
   }
-  router.push('/student/exams')
+  
+  router.push(action.path || '/student/exams')
+}
+
+function decorateTask(task: any, fallbackActionLabel: string) {
+  const actionType = String(task?.action?.type || '').toLowerCase()
+  const paperId = String(task?.action?.targetId || task?.action?.paperId || task?.action?.row?.paperId || '')
+  const attemptCount = paperId ? (examAttemptCountMap.value[paperId] || 0) : 0
+  const latestRecord = paperId ? latestExamRecordMap.value[paperId] : null
+  const maxAttemptCount = Number(task?.maxAttemptCount || 0)
+  const isRetakeExam = actionType === 'exam' && attemptCount > 0
+  const isMakeupExam = isRetakeExam && maxAttemptCount > 0
+  const remainingCount = maxAttemptCount > 0 ? Math.max(0, maxAttemptCount - attemptCount) : null
+  return {
+    ...task,
+    raw: task,
+    tag: isMakeupExam ? '可补考' : isRetakeExam ? '可再次参加考试' : task?.tag,
+    desc: isMakeupExam
+      ? `你已参加 ${attemptCount}/${maxAttemptCount} 次，还可补考 ${remainingCount} 次`
+      : isRetakeExam
+        ? `你已参加 ${attemptCount} 次，可再次作答`
+        : task?.desc,
+    meta: [
+      ...(Array.isArray(task?.meta) ? task.meta : []),
+      ...(isMakeupExam && remainingCount !== null ? [`剩余补考次数：${remainingCount}`] : []),
+      ...(isRetakeExam && latestRecord?.submitTime ? [`最近参加：${String(latestRecord.submitTime).slice(0, 16).replace('T', ' ')}`] : []),
+    ],
+    actionLabel: actionType === 'resume' ? '继续作答' : isMakeupExam ? '去补考' : isRetakeExam ? '再次考试' : fallbackActionLabel,
+  }
 }
 
 async function loadData() {
@@ -161,8 +279,12 @@ async function loadData() {
   if (!userId) return
   loading.value = true
   try {
-    const res = await getPortalTaskCenter({ userId })
-    taskCenter.value = res.data || {}
+    const [taskRes, recordRes] = await Promise.all([
+      getPortalTaskCenter({ userId }),
+      listExamRecord({ pageNum: 1, pageSize: 50 }),
+    ])
+    examRecords.value = recordRes.rows || []
+    taskCenter.value = taskRes.data || {}
   } finally {
     loading.value = false
   }
@@ -172,103 +294,214 @@ onMounted(loadData)
 </script>
 
 <style scoped>
-.plaza-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
-  gap: 18px;
-  padding: 22px;
-  background:
-    radial-gradient(circle at top left, rgba(24, 148, 106, 0.16) 0%, rgba(24, 148, 106, 0) 34%),
-    linear-gradient(135deg, #ffffff 0%, #f2fbf8 100%);
+.plaza-page {
+  padding: 24px 24px 40px;
 }
-.plaza-hero__eyebrow {
-  display: inline-flex;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(24, 148, 106, 0.12);
-  color: #12795a;
-  font-size: 12px;
-  font-weight: 700;
-}
-.plaza-hero__title {
-  margin-top: 12px;
-  font-size: 30px;
-  font-weight: 800;
-  color: var(--portal-text);
-}
-.plaza-hero__desc {
-  margin-top: 10px;
-  max-width: 760px;
-  font-size: 14px;
-  line-height: 1.9;
-  color: var(--portal-text-secondary);
-}
-.plaza-hero__stats {
-  display: grid;
-  gap: 14px;
-}
-.plaza-hero__metric {
-  padding: 18px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid var(--portal-border);
-}
-.plaza-hero__metric span {
-  color: var(--portal-text-secondary);
-  font-size: 13px;
-}
-.plaza-hero__metric strong {
-  display: block;
-  margin-top: 8px;
-  font-size: 30px;
-  color: #12795a;
-}
-.task-list {
-  display: grid;
-  gap: 14px;
-}
-.task-card {
-  padding: 16px;
-  border-radius: 18px;
-  background: linear-gradient(180deg, #ffffff 0%, #f7fcfa 100%);
-  border: 1px solid var(--portal-border);
-}
-.task-card--todo {
-  border-color: #f0c27b;
-  background: linear-gradient(180deg, #fffdf8 0%, #fff7eb 100%);
-}
-.task-card__head {
+
+.portal-page-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
+  align-items: center;
+  margin-bottom: 24px;
 }
-.task-card__title {
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--portal-text);
-  line-height: 1.6;
-}
-.task-card__desc {
-  margin-top: 8px;
-  color: var(--portal-text-secondary);
-  line-height: 1.8;
-  font-size: 14px;
-}
-.task-card__meta {
-  margin-top: 10px;
+
+.portal-page-title {
   display: flex;
+  align-items: center;
   gap: 12px;
-  flex-wrap: wrap;
-  color: var(--portal-text-secondary);
+  font-size: 20px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.portal-page-title-icon {
+  width: 4px;
+  height: 20px;
+  background: var(--brand-primary, #266fcb);
+  border-radius: 2px;
+}
+
+.plaza-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.plaza-kpi-card {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #ebeef5;
+  padding: 24px;
+  display: flex;
+  align-items: flex-start;
+  transition: all 0.3s ease;
+}
+
+.plaza-kpi-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+}
+
+.kpi-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  width: 100%;
+}
+
+.kpi-label {
+  font-size: 14px;
+  color: #606266;
+}
+
+.kpi-value {
+  font-size: 28px;
+  font-weight: 600;
+  color: #303133;
+  line-height: 1;
+}
+
+.kpi-value.text-primary {
+  color: var(--brand-primary, #266fcb);
+}
+
+.kpi-sub {
   font-size: 12px;
+  color: #909399;
 }
-.task-card__actions {
-  margin-top: 12px;
+
+.plaza-section-card {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #ebeef5;
+  padding: 24px;
+  height: 100%;
 }
-@media (max-width: 960px) {
-  .plaza-hero {
+
+.plaza-section-card--soft {
+  background: #fafafa;
+  border: 1px solid #e4e7ed;
+}
+
+.section-header {
+  margin-bottom: 20px;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.task-item {
+  background: #fff;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.task-item:hover {
+  box-shadow: 0 8px 24px rgba(38, 111, 203, 0.08);
+  transform: translateY(-2px);
+  border-color: #c6e2ff;
+}
+
+.task-item--todo {
+  border-left: 4px solid var(--el-color-warning);
+  background: linear-gradient(90deg, var(--el-color-warning-light-9) 0%, #fff 10%);
+}
+
+.task-item-main {
+  flex: 1;
+  min-width: 0;
+  margin-right: 24px;
+}
+
+.task-item-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.task-item-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.task-item-desc {
+  font-size: 14px;
+  color: #606266;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.task-item-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.task-item-actions {
+  flex-shrink: 0;
+}
+
+.custom-table {
+  --el-table-border-color: #ebeef5;
+  --el-table-header-bg-color: #fafafa;
+}
+
+.count-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--el-color-primary-light-9);
+  color: var(--brand-primary, #266fcb);
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.count-badge.is-zero {
+  background: #f4f4f5;
+  color: #909399;
+}
+
+@media (max-width: 1200px) {
+  .plaza-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .plaza-kpis {
     grid-template-columns: 1fr;
+  }
+  .task-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .task-item-main {
+    margin-right: 0;
+    width: 100%;
   }
 }
 </style>

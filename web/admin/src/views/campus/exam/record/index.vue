@@ -176,6 +176,32 @@
         </el-col>
       </el-row>
 
+      <el-row :gutter="16" class="mt16">
+        <el-col :span="24">
+          <el-card shadow="never">
+            <template #header><span>行为日志</span></template>
+            <el-table :data="parsedBehaviorLogs" size="small" border>
+              <el-table-column label="时间" min-width="180">
+                <template #default="scope">{{ scope.row.behaviorTime || '-' }}</template>
+              </el-table-column>
+              <el-table-column label="事件" width="120">
+                <template #default="scope">{{ behaviorTypeLabel(scope.row.behaviorType) }}</template>
+              </el-table-column>
+              <el-table-column label="次数" width="90" prop="behaviorCount" />
+              <el-table-column label="来源事件" width="140">
+                <template #default="scope">{{ scope.row.parsedData.sourceEvent || '-' }}</template>
+              </el-table-column>
+              <el-table-column label="累计切屏" width="110">
+                <template #default="scope">{{ scope.row.parsedData.focusLossCount ?? '-' }}</template>
+              </el-table-column>
+              <el-table-column label="发生时间戳" min-width="180">
+                <template #default="scope">{{ scope.row.parsedData.occurredAt || '-' }}</template>
+              </el-table-column>
+            </el-table>
+          </el-card>
+        </el-col>
+      </el-row>
+
       <el-table :data="recordDetail.answers || []" border class="mt16">
         <el-table-column label="题目ID" prop="questionId" width="90" />
         <el-table-column label="题型" width="100">
@@ -217,6 +243,12 @@ const queryParams = reactive<any>({
   examStatus: '',
   warningLevel: '',
 })
+const parsedBehaviorLogs = computed(() =>
+  (recordDetail.value.behaviorLogs || []).map((item: any) => ({
+    ...item,
+    parsedData: parseBehaviorData(item?.behaviorData),
+  })),
+)
 
 function questionTypeLabel(type: string) {
   return ({ single: '单选题', multiple: '多选题', judge: '判断题', fill: '填空题', essay: '简答题', material: '材料题', case: '案例题' } as any)[type] || type || '-'
@@ -257,6 +289,19 @@ function analysisLevelTag(level: string) {
 
 function warningLevelLabel(level: string) {
   return ({ LOW: '低风险', MEDIUM: '中风险', HIGH: '高风险' } as any)[level] || level || '-'
+}
+
+function behaviorTypeLabel(type: string) {
+  return ({ FOCUS_LOSS: '切屏', FLAGGED: '标记', MANUAL_SUBMIT: '交卷', AUTO_SAVE: '暂存' } as any)[type] || type || '-'
+}
+
+function parseBehaviorData(value?: string) {
+  if (!value) return {}
+  try {
+    return JSON.parse(value)
+  } catch {
+    return {}
+  }
 }
 
 function userLabel(userId: number | string | undefined) {

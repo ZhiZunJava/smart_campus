@@ -47,9 +47,6 @@ INSERT INTO `sys_menu` VALUES
 (2046, '节次布局', '2003', '13', 'timeTableLayout', 'campus/timeTableLayout/index', '', '', 1, 0, 'C', '0', '0', 'campus:timetable:list', 'ri-layout-grid-line', 'admin', NOW(), '', NULL, '课表节次与时间布局配置'),
 
 (2040, '资源管理', '2004', '1', 'resource', 'campus/resource/index', '', '', 1, 0, 'C', '0', '0', 'campus:resource:list', 'ri-article-line', 'admin', NOW(), '', NULL, '学习资源管理'),
-(2041, '行为记录', '2004', '2', 'studyRecord', 'campus/studyRecord/index', '', '', 1, 0, 'C', '0', '0', 'campus:studyRecord:list', 'ri-file-text-line', 'admin', NOW(), '', NULL, '学习行为记录'),
-(2042, '学习画像', '2004', '3', 'learningProfile', 'campus/learningProfile/index', '', '', 1, 0, 'C', '0', '0', 'campus:learningProfile:list', 'ri-brain-line', 'admin', NOW(), '', NULL, '学习画像'),
-(2043, '个性推荐', '2004', '4', 'learningRecommendation', 'campus/learningRecommendation/index', '', '', 1, 0, 'C', '0', '0', 'campus:learningRecommendation:list', 'ri-road-map-line', 'admin', NOW(), '', NULL, '个性化推荐'),
 
 (2050, '问答会话', '2005', '1', 'qaSession', 'campus/qa/session/index', '', '', 1, 0, 'C', '0', '0', 'campus:qa:session:list', 'ri-message-3-line', 'admin', NOW(), '', NULL, '问答会话'),
 (2051, '问答消息', '2005', '2', 'qaMessage', 'campus/qa/message/index', '', '', 1, 0, 'C', '0', '0', 'campus:qa:message:list', 'ri-chat-3-line', 'admin', NOW(), '', NULL, '问答消息'),
@@ -61,8 +58,6 @@ INSERT INTO `sys_menu` VALUES
 (2063, '考试记录', '2006', '4', 'examRecord', 'campus/exam/record/index', '', '', 1, 0, 'C', '0', '0', 'campus:exam:record:list', 'ri-calendar-2-line', 'admin', NOW(), '', NULL, '考试记录'),
 (2064, '错题本', '2006', '5', 'wrongQuestionBook', 'campus/exam/wrong/index', '', '', 1, 0, 'C', '0', '0', 'campus:exam:record:list', 'ri-edit-box-line', 'admin', NOW(), '', NULL, '错题本'),
 
-(2070, '学情预警', '2007', '1', 'learningWarning', 'campus/analysis/warning/index', '', '', 1, 0, 'C', '0', '0', 'campus:analysis:warning:list', 'ri-alert-line', 'admin', NOW(), '', NULL, '学情预警'),
-(2071, '学情报告', '2007', '2', 'learningReport', 'campus/analysis/report/index', '', '', 1, 0, 'C', '0', '0', 'campus:analysis:report:list', 'ri-clipboard-line', 'admin', NOW(), '', NULL, '学情报告'),
 
 (2080, '模型配置', '2008', '1', 'aiModel', 'campus/ai/model/index', '', '', 1, 0, 'C', '0', '0', 'campus:ai:model:list', 'ri-robot-2-line', 'admin', NOW(), '', NULL, 'AI模型配置'),
 (2081, 'Prompt模板', '2008', '2', 'aiPrompt', 'campus/ai/prompt/index', '', '', 1, 0, 'C', '0', '0', 'campus:ai:prompt:list', 'ri-file-text-line', 'admin', NOW(), '', NULL, 'Prompt模板'),
@@ -79,19 +74,6 @@ INSERT INTO `sys_menu` VALUES
 (2112, '资源修改', '2040', '3', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:resource:edit', '#', 'admin', NOW(), '', NULL, ''),
 (2113, '资源删除', '2040', '4', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:resource:remove', '#', 'admin', NOW(), '', NULL, ''),
 
-(2120, '行为查询', '2041', '1', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:studyRecord:query', '#', 'admin', NOW(), '', NULL, ''),
-(2121, '行为新增', '2041', '2', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:studyRecord:add', '#', 'admin', NOW(), '', NULL, ''),
-
-(2130, '画像查询', '2042', '1', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:learningProfile:query', '#', 'admin', NOW(), '', NULL, ''),
-(2131, '画像重建', '2042', '2', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:learningProfile:edit', '#', 'admin', NOW(), '', NULL, ''),
-
-(2140, '推荐查询', '2043', '1', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:learningRecommendation:query', '#', 'admin', NOW(), '', NULL, ''),
-(2141, '推荐生成', '2043', '2', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:learningRecommendation:add', '#', 'admin', NOW(), '', NULL, ''),
-
-(2150, '预警查询', '2070', '1', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:analysis:warning:list', '#', 'admin', NOW(), '', NULL, ''),
-(2151, '预警构建', '2070', '2', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:analysis:warning:add', '#', 'admin', NOW(), '', NULL, ''),
-(2152, '报告查询', '2071', '1', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:analysis:report:list', '#', 'admin', NOW(), '', NULL, ''),
-(2153, '报告生成', '2071', '2', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:analysis:report:add', '#', 'admin', NOW(), '', NULL, ''),
 
 (2160, '题库查询', '2060', '1', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:exam:question:list', '#', 'admin', NOW(), '', NULL, ''),
 (2161, '题库新增', '2060', '2', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:exam:question:add', '#', 'admin', NOW(), '', NULL, ''),
