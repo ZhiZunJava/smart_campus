@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScResourceFavoriteMapper">
+  <resultMap type="ScResourceFavorite" id="ScResourceFavoriteResult">
+    <id property="favoriteId" column="favorite_id" />
+    <result property="resourceId" column="resource_id" />
+    <result property="userId" column="user_id" />
+    <result property="createBy" column="create_by" />
+    <result property="createTime" column="create_time" />
+  </resultMap>
+
+  <select id="selectByResourceAndUser" resultMap="ScResourceFavoriteResult">
+    select favorite_id, resource_id, user_id, create_by, create_time
+    from sc_resource_favorite
+    where resource_id = #{param1} and user_id = #{param2}
+  </select>
+
+  <insert id="insertScResourceFavorite" parameterType="ScResourceFavorite" useGeneratedKeys="true" keyProperty="favoriteId">
+    insert into sc_resource_favorite(resource_id, user_id, create_by, create_time)
+    values(#{resourceId}, #{userId}, #{createBy}, sysdate())
+  </insert>
+
+  <delete id="deleteByResourceAndUser">
+    delete from sc_resource_favorite where resource_id = #{param1} and user_id = #{param2}
+  </delete>
+
+  <select id="countByResourceId" parameterType="Long" resultType="int">
+    select count(1) from sc_resource_favorite where resource_id = #{resourceId}
+  </select>
+
+  <select id="selectFavoriteResourceList" parameterType="Long" resultMap="com.smart.system.mapper.ScResourceMapper.ScResourceResult">
+    select r.resource_id, r.resource_name, r.resource_type, r.course_id,
+           r.chapter_id, r.node_id, r.sort_no, r.uploader_id, r.author_name, r.publisher_name, r.target_user_type,
+           r.file_url, r.cover_url, r.content_text, r.summary, r.audit_status,
+           r.view_count, r.download_count, r.favorite_count, r.allow_comment, r.allow_rating, r.allow_share,
+           r.quality_score, r.avg_rating, r.rating_count, r.comment_count, r.share_count,
+           r.status, r.create_by, r.create_time, r.update_by, r.update_time, r.remark
+    from sc_resource_favorite f
+    join sc_resource r on r.resource_id = f.resource_id
+    where f.user_id = #{userId}
+    order by f.create_time desc
+  </select>
+</mapper>

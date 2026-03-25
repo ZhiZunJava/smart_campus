@@ -21,4 +21,8 @@ public interface ScResourceMapper {
     int increaseDownloadCount(Long resourceId);
 
     int increaseFavoriteCount(Long resourceId);
+
+    int increaseShareCount(Long resourceId);
+
+    int updateResourceInteractionStats(ScResource scResource);
 }

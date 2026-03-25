@@ -25,13 +25,8 @@
       <div class="qa-sidebar__section">历史对话</div>
       <el-scrollbar class="qa-sidebar__history">
         <div class="qa-sidebar__history-list">
-          <div
-            v-for="item in filteredSessions"
-            :key="item.sessionId"
-            class="qa-session"
-            :class="{ active: item.sessionId === activeSessionId }"
-            @click="openSession(item)"
-          >
+          <div v-for="item in filteredSessions" :key="item.sessionId" class="qa-session"
+            :class="{ active: item.sessionId === activeSessionId }" @click="openSession(item)">
             <div class="qa-session__main">
               <div class="qa-session__title-row">
                 <div class="qa-session__title">{{ item.sessionTitle || `会话 ${item.sessionId}` }}</div>
@@ -63,16 +58,9 @@
     <section class="qa-main">
       <main class="qa-main__messages">
         <div class="qa-main__floating-header">
-          <el-input
-            v-model="editingSessionTitle"
-            class="qa-main__title-input"
-            :class="{ 'is-idle': !titleInputFocused }"
-            maxlength="50"
-            placeholder="给这次对话起个标题"
-            @focus="titleInputFocused = true"
-            @blur="handleTitleBlur"
-            @keyup.enter="commitSessionTitle"
-          />
+          <el-input v-model="editingSessionTitle" class="qa-main__title-input"
+            :class="{ 'is-idle': !titleInputFocused }" maxlength="50" placeholder="给这次对话起个标题"
+            @focus="titleInputFocused = true" @blur="handleTitleBlur" @keyup.enter="commitSessionTitle" />
           <div class="qa-main__actions">
             <span class="qa-main__pill"><i class="ri-robot-2-line"></i>{{ selectedModel?.modelName || '未选择模型' }}</span>
             <button v-if="streaming" type="button" class="qa-main__danger" @click="stopStreaming">
@@ -87,17 +75,13 @@
               <div class="qa-empty__title">有什么我能帮你的吗？</div>
               <div class="qa-empty__subtitle">围绕课程学习、作业分析、复盘答疑与图像理解，给你连续、清晰、可追问的校园学习协作体验。</div>
               <div class="qa-empty__suggestions">
-                <button v-for="item in suggestionList" :key="item" type="button" class="qa-suggestion" @click="applySuggestion(item)">{{ item }}</button>
+                <button v-for="item in suggestionList" :key="item" type="button" class="qa-suggestion"
+                  @click="applySuggestion(item)">{{ item }}</button>
               </div>
             </div>
 
-            <div
-              v-for="(item, index) in chatMessages"
-              :key="item.id"
-              :ref="(el) => setMessageRef(item.id, el)"
-              class="qa-message"
-              :class="item.role"
-            >
+            <div v-for="(item, index) in chatMessages" :key="item.id" :ref="(el) => setMessageRef(item.id, el)"
+              class="qa-message" :class="item.role">
               <div class="qa-message__avatar">
                 <i :class="item.role === 'user' ? 'ri-user-3-line' : 'ri-robot-2-line'"></i>
               </div>
@@ -107,69 +91,57 @@
                   <span v-if="item.modelName">{{ item.modelName }}</span>
                 </div>
 
-                <div v-if="item.role === 'user'" class="qa-message__index-label">问题 {{ getUserQuestionOrder(index) }}</div>
+                <div v-if="item.role === 'user'" class="qa-message__index-label">问题 {{ getUserQuestionOrder(index) }}
+                </div>
 
                 <div v-if="item.attachments?.length" class="qa-message__attachments">
-                  <button
-                    v-for="attachment in item.attachments"
-                    :key="attachment.attachmentId || attachment.fileName || attachment.name"
-                    type="button"
-                    class="qa-message__attachment"
-                    @click="openAttachment(attachment)"
-                  >
-                    <img
-                      v-if="isImageAttachment(attachment)"
-                      :src="attachment.imageUrl || attachment.fileUrl"
-                      :alt="attachment.originalName || attachment.name || '附件图片'"
-                    />
+                  <button v-for="attachment in item.attachments"
+                    :key="attachment.attachmentId || attachment.fileName || attachment.name" type="button"
+                    class="qa-message__attachment" @click="openAttachment(attachment)">
+                    <img v-if="isImageAttachment(attachment)" :src="attachment.imageUrl || attachment.fileUrl"
+                      :alt="attachment.originalName || attachment.name || '附件图片'" />
                     <i v-else class="ri-attachment-2"></i>
                     <span>{{ attachment.originalName || attachment.name || '附件' }}</span>
                   </button>
                 </div>
 
-                <details
-                  v-if="item.role === 'assistant' && item.reasoningContent"
-                  class="qa-reasoning"
-                  :open="streaming && item.id === currentStreamingAssistantId"
-                >
+                <details v-if="item.role === 'assistant' && item.reasoningContent" class="qa-reasoning"
+                  :open="streaming && item.id === currentStreamingAssistantId">
                   <summary class="qa-reasoning__summary">
                     <i class="ri-brain-line"></i>
                     <span>思考过程</span>
                   </summary>
-                  <div
-                    class="qa-reasoning__content markdown-body"
-                    v-html="renderMarkdown(item.reasoningContent)"
-                  ></div>
+                  <div class="qa-reasoning__content markdown-body">
+                    <QaMarkdownRenderer :source="item.reasoningContent" />
+                  </div>
                 </details>
 
-                <div
-                  v-if="item.role === 'assistant'"
-                  class="qa-message__content markdown-body"
-                  v-html="renderMarkdown(item.content || (streaming ? '思考中...' : ''))"
-                ></div>
+                <div v-if="item.role === 'assistant'" class="qa-message__content markdown-body">
+                  <div v-if="isStreamingAssistantMessage(item)"
+                    class="qa-message__content--plain qa-message__content--streaming">
+                    {{ getStreamingAssistantPreview(item.content) }}
+                  </div>
+                  <QaMarkdownRenderer v-else :source="item.content || ''" />
+                </div>
                 <div v-else class="qa-message__content qa-message__content--plain">{{ item.content }}</div>
 
                 <div class="qa-message__ops">
-                  <button v-if="item.role === 'assistant' && item.content" type="button" @click="copyText(item.content)">
+                  <button v-if="item.role === 'assistant' && item.content" type="button"
+                    @click="copyText(item.content)">
                     <i class="ri-file-copy-line"></i><span>复制内容</span>
                   </button>
-                  <button
-                    v-if="item.role === 'assistant' && item.content && item.messageId"
-                    type="button"
+                  <button v-if="item.role === 'assistant' && item.content && item.messageId" type="button"
                     :class="{ 'is-active': item.feedbackType === 'helpful' }"
-                    @click="openFeedbackDialog(item, 'helpful')"
-                  >
+                    @click="openFeedbackDialog(item, 'helpful')">
                     <i class="ri-thumb-up-line"></i><span>有帮助</span>
                   </button>
-                  <button
-                    v-if="item.role === 'assistant' && item.content && item.messageId"
-                    type="button"
+                  <button v-if="item.role === 'assistant' && item.content && item.messageId" type="button"
                     :class="{ 'is-active': item.feedbackType === 'unhelpful', 'is-danger': item.feedbackType === 'unhelpful' }"
-                    @click="openFeedbackDialog(item, 'unhelpful')"
-                  >
+                    @click="openFeedbackDialog(item, 'unhelpful')">
                     <i class="ri-thumb-down-line"></i><span>需改进</span>
                   </button>
-                  <button v-if="item.role === 'assistant' && item.content" type="button" @click="continueFromAnswer(item.content)">
+                  <button v-if="item.role === 'assistant' && item.content" type="button"
+                    @click="continueFromAnswer(item.content)">
                     <i class="ri-chat-forward-line"></i><span>引用后继续问</span>
                   </button>
                   <button v-if="item.role === 'user'" type="button" @click="reAskMessage(item.content)">
@@ -181,14 +153,8 @@
           </div>
         </el-scrollbar>
         <div v-if="userQuestionAnchors.length" class="qa-main__index">
-          <button
-            v-for="anchor in userQuestionAnchors"
-            :key="anchor.id"
-            type="button"
-            class="qa-main__index-item"
-            :class="{ 'is-active': anchor.id === activeAnchorId }"
-            @click="scrollToMessage(anchor.id)"
-          >
+          <button v-for="anchor in userQuestionAnchors" :key="anchor.id" type="button" class="qa-main__index-item"
+            :class="{ 'is-active': anchor.id === activeAnchorId }" @click="scrollToMessage(anchor.id)">
             <span class="qa-main__index-number">{{ anchor.order }}</span>
             <span class="qa-main__index-preview">{{ anchor.title }}</span>
             <span class="qa-main__index-line"></span>
@@ -197,6 +163,98 @@
       </main>
 
       <footer class="qa-composer">
+        <div class="qa-context-bar">
+          <div class="qa-context-bar__left">
+            <div class="qa-context-field qa-context-field--course">
+              <span class="qa-context-field__label">关联课程</span>
+              <el-select
+                v-model="selectedCourseId"
+                clearable
+                filterable
+                placeholder="可选课程上下文"
+                @change="handleCourseContextChange"
+              >
+                <el-option v-for="item in courseOptions" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
+            </div>
+
+            <div class="qa-context-field qa-context-field--exam">
+              <span class="qa-context-field__label">考试记录</span>
+              <el-select
+                v-model="selectedExamRecordId"
+                clearable
+                filterable
+                placeholder="可选考试记录分析"
+                :disabled="!examRecordOptions.length"
+              >
+                <el-option
+                  v-for="item in examRecordOptions"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+                />
+              </el-select>
+            </div>
+          </div>
+
+          <div class="qa-context-bar__right">
+            <button type="button" class="qa-context-chip" @click="applyCoursePlanPrompt">
+              <i class="ri-road-map-line"></i>
+              <span>生成学习规划</span>
+            </button>
+            <button type="button" class="qa-context-chip" :disabled="!selectedExamRecord" @click="applyExamAnalysisPrompt">
+              <i class="ri-bar-chart-box-line"></i>
+              <span>分析考试记录</span>
+            </button>
+            <button type="button" class="qa-context-chip" :disabled="!selectedCourseId" @click="applyWrongbookPlanPrompt">
+              <i class="ri-booklet-line"></i>
+              <span>错题复习规划</span>
+            </button>
+          </div>
+        </div>
+
+        <div v-if="selectedCourseId" class="qa-context-insights">
+          <section v-if="recentExamCards.length" class="qa-context-panel">
+            <div class="qa-context-panel__head">
+              <strong>最近考试记录</strong>
+              <span>点击可切换分析对象</span>
+            </div>
+            <div class="qa-context-records">
+              <button
+                v-for="item in recentExamCards"
+                :key="item.value"
+                type="button"
+                class="qa-context-record"
+                :class="{ 'is-active': item.value === selectedExamRecordId }"
+                @click="selectedExamRecordId = item.value"
+              >
+                <div class="qa-context-record__title">{{ item.raw.paperName || `考试 ${item.value}` }}</div>
+                <div class="qa-context-record__meta">
+                  <span>得分 {{ item.raw.score ?? 0 }}</span>
+                  <span>正确率 {{ formatCorrectRate(item.raw.correctRate) }}</span>
+                </div>
+              </button>
+            </div>
+          </section>
+
+          <section v-if="hasWrongbookOverview" class="qa-context-panel qa-context-panel--summary">
+            <div class="qa-context-panel__head">
+              <strong>错题概览</strong>
+              <span>{{ courseContextLabel(selectedCourseId) }}</span>
+            </div>
+            <div class="qa-context-summary">
+              <div class="qa-context-summary__item">
+                <span>总错题</span>
+                <strong>{{ wrongOverview.totalCount || 0 }}</strong>
+              </div>
+              <div class="qa-context-summary__item">
+                <span>未掌握</span>
+                <strong>{{ wrongOverview.unmasteredCount || 0 }}</strong>
+              </div>
+            </div>
+          </section>
+        </div>
+
         <div v-if="images.length" class="qa-composer__attachments">
           <div v-for="item in images" :key="item.name" class="qa-attachment">
             <i class="ri-image-line"></i>
@@ -205,19 +263,13 @@
           </div>
         </div>
 
-        <el-input
-          v-model="inputText"
-          type="textarea"
-          :rows="4"
-          resize="none"
-          placeholder="输入你的问题，支持课程问答、知识点解释、解题思路分析"
-          @keydown.enter.exact.prevent="handleSubmit"
-          @paste="handleComposerPaste"
-        />
+        <el-input v-model="inputText" type="textarea" :rows="4" resize="none" placeholder="输入你的问题，支持课程问答、知识点解释、解题思路分析"
+          @keydown.enter.exact.prevent="handleSubmit" @paste="handleComposerPaste" />
 
         <div class="qa-composer__toolbar">
           <div class="qa-composer__left">
-            <el-upload action="#" :auto-upload="false" :show-file-list="false" :on-change="handleImageChange" accept="image/*">
+            <el-upload action="#" :auto-upload="false" :show-file-list="false" :on-change="handleImageChange"
+              accept="image/*">
               <button type="button" class="qa-tool-btn">
                 <i class="ri-image-add-line"></i>
                 <span>上传图片</span>
@@ -228,7 +280,8 @@
               <div class="qa-tool-select__icon"><i class="ri-robot-2-line"></i></div>
               <div class="qa-tool-select__body">
                 <el-select v-model="selectedModelId" placeholder="选择模型" filterable @change="handleModelChange">
-                  <el-option v-for="item in modelOptions" :key="item.modelId" :label="`${item.modelName}（${item.provider}）`" :value="item.modelId" />
+                  <el-option v-for="item in modelOptions" :key="item.modelId"
+                    :label="`${item.modelName}（${item.provider}）`" :value="item.modelId" />
                 </el-select>
               </div>
             </div>
@@ -266,14 +319,8 @@
           </el-radio-group>
         </el-form-item>
         <el-form-item label="反馈内容">
-          <el-input
-            v-model="feedbackForm.feedbackContent"
-            type="textarea"
-            rows="5"
-            maxlength="200"
-            show-word-limit
-            placeholder="可以补充说明哪里回答得好，或哪里还需要改进"
-          />
+          <el-input v-model="feedbackForm.feedbackContent" type="textarea" rows="5" maxlength="200" show-word-limit
+            placeholder="可以补充说明哪里回答得好，或哪里还需要改进" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -285,15 +332,14 @@
 </template>
 
 <script setup lang="ts">
-import 'highlight.js/styles/github-dark.css'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import type { ElMessageBoxOptions } from 'element-plus'
 import { ElMessage, ElMessageBox } from '@/utils/feedback'
 import { getToken } from '@/utils/auth'
 import { normalizeQaErrorMessage, parseAssistantReferenceSource, parseQaAttachments } from '@/utils/qaMessage'
-import { renderQaMarkdown } from '@/utils/qaMarkdown'
 import usePortalUserStore from '@/store/user'
-import { addQaFeedback, addQaSession, deletePortalQaAttachment, deleteQaSession, listQaMessage, listQaModelOptions, listQaSession, updateQaSession, uploadPortalQaAttachment } from '@/api/portal'
+import { addQaFeedback, addQaSession, deletePortalQaAttachment, deleteQaSession, fetchPortalCourseOptions, getWrongBookOverview, listExamRecord, listQaMessage, listQaModelOptions, listQaSession, updateQaSession, uploadPortalQaAttachment } from '@/api/portal'
+import QaMarkdownRenderer from '@/components/qa/QaMarkdownRenderer.vue'
 
 const SESSION_PIN_KEY = 'qa-session-pins'
 const SESSION_ACTIVE_KEY = 'qa-active-session-id'
@@ -306,6 +352,11 @@ const streamEnabled = ref(true)
 const deepThinking = ref(false)
 const selectedModelId = ref<number | undefined>()
 const modelOptions = ref<any[]>([])
+const courseOptions = ref<Array<{ label: string; value: number }>>([])
+const selectedCourseId = ref<number | undefined>()
+const examRecordOptions = ref<Array<{ label: string; value: number; raw: any }>>([])
+const selectedExamRecordId = ref<number | undefined>()
+const wrongOverview = ref<Record<string, any>>({})
 const images = ref<Array<{ attachmentId?: number; name: string; imageUrl: string; fileName?: string; originalName?: string; mimeType: string; size?: number }>>([])
 const sessions = ref<any[]>([])
 const sessionKeyword = ref('')
@@ -317,7 +368,6 @@ const messageScrollbarRef = ref<any>(null)
 const currentAbortController = ref<AbortController | null>(null)
 const currentStreamingAssistantId = ref('')
 const titleInputFocused = ref(false)
-const renderMarkdown = renderQaMarkdown
 const editingSessionTitle = ref('')
 const messageRefs = ref<Record<string, HTMLElement | null>>({})
 const activeAnchorId = ref('')
@@ -352,6 +402,10 @@ const currentSessionTitle = computed(() => {
   const session = sessions.value.find((item) => item.sessionId === activeSessionId.value)
   return session?.sessionTitle || '新对话'
 })
+const selectedCourse = computed(() => courseOptions.value.find((item) => item.value === selectedCourseId.value))
+const selectedExamRecord = computed(() => examRecordOptions.value.find((item) => item.value === selectedExamRecordId.value)?.raw)
+const recentExamCards = computed(() => examRecordOptions.value.slice(0, 3))
+const hasWrongbookOverview = computed(() => Number(wrongOverview.value.totalCount || 0) > 0 || Number(wrongOverview.value.unmasteredCount || 0) > 0)
 const userQuestionAnchors = computed(() => chatMessages.value
   .filter((item) => item.role === 'user')
   .map((item, index) => ({ id: item.id, order: index + 1, title: item.content.slice(0, 18) })))
@@ -414,6 +468,43 @@ async function loadModels() {
   }
 }
 
+async function loadCourseOptions() {
+  courseOptions.value = await fetchPortalCourseOptions(userStore.user?.userId)
+}
+
+async function loadExamRecordOptions() {
+  if (!userStore.user?.userId) {
+    examRecordOptions.value = []
+    return
+  }
+  const res = await listExamRecord({
+    pageNum: 1,
+    pageSize: 30,
+    userId: userStore.user.userId,
+    courseId: selectedCourseId.value,
+  })
+  examRecordOptions.value = (res.rows || []).map((item: any) => ({
+    value: item.recordId,
+    raw: item,
+    label: `${item.paperName || `考试 ${item.recordId}`}｜${courseContextLabel(item.courseId)}｜得分 ${item.score ?? 0}`,
+  }))
+  if (selectedExamRecordId.value && !examRecordOptions.value.some((item) => item.value === selectedExamRecordId.value)) {
+    selectedExamRecordId.value = undefined
+  }
+}
+
+async function loadWrongOverview() {
+  if (!userStore.user?.userId || !selectedCourseId.value) {
+    wrongOverview.value = {}
+    return
+  }
+  const res = await getWrongBookOverview({
+    userId: userStore.user.userId,
+    courseId: selectedCourseId.value,
+  })
+  wrongOverview.value = res.data || {}
+}
+
 async function loadSessions() {
   if (!userStore.user?.userId) return
   const res = await listQaSession({ pageNum: 1, pageSize: 100, userId: userStore.user.userId })
@@ -423,6 +514,9 @@ async function loadSessions() {
 async function openSession(item: any) {
   activeSessionId.value = item.sessionId
   saveActiveSessionId(item.sessionId)
+  selectedCourseId.value = Number(item.courseId || 0) || undefined
+  await loadExamRecordOptions()
+  await loadWrongOverview()
   const res = await listQaMessage({ pageNum: 1, pageSize: 200, sessionId: item.sessionId })
   chatMessages.value = (res.rows || []).map((message: any) => {
     const role = message.roleType === 'assistant' ? 'assistant' : 'user'
@@ -447,6 +541,7 @@ async function createNewChat() {
   inputText.value = ''
   images.value = []
   editingSessionTitle.value = '新对话'
+  selectedExamRecordId.value = undefined
 }
 
 async function handleSessionCommand(command: string, item: any) {
@@ -500,6 +595,16 @@ function handleModelChange() {
   syncModelCapabilities()
 }
 
+async function handleCourseContextChange() {
+  selectedExamRecordId.value = undefined
+  await loadExamRecordOptions()
+  await loadWrongOverview()
+  if (activeSessionId.value) {
+    await updateQaSession({ sessionId: activeSessionId.value, courseId: selectedCourseId.value || null })
+    await loadSessions()
+  }
+}
+
 async function handleImageChange(file: any) {
   const raw = file?.raw || file
   if (!raw) return
@@ -544,6 +649,67 @@ async function handleComposerPaste(event: ClipboardEvent) {
     raw: new File([file], `粘贴图片-${Date.now()}.${(file.type.split('/')[1] || 'png').replace('jpeg', 'jpg')}`, { type: file.type }),
   })
   ElMessage.success('已上传剪贴板图片')
+}
+
+function courseContextLabel(courseId?: number) {
+  if (!courseId) return '通用'
+  return courseOptions.value.find((item) => item.value === courseId)?.label || `课程 ${courseId}`
+}
+
+function buildExamRecordContext(record: any) {
+  if (!record) return ''
+  const correctRateText = record.correctRate == null || record.correctRate === ''
+    ? '-'
+    : `${record.correctRate}${String(record.correctRate).includes('%') ? '' : '%'}`
+  return [
+    `考试名称：${record.paperName || `考试 ${record.recordId}`}`,
+    `课程：${courseContextLabel(record.courseId)}`,
+    `得分：${record.score ?? 0}`,
+    `正确率：${correctRateText}`,
+    `状态：${record.examStatus || '-'}`,
+    `开始时间：${record.startTime || '-'}`,
+    `提交时间：${record.submitTime || '-'}`,
+  ].join('\n')
+}
+
+function buildContextPrompt() {
+  const contexts: string[] = []
+  if (selectedCourse.value) {
+    contexts.push(`当前课程上下文：${selectedCourse.value.label}`)
+  }
+  if (hasWrongbookOverview.value) {
+    contexts.push(`错题概览：总错题 ${wrongOverview.value.totalCount || 0}，未掌握 ${wrongOverview.value.unmasteredCount || 0}。`)
+  }
+  if (selectedExamRecord.value) {
+    contexts.push(`考试记录摘要：\n${buildExamRecordContext(selectedExamRecord.value)}`)
+  }
+  return contexts.join('\n\n')
+}
+
+function applyCoursePlanPrompt() {
+  const courseText = selectedCourse.value ? `请围绕课程「${selectedCourse.value.label}」` : '请结合我当前学习情况'
+  inputText.value = `${courseText}生成一份可执行的学习规划，包含阶段目标、每周安排、重点模块、复习节奏和注意事项。`
+}
+
+function applyExamAnalysisPrompt() {
+  if (!selectedExamRecord.value) {
+    ElMessage.warning('请先选择一条考试记录')
+    return
+  }
+  inputText.value = '请结合这次考试记录做一次成绩与能力分析，指出优势、薄弱点、可能原因，并给出后续两周的改进建议。'
+}
+
+function applyWrongbookPlanPrompt() {
+  if (!selectedCourseId.value) {
+    ElMessage.warning('请先选择课程')
+    return
+  }
+  inputText.value = `请结合当前课程的错题情况，生成一份查漏补缺复习计划，包含优先级、专题安排、每日训练建议和复盘节奏。`
+}
+
+function formatCorrectRate(value: any) {
+  if (value == null || value === '') return '-'
+  return `${value}${String(value).includes('%') ? '' : '%'}`
 }
 
 function applySuggestion(text: string) {
@@ -603,7 +769,13 @@ async function ensureSession(question: string) {
   if (activeSessionId.value) return activeSessionId.value
   if (!userStore.user?.userId) return undefined
   const title = question.length > 18 ? `${question.slice(0, 18)}...` : question
-  await addQaSession({ userId: userStore.user.userId, courseId: null, sessionTitle: title, sourceType: 'general', status: '0' })
+  await addQaSession({
+    userId: userStore.user.userId,
+    courseId: selectedCourseId.value || null,
+    sessionTitle: title,
+    sourceType: selectedCourseId.value ? 'course' : 'general',
+    status: '0'
+  })
   await loadSessions()
   const newSession = sessions.value.find((item) => item.sessionTitle === title) || sessions.value[0]
   activeSessionId.value = newSession?.sessionId
@@ -626,6 +798,7 @@ async function handleSubmit() {
   }
 
   const question = inputText.value.trim()
+  const contextPrompt = buildContextPrompt()
   const ensuredSessionId = await ensureSession(question)
   const assistantId = `assistant_${Date.now()}`
   currentStreamingAssistantId.value = assistantId
@@ -639,7 +812,9 @@ async function handleSubmit() {
     const payload = {
       sessionId: ensuredSessionId,
       userId: userStore.user.userId,
+      courseId: selectedCourseId.value,
       question,
+      contextPrompt,
       modelId: selectedModelId.value,
       deepThinking: deepThinking.value,
       stream: streamEnabled.value,
@@ -732,9 +907,28 @@ function parseSseBlock(block: string, assistantId: string) {
   if (eventName === 'chunk') target.content += payload.content || ''
   if (eventName === 'done' && payload.aiResponse?.modelName) {
     target.modelName = payload.aiResponse.modelName
+    target.content = payload.aiResponse?.content || target.content || ''
     target.reasoningContent = payload.aiResponse?.reasoningContent || target.reasoningContent || ''
   }
   if (eventName === 'error') target.content = payload.message || '生成失败'
+}
+
+function isStreamingAssistantMessage(item: { role: string; id: string }) {
+  return item.role === 'assistant' && streaming.value && item.id === currentStreamingAssistantId.value
+}
+
+function getStreamingAssistantPreview(content?: string) {
+  const text = String(content || '').trim()
+  if (!text) {
+    return '正在生成回答...'
+  }
+  if (/:::\s*echarts|```(?:json|yaml)|"series"\s*:|"xAxis"\s*:|"yAxis"\s*:/.test(text)) {
+    return '正在整理图表内容...'
+  }
+  if (/\|/.test(text) && /(?:---|:\s*-|项目|数值|说明)/.test(text)) {
+    return '正在整理表格内容...'
+  }
+  return text
 }
 
 async function copyText(text: string) {
@@ -791,6 +985,9 @@ onMounted(async () => {
   loadPinnedSessions()
   loadActiveSessionId()
   await loadModels()
+  await loadCourseOptions()
+  await loadExamRecordOptions()
+  await loadWrongOverview()
   await loadSessions()
   if (activeSessionId.value) {
     const current = sessions.value.find((item) => item.sessionId === activeSessionId.value)
@@ -830,20 +1027,1348 @@ function handleScrollSpy() {
 </script>
 
 <style scoped>
-.qa-workbench{display:grid;grid-template-columns:220px minmax(0,1fr);width:100%;height:calc(100vh - 92px);min-height:680px;max-height:calc(100vh - 92px);background:var(--portal-card-solid);border:1px solid var(--portal-border);border-radius:6px;overflow:hidden;box-shadow:var(--portal-shadow-soft)}
-.qa-sidebar{min-height:0;background:var(--portal-surface-bg);border-right:1px solid var(--portal-border);padding:12px 10px;display:flex;flex-direction:column}.qa-sidebar__brand{margin-bottom:12px;padding:12px;border-radius:6px;background:var(--portal-card-solid);border:1px solid var(--portal-border)}.qa-sidebar__brand-top{display:flex;align-items:center;justify-content:space-between;gap:10px}.qa-sidebar__brand-text{margin-top:8px}.qa-sidebar__logo{width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#315fca;font-size:20px;line-height:1}.qa-sidebar__badge{display:inline-flex;padding:2px 8px;border-radius:999px;background:var(--portal-brand-light);color:var(--portal-brand);font-size:11px;font-weight:700}.qa-sidebar__title{font-size:14px;font-weight:800;color:var(--portal-text);line-height:1.3}.qa-sidebar__subtitle{font-size:12px;color:var(--portal-text-secondary);margin-top:4px;line-height:1.6}
-.qa-sidebar__new{display:flex;align-items:center;justify-content:center;gap:6px;height:34px;border:1px solid transparent;border-radius:4px;background:var(--portal-accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 4px 10px rgba(0,110,255,.16);margin-bottom:10px}.qa-sidebar__new i{font-size:15px}
-.qa-sidebar__search{display:flex;align-items:center;gap:8px;height:34px;padding:0 10px;border-radius:4px;background:var(--portal-card-solid);border:1px solid var(--portal-border);margin-bottom:12px}.qa-sidebar__search i{color:var(--portal-text-secondary)}.qa-sidebar__search input{border:none;outline:none;background:transparent;flex:1;font-size:12px;color:var(--portal-text)}.qa-sidebar__section{font-size:12px;color:var(--portal-text-secondary);margin-bottom:8px}.qa-sidebar__history{flex:1;min-height:0}.qa-sidebar__history-list{display:flex;flex-direction:column;gap:4px;padding-right:4px}
-.qa-session{display:flex;align-items:center;gap:8px;padding:8px;border-radius:4px;background:transparent;border:1px solid transparent;cursor:pointer;transition:all .2s ease}.qa-session:hover{border-color:var(--portal-border-strong);background:var(--portal-card-solid)}.qa-session.active{background:var(--portal-card-solid);border-color:var(--portal-border-strong)}.qa-session__main{flex:1;min-width:0}.qa-session__title-row{display:flex;align-items:center;gap:6px}.qa-session__title{font-size:12px;font-weight:600;color:var(--portal-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.qa-session__pin{color:var(--portal-warning);font-size:12px}.qa-session__meta{margin-top:4px;font-size:11px;color:var(--portal-text-secondary)}.qa-session__more{width:24px;height:24px;border:none;border-radius:4px;background:var(--portal-surface-bg);color:var(--portal-text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center}
-.qa-main{min-height:0;display:grid;grid-template-rows:minmax(0,1fr) auto;background:var(--portal-card-solid)}.qa-main__floating-header{position:absolute;top:8px;left:14px;right:14px;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:5}.qa-main__title-input{width:min(420px,42vw);pointer-events:auto;transition:all .2s ease}.qa-main__title-input :deep(.el-input__wrapper){border-radius:4px;box-shadow:none;border:1px solid var(--portal-border);padding:0 10px;height:32px;background:var(--portal-card-solid)}.qa-main__title-input :deep(.el-input__inner){text-align:center;font-size:14px;font-weight:700;color:var(--portal-text)}.qa-main__title-input :deep(.el-input__inner::placeholder){font-weight:500;color:var(--portal-text-secondary)}.qa-main__title-input.is-idle :deep(.el-input__wrapper){background:transparent;border-color:transparent}.qa-main__title-input.is-idle:hover :deep(.el-input__wrapper){background:var(--portal-card-solid);border-color:var(--portal-border)}.qa-main__title-input.is-idle :deep(.el-input__inner){cursor:text}.qa-main__actions{position:absolute;right:0;display:flex;align-items:center;gap:8px;pointer-events:auto}.qa-main__pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:var(--portal-surface-bg);border:1px solid var(--portal-border);color:var(--portal-text-secondary);font-size:12px}.qa-main__danger{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:none;border-radius:4px;background:rgba(220,91,73,.12);color:var(--portal-danger);cursor:pointer}
-.qa-main__messages{position:relative;min-height:0;background:linear-gradient(180deg,var(--portal-card-solid) 0%,var(--portal-surface-bg) 100%)}.qa-main__scroll{height:100%}.qa-main__content{padding:52px 16px 14px}.qa-main__content.is-empty{min-height:100%;display:flex;align-items:center;justify-content:center;padding:72px 16px 14px}.qa-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;max-width:980px}.qa-empty__title{font-size:24px;font-weight:800;color:var(--portal-text);text-align:center}.qa-empty__subtitle{margin-top:10px;max-width:760px;font-size:13px;line-height:1.85;color:var(--portal-text-secondary);text-align:center}.qa-empty__suggestions{margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:980px}.qa-suggestion{border:1px solid var(--portal-border);background:var(--portal-card-solid);padding:8px 12px;border-radius:999px;color:var(--portal-text);cursor:pointer;transition:.2s}.qa-suggestion:hover{background:var(--portal-brand-light);border-color:var(--portal-border-strong);color:var(--portal-brand)}
-.qa-message{display:flex;gap:10px;width:100%;max-width:100%;margin:0 0 12px}.qa-message.assistant{justify-content:flex-start;padding-right:4%}.qa-message.user{justify-content:flex-start;flex-direction:row-reverse;padding-left:4%}.qa-message__avatar{width:30px;height:30px;border-radius:4px;background:var(--portal-surface-bg);color:var(--portal-brand);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}.qa-message.user .qa-message__avatar{background:var(--portal-brand-light);color:var(--portal-accent)}.qa-message__bubble{width:fit-content;max-width:min(1120px,calc(100% - 40px));padding:12px 14px;border-radius:6px;background:var(--portal-card-solid);border:1px solid var(--portal-border);box-shadow:none}.qa-message.user .qa-message__bubble{background:var(--portal-brand-light);border-color:var(--portal-border-strong)}.qa-message__meta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;color:var(--portal-text-secondary);font-size:11px}.qa-message__meta strong{color:var(--portal-text);font-size:12px}.qa-message__index-label{margin-bottom:8px;color:var(--portal-brand);font-size:11px;font-weight:700}.qa-message__attachments{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}.qa-message__attachment{display:inline-flex;align-items:center;gap:8px;max-width:220px;padding:6px 8px;border:1px solid var(--portal-border);border-radius:6px;background:rgba(255,255,255,.72);color:var(--portal-text);cursor:pointer}.qa-message__attachment img{width:36px;height:36px;border-radius:4px;object-fit:cover;display:block;flex-shrink:0}.qa-message__attachment i{font-size:18px;color:var(--portal-brand);flex-shrink:0}.qa-message__attachment span{font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.qa-reasoning{margin:0 0 10px;border:1px solid var(--portal-border);border-radius:4px;background:var(--portal-surface-bg);overflow:hidden}.qa-reasoning__summary{display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;color:var(--portal-brand);font-size:12px;font-weight:700;list-style:none}.qa-reasoning__summary::-webkit-details-marker{display:none}.qa-reasoning__content{padding:0 10px 10px;color:var(--portal-text-secondary)}.qa-message__content{line-height:1.75;color:var(--portal-text)}.qa-message__content--plain{white-space:pre-wrap;word-break:break-word}.qa-message__ops{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}.qa-message__ops button{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:28px;padding:0 10px;border:1px solid var(--portal-border);border-radius:999px;background:var(--portal-card-solid);color:var(--portal-text-secondary);cursor:pointer;font-size:12px;font-weight:600;line-height:1;transition:all .2s ease}.qa-message__ops button i{display:inline-flex;align-items:center;justify-content:center;font-size:13px;line-height:1;flex-shrink:0}.qa-message__ops button span{display:inline-flex;align-items:center;line-height:1}.qa-message__ops button:hover{border-color:var(--portal-border-strong);background:var(--portal-brand-soft);color:var(--portal-brand)}.qa-message__ops button.is-active{border-color:#8cc8a2;background:#e9f7ef;color:#14804a}.qa-message__ops button.is-active.is-danger{border-color:#efb0a6;background:#fff1ee;color:#c2412d}.qa-main__index{position:absolute;right:8px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:6px;padding:0;z-index:6;transition:all .22s ease}.qa-main__index-item{position:relative;display:flex;align-items:center;justify-content:flex-end;width:18px;height:16px;border:none;background:transparent;color:#a4b1bc;cursor:pointer;transition:all .2s ease}.qa-main__index-number{display:none;position:absolute;right:18px;font-size:11px;font-weight:700;color:inherit;white-space:nowrap}.qa-main__index-preview{display:none;position:absolute;right:34px;max-width:140px;padding:0;font-size:11px;font-weight:600;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.qa-main__index-line{display:block;width:12px;height:2px;border-radius:999px;background:currentColor;opacity:.85;transition:all .2s ease}.qa-main__index:hover{padding:10px;border-radius:4px;background:var(--portal-card-solid);border:1px solid var(--portal-border);box-shadow:var(--portal-shadow-soft)}.qa-main__index:hover .qa-main__index-item{width:176px}.qa-main__index:hover .qa-main__index-number,.qa-main__index:hover .qa-main__index-preview{display:block}.qa-main__index-item:hover,.qa-main__index-item.is-active{color:var(--portal-brand)}.qa-main__index-item.is-active .qa-main__index-number{display:block}.qa-main__index-item.is-active .qa-main__index-line{width:16px}
-.qa-composer{position:sticky;bottom:0;z-index:3;padding:10px 14px 12px;border-top:1px solid var(--portal-border);background:var(--portal-card-solid);backdrop-filter:blur(8px)}.qa-composer__attachments{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}.qa-attachment{display:inline-flex;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;background:var(--portal-surface-bg);border:1px solid var(--portal-border);font-size:12px;color:var(--portal-text-secondary)}.qa-attachment button{border:none;background:transparent;color:var(--portal-text-secondary);cursor:pointer}
-.qa-composer :deep(.el-textarea__inner){border-radius:4px;min-height:92px;background:var(--portal-card-solid);color:var(--portal-text);border-color:var(--portal-border);padding:12px 14px}.qa-composer__toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;flex-wrap:nowrap}.qa-composer__left{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;min-width:0;flex:1}.qa-composer__right{display:flex;align-items:center;gap:8px;flex-shrink:0}.qa-composer__status{font-size:12px;color:var(--portal-brand);white-space:nowrap}.qa-tool-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 12px;border:1px solid var(--portal-border);border-radius:4px;background:var(--portal-card-solid);color:var(--portal-text);cursor:pointer;font-size:12px;font-weight:600;line-height:1;white-space:nowrap;transition:all .2s ease;flex-shrink:0}.qa-tool-btn i{display:inline-flex;align-items:center;justify-content:center;font-size:14px;line-height:1}.qa-tool-btn:hover{border-color:var(--portal-border-strong);background:var(--portal-brand-soft);color:var(--portal-brand)}.qa-tool-select{display:flex;align-items:center;gap:10px;padding:0 12px;height:36px;border:1px solid var(--portal-border);border-radius:4px;background:var(--portal-card-solid);flex-shrink:0}.qa-tool-select--model{min-width:300px}.qa-tool-select__icon{width:20px;height:20px;border-radius:4px;background:var(--portal-brand-light);color:var(--portal-brand);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px}.qa-tool-select__body{display:flex;align-items:center;min-width:0;flex:1}.qa-tool-select :deep(.el-select){width:100%}.qa-tool-select :deep(.el-select__wrapper){box-shadow:none;background:transparent;padding:0;min-height:auto;height:auto}.qa-tool-select :deep(.el-select__placeholder),.qa-tool-select :deep(.el-select__selected-item){font-size:13px;color:var(--portal-text);font-weight:700;line-height:1.2}.qa-tool-select :deep(.el-select__caret){color:var(--portal-text-secondary)}.qa-tool-switch{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 10px;border:1px solid var(--portal-border);border-radius:4px;background:var(--portal-card-solid);font-size:12px;font-weight:600;color:var(--portal-text);line-height:1;white-space:nowrap;transition:all .2s ease;flex-shrink:0}.qa-tool-switch i{display:inline-flex;align-items:center;justify-content:center;font-size:14px;line-height:1;flex-shrink:0}.qa-tool-switch span{display:inline-flex;align-items:center;line-height:1}.qa-tool-switch:hover{border-color:var(--portal-border-strong);background:var(--portal-brand-soft)}.qa-tool-switch.disabled{opacity:.55}.qa-tool-switch :deep(.el-switch){margin-left:2px;--el-switch-height:18px;--el-switch-width:32px}.qa-send-btn{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 16px;border:none;border-radius:4px;background:var(--portal-accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 4px 10px rgba(0,110,255,.16);flex-shrink:0}.qa-send-btn i{font-size:14px}.qa-send-btn:disabled{opacity:.6;cursor:not-allowed}
-.qa-sidebar__history :deep(.el-scrollbar__wrap),.qa-main__scroll :deep(.el-scrollbar__wrap){scroll-behavior:smooth}
-.qa-sidebar__history :deep(.el-scrollbar__bar.is-vertical),.qa-main__scroll :deep(.el-scrollbar__bar.is-vertical){right:2px}
-.qa-sidebar__history :deep(.el-scrollbar__thumb),.qa-main__scroll :deep(.el-scrollbar__thumb){background:#90a4b4}
-.markdown-body :deep(p){margin:0 0 10px}.markdown-body :deep(pre){padding:0;border-radius:4px;overflow:auto}.markdown-body :deep(.hljs){margin:10px 0;background:#0f172a;color:#e5e7eb;padding:12px 14px;border-radius:4px}.markdown-body :deep(code){font-family:Consolas, Monaco, 'Courier New', monospace}.markdown-body :deep(:not(pre) > code){background:var(--portal-brand-light);color:var(--portal-brand);padding:2px 6px;border-radius:4px}.markdown-body :deep(ul),.markdown-body :deep(ol){padding-left:18px}.markdown-body :deep(blockquote){margin:10px 0;padding:8px 10px;border-left:4px solid var(--portal-border-strong);background:var(--portal-surface-bg);color:var(--portal-text-secondary)}.markdown-body :deep(.qa-table-wrap){width:100%;overflow-x:auto;margin:12px 0}.markdown-body :deep(table){display:table;max-width:100%;border-collapse:separate;border-spacing:0;width:100%;margin:0;border:1px solid var(--portal-border);border-radius:4px;background:var(--portal-card-solid)}.markdown-body :deep(thead tr){background:var(--portal-surface-bg)}.markdown-body :deep(th),.markdown-body :deep(td){border-right:1px solid var(--portal-border);border-bottom:1px solid var(--portal-border);padding:9px 10px;text-align:left;vertical-align:top;min-width:90px;line-height:1.7}.markdown-body :deep(th:last-child),.markdown-body :deep(td:last-child){border-right:none}.markdown-body :deep(tbody tr:last-child td){border-bottom:none}.markdown-body :deep(tbody tr:nth-child(even)){background:var(--portal-surface-bg)}.markdown-body :deep(a){color:var(--portal-accent);text-decoration:none}
-.qa-feedback-dialog :deep(.el-dialog){border-radius:8px;overflow:hidden}.qa-feedback-dialog :deep(.el-dialog__header){padding:18px 20px 10px;margin-right:0}.qa-feedback-dialog :deep(.el-dialog__title){font-size:15px;font-weight:700;color:var(--portal-text)}.qa-feedback-dialog :deep(.el-dialog__body){padding:4px 20px 8px}.qa-feedback-dialog :deep(.el-dialog__footer){padding:10px 20px 18px}.qa-feedback-form :deep(.el-form-item){align-items:flex-start;margin-bottom:18px}.qa-feedback-form :deep(.el-form-item__label){padding-top:8px;font-size:13px;color:var(--portal-text)}.qa-feedback-form__type :deep(.el-radio-button__inner){min-width:92px;border-radius:6px;padding:10px 18px;font-weight:600;box-shadow:none}.qa-feedback-form :deep(.el-textarea__inner){min-height:150px;border-radius:6px;padding:12px 14px;font-size:13px;line-height:1.7}
-@media (max-width: 1100px){.qa-workbench{grid-template-columns:1fr;height:calc(100vh - 96px);max-height:calc(100vh - 96px);min-height:unset}.qa-sidebar{display:none}.qa-main__floating-header{top:8px;left:10px;right:10px;padding:0}.qa-main__actions{position:static;margin-left:10px}.qa-main__title-input{width:100%}.qa-main__title-input :deep(.el-input__inner){font-size:14px}.qa-empty__title{font-size:22px}.qa-composer__toolbar{flex-direction:column;align-items:flex-start}.qa-composer__left,.qa-composer__right{width:100%}.qa-tool-select{width:100%}.qa-tool-select :deep(.el-select){width:100%}.qa-main__content{padding:50px 12px 12px}.qa-message.assistant,.qa-message.user{padding-left:0;padding-right:0}.qa-message__bubble{max-width:calc(100% - 40px)}.qa-main__index{display:none}}
+.qa-workbench {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  width: 100%;
+  height: calc(100vh - 92px);
+  min-height: 680px;
+  max-height: calc(100vh - 92px);
+  background: var(--portal-card-solid);
+  border: 1px solid var(--portal-border);
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: var(--portal-shadow-soft)
+}
+
+.qa-sidebar {
+  min-height: 0;
+  background: var(--portal-surface-bg);
+  border-right: 1px solid var(--portal-border);
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column
+}
+
+.qa-sidebar__brand {
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 6px;
+  background: var(--portal-card-solid);
+  border: 1px solid var(--portal-border)
+}
+
+.qa-sidebar__brand-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px
+}
+
+.qa-sidebar__brand-text {
+  margin-top: 8px
+}
+
+.qa-sidebar__logo {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #315fca;
+  font-size: 20px;
+  line-height: 1
+}
+
+.qa-sidebar__badge {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--portal-brand-light);
+  color: var(--portal-brand);
+  font-size: 11px;
+  font-weight: 700
+}
+
+.qa-sidebar__title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--portal-text);
+  line-height: 1.3
+}
+
+.qa-sidebar__subtitle {
+  font-size: 12px;
+  color: var(--portal-text-secondary);
+  margin-top: 4px;
+  line-height: 1.6
+}
+
+.qa-sidebar__new {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: var(--portal-accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 110, 255, .16);
+  margin-bottom: 10px
+}
+
+.qa-sidebar__new i {
+  font-size: 15px
+}
+
+.qa-sidebar__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 4px;
+  background: var(--portal-card-solid);
+  border: 1px solid var(--portal-border);
+  margin-bottom: 12px
+}
+
+.qa-sidebar__search i {
+  color: var(--portal-text-secondary)
+}
+
+.qa-sidebar__search input {
+  border: none;
+  outline: none;
+  background: transparent;
+  flex: 1;
+  font-size: 12px;
+  color: var(--portal-text)
+}
+
+.qa-sidebar__section {
+  font-size: 12px;
+  color: var(--portal-text-secondary);
+  margin-bottom: 8px
+}
+
+.qa-sidebar__history {
+  flex: 1;
+  min-height: 0
+}
+
+.qa-sidebar__history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-right: 4px
+}
+
+.qa-session {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all .2s ease
+}
+
+.qa-session:hover {
+  border-color: var(--portal-border-strong);
+  background: var(--portal-card-solid)
+}
+
+.qa-session.active {
+  background: var(--portal-card-solid);
+  border-color: var(--portal-border-strong)
+}
+
+.qa-session__main {
+  flex: 1;
+  min-width: 0
+}
+
+.qa-session__title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px
+}
+
+.qa-session__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--portal-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis
+}
+
+.qa-session__pin {
+  color: var(--portal-warning);
+  font-size: 12px
+}
+
+.qa-session__meta {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--portal-text-secondary)
+}
+
+.qa-session__more {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: var(--portal-surface-bg);
+  color: var(--portal-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center
+}
+
+.qa-main {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  background: var(--portal-card-solid)
+}
+
+.qa-main__floating-header {
+  position: absolute;
+  top: 8px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 5
+}
+
+.qa-main__title-input {
+  width: min(420px, 42vw);
+  pointer-events: auto;
+  transition: all .2s ease
+}
+
+.qa-main__title-input :deep(.el-input__wrapper) {
+  border-radius: 4px;
+  box-shadow: none;
+  border: 1px solid var(--portal-border);
+  padding: 0 10px;
+  height: 32px;
+  background: var(--portal-card-solid)
+}
+
+.qa-main__title-input :deep(.el-input__inner) {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--portal-text)
+}
+
+.qa-main__title-input :deep(.el-input__inner::placeholder) {
+  font-weight: 500;
+  color: var(--portal-text-secondary)
+}
+
+.qa-main__title-input.is-idle :deep(.el-input__wrapper) {
+  background: transparent;
+  border-color: transparent
+}
+
+.qa-main__title-input.is-idle:hover :deep(.el-input__wrapper) {
+  background: var(--portal-card-solid);
+  border-color: var(--portal-border)
+}
+
+.qa-main__title-input.is-idle :deep(.el-input__inner) {
+  cursor: text
+}
+
+.qa-main__actions {
+  position: absolute;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto
+}
+
+.qa-main__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--portal-surface-bg);
+  border: 1px solid var(--portal-border);
+  color: var(--portal-text-secondary);
+  font-size: 12px
+}
+
+.qa-main__danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 4px;
+  background: rgba(220, 91, 73, .12);
+  color: var(--portal-danger);
+  cursor: pointer
+}
+
+.qa-main__messages {
+  position: relative;
+  min-height: 0;
+  background: linear-gradient(180deg, var(--portal-card-solid) 0%, var(--portal-surface-bg) 100%)
+}
+
+.qa-main__scroll {
+  height: 100%
+}
+
+.qa-main__content {
+  padding: 52px 16px 14px
+}
+
+.qa-main__content.is-empty {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 72px 16px 14px
+}
+
+.qa-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  max-width: 980px
+}
+
+.qa-empty__title {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--portal-text);
+  text-align: center
+}
+
+.qa-empty__subtitle {
+  margin-top: 10px;
+  max-width: 760px;
+  font-size: 13px;
+  line-height: 1.85;
+  color: var(--portal-text-secondary);
+  text-align: center
+}
+
+.qa-empty__suggestions {
+  margin-top: 16px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 980px
+}
+
+.qa-suggestion {
+  border: 1px solid var(--portal-border);
+  background: var(--portal-card-solid);
+  padding: 8px 12px;
+  border-radius: 999px;
+  color: var(--portal-text);
+  cursor: pointer;
+  transition: .2s
+}
+
+.qa-suggestion:hover {
+  background: var(--portal-brand-light);
+  border-color: var(--portal-border-strong);
+  color: var(--portal-brand)
+}
+
+.qa-message {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  max-width: 100%;
+  margin: 0 0 14px
+}
+
+.qa-message.assistant {
+  justify-content: flex-start;
+  padding-right: 2%
+}
+
+.qa-message.user {
+  justify-content: flex-start;
+  flex-direction: row-reverse;
+  padding-left: 18%
+}
+
+.qa-message__avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 4px;
+  background: var(--portal-surface-bg);
+  color: var(--portal-brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0
+}
+
+.qa-message.user .qa-message__avatar {
+  background: var(--portal-brand-light);
+  color: var(--portal-accent)
+}
+
+.qa-message__bubble {
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--portal-card-solid);
+  border: 1px solid var(--portal-border);
+  box-shadow: none;
+  min-width: 0
+}
+
+.qa-message.assistant .qa-message__bubble {
+  width: min(1120px, calc(100% - 40px))
+}
+
+.qa-message.user .qa-message__bubble {
+  width: auto;
+  max-width: min(520px, calc(100% - 40px));
+  background: var(--portal-brand-light);
+  border-color: var(--portal-border-strong)
+}
+
+.qa-message__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  color: var(--portal-text-secondary);
+  font-size: 11px
+}
+
+.qa-message__meta strong {
+  color: var(--portal-text);
+  font-size: 12px
+}
+
+.qa-message__index-label {
+  margin-bottom: 8px;
+  color: var(--portal-brand);
+  font-size: 11px;
+  font-weight: 700
+}
+
+.qa-message__attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px
+}
+
+.qa-message__attachment {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 220px;
+  padding: 6px 8px;
+  border: 1px solid var(--portal-border);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, .72);
+  color: var(--portal-text);
+  cursor: pointer
+}
+
+.qa-message__attachment img {
+  width: 36px;
+  height: 36px;
+  border-radius: 4px;
+  object-fit: cover;
+  display: block;
+  flex-shrink: 0
+}
+
+.qa-message__attachment i {
+  font-size: 18px;
+  color: var(--portal-brand);
+  flex-shrink: 0
+}
+
+.qa-message__attachment span {
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis
+}
+
+.qa-reasoning {
+  margin: 0 0 10px;
+  border: 1px solid var(--portal-border);
+  border-radius: 4px;
+  background: var(--portal-surface-bg);
+  overflow: hidden
+}
+
+.qa-reasoning__summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  color: var(--portal-brand);
+  font-size: 12px;
+  font-weight: 700;
+  list-style: none
+}
+
+.qa-reasoning__summary::-webkit-details-marker {
+  display: none
+}
+
+.qa-reasoning__content {
+  padding: 0 10px 10px;
+  color: var(--portal-text-secondary)
+}
+
+.qa-message__content {
+  line-height: 1.75;
+  color: var(--portal-text);
+  min-width: 0;
+  overflow: visible
+}
+
+.qa-message__content--plain {
+  white-space: pre-wrap;
+  word-break: break-word
+}
+
+.qa-message__content--streaming {
+  padding: 2px 0;
+  color: var(--portal-text-secondary)
+}
+
+.qa-message__ops {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap
+}
+
+.qa-message__ops button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--portal-border);
+  border-radius: 999px;
+  background: var(--portal-card-solid);
+  color: var(--portal-text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  transition: all .2s ease
+}
+
+.qa-message__ops button i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  line-height: 1;
+  flex-shrink: 0
+}
+
+.qa-message__ops button span {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1
+}
+
+.qa-message__ops button:hover {
+  border-color: var(--portal-border-strong);
+  background: var(--portal-brand-soft);
+  color: var(--portal-brand)
+}
+
+.qa-message__ops button.is-active {
+  border-color: #8cc8a2;
+  background: #e9f7ef;
+  color: #14804a
+}
+
+.qa-message__ops button.is-active.is-danger {
+  border-color: #efb0a6;
+  background: #fff1ee;
+  color: #c2412d
+}
+
+.qa-main__index {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0;
+  z-index: 6;
+  transition: all .22s ease
+}
+
+.qa-main__index-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 18px;
+  height: 16px;
+  border: none;
+  background: transparent;
+  color: #a4b1bc;
+  cursor: pointer;
+  transition: all .2s ease
+}
+
+.qa-main__index-number {
+  display: none;
+  position: absolute;
+  right: 18px;
+  font-size: 11px;
+  font-weight: 700;
+  color: inherit;
+  white-space: nowrap
+}
+
+.qa-main__index-preview {
+  display: none;
+  position: absolute;
+  right: 34px;
+  max-width: 140px;
+  padding: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis
+}
+
+.qa-main__index-line {
+  display: block;
+  width: 12px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: .85;
+  transition: all .2s ease
+}
+
+.qa-main__index:hover {
+  padding: 10px;
+  border-radius: 4px;
+  background: var(--portal-card-solid);
+  border: 1px solid var(--portal-border);
+  box-shadow: var(--portal-shadow-soft)
+}
+
+.qa-main__index:hover .qa-main__index-item {
+  width: 176px
+}
+
+.qa-main__index:hover .qa-main__index-number,
+.qa-main__index:hover .qa-main__index-preview {
+  display: block
+}
+
+.qa-main__index-item:hover,
+.qa-main__index-item.is-active {
+  color: var(--portal-brand)
+}
+
+.qa-main__index-item.is-active .qa-main__index-number {
+  display: block
+}
+
+.qa-main__index-item.is-active .qa-main__index-line {
+  width: 16px
+}
+
+.qa-composer {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  padding: 10px 14px 12px;
+  border-top: 1px solid var(--portal-border);
+  background: var(--portal-card-solid);
+  backdrop-filter: blur(8px)
+}
+
+.qa-context-bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px
+}
+
+.qa-context-bar__left {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
+  flex: 1
+}
+
+.qa-context-bar__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap
+}
+
+.qa-context-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0
+}
+
+.qa-context-field--course {
+  width: 240px
+}
+
+.qa-context-field--exam {
+  width: 360px
+}
+
+.qa-context-field__label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--portal-text-secondary)
+}
+
+.qa-context-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--portal-border);
+  border-radius: 999px;
+  background: var(--portal-surface-bg);
+  color: var(--portal-text);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all .2s ease
+}
+
+.qa-context-chip:hover {
+  border-color: var(--portal-border-strong);
+  background: var(--portal-brand-soft);
+  color: var(--portal-brand)
+}
+
+.qa-context-chip:disabled {
+  opacity: .45;
+  cursor: not-allowed
+}
+
+.qa-context-insights {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 10px
+}
+
+.qa-context-panel {
+  border: 1px solid var(--portal-border);
+  border-radius: 10px;
+  background: var(--portal-surface-bg);
+  padding: 10px 12px
+}
+
+.qa-context-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px
+}
+
+.qa-context-panel__head strong {
+  font-size: 13px;
+  color: var(--portal-text)
+}
+
+.qa-context-panel__head span {
+  font-size: 11px;
+  color: var(--portal-text-secondary)
+}
+
+.qa-context-records {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px
+}
+
+.qa-context-record {
+  border: 1px solid var(--portal-border);
+  border-radius: 8px;
+  background: var(--portal-card-solid);
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s ease
+}
+
+.qa-context-record:hover,
+.qa-context-record.is-active {
+  border-color: var(--portal-border-strong);
+  background: var(--portal-brand-soft)
+}
+
+.qa-context-record__title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--portal-text);
+  line-height: 1.5
+}
+
+.qa-context-record__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--portal-text-secondary)
+}
+
+.qa-context-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px
+}
+
+.qa-context-summary__item {
+  border: 1px solid var(--portal-border);
+  border-radius: 8px;
+  background: var(--portal-card-solid);
+  padding: 10px 12px
+}
+
+.qa-context-summary__item span {
+  display: block;
+  font-size: 11px;
+  color: var(--portal-text-secondary)
+}
+
+.qa-context-summary__item strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 18px;
+  color: var(--portal-text)
+}
+
+.qa-composer__attachments {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px
+}
+
+.qa-attachment {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: var(--portal-surface-bg);
+  border: 1px solid var(--portal-border);
+  font-size: 12px;
+  color: var(--portal-text-secondary)
+}
+
+.qa-attachment button {
+  border: none;
+  background: transparent;
+  color: var(--portal-text-secondary);
+  cursor: pointer
+}
+
+.qa-composer :deep(.el-textarea__inner) {
+  border-radius: 4px;
+  min-height: 92px;
+  background: var(--portal-card-solid);
+  color: var(--portal-text);
+  border-color: var(--portal-border);
+  padding: 12px 14px
+}
+
+.qa-composer__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: nowrap
+}
+
+.qa-composer__left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  min-width: 0;
+  flex: 1
+}
+
+.qa-composer__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0
+}
+
+.qa-composer__status {
+  font-size: 12px;
+  color: var(--portal-brand);
+  white-space: nowrap
+}
+
+.qa-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--portal-border);
+  border-radius: 4px;
+  background: var(--portal-card-solid);
+  color: var(--portal-text);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  transition: all .2s ease;
+  flex-shrink: 0
+}
+
+.qa-tool-btn i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1
+}
+
+.qa-tool-btn:hover {
+  border-color: var(--portal-border-strong);
+  background: var(--portal-brand-soft);
+  color: var(--portal-brand)
+}
+
+.qa-tool-select {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  height: 36px;
+  border: 1px solid var(--portal-border);
+  border-radius: 4px;
+  background: var(--portal-card-solid);
+  flex-shrink: 0
+}
+
+.qa-tool-select--model {
+  min-width: 300px
+}
+
+.qa-tool-select__icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: var(--portal-brand-light);
+  color: var(--portal-brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 11px
+}
+
+.qa-tool-select__body {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1
+}
+
+.qa-tool-select :deep(.el-select) {
+  width: 100%
+}
+
+.qa-tool-select :deep(.el-select__wrapper) {
+  box-shadow: none;
+  background: transparent;
+  padding: 0;
+  min-height: auto;
+  height: auto
+}
+
+.qa-tool-select :deep(.el-select__placeholder),
+.qa-tool-select :deep(.el-select__selected-item) {
+  font-size: 13px;
+  color: var(--portal-text);
+  font-weight: 700;
+  line-height: 1.2
+}
+
+.qa-tool-select :deep(.el-select__caret) {
+  color: var(--portal-text-secondary)
+}
+
+.qa-tool-switch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--portal-border);
+  border-radius: 4px;
+  background: var(--portal-card-solid);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--portal-text);
+  line-height: 1;
+  white-space: nowrap;
+  transition: all .2s ease;
+  flex-shrink: 0
+}
+
+.qa-tool-switch i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0
+}
+
+.qa-tool-switch span {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1
+}
+
+.qa-tool-switch:hover {
+  border-color: var(--portal-border-strong);
+  background: var(--portal-brand-soft)
+}
+
+.qa-tool-switch.disabled {
+  opacity: .55
+}
+
+.qa-tool-switch :deep(.el-switch) {
+  margin-left: 2px;
+  --el-switch-height: 18px;
+  --el-switch-width: 32px
+}
+
+.qa-send-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 4px;
+  background: var(--portal-accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 110, 255, .16);
+  flex-shrink: 0
+}
+
+.qa-send-btn i {
+  font-size: 14px
+}
+
+.qa-send-btn:disabled {
+  opacity: .6;
+  cursor: not-allowed
+}
+
+.qa-sidebar__history :deep(.el-scrollbar__wrap),
+.qa-main__scroll :deep(.el-scrollbar__wrap) {
+  scroll-behavior: smooth
+}
+
+.qa-sidebar__history :deep(.el-scrollbar__bar.is-vertical),
+.qa-main__scroll :deep(.el-scrollbar__bar.is-vertical) {
+  right: 2px
+}
+
+.qa-sidebar__history :deep(.el-scrollbar__thumb),
+.qa-main__scroll :deep(.el-scrollbar__thumb) {
+  background: #90a4b4
+}
+
+.markdown-body :deep(p) {
+  margin: 0 0 10px
+}
+
+.markdown-body :deep(pre) {
+  padding: 0;
+  border-radius: 4px;
+  overflow: auto
+}
+
+.markdown-body :deep(.hljs) {
+  margin: 10px 0;
+  background: #0f172a;
+  color: #e5e7eb;
+  padding: 12px 14px;
+  border-radius: 4px
+}
+
+.markdown-body :deep(code) {
+  font-family: Consolas, Monaco, 'Courier New', monospace
+}
+
+.markdown-body :deep(:not(pre) > code) {
+  background: var(--portal-brand-light);
+  color: var(--portal-brand);
+  padding: 2px 6px;
+  border-radius: 4px
+}
+
+.markdown-body :deep(ul),
+.markdown-body :deep(ol) {
+  padding-left: 18px;
+  list-style: auto;
+}
+
+.markdown-body :deep(blockquote) {
+  margin: 10px 0;
+  padding: 8px 10px;
+  border-left: 4px solid var(--portal-border-strong);
+  background: var(--portal-surface-bg);
+  color: var(--portal-text-secondary)
+}
+
+.markdown-body :deep(.qa-table-wrap) {
+  width: 100%;
+  overflow-x: auto;
+  margin: 12px 0
+}
+
+.markdown-body :deep(table) {
+  display: table;
+  max-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  margin: 0;
+  border: 1px solid var(--portal-border);
+  border-radius: 4px;
+  background: var(--portal-card-solid)
+}
+
+.markdown-body :deep(thead tr) {
+  background: var(--portal-surface-bg)
+}
+
+.markdown-body :deep(th),
+.markdown-body :deep(td) {
+  border-right: 1px solid var(--portal-border);
+  border-bottom: 1px solid var(--portal-border);
+  padding: 9px 10px;
+  text-align: left;
+  vertical-align: top;
+  min-width: 90px;
+  line-height: 1.7
+}
+
+.markdown-body :deep(th:last-child),
+.markdown-body :deep(td:last-child) {
+  border-right: none
+}
+
+.markdown-body :deep(tbody tr:last-child td) {
+  border-bottom: none
+}
+
+.markdown-body :deep(tbody tr:nth-child(even)) {
+  background: var(--portal-surface-bg)
+}
+
+.markdown-body :deep(a) {
+  color: var(--portal-accent);
+  text-decoration: none
+}
+
+.qa-feedback-dialog :deep(.el-dialog) {
+  border-radius: 8px;
+  overflow: hidden
+}
+
+.qa-feedback-dialog :deep(.el-dialog__header) {
+  padding: 18px 20px 10px;
+  margin-right: 0
+}
+
+.qa-feedback-dialog :deep(.el-dialog__title) {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--portal-text)
+}
+
+.qa-feedback-dialog :deep(.el-dialog__body) {
+  padding: 4px 20px 8px
+}
+
+.qa-feedback-dialog :deep(.el-dialog__footer) {
+  padding: 10px 20px 18px
+}
+
+.qa-feedback-form :deep(.el-form-item) {
+  align-items: flex-start;
+  margin-bottom: 18px
+}
+
+.qa-feedback-form :deep(.el-form-item__label) {
+  padding-top: 8px;
+  font-size: 13px;
+  color: var(--portal-text)
+}
+
+.qa-feedback-form__type :deep(.el-radio-button__inner) {
+  min-width: 92px;
+  border-radius: 6px;
+  padding: 10px 18px;
+  font-weight: 600;
+  box-shadow: none
+}
+
+.qa-feedback-form :deep(.el-textarea__inner) {
+  min-height: 150px;
+  border-radius: 6px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.7
+}
+
+@media (max-width: 1100px) {
+  .qa-workbench {
+    grid-template-columns: 1fr;
+    height: calc(100vh - 96px);
+    max-height: calc(100vh - 96px);
+    min-height: unset
+  }
+
+  .qa-sidebar {
+    display: none
+  }
+
+  .qa-main__floating-header {
+    top: 8px;
+    left: 10px;
+    right: 10px;
+    padding: 0
+  }
+
+  .qa-main__actions {
+    position: static;
+    margin-left: 10px
+  }
+
+  .qa-main__title-input {
+    width: 100%
+  }
+
+  .qa-main__title-input :deep(.el-input__inner) {
+    font-size: 14px
+  }
+
+  .qa-empty__title {
+    font-size: 22px
+  }
+
+  .qa-context-bar,
+  .qa-composer__toolbar {
+    flex-direction: column;
+    align-items: flex-start
+  }
+
+  .qa-context-bar__left,
+  .qa-context-bar__right,
+  .qa-composer__left,
+  .qa-composer__right {
+    width: 100%
+  }
+
+  .qa-context-field--course,
+  .qa-context-field--exam,
+  .qa-tool-select {
+    width: 100%
+  }
+
+  .qa-context-records,
+  .qa-context-summary {
+    grid-template-columns: 1fr
+  }
+
+  .qa-context-field :deep(.el-select),
+  .qa-tool-select :deep(.el-select) {
+    width: 100%
+  }
+
+  .qa-main__content {
+    padding: 50px 12px 12px
+  }
+
+  .qa-message.assistant,
+  .qa-message.user {
+    padding-left: 0;
+    padding-right: 0
+  }
+
+  .qa-message__bubble {
+    max-width: calc(100% - 40px)
+  }
+
+  .qa-main__index {
+    display: none
+  }
+}
 </style>

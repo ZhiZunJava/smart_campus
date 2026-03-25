@@ -7,7 +7,12 @@
         <result property="resourceType" column="resource_type" />
         <result property="courseId" column="course_id" />
         <result property="chapterId" column="chapter_id" />
+        <result property="nodeId" column="node_id" />
+        <result property="sortNo" column="sort_no" />
         <result property="uploaderId" column="uploader_id" />
+        <result property="authorName" column="author_name" />
+        <result property="publisherName" column="publisher_name" />
+        <result property="targetUserType" column="target_user_type" />
         <result property="fileUrl" column="file_url" />
         <result property="coverUrl" column="cover_url" />
         <result property="contentText" column="content_text" />
@@ -16,7 +21,14 @@
         <result property="viewCount" column="view_count" />
         <result property="downloadCount" column="download_count" />
         <result property="favoriteCount" column="favorite_count" />
+        <result property="allowComment" column="allow_comment" />
+        <result property="allowRating" column="allow_rating" />
+        <result property="allowShare" column="allow_share" />
         <result property="qualityScore" column="quality_score" />
+        <result property="avgRating" column="avg_rating" />
+        <result property="ratingCount" column="rating_count" />
+        <result property="commentCount" column="comment_count" />
+        <result property="shareCount" column="share_count" />
         <result property="status" column="status" />
         <result property="createBy" column="create_by" />
         <result property="createTime" column="create_time" />
@@ -25,8 +37,8 @@
         <result property="remark" column="remark" />
     </resultMap>
     <sql id="selectScResourceVo"> select resource_id, resource_name, resource_type, course_id,
-        chapter_id, uploader_id, file_url, cover_url, content_text, summary, audit_status,
-        view_count, download_count, favorite_count, quality_score, status, create_by, create_time,
+        chapter_id, node_id, sort_no, uploader_id, author_name, publisher_name, target_user_type, file_url, cover_url, content_text, summary, audit_status,
+        view_count, download_count, favorite_count, allow_comment, allow_rating, allow_share, quality_score, avg_rating, rating_count, comment_count, share_count, status, create_by, create_time,
         update_by, update_time, remark from sc_resource </sql>
     <select id="selectScResourceByResourceId" parameterType="Long" resultMap="ScResourceResult"><include
             refid="selectScResourceVo" /> where resource_id = #{resourceId}</select>
@@ -40,21 +52,23 @@
             <if test="courseId != null">and course_id = #{courseId}</if>
             <if
                 test="chapterId != null">and chapter_id = #{chapterId}</if>
+            <if test="nodeId != null">and node_id = #{nodeId}</if>
             <if
                 test="uploaderId != null">and uploader_id = #{uploaderId}</if>
+            <if test="targetUserType != null and targetUserType != ''">and (target_user_type = #{targetUserType} or target_user_type = 'all')</if>
             <if
                 test="auditStatus != null and auditStatus != ''">and audit_status = #{auditStatus}</if>
             <if
                 test="status != null and status != ''">and status = #{status}</if>
         </where>
-        order by quality_score desc, resource_id desc </select>
+        order by sort_no asc, quality_score desc, resource_id desc </select>
     <insert id="insertScResource" parameterType="ScResource" useGeneratedKeys="true"
         keyProperty="resourceId"> insert into sc_resource(resource_name, resource_type, course_id,
-        chapter_id, uploader_id, file_url, cover_url, content_text, summary, audit_status,
-        view_count, download_count, favorite_count, quality_score, status, create_by, create_time,
-        remark) values(#{resourceName}, #{resourceType}, #{courseId}, #{chapterId}, #{uploaderId},
-        #{fileUrl}, #{coverUrl}, #{contentText}, #{summary}, #{auditStatus}, #{viewCount},
-        #{downloadCount}, #{favoriteCount}, #{qualityScore}, #{status}, #{createBy}, sysdate(),
+        chapter_id, node_id, sort_no, uploader_id, author_name, publisher_name, target_user_type, file_url, cover_url, content_text, summary, audit_status,
+        view_count, download_count, favorite_count, allow_comment, allow_rating, allow_share, quality_score, avg_rating, rating_count, comment_count, share_count, status, create_by, create_time,
+        remark) values(#{resourceName}, #{resourceType}, #{courseId}, #{chapterId}, #{nodeId}, #{sortNo}, #{uploaderId},
+        #{authorName}, #{publisherName}, #{targetUserType}, #{fileUrl}, #{coverUrl}, #{contentText}, #{summary}, #{auditStatus}, #{viewCount},
+        #{downloadCount}, #{favoriteCount}, #{allowComment}, #{allowRating}, #{allowShare}, #{qualityScore}, #{avgRating}, #{ratingCount}, #{commentCount}, #{shareCount}, #{status}, #{createBy}, sysdate(),
         #{remark}) </insert>
     <update id="updateScResource" parameterType="ScResource"> update sc_resource <set>
             <if test="resourceName != null">resource_name = #{resourceName},</if>
@@ -64,7 +78,12 @@
                 test="courseId != null">course_id = #{courseId},</if>
             <if test="chapterId != null">chapter_id
         = #{chapterId},</if>
+            <if test="nodeId != null">node_id = #{nodeId},</if>
+            <if test="sortNo != null">sort_no = #{sortNo},</if>
             <if test="uploaderId != null">uploader_id = #{uploaderId},</if>
+            <if test="authorName != null">author_name = #{authorName},</if>
+            <if test="publisherName != null">publisher_name = #{publisherName},</if>
+            <if test="targetUserType != null">target_user_type = #{targetUserType},</if>
             <if
                 test="fileUrl != null">file_url = #{fileUrl},</if>
             <if test="coverUrl != null">cover_url
@@ -79,8 +98,15 @@
                 test="downloadCount != null">download_count = #{downloadCount},</if>
             <if
                 test="favoriteCount != null">favorite_count = #{favoriteCount},</if>
+            <if test="allowComment != null">allow_comment = #{allowComment},</if>
+            <if test="allowRating != null">allow_rating = #{allowRating},</if>
+            <if test="allowShare != null">allow_share = #{allowShare},</if>
             <if
                 test="qualityScore != null">quality_score = #{qualityScore},</if>
+            <if test="avgRating != null">avg_rating = #{avgRating},</if>
+            <if test="ratingCount != null">rating_count = #{ratingCount},</if>
+            <if test="commentCount != null">comment_count = #{commentCount},</if>
+            <if test="shareCount != null">share_count = #{shareCount},</if>
             <if
                 test="status != null">status = #{status},</if>
             <if test="updateBy != null">update_by
@@ -98,4 +124,18 @@
         ifnull(download_count, 0) + 1 where resource_id = #{resourceId}</update>
     <update id="increaseFavoriteCount" parameterType="Long">update sc_resource set favorite_count =
         ifnull(favorite_count, 0) + 1 where resource_id = #{resourceId}</update>
+    <update id="increaseShareCount" parameterType="Long">update sc_resource set share_count =
+        ifnull(share_count, 0) + 1 where resource_id = #{resourceId}</update>
+    <update id="updateResourceInteractionStats" parameterType="ScResource">
+        update sc_resource
+        <set>
+            <if test="avgRating != null">avg_rating = #{avgRating},</if>
+            <if test="ratingCount != null">rating_count = #{ratingCount},</if>
+            <if test="commentCount != null">comment_count = #{commentCount},</if>
+            <if test="shareCount != null">share_count = #{shareCount},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where resource_id = #{resourceId}
+    </update>
 </mapper>

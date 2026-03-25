@@ -85,31 +85,39 @@
               </div>
             </template>
             <template #default>
+                <div v-if="taskOverviewBadges.length" class="task-overview-badges">
+                  <span v-for="badge in taskOverviewBadges" :key="badge" class="task-overview-badge">{{ badge }}</span>
+                </div>
                 <template v-if="recentTasks.length">
-                  <div
-                    v-for="task in recentTasks"
-                    :key="task.key"
-                    class="modern-task-card"
-                  >
-                    <div class="modern-task-icon" :class="task.iconClass">
-                      <i :class="task.icon"></i>
-                    </div>
-                    <div class="modern-task-details">
-                      <div class="modern-task-title">
-                        <h4>{{ task.title }}</h4>
-                        <el-tag size="small" :type="task.tagType" effect="plain">{{ task.tag }}</el-tag>
+                  <el-scrollbar max-height="392px" class="task-scrollbar">
+                    <div class="task-scroll-content">
+                      <div
+                        v-for="task in recentTasks"
+                        :key="task.key"
+                        class="modern-task-card"
+                      >
+                        <div class="modern-task-icon" :class="task.iconClass">
+                          <i :class="task.icon"></i>
+                        </div>
+                        <div class="modern-task-details">
+                          <div class="modern-task-title">
+                            <h4>{{ task.title }}</h4>
+                            <el-tag size="small" :type="task.tagType" effect="plain">{{ task.tag }}</el-tag>
+                          </div>
+                          <span class="modern-task-status" :class="task.metaClass">{{ task.statusText }}</span>
+                          <div v-if="task.meta?.length" class="modern-task-meta">
+                            <span v-for="meta in task.meta.slice(0, 2)" :key="meta">{{ meta }}</span>
+                          </div>
+                          <div v-if="task.recommendationReason" class="modern-task-reason">{{ task.recommendationReason }}</div>
+                        </div>
+                        <div class="modern-task-actions">
+                          <el-button plain type="primary" size="small" @click="openTask(task.raw)">
+                            {{ task.actionLabel }}
+                          </el-button>
+                        </div>
                       </div>
-                      <span class="modern-task-status" :class="task.metaClass">{{ task.statusText }}</span>
-                      <div v-if="task.meta?.length" class="modern-task-meta">
-                        <span v-for="meta in task.meta.slice(0, 2)" :key="meta">{{ meta }}</span>
-                      </div>
                     </div>
-                    <div class="modern-task-actions">
-                      <el-button plain type="primary" size="small" @click="openTask(task.raw)">
-                        {{ task.actionLabel }}
-                      </el-button>
-                    </div>
-                  </div>
+                  </el-scrollbar>
                 </template>
                 <el-empty v-else description="当前没有待处理任务" :image-size="100" />
               </template>
@@ -313,6 +321,7 @@ import {
 } from '@/api/portal'
 import usePortalUserStore from '@/store/user'
 import { useTabsStore } from '@/store/tabs'
+import { recordTaskFeedback, sortTasksWithFeedback, syncTaskFeedback } from '@/utils/taskFeedback'
 
 const router = useRouter()
 const route = useRoute()
@@ -423,13 +432,15 @@ const tomorrowCourses = computed(() => {
 })
 
 const recentTasks = computed(() => {
-  const source = [
-    ...(taskCenter.value.todoTasks || []),
-    ...(taskCenter.value.recommendedTasks || []),
-  ]
+  const source = Array.isArray(taskCenter.value.homepageTasks) && taskCenter.value.homepageTasks.length
+    ? taskCenter.value.homepageTasks
+    : [
+      ...(taskCenter.value.todoTasks || []),
+      ...(taskCenter.value.recommendedTasks || []),
+    ]
   const seen = new Set<string>()
   const ongoingPaperId = String(userStore.ongoingExam?.paperId || '')
-  return source
+  const dedupedTasks = source
     .filter((item: any) => {
       const actionType = String(item?.action?.type || '').toLowerCase()
       const taskPaperId = String(item?.action?.targetId || item?.action?.paperId || item?.action?.row?.paperId || '')
@@ -444,9 +455,30 @@ const recentTasks = computed(() => {
       if (!key || seen.has(key)) return false
       seen.add(key)
       return true
-    })
-    .slice(0, 4)
-    .map((item: any) => buildTaskCard(item))
+     })
+
+  const regularTasks = dedupedTasks.filter((item: any) => !isWrongTask(item))
+  const wrongReviewTasks = dedupedTasks.filter((item: any) => isWrongTask(item))
+  const selectedTasks = regularTasks.length
+    ? sortTasksWithFeedback(regularTasks)
+    : wrongReviewTasks.slice(0, 1)
+
+  return selectedTasks.map((item: any) => buildTaskCard(item))
+})
+const taskOverviewBadges = computed(() => {
+  const summary = taskCenter.value?.recommendationSummary || {}
+  const badges: string[] = []
+  const urgentCount = Number(summary.urgentCount || 0)
+  const examCount = Number(summary.examCount || 0)
+  const wrongbookCount = Number(summary.wrongbookCount || 0)
+  if (urgentCount > 0) badges.push(`优先处理 ${urgentCount}`)
+  if (examCount > 0) badges.push(`考试相关 ${examCount}`)
+  if (wrongbookCount > 0) badges.push(`薄弱巩固 ${wrongbookCount}`)
+  const reasons = Array.isArray(summary.topReasons) ? summary.topReasons : []
+  reasons.slice(0, 2).forEach((reason: string) => {
+    if (reason) badges.push(reason)
+  })
+  return badges.slice(0, 4)
 })
 const examAttemptCountMap = computed(() =>
   examRecords.value.reduce((acc: Record<string, number>, item: any) => {
@@ -649,6 +681,20 @@ function resolveExamRetakeInfo(task: any) {
   }
 }
 
+function isWrongTask(task: any) {
+  const actionType = String(task?.action?.type || '').toLowerCase()
+  if (actionType === 'wrongbook') return true
+
+  const tag = String(task?.tag || '')
+  const title = String(task?.title || '')
+  const desc = String(task?.desc || '')
+  const path = String(task?.action?.path || '')
+  const metaText = Array.isArray(task?.meta) ? task.meta.join(' ') : ''
+  const combinedText = `${tag} ${title} ${desc} ${path} ${metaText}`.toLowerCase()
+
+  return ['wrongbook', '错题', '回练', '薄弱项'].some((keyword) => combinedText.includes(keyword.toLowerCase()))
+}
+
 function resolveTaskTag(task: any) {
   const actionType = String(task?.action?.type || '').toLowerCase()
   const tag = String(task?.tag || '').trim()
@@ -723,6 +769,7 @@ function buildTaskCard(task: any) {
     statusText: resolveTaskStatusText(task),
     metaClass: resolveTaskMetaClass(task?.tagType),
     actionLabel: resolveTaskActionLabel(task),
+    recommendationReason: String(task?.recommendationReason || '').trim(),
   }
 }
 
@@ -751,6 +798,8 @@ function resolveTaskActionLabel(task: any) {
 
 function openTask(task: any) {
   const action = task?.action || {}
+  recordTaskFeedback(task)
+  syncTaskFeedback(task, 'dashboard')
   const dispatchId = Number(action?.row?.dispatchId || 0)
   if (dispatchId) {
     markPortalTaskRead(dispatchId).catch(() => {})
@@ -1185,11 +1234,40 @@ onMounted(loadData)
   display: flex;
   flex-direction: column;
   gap: 14px;
+  min-height: 0;
+}
+
+.task-overview-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.task-overview-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #eef5ff;
+  color: #285ea8;
+  font-size: 1.1rem;
+  line-height: 1.4;
+}
+
+.task-scrollbar {
+  width: 100%;
+}
+
+.task-scroll-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-right: 6px;
 }
 
 .modern-task-card {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   padding: 14px 16px;
   background: rgba(255, 255, 255, 0.95);
   border-radius: 8px;
@@ -1270,12 +1348,19 @@ onMounted(loadData)
   color: #909399;
 }
 
+.modern-task-reason {
+  font-size: 1.15rem;
+  line-height: 1.6;
+  color: #5c6b7f;
+}
+
 .modern-task-actions {
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin-left: 16px;
   flex-shrink: 0;
+  align-self: center;
 }
 
 .modern-task-actions .el-button {

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScResourceAssetMapper">
+  <resultMap type="ScResourceAsset" id="ScResourceAssetResult">
+    <id property="assetId" column="asset_id" />
+    <result property="resourceId" column="resource_id" />
+    <result property="assetType" column="asset_type" />
+    <result property="assetName" column="asset_name" />
+    <result property="fileUrl" column="file_url" />
+    <result property="coverUrl" column="cover_url" />
+    <result property="contentText" column="content_text" />
+    <result property="summary" column="summary" />
+    <result property="bizType" column="biz_type" />
+    <result property="bizId" column="biz_id" />
+    <result property="sortNo" column="sort_no" />
+    <result property="allowDownload" column="allow_download" />
+    <result property="viewCount" column="view_count" />
+    <result property="downloadCount" column="download_count" />
+    <result property="favoriteCount" column="favorite_count" />
+    <result property="status" column="status" />
+    <result property="createBy" column="create_by" />
+    <result property="createTime" column="create_time" />
+    <result property="updateBy" column="update_by" />
+    <result property="updateTime" column="update_time" />
+    <result property="remark" column="remark" />
+  </resultMap>
+
+  <sql id="selectScResourceAssetVo">
+    select asset_id, resource_id, asset_type, asset_name, file_url, cover_url, content_text, summary,
+           biz_type, biz_id, sort_no, allow_download, view_count, download_count, favorite_count,
+           status, create_by, create_time, update_by, update_time, remark
+    from sc_resource_asset
+  </sql>
+
+  <select id="selectScResourceAssetByAssetId" parameterType="Long" resultMap="ScResourceAssetResult">
+    <include refid="selectScResourceAssetVo" />
+    where asset_id = #{assetId}
+  </select>
+
+  <select id="selectScResourceAssetList" parameterType="ScResourceAsset" resultMap="ScResourceAssetResult">
+    <include refid="selectScResourceAssetVo" />
+    <where>
+      <if test="resourceId != null">and resource_id = #{resourceId}</if>
+      <if test="assetType != null and assetType != ''">and asset_type = #{assetType}</if>
+      <if test="status != null and status != ''">and status = #{status}</if>
+    </where>
+    order by sort_no asc, asset_id asc
+  </select>
+
+  <insert id="insertScResourceAsset" parameterType="ScResourceAsset" useGeneratedKeys="true" keyProperty="assetId">
+    insert into sc_resource_asset(resource_id, asset_type, asset_name, file_url, cover_url, content_text, summary,
+      biz_type, biz_id, sort_no, allow_download, view_count, download_count, favorite_count, status, create_by, create_time, remark)
+    values(#{resourceId}, #{assetType}, #{assetName}, #{fileUrl}, #{coverUrl}, #{contentText}, #{summary},
+      #{bizType}, #{bizId}, #{sortNo}, #{allowDownload}, #{viewCount}, #{downloadCount}, #{favoriteCount},
+      #{status}, #{createBy}, sysdate(), #{remark})
+  </insert>
+
+  <update id="updateScResourceAsset" parameterType="ScResourceAsset">
+    update sc_resource_asset
+    <set>
+      <if test="resourceId != null">resource_id = #{resourceId},</if>
+      <if test="assetType != null">asset_type = #{assetType},</if>
+      <if test="assetName != null">asset_name = #{assetName},</if>
+      <if test="fileUrl != null">file_url = #{fileUrl},</if>
+      <if test="coverUrl != null">cover_url = #{coverUrl},</if>
+      <if test="contentText != null">content_text = #{contentText},</if>
+      <if test="summary != null">summary = #{summary},</if>
+      <if test="bizType != null">biz_type = #{bizType},</if>
+      <if test="bizId != null">biz_id = #{bizId},</if>
+      <if test="sortNo != null">sort_no = #{sortNo},</if>
+      <if test="allowDownload != null">allow_download = #{allowDownload},</if>
+      <if test="viewCount != null">view_count = #{viewCount},</if>
+      <if test="downloadCount != null">download_count = #{downloadCount},</if>
+      <if test="favoriteCount != null">favorite_count = #{favoriteCount},</if>
+      <if test="status != null">status = #{status},</if>
+      <if test="updateBy != null">update_by = #{updateBy},</if>
+      <if test="remark != null">remark = #{remark},</if>
+      update_time = sysdate()
+    </set>
+    where asset_id = #{assetId}
+  </update>
+
+  <delete id="deleteScResourceAssetByAssetId" parameterType="Long">
+    delete from sc_resource_asset where asset_id = #{assetId}
+  </delete>
+
+  <delete id="deleteScResourceAssetByAssetIds" parameterType="Long">
+    delete from sc_resource_asset where asset_id in
+    <foreach item="assetId" collection="array" open="(" separator="," close=")">
+      #{assetId}
+    </foreach>
+  </delete>
+
+  <delete id="deleteScResourceAssetByResourceId" parameterType="Long">
+    delete from sc_resource_asset where resource_id = #{resourceId}
+  </delete>
+</mapper>

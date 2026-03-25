@@ -29,6 +29,8 @@ const routes = [
       { path: 'courses', component: () => import('@/views/student/Courses.vue'), meta: { title: '我的课程' } },
       { path: 'schedule', component: () => import('@/views/student/Schedule.vue'), meta: { title: '我的课表' } },
       { path: 'resources', component: () => import('@/views/student/Resources.vue'), meta: { title: '资源中心' } },
+      { path: 'resources/:resourceId', component: () => import('@/views/student/ResourceDetail.vue'), meta: { title: '资源详情', hideShortcut: true } },
+      { path: 'favorites', component: () => import('@/views/student/Favorites.vue'), meta: { title: '我的收藏' } },
       { path: 'qa', component: () => import('@/views/student/Qa.vue'), meta: { title: '智能问答', hideBanner: true } },
       { path: 'plaza', component: () => import('@/views/student/ChallengePlaza.vue'), meta: { title: '任务中心' } },
       { path: 'messages', component: () => import('@/views/student/Messages.vue'), meta: { title: '消息中心', hideShortcut: true } },
@@ -71,26 +73,23 @@ const router = createRouter({
   }
 })
 
-router.beforeEach(async (to, _from, next) => {
+router.beforeEach(async (to, _from) => {
   const userStore = usePortalUserStore()
   const isPublic = to.meta.public
 
   if (to.path === '/') {
     if (!userStore.token) {
-      next('/login')
-      return
+      return '/login'
     }
     if (!userStore.user) {
       try {
         await userStore.loadUserInfo()
       } catch (error) {
         await userStore.logoutAction()
-        next('/login')
-        return
+        return '/login'
       }
     }
-    next(resolveHome(userStore.preferredPortalRole))
-    return
+    return resolveHome(userStore.preferredPortalRole)
   }
 
   if (isPublic) {
@@ -99,20 +98,16 @@ router.beforeEach(async (to, _from, next) => {
         try {
           await userStore.loadUserInfo()
         } catch (error) {
-          next()
-          return
+          return true
         }
       }
-      next(resolveHome(userStore.preferredPortalRole))
-      return
+      return resolveHome(userStore.preferredPortalRole)
     }
-    next()
-    return
+    return true
   }
 
   if (!userStore.token) {
-    next('/login')
-    return
+    return '/login'
   }
 
   if (!userStore.user) {
@@ -120,22 +115,20 @@ router.beforeEach(async (to, _from, next) => {
       await userStore.loadUserInfo()
     } catch (error) {
       await userStore.logoutAction()
-      next('/login')
-      return
+      return '/login'
     }
   }
 
   const routeRole = to.meta.role as string | undefined
   if (routeRole && !userStore.availablePortalRoles.includes(routeRole)) {
-    next(resolveHome(userStore.preferredPortalRole))
-    return
+    return resolveHome(userStore.preferredPortalRole)
   }
 
   if (routeRole) {
     userStore.setPreferredPortalRole(routeRole)
   }
 
-  next()
+  return true
 })
 
 export default router

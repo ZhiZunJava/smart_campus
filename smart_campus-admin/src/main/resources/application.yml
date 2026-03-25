@@ -142,3 +142,10 @@ xss:
   excludes: /system/notice
   # 匹配链接
   urlPatterns: /system/*,/monitor/*,/tool/*
+
+office:
+  preview:
+    enabled: true
+    officeHome:
+    workingDir: D:/smart_campus/uploadPath/office-work
+    outputDir: D:/smart_campus/uploadPath/preview

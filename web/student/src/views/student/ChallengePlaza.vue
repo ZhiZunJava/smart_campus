@@ -70,6 +70,16 @@
         <div class="section-header">
           <div class="section-title">推荐任务</div>
         </div>
+        <div v-if="recommendationGroups.length" class="recommendation-groups">
+          <article v-for="group in recommendationGroups" :key="group.key" class="recommendation-group-card">
+            <div class="recommendation-group-head">
+              <span class="recommendation-group-title">{{ group.label }}</span>
+              <span class="count-badge" :class="{ 'is-zero': Number(group.count || 0) === 0 }">{{ group.count }}</span>
+            </div>
+            <div class="recommendation-group-desc">{{ group.desc }}</div>
+            <div v-if="group.topReason" class="recommendation-group-reason">{{ group.topReason }}</div>
+          </article>
+        </div>
         <div class="task-list">
           <article v-for="task in displayRecommendedTasks" :key="task.key" class="task-item">
             <div class="task-item-main">
@@ -81,6 +91,7 @@
               <div class="task-item-meta">
                 <span v-for="meta in task.meta" :key="meta">{{ meta }}</span>
               </div>
+              <div v-if="task.recommendationReason" class="task-item-reason">{{ task.recommendationReason }}</div>
             </div>
             <div class="task-item-actions">
               <el-button type="primary" plain @click="openTask(task)">{{ task.actionLabel }}</el-button>
@@ -142,6 +153,7 @@ import {
   markPortalTaskRead,
 } from '@/api/portal'
 import usePortalUserStore from '@/store/user'
+import { recordTaskFeedback, sortTasksWithFeedback, syncTaskFeedback } from '@/utils/taskFeedback'
 
 const router = useRouter()
 const userStore = usePortalUserStore()
@@ -197,7 +209,8 @@ const latestExamRecordMap = computed(() =>
   }, {}),
 )
 const displayTodoTasks = computed(() => todoTasks.value.map((item: any) => decorateTask(item, '立即处理')))
-const displayRecommendedTasks = computed(() => recommendedTasks.value.map((item: any) => decorateTask(item, '查看详情')))
+const displayRecommendedTasks = computed(() => sortTasksWithFeedback(recommendedTasks.value).map((item: any) => decorateTask(item, '查看详情')))
+const recommendationGroups = computed(() => taskCenter.value.recommendationGroups || [])
 const taskBuckets = computed(() => [
   { label: '考试任务', count: taskCenter.value.stats?.examTaskCount || 0, desc: '来自课程考试与开放考试' },
   { label: '错题任务', count: taskCenter.value.stats?.wrongTaskCount || 0, desc: '来自错题回练与薄弱项复盘' },
@@ -207,6 +220,8 @@ const taskBuckets = computed(() => [
 
 function openTask(task: any) {
   const rawTask = task?.raw || task
+  recordTaskFeedback(rawTask)
+  syncTaskFeedback(rawTask, 'plaza')
   const action = rawTask?.action || {}
   const dispatchId = Number(action?.row?.dispatchId || rawTask?.dispatchId || action?.dispatchId || 0)
   if (dispatchId) {
@@ -271,6 +286,7 @@ function decorateTask(task: any, fallbackActionLabel: string) {
       ...(isRetakeExam && latestRecord?.submitTime ? [`最近参加：${String(latestRecord.submitTime).slice(0, 16).replace('T', ' ')}`] : []),
     ],
     actionLabel: actionType === 'resume' ? '继续作答' : isMakeupExam ? '去补考' : isRetakeExam ? '再次考试' : fallbackActionLabel,
+    recommendationReason: String(task?.recommendationReason || '').trim(),
   }
 }
 
@@ -381,6 +397,10 @@ onMounted(loadData)
   height: 100%;
 }
 
+.plaza-page > .portal-grid:last-of-type {
+  margin-bottom: 16px;
+}
+
 .plaza-section-card--soft {
   background: #fafafa;
   border: 1px solid #e4e7ed;
@@ -400,6 +420,47 @@ onMounted(loadData)
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.recommendation-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.recommendation-group-card {
+  border-radius: 12px;
+  border: 1px solid #e5edf8;
+  background: linear-gradient(180deg, #f7fbff 0%, #ffffff 100%);
+  padding: 14px 16px;
+}
+
+.recommendation-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.recommendation-group-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #243b53;
+}
+
+.recommendation-group-desc {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #5f6c7b;
+}
+
+.recommendation-group-reason {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--brand-primary, #266fcb);
 }
 
 .task-item {
@@ -460,6 +521,13 @@ onMounted(loadData)
   color: #909399;
 }
 
+.task-item-reason {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #266fcb;
+}
+
 .task-item-actions {
   flex-shrink: 0;
 }
@@ -492,6 +560,9 @@ onMounted(loadData)
 
 @media (max-width: 768px) {
   .plaza-kpis {
+    grid-template-columns: 1fr;
+  }
+  .recommendation-groups {
     grid-template-columns: 1fr;
   }
   .task-item {

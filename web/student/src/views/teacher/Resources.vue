@@ -29,9 +29,9 @@
     </section>
 
     <div class="portal-grid portal-grid-2 mt20">
-      <div class="portal-card" style="padding: 20px;">
-        <div style="font-weight: 600; margin-bottom: 16px;">资源列表</div>
-        <el-table v-loading="loading" :data="resources" @row-click="selectResource">
+      <div class="portal-card" style="padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
+        <div style="font-weight: 600; margin-bottom: 20px; font-size: 18px; color: #1e293b;">资源列表</div>
+        <el-table v-loading="loading" :data="resources" @row-click="selectResource" style="width: 100%; border-radius: 8px; overflow: hidden;">
           <el-table-column prop="resourceId" label="资源ID" width="90" />
           <el-table-column prop="resourceName" label="资源名称" min-width="220" />
           <el-table-column prop="resourceType" label="类型" width="100" />
@@ -43,18 +43,18 @@
         <el-empty v-if="!loading && resources.length === 0" description="暂无资源数据" />
       </div>
 
-      <div class="portal-card portal-soft-card" style="padding: 20px;">
-        <div style="font-weight: 600; margin-bottom: 16px;">资源详情</div>
+      <div class="portal-card portal-soft-card" style="padding: 24px; border-radius: 16px;">
+        <div style="font-weight: 600; margin-bottom: 20px; font-size: 18px; color: #1e293b;">资源详情</div>
         <template v-if="detail.resourceId">
-          <div class="portal-surface">资源名称：{{ detail.resourceName }}</div>
+          <div class="portal-surface" style="padding: 16px; border-radius: 12px;">资源名称：{{ detail.resourceName }}</div>
           <div class="portal-grid portal-grid-2 mt16">
-            <div class="portal-surface">资源类型：{{ detail.resourceType || '-' }}</div>
-            <div class="portal-surface">质量分：{{ detail.qualityScore || 0 }}</div>
-            <div class="portal-surface">浏览量：{{ detail.viewCount || 0 }}</div>
-            <div class="portal-surface">下载量：{{ detail.downloadCount || 0 }}</div>
+            <div class="portal-surface" style="padding: 16px; border-radius: 12px;">资源类型：{{ detail.resourceType || '-' }}</div>
+            <div class="portal-surface" style="padding: 16px; border-radius: 12px;">质量分：{{ detail.qualityScore || 0 }}</div>
+            <div class="portal-surface" style="padding: 16px; border-radius: 12px;">浏览量：{{ detail.viewCount || 0 }}</div>
+            <div class="portal-surface" style="padding: 16px; border-radius: 12px;">下载量：{{ detail.downloadCount || 0 }}</div>
           </div>
-          <div class="portal-surface mt16">摘要：{{ detail.summary || '-' }}</div>
-          <div class="portal-surface mt16">内容文本：{{ detail.contentText || '-' }}</div>
+          <div class="portal-surface mt16" style="padding: 16px; border-radius: 12px; line-height: 1.6;">摘要：{{ detail.summary || '-' }}</div>
+          <div class="portal-surface mt16" style="padding: 16px; border-radius: 12px; line-height: 1.6;">内容文本：{{ detail.contentText || '-' }}</div>
         </template>
         <el-empty v-else class="portal-empty" description="请选择一条资源查看详情" />
       </div>

@@ -84,6 +84,58 @@ export function getResourceDetail(resourceId: number) {
   return request({ url: `/campus/portal/learning/resource/${resourceId}`, method: 'get' })
 }
 
+export function getResourceTree(courseId: number) {
+  return request({ url: '/campus/portal/learning/resource/tree', method: 'get', params: { courseId } })
+}
+
+export function listResourceAsset(query: any) {
+  return request({ url: '/campus/portal/learning/resource/asset/list', method: 'get', params: query })
+}
+
+export function listResourceComment(resourceId: number) {
+  return request({ url: '/campus/portal/learning/resource/comment/list', method: 'get', params: { resourceId } })
+}
+
+export function addResourceComment(data: any) {
+  return request({ url: '/campus/portal/learning/resource/comment', method: 'post', data })
+}
+
+export function likeResourceComment(commentId: number) {
+  return request({ url: `/campus/portal/learning/resource/comment/${commentId}/like`, method: 'post' })
+}
+
+export function favoriteResource(resourceId: number) {
+  return request({ url: `/campus/portal/learning/resource/${resourceId}/favorite`, method: 'post' })
+}
+
+export function unfavoriteResource(resourceId: number) {
+  return request({ url: `/campus/portal/learning/resource/${resourceId}/unfavorite`, method: 'post' })
+}
+
+export function getFavoriteResourceStatus(resourceId: number) {
+  return request({ url: `/campus/portal/learning/resource/${resourceId}/favorite`, method: 'get' })
+}
+
+export function listFavoriteResources(query: any) {
+  return request({ url: '/campus/portal/learning/resource/favorite/list', method: 'get', params: query })
+}
+
+export function rateResource(resourceId: number, ratingScore: number) {
+  return request({ url: `/campus/portal/learning/resource/${resourceId}/rate`, method: 'post', params: { ratingScore } })
+}
+
+export function shareResource(resourceId: number) {
+  return request({ url: `/campus/portal/learning/resource/${resourceId}/share`, method: 'post' })
+}
+
+export function getOfficePreview(resource: string) {
+  return request({ url: '/common/office/preview', method: 'post', params: { resource } })
+}
+
+export function getOfficePreviewStatus(taskId: string) {
+  return request({ url: '/common/office/preview/status', method: 'get', params: { taskId } })
+}
+
 export function listQaSession(query: any) {
   return request({ url: '/campus/qa/session/list', method: 'get', params: query })
 }
@@ -234,6 +286,10 @@ export function getPortalTaskCenter(params: any) {
 
 export function markPortalTaskRead(dispatchId: number) {
   return request({ url: `/campus/portal/student/task-dispatch/${dispatchId}/read`, method: 'put' })
+}
+
+export function reportPortalTaskFeedback(data: any) {
+  return request({ url: '/campus/portal/student/task-feedback', method: 'put', data })
 }
 
 export function completePortalTask(dispatchId: number, data?: any) {

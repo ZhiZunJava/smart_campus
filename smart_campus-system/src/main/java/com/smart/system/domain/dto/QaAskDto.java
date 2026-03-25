@@ -14,6 +14,7 @@ public class QaAskDto {
     private Long modelId;
     private String sessionTitle;
     private String question;
+    private String contextPrompt;
     private Boolean stream;
     private Boolean deepThinking;
     private List<AiImageInputDto> images;
@@ -64,6 +65,14 @@ public class QaAskDto {
 
     public void setQuestion(String question) {
         this.question = question;
+    }
+
+    public String getContextPrompt() {
+        return contextPrompt;
+    }
+
+    public void setContextPrompt(String contextPrompt) {
+        this.contextPrompt = contextPrompt;
     }
 
     public Boolean getStream() {

@@ -239,6 +239,7 @@ import {
   markPortalTaskRead,
 } from '@/api/portal'
 import usePortalUserStore from '@/store/user'
+import { recordTaskFeedback, syncTaskFeedback } from '@/utils/taskFeedback'
 
 type MessageTab = 'todo' | 'message' | 'notice'
 
@@ -558,6 +559,8 @@ function handleAction(item: any) {
 
 function openTask(task: any) {
   const action = task?.action || {}
+  recordTaskFeedback(task)
+  syncTaskFeedback(task, 'messages')
   const dispatchId = Number(action?.row?.dispatchId || 0)
   if (dispatchId) {
     markPortalTaskRead(dispatchId).catch(() => {})

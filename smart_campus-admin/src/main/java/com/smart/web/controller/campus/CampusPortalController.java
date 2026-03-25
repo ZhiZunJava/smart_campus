@@ -38,6 +38,7 @@ import com.smart.system.domain.ScExamRecord;
 import com.smart.system.domain.ScKnowledgePoint;
 import com.smart.system.domain.ScQuestionBank;
 import com.smart.system.domain.ScSchoolTerm;
+import com.smart.system.domain.ScStudyRecord;
 import com.smart.system.domain.ScUserAchievement;
 import com.smart.system.domain.ScLearningTaskSubmission;
 import com.smart.system.domain.ScWrongQuestionBook;
@@ -57,6 +58,7 @@ import com.smart.system.service.IScLearningTaskSubmissionService;
 import com.smart.system.service.IScParentStudentRelService;
 import com.smart.system.service.IScQuestionBankService;
 import com.smart.system.service.IScSchoolTermService;
+import com.smart.system.service.IScStudyRecordService;
 import com.smart.system.service.IScUserGrowthService;
 import com.smart.system.service.IScUserProfileService;
 import com.smart.system.service.IScWrongQuestionBookService;
@@ -125,6 +127,9 @@ public class CampusPortalController extends BaseController {
 
     @Autowired
     private IScWrongQuestionBookService scWrongQuestionBookService;
+
+    @Autowired
+    private IScStudyRecordService scStudyRecordService;
 
     @Autowired
     private IScUserGrowthService scUserGrowthService;
@@ -274,6 +279,9 @@ public class CampusPortalController extends BaseController {
     @GetMapping("/student/tasks")
     public AjaxResult studentTasks(@RequestParam Long userId, @RequestParam(required = false) Long termId) {
         List<Map<String, Object>> courseList = castToMapList(studentMyCourses(userId, termId).get("data"));
+        Map<Long, Map<String, Object>> courseInfoMap = courseList.stream()
+                .filter(item -> asLong(item.get("courseId")) != null)
+                .collect(Collectors.toMap(item -> asLong(item.get("courseId")), item -> item, (left, right) -> left, LinkedHashMap::new));
 
         ScExamPaper paperQuery = new ScExamPaper();
         paperQuery.setStatus("0");
@@ -292,33 +300,29 @@ public class CampusPortalController extends BaseController {
         ScWrongQuestionBook wrongQuery = new ScWrongQuestionBook();
         wrongQuery.setUserId(userId);
         List<ScWrongQuestionBook> wrongs = scWrongQuestionBookService.selectScWrongQuestionBookList(wrongQuery);
+        Map<String, Object> taskFeedbackProfile = buildTaskFeedbackProfile(userId);
+
+        Map<Long, Long> examAttemptCountMap = records.stream()
+                .filter(item -> item.getPaperId() != null)
+                .collect(Collectors.groupingBy(ScExamRecord::getPaperId, LinkedHashMap::new, Collectors.counting()));
+        Date now = new Date();
 
         List<Map<String, Object>> examTasks = papers.stream()
-                .limit(10)
-                .map(item -> taskItem("exam-" + item.getPaperId(),
-                        StringUtils.defaultIfEmpty(item.getPaperName(), "试卷 " + item.getPaperId()),
-                        item.getCourseId() == null ? "开放考试任务，可自由参与。" : "课程考试任务，建议按课程进度完成。",
-                        "考试任务", "EXAM", "primary", "待处理",
-                        Arrays.asList((item.getDurationMinutes() == null ? 0 : item.getDurationMinutes()) + " 分钟",
-                                "总分 " + StringUtils.defaultIfEmpty(item.getTotalScore() == null ? null : item.getTotalScore().toPlainString(), "0")),
-                        actionItem("exam", item.getPaperId(), null, rowMap(
-                                "paperId", item.getPaperId(),
-                                "paperName", item.getPaperName(),
-                                "courseId", item.getCourseId()), "/student/exams")))
+                .filter(item -> item.getPublishEndTime() == null || !item.getPublishEndTime().before(now))
+                .map(item -> buildExamTask(item, courseInfoMap.get(item.getCourseId()), examAttemptCountMap.getOrDefault(item.getPaperId(), 0L), now))
+                .map(item -> applyBehaviorFeedback(item, taskFeedbackProfile))
+                .sorted(taskScoreComparator())
+                .limit(12)
                 .collect(Collectors.toList());
 
         List<Map<String, Object>> wrongTasks = wrongs.stream()
-                .limit(6)
-                .map(item -> taskItem("wrong-" + item.getId(),
-                        "错题回练 · 题目 " + item.getQuestionId(),
-                        "建议优先复盘高频错题，再进行错题回练。",
-                        "错题任务", "WRONG_BOOK", "warning", "1".equals(item.getMasteryStatus()) ? "已掌握" : "待巩固",
-                        Arrays.asList("错误 " + defaultInt(item.getWrongCount()) + " 次",
-                                item.getCourseId() == null ? "通用题目" : "课程 " + item.getCourseId()),
-                        actionItem("wrongbook", item.getId(), null, rowMap(
-                                "wrongId", item.getId(),
-                                "questionId", item.getQuestionId(),
-                                "courseId", item.getCourseId()), "/student/wrongbook")))
+                .sorted(Comparator
+                        .comparing((ScWrongQuestionBook item) -> "1".equals(item.getMasteryStatus()))
+                        .thenComparing(item -> defaultInt(item.getWrongCount()), Comparator.reverseOrder())
+                        .thenComparing(ScWrongQuestionBook::getLastWrongTime, Comparator.nullsLast(Comparator.reverseOrder())))
+                .map(item -> buildWrongTask(item, courseInfoMap.get(item.getCourseId()), now))
+                .map(item -> applyBehaviorFeedback(item, taskFeedbackProfile))
+                .limit(10)
                 .collect(Collectors.<Map<String, Object>>toList());
 
         List<Map<String, Object>> courseTasks = courseList.stream()
@@ -326,62 +330,58 @@ public class CampusPortalController extends BaseController {
                     Long courseId = asLong(item.get("courseId"));
                     return courseId != null && examCourseIds.contains(courseId);
                 })
+                .map(item -> buildCourseTask(item, now))
+                .map(item -> applyBehaviorFeedback(item, taskFeedbackProfile))
+                .sorted(taskScoreComparator())
                 .limit(8)
-                .map(item -> taskItem("course-" + item.get("id"),
-                        String.valueOf(item.get("courseName")) + " · 课程考试跟进",
-                        "该课程已有考试相关数据，进入课程详情查看考试与统计概况。",
-                        resolveCourseTaskLabel((String) item.get("taskType")), resolveCourseTaskCode((String) item.get("taskType")), "success", "进行中",
-                        Arrays.asList(StringUtils.defaultIfEmpty((String) item.get("courseCode"), "无课程编码"),
-                                StringUtils.defaultIfEmpty((String) item.get("termName"), "当前学期")),
-                        actionItem("course", asLong(item.get("id")), null, rowMap(
-                                "classCourseId", asLong(item.get("id")),
-                                "courseId", asLong(item.get("courseId")),
-                                "courseName", item.get("courseName"),
-                                "taskType", item.get("taskType")), "/student/courses")))
                 .collect(Collectors.toList());
 
         List<Map<String, Object>> manualTasks = scLearningTaskService.selectUserDispatchedTasks(userId, termId).stream()
                 .map(this::manualTaskItem)
+                .map(item -> applyBehaviorFeedback(item, taskFeedbackProfile))
+                .sorted(taskScoreComparator())
                 .collect(Collectors.toList());
 
-        List<Map<String, Object>> todoTasks = new ArrayList<>();
-        todoTasks.addAll(manualTasks.stream()
+        List<Map<String, Object>> pendingManualTasks = manualTasks.stream()
                 .filter(item -> !"COMPLETED".equals(String.valueOf(item.get("taskTypeCode"))))
-                .limit(4)
-                .collect(Collectors.toList()));
+                .collect(Collectors.toList());
+
+        List<Map<String, Object>> todoCandidates = new ArrayList<>();
+        todoCandidates.addAll(pendingManualTasks);
+        List<Map<String, Object>> todoTasks = new ArrayList<>();
         records.stream()
                 .filter(item -> "ONGOING".equals(item.getExamStatus()))
                 .findFirst()
-                .ifPresent(item -> todoTasks.add(taskItem("ongoing-" + item.getRecordId(),
-                        StringUtils.defaultIfEmpty(item.getPaperName(), "试卷 " + item.getPaperId()),
-                        "你有一场未完成考试，建议优先继续作答。",
-                        "待办考试", "EXAM_RESUME", "danger", "进行中",
-                        Collections.singletonList("开始于 " + StringUtils.defaultIfEmpty(DateUtils.parseDateToStr("yyyy-MM-dd HH:mm:ss", item.getStartTime()), "-")),
-                        actionItem("resume", item.getPaperId(), item.getRecordId(), rowMap(
-                                "recordId", item.getRecordId(),
-                                "paperId", item.getPaperId(),
-                                "paperName", item.getPaperName(),
-                                "startTime", item.getStartTime()), "/student/exams/session/" + item.getRecordId()))));
-        todoTasks.addAll(wrongTasks.stream().limit(2).collect(Collectors.toList()));
-        todoTasks.addAll(courseTasks.stream().limit(2).collect(Collectors.toList()));
-
-        List<Map<String, Object>> recommendedTasks = new ArrayList<>();
-        recommendedTasks.addAll(manualTasks.stream()
-                .filter(item -> !"COMPLETED".equals(String.valueOf(item.get("taskTypeCode"))))
+                .ifPresent(item -> todoCandidates.add(applyBehaviorFeedback(buildResumeTask(item), taskFeedbackProfile)));
+        todoCandidates.addAll(examTasks.stream()
+                .filter(item -> getTaskScore(item) >= 72)
+                .limit(3)
+                .collect(Collectors.toList()));
+        todoCandidates.addAll(courseTasks.stream()
+                .filter(item -> getTaskScore(item) >= 52)
                 .limit(2)
                 .collect(Collectors.toList()));
-        recommendedTasks.addAll(examTasks.stream().limit(2).collect(Collectors.toList()));
-        List<Map<String, Object>> topWrongTasks = wrongs.stream().limit(2).map(item -> taskItem("topwrong-" + item.getQuestionId(),
-                "高频错题 · " + item.getQuestionId(),
-                "这道题在你的历史作答里属于高频失分，建议尽快回练。",
-                "薄弱项", "WRONG_BOOK", "warning", "推荐",
-                Collections.singletonList("错误 " + defaultInt(item.getWrongCount()) + " 次"),
-                actionItem("wrongbook", item.getId(), null, rowMap(
-                        "wrongId", item.getId(),
-                        "questionId", item.getQuestionId(),
-                        "courseId", item.getCourseId()), "/student/wrongbook"))).collect(Collectors.<Map<String, Object>>toList());
-        recommendedTasks.addAll(topWrongTasks);
-        recommendedTasks.addAll(courseTasks.stream().skip(2).limit(2).collect(Collectors.toList()));
+        todoTasks.addAll(selectRankedTasks(todoCandidates, 6, bucketLimitMap(
+                "manual", 3,
+                "resume", 1,
+                "exam", 2,
+                "course", 1,
+                "wrongbook", 0)));
+
+        List<Map<String, Object>> recommendedTasks = new ArrayList<>();
+        List<Map<String, Object>> recommendationPool = new ArrayList<>();
+        recommendationPool.addAll(pendingManualTasks);
+        recommendationPool.addAll(examTasks);
+        recommendationPool.addAll(wrongTasks);
+        recommendationPool.addAll(courseTasks);
+        recommendedTasks.addAll(selectRankedTasks(recommendationPool, 10, bucketLimitMap(
+                "resume", 1,
+                "manual", 3,
+                "exam", 3,
+                "wrongbook", 2,
+                "course", 2)));
+
+        List<Map<String, Object>> homepageTasks = selectHomepageTasks(todoTasks, recommendedTasks);
 
         List<Map<String, Object>> historyTasks = records.stream()
                 .filter(item -> "SUBMITTED".equals(item.getExamStatus()))
@@ -404,17 +404,25 @@ public class CampusPortalController extends BaseController {
         stats.put("examTaskCount", examTasks.size());
         stats.put("wrongTaskCount", wrongTasks.size());
         stats.put("courseTaskCount", courseTasks.size());
+        stats.put("manualTaskCount", manualTasks.size());
         stats.put("todoCount", todoTasks.size());
         stats.put("recommendedCount", recommendedTasks.size());
+        stats.put("homepageCount", homepageTasks.size());
+        stats.put("urgentCount", homepageTasks.stream().filter(item -> getTaskScore(item) >= 85).count());
+        stats.put("dueSoonCount", pendingManualTasks.stream().filter(item -> "HIGH".equals(item.get("priorityLevel")) || "URGENT".equals(item.get("priorityLevel"))).count());
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("todoTasks", todoTasks);
         result.put("recommendedTasks", recommendedTasks);
+        result.put("homepageTasks", homepageTasks);
         result.put("historyTasks", historyTasks);
         result.put("examTasks", examTasks);
         result.put("wrongTasks", wrongTasks);
         result.put("courseTasks", courseTasks);
         result.put("manualTasks", manualTasks);
+        result.put("recommendationGroups", buildRecommendationGroups(recommendedTasks));
+        result.put("recommendationSummary", buildTaskSummary(todoTasks, recommendedTasks, homepageTasks));
+        result.put("feedbackProfile", taskFeedbackProfile);
         result.put("stats", stats);
         return success(result);
     }
@@ -430,6 +438,36 @@ public class CampusPortalController extends BaseController {
     public AjaxResult markStudentTaskRead(@PathVariable Long dispatchId) {
         LoginUser loginUser = getLoginUser();
         return toAjax(scLearningTaskDispatchService.markDispatchRead(dispatchId, loginUser.getUserId(), getUsername()));
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('student,admin')")
+    @PutMapping("/student/task-feedback")
+    public AjaxResult recordStudentTaskFeedback(@RequestBody(required = false) Map<String, Object> payload) {
+        LoginUser loginUser = getLoginUser();
+        Long userId = loginUser == null ? null : loginUser.getUserId();
+        if (userId == null) {
+            return error("用户信息不存在");
+        }
+        String feedbackType = StringUtils.upperCase(StringUtils.trimToEmpty(payload == null ? null : String.valueOf(payload.get("feedbackType"))));
+        if (StringUtils.isEmpty(feedbackType)) {
+            feedbackType = "OPEN";
+        }
+        String taskKey = StringUtils.trimToEmpty(payload == null ? null : String.valueOf(payload.get("taskKey")));
+        String sourceType = StringUtils.lowerCase(StringUtils.trimToEmpty(payload == null ? null : String.valueOf(payload.get("sourceType"))));
+        String page = StringUtils.lowerCase(StringUtils.trimToEmpty(payload == null ? null : String.valueOf(payload.get("page"))));
+        if (StringUtils.isEmpty(page)) {
+            page = "dashboard";
+        }
+        ScStudyRecord record = new ScStudyRecord();
+        record.setUserId(userId);
+        record.setCourseId(asLong(payload == null ? null : payload.get("courseId")));
+        record.setResourceId(asLong(payload == null ? null : payload.get("targetId")));
+        record.setBehaviorType("TASK_" + feedbackType);
+        record.setDurationSeconds(1);
+        record.setSourcePage(buildTaskFeedbackSourcePage(page, sourceType, taskKey));
+        record.setDeviceType("web");
+        scStudyRecordService.recordBehavior(record);
+        return success();
     }
 
     @PreAuthorize("@ss.hasAnyRoles('student,admin')")
@@ -1264,6 +1302,419 @@ public class CampusPortalController extends BaseController {
         return item;
     }
 
+    private Map<String, Object> buildTaskFeedbackProfile(Long userId) {
+        if (userId == null) {
+            return rowMap("recentSourceOpens", Collections.emptyMap(), "recentTaskOpenMap", Collections.emptyMap());
+        }
+        ScStudyRecord query = new ScStudyRecord();
+        query.setUserId(userId);
+        query.setBehaviorType("TASK_OPEN");
+        Date threshold = DateUtils.addDays(new Date(), -7);
+        Map<String, Integer> sourceCount = new LinkedHashMap<>();
+        Map<String, Long> taskOpenMap = new LinkedHashMap<>();
+        scStudyRecordService.selectScStudyRecordList(query).stream()
+                .filter(item -> item.getCreateTime() != null && !item.getCreateTime().before(threshold))
+                .forEach(item -> {
+                    Map<String, String> payload = parseTaskFeedbackSourcePage(item.getSourcePage());
+                    String sourceType = StringUtils.defaultIfEmpty(payload.get("sourceType"), "other");
+                    String taskKey = StringUtils.defaultIfEmpty(payload.get("taskKey"), "");
+                    sourceCount.put(sourceType, sourceCount.getOrDefault(sourceType, 0) + 1);
+                    if (StringUtils.isNotEmpty(taskKey) && item.getCreateTime() != null) {
+                        long timestamp = item.getCreateTime().getTime();
+                        taskOpenMap.put(taskKey, Math.max(taskOpenMap.getOrDefault(taskKey, 0L), timestamp));
+                    }
+                });
+        return rowMap(
+                "recentSourceOpens", sourceCount,
+                "recentTaskOpenMap", taskOpenMap);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> applyBehaviorFeedback(Map<String, Object> task, Map<String, Object> taskFeedbackProfile) {
+        if (task == null || taskFeedbackProfile == null) {
+            return task;
+        }
+        Map<String, Integer> sourceOpens = taskFeedbackProfile.get("recentSourceOpens") instanceof Map
+                ? (Map<String, Integer>) taskFeedbackProfile.get("recentSourceOpens")
+                : Collections.emptyMap();
+        Map<String, Long> taskOpenMap = taskFeedbackProfile.get("recentTaskOpenMap") instanceof Map
+                ? (Map<String, Long>) taskFeedbackProfile.get("recentTaskOpenMap")
+                : Collections.emptyMap();
+        String sourceType = String.valueOf(task.getOrDefault("sourceType", "other"));
+        String taskKey = String.valueOf(task.getOrDefault("key", ""));
+        int score = getTaskScore(task);
+        score += Math.min(sourceOpens.getOrDefault(sourceType, 0) * 3, 12);
+        Long latestOpenAt = taskOpenMap.get(taskKey);
+        if (latestOpenAt != null) {
+            long deltaMs = System.currentTimeMillis() - latestOpenAt;
+            if (deltaMs <= 1000L * 60L * 60L * 6L) {
+                score -= 6;
+            } else if (deltaMs >= 1000L * 60L * 60L * 24L) {
+                score += 2;
+            }
+        }
+        task.put("score", score);
+        return task;
+    }
+
+    private String buildTaskFeedbackSourcePage(String page, String sourceType, String taskKey) {
+        return String.format("portal_task|%s|%s|%s",
+                StringUtils.defaultIfEmpty(page, "dashboard"),
+                StringUtils.defaultIfEmpty(sourceType, "other"),
+                StringUtils.defaultIfEmpty(taskKey, ""));
+    }
+
+    private Map<String, String> parseTaskFeedbackSourcePage(String sourcePage) {
+        if (!StringUtils.startsWith(StringUtils.defaultString(sourcePage), "portal_task|")) {
+            return Collections.emptyMap();
+        }
+        String[] parts = String.valueOf(sourcePage).split("\\|", -1);
+        if (parts == null || parts.length < 4) {
+            return Collections.emptyMap();
+        }
+        return rowStringMap(
+                "page", parts[1],
+                "sourceType", parts[2],
+                "taskKey", parts[3]);
+    }
+
+    private Map<String, Object> buildExamTask(ScExamPaper paper, Map<String, Object> courseInfo, long attemptCount, Date now) {
+        String courseName = courseInfo == null ? null : String.valueOf(courseInfo.get("courseName"));
+        boolean courseExam = paper.getCourseId() != null;
+        Date startTime = paper.getPublishStartTime();
+        Date endTime = paper.getPublishEndTime();
+        long hoursToEnd = hoursBetween(now, endTime);
+        boolean deadlineSoon = endTime != null && hoursToEnd <= 72;
+        boolean windowOpen = endTime == null || !endTime.before(now);
+        int score = 58;
+        if (courseExam) {
+            score += 8;
+        }
+        if (attemptCount > 0) {
+            score += 6;
+        }
+        if (deadlineSoon) {
+            score += 18;
+        } else if (endTime != null && hoursToEnd <= 168) {
+            score += 10;
+        }
+        if (startTime != null && !startTime.after(now)) {
+            score += 6;
+        }
+        if (!windowOpen) {
+            score -= 20;
+        }
+        List<String> meta = new ArrayList<>();
+        meta.add((paper.getDurationMinutes() == null ? 0 : paper.getDurationMinutes()) + " 分钟");
+        meta.add("总分 " + StringUtils.defaultIfEmpty(paper.getTotalScore() == null ? null : paper.getTotalScore().toPlainString(), "0"));
+        if (endTime != null) {
+            meta.add("截止 " + DateUtils.parseDateToStr("MM-dd HH:mm", endTime));
+        }
+        if (attemptCount > 0) {
+            meta.add("已参加 " + attemptCount + " 次");
+        }
+        String desc = courseExam
+                ? StringUtils.defaultIfEmpty(courseName, "当前课程") + " 已开放考试，建议按课程进度完成。"
+                : "开放考试任务，可自由参与。";
+        if (deadlineSoon && endTime != null) {
+            desc = "考试开放窗口即将结束，建议优先完成。";
+        } else if (attemptCount > 0) {
+            desc = "你已有历史作答记录，可按需再次参加考试。";
+        }
+        Map<String, Object> item = taskItem("exam-" + paper.getPaperId(),
+                StringUtils.defaultIfEmpty(paper.getPaperName(), "试卷 " + paper.getPaperId()),
+                desc,
+                attemptCount > 0 ? "再次作答" : "考试任务",
+                "EXAM",
+                deadlineSoon ? "danger" : "primary",
+                deadlineSoon ? "临近截止" : "待处理",
+                meta,
+                actionItem("exam", paper.getPaperId(), null, rowMap(
+                        "paperId", paper.getPaperId(),
+                        "paperName", paper.getPaperName(),
+                        "courseId", paper.getCourseId(),
+                        "courseName", courseName,
+                        "publishEndTime", paper.getPublishEndTime(),
+                        "maxAttemptCount", paper.getMaxAttemptCount()), "/student/exams"));
+        return applyTaskSignals(item, "exam", score, deadlineSoon ? "HIGH" : "MEDIUM",
+                deadlineSoon ? "考试窗口临近截止，建议优先处理" : courseExam ? "课程考试与当前学习进度直接相关" : "开放考试可作为阶段性自测",
+                deadlineSoon ? "deadline" : "exam");
+    }
+
+    private Map<String, Object> buildWrongTask(ScWrongQuestionBook wrong, Map<String, Object> courseInfo, Date now) {
+        int wrongCount = defaultInt(wrong.getWrongCount());
+        boolean mastered = "1".equals(wrong.getMasteryStatus());
+        long hoursFromLastWrong = hoursBetween(wrong.getLastWrongTime(), now);
+        boolean recentlyWrong = wrong.getLastWrongTime() != null && hoursFromLastWrong <= 72;
+        boolean inCooldown = wrong.getLastWrongTime() != null && hoursFromLastWrong <= 12 && wrongCount < 3 && !mastered;
+        int score = 32 + Math.min(wrongCount * 8, 32);
+        if (!mastered) {
+            score += 18;
+        }
+        if (recentlyWrong) {
+            score += 10;
+        }
+        if (inCooldown) {
+            score -= 18;
+        }
+        List<String> meta = new ArrayList<>();
+        meta.add("错误 " + wrongCount + " 次");
+        meta.add(courseInfo == null ? (wrong.getCourseId() == null ? "通用题目" : "课程 " + wrong.getCourseId()) : String.valueOf(courseInfo.get("courseName")));
+        if (wrong.getKnowledgePointId() != null) {
+            meta.add("知识点 " + wrong.getKnowledgePointId());
+        }
+        if (wrong.getLastWrongTime() != null) {
+            meta.add("最近错于 " + DateUtils.parseDateToStr("MM-dd HH:mm", wrong.getLastWrongTime()));
+        }
+        String titlePrefix = wrongCount >= 3 ? "高频错题" : "错题回练";
+        String desc = !mastered
+                ? "这道题仍处于待巩固状态，建议优先回练并复盘解析。"
+                : "这道题已标记为已掌握，可按需复习巩固。";
+        if (recentlyWrong) {
+            desc = "这是你近期刚出错的题目，尽快复盘更容易补齐漏洞。";
+        }
+        if (inCooldown) {
+            desc = "这道题刚进入错题本，先留一点缓冲时间，稍后再回练会更自然。";
+        }
+        Map<String, Object> item = taskItem("wrong-" + wrong.getId(),
+                titlePrefix + " · 题目 " + wrong.getQuestionId(),
+                desc,
+                wrongCount >= 3 ? "薄弱项" : "错题任务",
+                "WRONG_BOOK",
+                mastered ? "info" : "warning",
+                mastered ? "已掌握" : "待巩固",
+                meta,
+                actionItem("wrongbook", wrong.getId(), null, rowMap(
+                        "wrongId", wrong.getId(),
+                        "questionId", wrong.getQuestionId(),
+                        "courseId", wrong.getCourseId(),
+                        "knowledgePointId", wrong.getKnowledgePointId()), "/student/wrongbook"));
+        item.put("homepageEligible", !inCooldown);
+        item.put("cooldownActive", inCooldown);
+        return applyTaskSignals(item, "wrongbook", score, !mastered && wrongCount >= 3 ? "HIGH" : "MEDIUM",
+                inCooldown ? "错题刚产生，先进入观察缓冲期" : recentlyWrong ? "近期连续出错，适合马上回练" : "用于巩固薄弱题型与知识点",
+                "wrongbook");
+    }
+
+    private Map<String, Object> buildCourseTask(Map<String, Object> courseInfo, Date now) {
+        String taskType = (String) courseInfo.get("taskType");
+        String taskCode = resolveCourseTaskCode(taskType);
+        int score = "EXAM".equals(taskCode) ? 58 : "HOMEWORK".equals(taskCode) ? 50 : 44;
+        String priority = "EXAM".equals(taskCode) ? "MEDIUM" : "NORMAL";
+        String reason = "EXAM".equals(taskCode) ? "课程已进入考试跟进阶段" : "适合回到课程页继续推进本周学习";
+        Map<String, Object> item = taskItem("course-" + courseInfo.get("id"),
+                String.valueOf(courseInfo.get("courseName")) + " · " + ("EXAM".equals(taskCode) ? "课程考试跟进" : "课程学习跟进"),
+                "该课程已有学习任务沉淀，进入课程详情可继续查看考试、资源与统计概况。",
+                resolveCourseTaskLabel(taskType), taskCode, "success", "进行中",
+                Arrays.asList(StringUtils.defaultIfEmpty((String) courseInfo.get("courseCode"), "无课程编码"),
+                        StringUtils.defaultIfEmpty((String) courseInfo.get("termName"), "当前学期")),
+                actionItem("course", asLong(courseInfo.get("id")), null, rowMap(
+                        "classCourseId", asLong(courseInfo.get("id")),
+                        "courseId", asLong(courseInfo.get("courseId")),
+                        "courseName", courseInfo.get("courseName"),
+                        "taskType", courseInfo.get("taskType")), "/student/courses"));
+        return applyTaskSignals(item, "course", score, priority, reason, "course");
+    }
+
+    private Map<String, Object> buildResumeTask(ScExamRecord record) {
+        Map<String, Object> item = taskItem("ongoing-" + record.getRecordId(),
+                StringUtils.defaultIfEmpty(record.getPaperName(), "试卷 " + record.getPaperId()),
+                "你有一场未完成考试，建议优先继续作答。",
+                "待办考试", "EXAM_RESUME", "danger", "进行中",
+                Collections.singletonList("开始于 " + StringUtils.defaultIfEmpty(DateUtils.parseDateToStr("yyyy-MM-dd HH:mm:ss", record.getStartTime()), "-")),
+                actionItem("resume", record.getPaperId(), record.getRecordId(), rowMap(
+                        "recordId", record.getRecordId(),
+                        "paperId", record.getPaperId(),
+                        "paperName", record.getPaperName(),
+                        "startTime", record.getStartTime()), "/student/exams/session/" + record.getRecordId()));
+        return applyTaskSignals(item, "resume", 98, "URGENT", "已有考试进行中，继续作答的收益最高", "resume");
+    }
+
+    private Map<String, Object> applyTaskSignals(Map<String, Object> item, String sourceType, int score, String priorityLevel,
+            String recommendationReason, String recommendationBucket) {
+        item.put("sourceType", sourceType);
+        item.put("score", score);
+        item.put("priorityLevel", StringUtils.defaultIfEmpty(priorityLevel, "NORMAL"));
+        item.put("recommendationReason", recommendationReason);
+        item.put("recommendationBucket", recommendationBucket);
+        item.put("homepageEligible", Boolean.TRUE);
+        return item;
+    }
+
+    private Comparator<Map<String, Object>> taskScoreComparator() {
+        return Comparator.comparingInt(this::getTaskScore)
+                .reversed()
+                .thenComparing(item -> String.valueOf(item.getOrDefault("key", "")));
+    }
+
+    private int getTaskScore(Map<String, Object> item) {
+        Object value = item == null ? null : item.get("score");
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+        try {
+            return Integer.parseInt(String.valueOf(value));
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    private long hoursBetween(Date start, Date end) {
+        if (start == null || end == null) {
+            return Long.MAX_VALUE;
+        }
+        long diff = end.getTime() - start.getTime();
+        return Math.abs(diff) / (1000L * 60L * 60L);
+    }
+
+    private List<Map<String, Object>> selectRankedTasks(List<Map<String, Object>> tasks, int limit, Map<String, Integer> bucketLimits) {
+        if (tasks == null || tasks.isEmpty() || limit <= 0) {
+            return Collections.emptyList();
+        }
+        List<Map<String, Object>> sorted = tasks.stream()
+                .filter(Objects::nonNull)
+                .sorted(taskScoreComparator())
+                .collect(Collectors.toList());
+        List<Map<String, Object>> selected = new ArrayList<>();
+        Set<String> seen = new LinkedHashSet<>();
+        Map<String, Integer> bucketCount = new HashMap<>();
+        for (Map<String, Object> item : sorted) {
+            if (selected.size() >= limit) {
+                break;
+            }
+            if (!seen.add(String.valueOf(item.get("key")))) {
+                continue;
+            }
+            String bucket = String.valueOf(item.getOrDefault("sourceType", item.getOrDefault("recommendationBucket", "other")));
+            int bucketLimit = bucketLimits.getOrDefault(bucket, Integer.MAX_VALUE);
+            if (bucketLimit <= 0) {
+                continue;
+            }
+            int current = bucketCount.getOrDefault(bucket, 0);
+            if (current >= bucketLimit) {
+                continue;
+            }
+            selected.add(item);
+            bucketCount.put(bucket, current + 1);
+        }
+        if (selected.size() >= limit) {
+            return selected;
+        }
+        for (Map<String, Object> item : sorted) {
+            if (selected.size() >= limit) {
+                break;
+            }
+            String key = String.valueOf(item.get("key"));
+            if (selected.stream().anyMatch(current -> Objects.equals(String.valueOf(current.get("key")), key))) {
+                continue;
+            }
+            if (!Boolean.TRUE.equals(item.getOrDefault("homepageEligible", Boolean.TRUE)) && bucketLimits.containsKey("homepageOnly")) {
+                continue;
+            }
+            selected.add(item);
+        }
+        return selected;
+    }
+
+    private List<Map<String, Object>> selectHomepageTasks(List<Map<String, Object>> todoTasks, List<Map<String, Object>> recommendedTasks) {
+        List<Map<String, Object>> source = new ArrayList<>();
+        source.addAll(todoTasks);
+        source.addAll(recommendedTasks);
+        return selectRankedTasks(source, 8, bucketLimitMap(
+                "resume", 1,
+                "manual", 3,
+                "exam", 3,
+                "wrongbook", 1,
+                "course", 2));
+    }
+
+    private Map<String, Integer> bucketLimitMap(Object... values) {
+        Map<String, Integer> result = new LinkedHashMap<>();
+        if (values == null) {
+            return result;
+        }
+        for (int i = 0; i + 1 < values.length; i += 2) {
+            result.put(String.valueOf(values[i]), Integer.parseInt(String.valueOf(values[i + 1])));
+        }
+        return result;
+    }
+
+    private List<Map<String, Object>> buildRecommendationGroups(List<Map<String, Object>> recommendedTasks) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        Map<String, List<Map<String, Object>>> grouped = recommendedTasks.stream()
+                .collect(Collectors.groupingBy(item -> String.valueOf(item.getOrDefault("sourceType", "other")), LinkedHashMap::new, Collectors.toList()));
+        grouped.forEach((sourceType, items) -> {
+            Map<String, Object> group = new LinkedHashMap<>();
+            group.put("key", sourceType);
+            group.put("label", resolveTaskGroupLabel(sourceType));
+            group.put("count", items.size());
+            group.put("desc", resolveTaskGroupDesc(sourceType));
+            group.put("topReason", items.stream()
+                    .map(item -> String.valueOf(item.getOrDefault("recommendationReason", "")))
+                    .filter(StringUtils::isNotEmpty)
+                    .findFirst()
+                    .orElse(""));
+            result.add(group);
+        });
+        return result;
+    }
+
+    private Map<String, Object> buildTaskSummary(List<Map<String, Object>> todoTasks, List<Map<String, Object>> recommendedTasks,
+            List<Map<String, Object>> homepageTasks) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("todoCount", todoTasks.size());
+        result.put("recommendedCount", recommendedTasks.size());
+        result.put("homepageCount", homepageTasks.size());
+        result.put("urgentCount", homepageTasks.stream().filter(item -> getTaskScore(item) >= 85).count());
+        result.put("examCount", homepageTasks.stream().filter(item -> "exam".equals(item.get("sourceType")) || "resume".equals(item.get("sourceType"))).count());
+        result.put("wrongbookCount", homepageTasks.stream().filter(item -> "wrongbook".equals(item.get("sourceType"))).count());
+        result.put("topReasons", homepageTasks.stream()
+                .map(item -> String.valueOf(item.getOrDefault("recommendationReason", "")))
+                .filter(StringUtils::isNotEmpty)
+                .distinct()
+                .limit(3)
+                .collect(Collectors.toList()));
+        return result;
+    }
+
+    private String resolveTaskGroupLabel(String sourceType) {
+        if ("resume".equals(sourceType)) {
+            return "继续作答";
+        }
+        if ("manual".equals(sourceType)) {
+            return "老师布置";
+        }
+        if ("exam".equals(sourceType)) {
+            return "考试冲刺";
+        }
+        if ("wrongbook".equals(sourceType)) {
+            return "薄弱巩固";
+        }
+        if ("course".equals(sourceType)) {
+            return "课程跟进";
+        }
+        return "综合推荐";
+    }
+
+    private String resolveTaskGroupDesc(String sourceType) {
+        if ("resume".equals(sourceType)) {
+            return "优先完成进行中的考试与关键任务";
+        }
+        if ("manual".equals(sourceType)) {
+            return "来自老师布置与截止时间驱动的任务";
+        }
+        if ("exam".equals(sourceType)) {
+            return "结合考试窗口、课程关联和作答记录推荐";
+        }
+        if ("wrongbook".equals(sourceType)) {
+            return "围绕错题频次、掌握状态与近期失误推荐";
+        }
+        if ("course".equals(sourceType)) {
+            return "回到课程页继续推进阶段性学习";
+        }
+        return "融合多维信号生成的推荐任务";
+    }
+
     private Map<String, Object> manualTaskItem(Map<String, Object> source) {
         String completionStatus = String.valueOf(source.getOrDefault("completionStatus", "PENDING"));
         String taskType = String.valueOf(source.getOrDefault("taskType", "COURSE"));
@@ -1271,17 +1722,16 @@ public class CampusPortalController extends BaseController {
         Long actionTargetId = asLong(source.get("actionTargetId"));
         Long dispatchId = asLong(source.get("dispatchId"));
         String path = StringUtils.defaultIfEmpty((String) source.get("actionPath"), "/student/plaza");
+        Date now = new Date();
+        Date dueDate = parseAnyDate(source.get("dueTime"));
         List<String> meta = new ArrayList<>();
-        if (source.get("dueTime") != null) {
-            Date dueDate = parseAnyDate(source.get("dueTime"));
-            if (dueDate != null) {
-                meta.add("截止 " + DateUtils.parseDateToStr("yyyy-MM-dd HH:mm", dueDate));
-            }
+        if (dueDate != null) {
+            meta.add("截止 " + DateUtils.parseDateToStr("yyyy-MM-dd HH:mm", dueDate));
         }
         if (StringUtils.isNotEmpty((String) source.get("priorityLevel"))) {
             meta.add("优先级 " + source.get("priorityLevel"));
         }
-        return taskItem("manual-" + taskId + "-" + dispatchId,
+        Map<String, Object> item = taskItem("manual-" + taskId + "-" + dispatchId,
                 StringUtils.defaultIfEmpty((String) source.get("taskTitle"), "学习任务"),
                 StringUtils.defaultIfEmpty((String) source.get("taskDesc"), "请按要求完成任务。"),
                 resolveManualTaskLabel(taskType),
@@ -1290,6 +1740,61 @@ public class CampusPortalController extends BaseController {
                 resolveManualStatusText(completionStatus, source.get("dueTime")),
                 meta,
                 actionItem(resolveManualActionType(path), actionTargetId, dispatchId, source, "/student/tasks/" + dispatchId));
+        int score = 42 + priorityWeight((String) source.get("priorityLevel"));
+        if (!"COMPLETED".equalsIgnoreCase(completionStatus) && dueDate != null) {
+            long hoursToDue = hoursBetween(now, dueDate);
+            if (dueDate.before(now)) {
+                score += 28;
+            } else if (hoursToDue <= 24) {
+                score += 22;
+            } else if (hoursToDue <= 72) {
+                score += 14;
+            }
+        }
+        if ("COMPLETED".equalsIgnoreCase(completionStatus)) {
+            score = 0;
+        }
+        return applyTaskSignals(item, "manual", score,
+                normalizePriorityLevel((String) source.get("priorityLevel")),
+                dueDate != null ? "结合截止时间与老师布置优先级推荐" : "老师布置的任务建议按计划推进",
+                "manual");
+    }
+
+    private int priorityWeight(String priorityLevel) {
+        String normalized = normalizePriorityLevel(priorityLevel);
+        if ("URGENT".equals(normalized)) {
+            return 30;
+        }
+        if ("HIGH".equals(normalized)) {
+            return 20;
+        }
+        if ("MEDIUM".equals(normalized)) {
+            return 10;
+        }
+        if ("LOW".equals(normalized)) {
+            return 2;
+        }
+        return 6;
+    }
+
+    private String normalizePriorityLevel(String priorityLevel) {
+        String normalized = StringUtils.upperCase(StringUtils.trimToEmpty(priorityLevel));
+        if (StringUtils.isBlank(normalized)) {
+            return "NORMAL";
+        }
+        if (Arrays.asList("P0", "URGENT", "CRITICAL").contains(normalized)) {
+            return "URGENT";
+        }
+        if (Arrays.asList("P1", "HIGH").contains(normalized)) {
+            return "HIGH";
+        }
+        if (Arrays.asList("P2", "MEDIUM").contains(normalized)) {
+            return "MEDIUM";
+        }
+        if (Arrays.asList("P4", "LOW").contains(normalized)) {
+            return "LOW";
+        }
+        return "NORMAL";
     }
 
     private Map<String, Object> toPortalNoticeItem(SysNotice notice, String defaultCategory) {
@@ -1329,6 +1834,17 @@ public class CampusPortalController extends BaseController {
 
     private Map<String, Object> rowMap(Object... kv) {
         Map<String, Object> row = new LinkedHashMap<>();
+        if (kv == null) {
+            return row;
+        }
+        for (int i = 0; i + 1 < kv.length; i += 2) {
+            row.put(String.valueOf(kv[i]), kv[i + 1]);
+        }
+        return row;
+    }
+
+    private Map<String, String> rowStringMap(String... kv) {
+        Map<String, String> row = new LinkedHashMap<>();
         if (kv == null) {
             return row;
         }

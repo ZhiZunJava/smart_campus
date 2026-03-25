@@ -41,6 +41,12 @@ public class OpenAiCompatibleGatewayServiceImpl implements IAiGatewayService {
     private static final Logger log = LoggerFactory.getLogger(OpenAiCompatibleGatewayServiceImpl.class);
     private static final int MAX_RETRY_TIMES = 2;
     private static final long RETRY_SLEEP_MILLIS = 800L;
+    private static final int QA_BASE_MAX_TOKENS = 4096;
+    private static final int QA_DEEP_THINKING_MAX_TOKENS = 6144;
+    private static final int QA_IMAGE_BONUS_TOKENS = 512;
+    private static final int QA_LONG_PROMPT_BONUS_TOKENS = 512;
+    private static final int QA_LONG_HISTORY_BONUS_TOKENS = 512;
+    private static final int QA_MAX_TOKENS_CAP = 7168;
 
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(20))
@@ -365,10 +371,35 @@ public class OpenAiCompatibleGatewayServiceImpl implements IAiGatewayService {
         if ("exam_question_generate".equalsIgnoreCase(bizType)) {
             return resolveExamGenerateMaxTokens(requestDto);
         }
+        if ("qa".equalsIgnoreCase(bizType)) {
+            return resolveQaMaxTokens(requestDto);
+        }
         if ("learning_profile_analysis".equalsIgnoreCase(bizType) || "resource_analysis".equalsIgnoreCase(bizType)) {
             return 512;
         }
         return 1024;
+    }
+
+    private int resolveQaMaxTokens(AiChatRequestDto requestDto) {
+        int maxTokens = Boolean.TRUE.equals(requestDto.getDeepThinking())
+                ? QA_DEEP_THINKING_MAX_TOKENS
+                : QA_BASE_MAX_TOKENS;
+
+        if (hasImages(requestDto)) {
+            maxTokens += QA_IMAGE_BONUS_TOKENS;
+        }
+
+        if (requestDto != null && StringUtils.isNotEmpty(requestDto.getUserPrompt())
+                && requestDto.getUserPrompt().length() >= 1200) {
+            maxTokens += QA_LONG_PROMPT_BONUS_TOKENS;
+        }
+
+        if (requestDto != null && requestDto.getHistoryMessages() != null
+                && requestDto.getHistoryMessages().size() >= 8) {
+            maxTokens += QA_LONG_HISTORY_BONUS_TOKENS;
+        }
+
+        return Math.min(maxTokens, QA_MAX_TOKENS_CAP);
     }
 
     private int resolveExamGenerateMaxTokens(AiChatRequestDto requestDto) {

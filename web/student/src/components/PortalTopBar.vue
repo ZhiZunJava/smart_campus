@@ -112,6 +112,10 @@
                 <el-icon><Files /></el-icon>
                 <span>我的档案</span>
               </el-dropdown-item>
+              <el-dropdown-item @click="goFavoritesPage">
+                <el-icon><Grid /></el-icon>
+                <span>我的收藏</span>
+              </el-dropdown-item>
               <el-dropdown-item @click="goAccountSettingsPage">
                 <el-icon><Setting /></el-icon>
                 <span>账号设置</span>
@@ -642,6 +646,10 @@ function goMessageAction(message: any) {
 
 function goProfilePage() {
   router.push('/account/profile')
+}
+
+function goFavoritesPage() {
+  router.push('/student/favorites')
 }
 
 function goAccountSettingsPage() {

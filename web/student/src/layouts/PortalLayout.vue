@@ -198,6 +198,7 @@ const menus: Record<string, MenuItem[]> = {
     { title: '我的课程', path: '/student/courses', desc: '查看学期课程与班级课程' },
     { title: '我的课表', path: '/student/schedule', desc: '按周查看课程安排' },
     { title: '资源中心', path: '/student/resources', desc: '查询学习资料与课程资源' },
+    { title: '我的收藏', path: '/student/favorites', desc: '查看已收藏的课时和资源' },
     { title: '智能问答', path: '/student/qa', desc: '围绕课程内容进行智能问答' },
     { title: '任务广场', path: '/student/plaza', desc: '浏览通用试卷、开放挑战与通用题目' },
     { title: '我的考试', path: '/student/exams', desc: '查看考试安排、记录与成绩反馈' },
@@ -233,21 +234,22 @@ const groupedMenus: Record<string, MenuGroup[]> = {
       items: [
         menus.student[1],
         menus.student[2],
+        menus.student[5],
       ],
     },
     {
       key: 'student-plaza',
       label: '任务与练习',
       items: [
-        menus.student[5],
+        menus.student[6],
       ],
     },
     {
       key: 'student-growth',
       label: '考试与成长',
       items: [
-        menus.student[6],
         menus.student[7],
+        menus.student[8],
       ],
     },
   ],
@@ -609,7 +611,7 @@ async function handleLogout() {
   background: #fff;
   margin: 0;
   flex: 1;
-  padding: 20px;
+  padding: 20px 20px 28px;
   border-radius: 0 0 6px 6px;
   min-height: 100%;
   display: flex;
@@ -618,9 +620,13 @@ async function handleLogout() {
 
 .portal-route-transition-shell {
   display: flex;
-  flex: 1;
-  min-height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
   flex-direction: column;
+}
+
+:deep(.portal-stage--white .portal-page) {
+  min-height: auto;
 }
 
 .portal-ongoing-banner {

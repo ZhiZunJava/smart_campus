@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScResourceRatingMapper">
+  <resultMap type="ScResourceRating" id="ScResourceRatingResult">
+    <id property="ratingId" column="rating_id" />
+    <result property="resourceId" column="resource_id" />
+    <result property="userId" column="user_id" />
+    <result property="ratingScore" column="rating_score" />
+    <result property="createBy" column="create_by" />
+    <result property="createTime" column="create_time" />
+    <result property="updateBy" column="update_by" />
+    <result property="updateTime" column="update_time" />
+    <result property="remark" column="remark" />
+  </resultMap>
+
+  <select id="selectScResourceRatingByResourceAndUser" resultMap="ScResourceRatingResult">
+    select rating_id, resource_id, user_id, rating_score, create_by, create_time, update_by, update_time, remark
+    from sc_resource_rating
+    where resource_id = #{param1} and user_id = #{param2}
+  </select>
+
+  <insert id="insertScResourceRating" parameterType="ScResourceRating" useGeneratedKeys="true" keyProperty="ratingId">
+    insert into sc_resource_rating(resource_id, user_id, rating_score, create_by, create_time, remark)
+    values(#{resourceId}, #{userId}, #{ratingScore}, #{createBy}, sysdate(), #{remark})
+  </insert>
+
+  <update id="updateScResourceRating" parameterType="ScResourceRating">
+    update sc_resource_rating
+    set rating_score = #{ratingScore},
+        update_by = #{updateBy},
+        update_time = sysdate(),
+        remark = #{remark}
+    where rating_id = #{ratingId}
+  </update>
+
+  <select id="selectRatingSummaryByResourceId" parameterType="Long" resultType="java.util.HashMap">
+    select ifnull(avg(rating_score), 0) as avgRating, count(1) as ratingCount
+    from sc_resource_rating
+    where resource_id = #{resourceId}
+  </select>
+</mapper>

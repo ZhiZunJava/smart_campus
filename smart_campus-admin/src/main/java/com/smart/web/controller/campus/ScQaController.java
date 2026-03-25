@@ -1,10 +1,13 @@
 package com.smart.web.controller.campus;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,6 +45,8 @@ import com.smart.framework.config.ServerConfig;
 @RestController
 @RequestMapping("/campus/qa")
 public class ScQaController extends BaseController {
+    private static final Pattern CODE_FENCE_PATTERN = Pattern.compile("(```[\\s\\S]*?```|~~~[\\s\\S]*?~~~)");
+
     @Autowired
     private IScQaSessionService scQaSessionService;
     @Autowired
@@ -190,7 +195,7 @@ public class ScQaController extends BaseController {
     public AjaxResult ask(@RequestBody QaAskDto askDto) {
         try {
             AskContext context = prepareAskContext(askDto, false);
-            AiChatResponseVo aiResponse = aiGatewayService.chat(context.requestDto);
+            AiChatResponseVo aiResponse = normalizeAssistantResponse(aiGatewayService.chat(context.requestDto));
             ScQaMessage assistantMessage = saveAssistantMessage(context.session, aiResponse, context.operatorName);
 
             AjaxResult ajax = AjaxResult.success();
@@ -238,6 +243,7 @@ public class ScQaController extends BaseController {
                     }
                 });
                 aiResponse.setContent(contentBuilder.toString());
+                normalizeAssistantResponse(aiResponse);
                 ScQaMessage assistantMessage = saveAssistantMessage(context.session, aiResponse, context.operatorName);
                 Map<String, Object> donePayload = new HashMap<>();
                 donePayload.put("sessionId", context.session.getSessionId());
@@ -270,7 +276,7 @@ public class ScQaController extends BaseController {
         requestDto.setModelId(modelId);
         requestDto.setBizType("qa");
         requestDto.setSystemPrompt(systemPrompt);
-        requestDto.setUserPrompt(askDto.getQuestion());
+        requestDto.setUserPrompt(buildQaUserPrompt(askDto));
         requestDto.setDeepThinking(Boolean.TRUE.equals(askDto.getDeepThinking()));
         requestDto.setStream(stream);
         requestDto.setImages(askDto.getImages());
@@ -359,7 +365,42 @@ public class ScQaController extends BaseController {
         if (askDto.getImages() != null && !askDto.getImages().isEmpty()) {
             systemPrompt += "\n如果用户上传了图片，请结合图片内容回答；若当前模型不支持视觉能力，请明确说明。";
         }
+        systemPrompt += buildMarkdownOutputRules();
         return systemPrompt;
+    }
+
+    private String buildQaUserPrompt(QaAskDto askDto) {
+        if (askDto == null) {
+            return "";
+        }
+        String question = StringUtils.defaultString(askDto.getQuestion()).trim();
+        String contextPrompt = StringUtils.defaultString(askDto.getContextPrompt()).trim();
+        if (StringUtils.isEmpty(contextPrompt)) {
+            return question;
+        }
+        return "以下是学习上下文，仅供理解问题使用，请不要逐字复述这些上下文标题或标签。\n"
+                + contextPrompt
+                + "\n\n请直接回答下面这个用户问题：\n"
+                + question;
+    }
+
+    private String buildMarkdownOutputRules() {
+        return "\n请使用规范、稳定、便于前端渲染的 GitHub Flavored Markdown 输出，并严格遵守以下要求："
+                + "\n1. 不要输出字母 n、字符串 \\n、\\r\\n 来代替换行，必须直接输出真正的换行。"
+                + "\n2. 只在必要时使用标题，标题必须使用 # 或 ##，且标题后空一行。"
+                + "\n3. 列表每一项必须单独占一行，禁止写成“1.xxx 2.xxx”这种同一行多条列表。"
+                + "\n4. 表格只在列数稳定、数据规整时使用，必须输出标准 Markdown 表格；如果信息不规整，请改用列表，不要强行拼表格。"
+                + "\n5. 代码、JSON、配置示例必须使用 fenced code block，并标明语言，如 ```json。"
+                + "\n6. 普通学习计划、说明文字、步骤描述，不要放进 ```plaintext``` 或其他代码块。"
+                + "\n7. 不要输出 HTML 标签，不要混用 Markdown 和原始 HTML。"
+                + "\n8. 段落之间保留空行，避免把标题、列表、表格、代码块和正文粘在同一行。"
+                + "\n9. 如果用户明确需要图表，或当前回答适合用趋势/占比/对比图展示，可以输出 ECharts 容器，格式必须严格如下："
+                + "\n:::echarts"
+                + "\n```json"
+                + "\n{ \"title\": { \"text\": \"示例\" }, \"xAxis\": { \"type\": \"category\", \"data\": [\"A\", \"B\"] }, \"yAxis\": { \"type\": \"value\" }, \"series\": [{ \"type\": \"bar\", \"data\": [1, 2] }] }"
+                + "\n```"
+                + "\n:::"
+                + "\n其中 JSON 必须是合法的 ECharts option，不允许加注释或额外解释。";
     }
 
     private ScQaMessage saveAssistantMessage(ScQaSession session, AiChatResponseVo aiResponse, String operatorName) {
@@ -378,6 +419,15 @@ public class ScQaController extends BaseController {
         scQaMessageService.insertScQaMessage(assistantMessage);
         touchSessionAfterMessage(session.getSessionId(), aiResponse.getContent());
         return assistantMessage;
+    }
+
+    private AiChatResponseVo normalizeAssistantResponse(AiChatResponseVo aiResponse) {
+        if (aiResponse == null) {
+            return null;
+        }
+        aiResponse.setContent(normalizeQaMarkdown(aiResponse.getContent()));
+        aiResponse.setReasoningContent(normalizeQaMarkdown(aiResponse.getReasoningContent()));
+        return aiResponse;
     }
 
     private List<AiHistoryMessageDto> loadRecentHistoryMessages(Long sessionId, int limit) {
@@ -490,6 +540,193 @@ public class ScQaController extends BaseController {
             }
         }
         return map;
+    }
+
+    private String normalizeQaMarkdown(String content) {
+        if (StringUtils.isEmpty(content)) {
+            return "";
+        }
+        String normalized = normalizeQaMarkdownPrelude(content);
+        Matcher matcher = CODE_FENCE_PATTERN.matcher(normalized);
+        StringBuilder builder = new StringBuilder();
+        int lastEnd = 0;
+        while (matcher.find()) {
+            builder.append(normalizeQaMarkdownSegment(normalized.substring(lastEnd, matcher.start())));
+            builder.append(matcher.group());
+            lastEnd = matcher.end();
+        }
+        builder.append(normalizeQaMarkdownSegment(normalized.substring(lastEnd)));
+        return builder.toString()
+                .replaceAll("\n{3,}", "\n\n")
+                .trim();
+    }
+
+    private String normalizeQaMarkdownPrelude(String content) {
+        String normalized = content.replace("\r\n", "\n").replace("\\n", "\n");
+        String[] lines = normalized.split("\n", -1);
+        StringBuilder lineBuilder = new StringBuilder();
+        for (int index = 0; index < lines.length; index++) {
+            if (index > 0) {
+                lineBuilder.append("\n");
+            }
+            lineBuilder.append(normalizePreludeLine(lines[index]));
+        }
+        normalized = lineBuilder.toString();
+        normalized = normalized.replaceAll("(:::\\s*echarts)\\s*```", "$1\n```");
+        normalized = normalized.replaceAll("(^|\\n)(:::\\s*echarts)(?=[^\\n])", "$1$2\n");
+        normalized = normalized.replaceAll("(```[A-Za-z0-9_-]+)(?=[^\\n])", "$1\n");
+        normalized = normalized.replaceAll("(~~~[A-Za-z0-9_-]+)(?=[^\\n])", "$1\n");
+        normalized = normalized.replaceAll("([}\\]])\\s*(```|~~~)", "$1\n$2");
+        normalized = normalized.replaceAll("(```|~~~)\\s*:::", "$1\n:::");
+
+        int echartsOpenCount = countMatches(normalized, "(?m)^:::\\s*echarts\\b.*$");
+        int echartsCloseCount = countMatches(normalized, "(?m)^:::\\s*$");
+        if (echartsOpenCount > echartsCloseCount) {
+            normalized = normalized.trim();
+            if (countMatches(normalized, "```") % 2 == 1) {
+                normalized = normalized + "\n```";
+            }
+            normalized = normalized + "\n:::";
+        }
+        return normalized;
+    }
+
+    private String normalizePreludeLine(String line) {
+        if (StringUtils.isEmpty(line)) {
+            return line;
+        }
+        if (line.contains("|")) {
+            return normalizeBrokenTableSeparatorLine(line);
+        }
+        String normalized = line;
+        normalized = normalized.replaceAll(
+                "([^\\nA-Za-z])nn(?=(?:#{1,6}|[-*+]|\\d+[\\.\\)\\uFF09]|:::\\s*echarts|```|~~~|第[一二三四五六七八九十]+阶段|[一二三四五六七八九十]+、|周[一二三四五六日天末]))",
+                "$1\n\n");
+        normalized = normalized.replaceAll(
+                "([^\\nA-Za-z])n(?=(?:#{1,6}|[-*+]|\\d+[\\.\\)\\uFF09]|:::\\s*echarts|```|~~~|第[一二三四五六七八九十]+阶段|[一二三四五六七八九十]+、|周[一二三四五六日天末]))",
+                "$1\n");
+        return normalized;
+    }
+
+    private String normalizeQaMarkdownSegment(String segment) {
+        if (StringUtils.isEmpty(segment)) {
+            return "";
+        }
+        String normalized = segment;
+        normalized = normalized.replaceAll(
+                "^\\s*([^\\n#`]{2,40}?)(?=(?:##|###|[一二三四五六七八九十]+、|第[一二三四五六七八九十]+阶段))",
+                "# $1\n\n");
+        normalized = normalized.replaceAll("(^|\\n)([一二三四五六七八九十]+、[^\\n#]+)", "$1## $2");
+        normalized = normalized.replaceAll("(^|\\n)(第[一二三四五六七八九十]+阶段[：:][^\\n#]+)", "$1### $2");
+        normalized = normalized.replaceAll("([^\\n#])\\s*(#{1,6})([^\\s#\\n])", "$1\n\n$2 $3");
+        normalized = normalized.replaceAll("(^|\\n)(#{1,6})([^\\s#\\n])", "$1$2 $3");
+        normalized = normalized.replaceAll("([^\\n])\\s*(#{1,6}\\s+)", "$1\\n\\n$2");
+        normalized = normalized.replaceAll("(\\*\\*[^*\\n]+\\*\\*)(\\|)", "$1\\n$2");
+        normalized = normalized.replaceAll("([^\\n])(\\|[-: \\t|]{3,}\\|)", "$1\\n$2");
+        normalized = normalized.replaceAll("(\\|[-: \\t|]{3,}\\|)([^\\n|])", "$1\\n$2");
+        normalized = normalized.replaceAll("(?m)^\\s*#{1,6}\\s*$", "");
+        String[] lines = normalized.split("\n", -1);
+        StringBuilder lineBuilder = new StringBuilder();
+        for (int index = 0; index < lines.length; index++) {
+            if (index > 0) {
+                lineBuilder.append("\n");
+            }
+            lineBuilder.append(normalizeQaMarkdownLine(lines[index]));
+        }
+        return lineBuilder.toString();
+    }
+
+    private String normalizeQaMarkdownLine(String line) {
+        if (line == null) {
+            return "";
+        }
+        if (line.contains("|")) {
+            return normalizeBrokenTableSeparatorLine(line);
+        }
+        String normalized = line;
+        normalized = normalized.replaceAll("^([-*+])(?=\\S)", "$1 ");
+        normalized = normalized.replaceAll("([：:])\\s*([-*+])(?=\\S)", "$1\\n$2 ");
+        normalized = normalized.replaceAll("([^\\n])\\s+([-*+])(?=[\\u4e00-\\u9fa5A-Za-z(（【])", "$1\\n$2 ");
+        normalized = normalized.replaceAll("^(\\d+[\\.\\)\\uFF09])(?=\\S)", "$1 ");
+        normalized = normalized.replaceAll("([：:])\\s*(\\d+[\\.\\)\\uFF09])(?=\\S)", "$1\\n$2 ");
+        normalized = normalized.replaceAll("([：:])\\s*(\\d+[\\.\\)\\uFF09])\\s*", "$1\\n$2 ");
+        normalized = normalized.replaceAll("([^\\n])(\\d+[\\.\\)\\uFF09])(?=[\\u4e00-\\u9fa5A-Za-z])", "$1\\n$2 ");
+        normalized = normalized.replaceAll("([^\\n])\\s+(\\d+[\\.\\)\\uFF09])\\s+", "$1\\n$2 ");
+        return normalized;
+    }
+
+    private int countMatches(String content, String regex) {
+        if (StringUtils.isEmpty(content)) {
+            return 0;
+        }
+        Matcher matcher = Pattern.compile(regex).matcher(content);
+        int count = 0;
+        while (matcher.find()) {
+            count++;
+        }
+        return count;
+    }
+
+    private String normalizeBrokenTableSeparatorLine(String line) {
+        if (!looksLikeBrokenTableSeparatorLine(line)) {
+            return line;
+        }
+        List<String> cells = getPipeCells(line);
+        List<String> normalizedCells = new ArrayList<>();
+        for (String cell : cells) {
+            normalizedCells.add(normalizeTableSeparatorCell(cell));
+        }
+        return "| " + String.join(" | ", normalizedCells) + " |";
+    }
+
+    private boolean looksLikeBrokenTableSeparatorLine(String line) {
+        if (StringUtils.isEmpty(line) || !line.contains("|")) {
+            return false;
+        }
+        List<String> cells = getPipeCells(line);
+        int nonEmptyCellCount = 0;
+        for (String cell : cells) {
+            if (StringUtils.isEmpty(cell)) {
+                continue;
+            }
+            nonEmptyCellCount++;
+            if (!cell.matches("[\\s:n-]+") || !cell.contains("-")) {
+                return false;
+            }
+        }
+        return nonEmptyCellCount >= 2;
+    }
+
+    private List<String> getPipeCells(String line) {
+        String normalized = StringUtils.defaultString(line).trim();
+        if (normalized.startsWith("|")) {
+            normalized = normalized.substring(1);
+        }
+        if (normalized.endsWith("|")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        String[] parts = normalized.split("\\|", -1);
+        List<String> cells = new ArrayList<>();
+        for (String part : parts) {
+            cells.add(part == null ? "" : part.trim());
+        }
+        return cells;
+    }
+
+    private String normalizeTableSeparatorCell(String cell) {
+        String compact = StringUtils.defaultString(cell).replace("n", "").replaceAll("\\s+", "");
+        boolean hasLeadingColon = compact.startsWith(":");
+        boolean hasTrailingColon = compact.endsWith(":");
+        if (hasLeadingColon && hasTrailingColon) {
+            return ":---:";
+        }
+        if (hasLeadingColon) {
+            return ":---";
+        }
+        if (hasTrailingColon) {
+            return "---:";
+        }
+        return "---";
     }
 
     private static class AskContext {

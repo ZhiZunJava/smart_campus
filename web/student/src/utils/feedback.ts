@@ -1,4 +1,4 @@
-import { defineComponent, h, isVNode, type VNode } from 'vue'
+import { defineComponent, h, isVNode, markRaw, type VNode } from 'vue'
 import {
   ElMessage as BaseMessage,
   ElMessageBox as BaseMessageBox,
@@ -9,12 +9,12 @@ import type { ElMessageBoxOptions } from 'element-plus'
 type FeedbackType = 'success' | 'warning' | 'info' | 'error'
 
 const createRemixIcon = (name: string, className: string) =>
-  defineComponent({
+  markRaw(defineComponent({
     name,
     setup() {
       return () => h('i', { class: ['portal-feedback-remix-icon', className], 'aria-hidden': 'true' })
     },
-  })
+  }))
 
 const feedbackTypeIcons: Record<FeedbackType, ReturnType<typeof createRemixIcon>> = {
   success: createRemixIcon('PortalFeedbackSuccessIcon', 'ri-checkbox-circle-fill'),
@@ -24,6 +24,13 @@ const feedbackTypeIcons: Record<FeedbackType, ReturnType<typeof createRemixIcon>
 }
 
 const feedbackCloseIcon = createRemixIcon('PortalFeedbackCloseIcon', 'ri-close-line')
+
+function normalizeComponentOption<T>(value: T): T {
+  if (value && (typeof value === 'object' || typeof value === 'function')) {
+    return markRaw(value as object) as T
+  }
+  return value
+}
 
 function normalizeType(type?: string): FeedbackType | undefined {
   if (type === 'success' || type === 'warning' || type === 'info' || type === 'error') {
@@ -51,7 +58,7 @@ function normalizeMessageParams(params: any, forcedType?: FeedbackType) {
     return {
       message: params,
       type: forcedType,
-      icon: forcedType ? feedbackTypeIcons[forcedType] : undefined,
+      icon: forcedType ? normalizeComponentOption(feedbackTypeIcons[forcedType]) : undefined,
       customClass: 'portal-feedback-message',
     }
   }
@@ -60,7 +67,7 @@ function normalizeMessageParams(params: any, forcedType?: FeedbackType) {
   return {
     ...params,
     type,
-    icon: params?.icon || (type ? feedbackTypeIcons[type] : undefined),
+    icon: normalizeComponentOption(params?.icon || (type ? feedbackTypeIcons[type] : undefined)),
     customClass: mergeCustomClass(params?.customClass, 'portal-feedback-message'),
   }
 }
@@ -70,8 +77,8 @@ function normalizeNotificationParams(params: any, forcedType?: FeedbackType) {
     return {
       message: params,
       type: forcedType,
-      icon: forcedType ? feedbackTypeIcons[forcedType] : undefined,
-      closeIcon: feedbackCloseIcon,
+      icon: forcedType ? normalizeComponentOption(feedbackTypeIcons[forcedType]) : undefined,
+      closeIcon: normalizeComponentOption(feedbackCloseIcon),
       customClass: 'portal-feedback-notification',
     }
   }
@@ -80,8 +87,8 @@ function normalizeNotificationParams(params: any, forcedType?: FeedbackType) {
   return {
     ...params,
     type,
-    icon: params?.icon || (type ? feedbackTypeIcons[type] : undefined),
-    closeIcon: params?.closeIcon || feedbackCloseIcon,
+    icon: normalizeComponentOption(params?.icon || (type ? feedbackTypeIcons[type] : undefined)),
+    closeIcon: normalizeComponentOption(params?.closeIcon || feedbackCloseIcon),
     customClass: mergeCustomClass(params?.customClass, 'portal-feedback-notification'),
   }
 }
@@ -91,8 +98,8 @@ function normalizeMessageBoxOptions(options?: ElMessageBoxOptions, forcedType?: 
   return {
     ...options,
     type,
-    icon: options?.icon || (type ? feedbackTypeIcons[type] : undefined),
-    closeIcon: options?.closeIcon || feedbackCloseIcon,
+    icon: normalizeComponentOption(options?.icon || (type ? feedbackTypeIcons[type] : undefined)),
+    closeIcon: normalizeComponentOption(options?.closeIcon || feedbackCloseIcon),
     customClass: mergeCustomClass(options?.customClass, 'portal-feedback-message-box'),
   }
 }

@@ -18,7 +18,12 @@ public class ScResource extends BaseEntity {
     private String resourceType;
     private Long courseId;
     private Long chapterId;
+    private Long nodeId;
+    private Integer sortNo;
     private Long uploaderId;
+    private String authorName;
+    private String publisherName;
+    private String targetUserType;
     private String fileUrl;
     private String coverUrl;
     private String contentText;
@@ -27,7 +32,14 @@ public class ScResource extends BaseEntity {
     private Integer viewCount;
     private Integer downloadCount;
     private Integer favoriteCount;
+    private String allowComment;
+    private String allowRating;
+    private String allowShare;
     private BigDecimal qualityScore;
+    private BigDecimal avgRating;
+    private Integer ratingCount;
+    private Integer commentCount;
+    private Integer shareCount;
     private String status;
 
     public Long getResourceId() {
@@ -70,12 +82,52 @@ public class ScResource extends BaseEntity {
         this.chapterId = chapterId;
     }
 
+    public Long getNodeId() {
+        return nodeId;
+    }
+
+    public void setNodeId(Long nodeId) {
+        this.nodeId = nodeId;
+    }
+
+    public Integer getSortNo() {
+        return sortNo;
+    }
+
+    public void setSortNo(Integer sortNo) {
+        this.sortNo = sortNo;
+    }
+
     public Long getUploaderId() {
         return uploaderId;
     }
 
     public void setUploaderId(Long uploaderId) {
         this.uploaderId = uploaderId;
+    }
+
+    public String getAuthorName() {
+        return authorName;
+    }
+
+    public void setAuthorName(String authorName) {
+        this.authorName = authorName;
+    }
+
+    public String getPublisherName() {
+        return publisherName;
+    }
+
+    public void setPublisherName(String publisherName) {
+        this.publisherName = publisherName;
+    }
+
+    public String getTargetUserType() {
+        return targetUserType;
+    }
+
+    public void setTargetUserType(String targetUserType) {
+        this.targetUserType = targetUserType;
     }
 
     public String getFileUrl() {
@@ -142,12 +194,68 @@ public class ScResource extends BaseEntity {
         this.favoriteCount = favoriteCount;
     }
 
+    public String getAllowComment() {
+        return allowComment;
+    }
+
+    public void setAllowComment(String allowComment) {
+        this.allowComment = allowComment;
+    }
+
+    public String getAllowRating() {
+        return allowRating;
+    }
+
+    public void setAllowRating(String allowRating) {
+        this.allowRating = allowRating;
+    }
+
+    public String getAllowShare() {
+        return allowShare;
+    }
+
+    public void setAllowShare(String allowShare) {
+        this.allowShare = allowShare;
+    }
+
     public BigDecimal getQualityScore() {
         return qualityScore;
     }
 
     public void setQualityScore(BigDecimal qualityScore) {
         this.qualityScore = qualityScore;
+    }
+
+    public BigDecimal getAvgRating() {
+        return avgRating;
+    }
+
+    public void setAvgRating(BigDecimal avgRating) {
+        this.avgRating = avgRating;
+    }
+
+    public Integer getRatingCount() {
+        return ratingCount;
+    }
+
+    public void setRatingCount(Integer ratingCount) {
+        this.ratingCount = ratingCount;
+    }
+
+    public Integer getCommentCount() {
+        return commentCount;
+    }
+
+    public void setCommentCount(Integer commentCount) {
+        this.commentCount = commentCount;
+    }
+
+    public Integer getShareCount() {
+        return shareCount;
+    }
+
+    public void setShareCount(Integer shareCount) {
+        this.shareCount = shareCount;
     }
 
     public String getStatus() {
@@ -166,7 +274,12 @@ public class ScResource extends BaseEntity {
                 .append("resourceType", getResourceType())
                 .append("courseId", getCourseId())
                 .append("chapterId", getChapterId())
+                .append("nodeId", getNodeId())
+                .append("sortNo", getSortNo())
                 .append("uploaderId", getUploaderId())
+                .append("authorName", getAuthorName())
+                .append("publisherName", getPublisherName())
+                .append("targetUserType", getTargetUserType())
                 .append("fileUrl", getFileUrl())
                 .append("coverUrl", getCoverUrl())
                 .append("contentText", getContentText())
@@ -175,7 +288,14 @@ public class ScResource extends BaseEntity {
                 .append("viewCount", getViewCount())
                 .append("downloadCount", getDownloadCount())
                 .append("favoriteCount", getFavoriteCount())
+                .append("allowComment", getAllowComment())
+                .append("allowRating", getAllowRating())
+                .append("allowShare", getAllowShare())
                 .append("qualityScore", getQualityScore())
+                .append("avgRating", getAvgRating())
+                .append("ratingCount", getRatingCount())
+                .append("commentCount", getCommentCount())
+                .append("shareCount", getShareCount())
                 .append("status", getStatus())
                 .append("createBy", getCreateBy())
                 .append("createTime", getCreateTime())
