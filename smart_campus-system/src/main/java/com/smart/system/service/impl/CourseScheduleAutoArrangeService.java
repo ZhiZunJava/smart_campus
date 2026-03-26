@@ -33,6 +33,9 @@ import com.smart.system.service.ISysConfigService;
 @Service
 public class CourseScheduleAutoArrangeService {
     private static final String CONFIG_KEY = "campus.schedule.timeTableLayout";
+    private static final long VIRTUAL_OPEN_SPACE_CLASSROOM_ID = -1L;
+    private static final String VIRTUAL_OPEN_SPACE_CLASSROOM_NAME = "空场地";
+    private static final String VIRTUAL_OPEN_SPACE_ROOM_TYPE = "OPEN_SPACE";
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -77,6 +80,10 @@ public class CourseScheduleAutoArrangeService {
                                 .thenComparing(
                                         item -> item.getClassroomId() == null ? Long.MAX_VALUE : item.getClassroomId()))
                         .collect(Collectors.toList());
+        if (hasVirtualOpenSpaceSelection(itemConfigMap)) {
+            activeClassrooms = new ArrayList<>(activeClassrooms);
+            activeClassrooms.add(createVirtualOpenSpaceClassroom());
+        }
         if (activeClassrooms.isEmpty()) {
             throw new ServiceException("当前没有可用教室，无法自动排课");
         }
@@ -90,8 +97,8 @@ public class CourseScheduleAutoArrangeService {
                         .filter(item -> item != null && Objects.equals(item.getTermId(), request.getTermId()))
                         .collect(Collectors.toList());
 
-        Map<Long, Integer> existingWeeklySections = calculateExistingWeeklySections(termExistingSchedules);
-        List<LessonTask> lessonTasks = buildLessonTasks(classCourses, requestedCourseIds, existingWeeklySections, term,
+        Map<Long, Integer> existingArrangedHours = calculateExistingArrangedHours(termExistingSchedules);
+        List<LessonTask> lessonTasks = buildLessonTasks(classCourses, requestedCourseIds, existingArrangedHours, term,
                 activeClassrooms, itemConfigMap, preferredDurations, excludedWeekDays, excludedDayParts);
 
         CourseScheduleAutoArrangeVo result = new CourseScheduleAutoArrangeVo();
@@ -170,20 +177,29 @@ public class CourseScheduleAutoArrangeService {
             Long classroomId = item.get("classroomId") == null ? null
                     : Long.parseLong(String.valueOf(item.get("classroomId")));
             ScClassroom classroom = classroomMap.get(classroomId);
-            if (classCourse == null || classroom == null) {
+            if (classCourse == null) {
                 continue;
             }
             ScCourseSchedule schedule = new ScCourseSchedule();
             schedule.setTermId(term.getTermId());
             schedule.setClassCourseId(classCourseId);
-            schedule.setClassroomId(classroomId);
             schedule.setWeekDay(Integer.parseInt(String.valueOf(item.get("weekDay"))));
             schedule.setStartSection(Integer.parseInt(String.valueOf(item.get("startSection"))));
             schedule.setEndSection(Integer.parseInt(String.valueOf(item.get("endSection"))));
-            schedule.setClassroom(classroom.getClassroomName());
-            schedule.setClassroomName(classroom.getClassroomName());
-            schedule.setBuildingName(classroom.getBuildingName());
-            schedule.setCampusName(classroom.getCampusName());
+            if (isVirtualOpenSpaceClassroomId(classroomId)) {
+                schedule.setClassroomId(null);
+                schedule.setClassroom(VIRTUAL_OPEN_SPACE_CLASSROOM_NAME);
+                schedule.setClassroomName(VIRTUAL_OPEN_SPACE_CLASSROOM_NAME);
+                schedule.setCampusName(classCourse.getCampusName());
+            } else if (classroom != null) {
+                schedule.setClassroomId(classroomId);
+                schedule.setClassroom(classroom.getClassroomName());
+                schedule.setClassroomName(classroom.getClassroomName());
+                schedule.setBuildingName(classroom.getBuildingName());
+                schedule.setCampusName(classroom.getCampusName());
+            } else {
+                continue;
+            }
             String weeksText = StringUtils.defaultIfEmpty(String.valueOf(item.get("weeksText")), buildWeeksText(classCourse, term));
             if ("null".equalsIgnoreCase(weeksText)) {
                 weeksText = buildWeeksText(classCourse, term);
@@ -266,7 +282,7 @@ public class CourseScheduleAutoArrangeService {
                 .collect(Collectors.toList());
     }
 
-    private Map<Long, Integer> calculateExistingWeeklySections(List<ScCourseSchedule> existingSchedules) {
+    private Map<Long, Integer> calculateExistingArrangedHours(List<ScCourseSchedule> existingSchedules) {
         Map<Long, Integer> result = new HashMap<>();
         for (ScCourseSchedule item : existingSchedules) {
             if (item == null || !"0".equals(StringUtils.defaultIfEmpty(item.getStatus(), "0"))
@@ -276,14 +292,15 @@ public class CourseScheduleAutoArrangeService {
             int start = item.getStartSection() == null ? 0 : item.getStartSection();
             int end = item.getEndSection() == null ? start : item.getEndSection();
             int duration = Math.max(1, end - start + 1);
-            result.merge(item.getClassCourseId(), duration, Integer::sum);
+            int weekCount = Math.max(extractWeeks(item.getWeeksText()).size(), 1);
+            result.merge(item.getClassCourseId(), duration * weekCount, Integer::sum);
         }
         return result;
     }
 
     private List<LessonTask> buildLessonTasks(List<ScClassCourse> classCourses,
             Set<Long> requestedCourseIds,
-            Map<Long, Integer> existingWeeklySections,
+            Map<Long, Integer> existingArrangedHours,
             ScSchoolTerm term,
             List<ScClassroom> classrooms,
             Map<Long, CourseScheduleAutoArrangeItemDto> itemConfigMap,
@@ -294,6 +311,7 @@ public class CourseScheduleAutoArrangeService {
         if (classCourses == null) {
             return tasks;
         }
+        Map<String, Integer> selectionGroupOptionCountMap = buildSelectionGroupOptionCountMap(classCourses, term);
         for (ScClassCourse item : classCourses) {
             if (item == null || !"0".equals(StringUtils.defaultIfEmpty(item.getStatus(), "0"))) {
                 continue;
@@ -325,53 +343,62 @@ public class CourseScheduleAutoArrangeService {
                         .map(value -> value.trim().toUpperCase())
                         .collect(Collectors.toCollection(LinkedHashSet::new)));
             }
-            int weeklySections = resolveWeeklySections(item, term);
+            List<Integer> configuredWeeks = resolveConfiguredWeeks(itemConfig, item, term);
+            int weekCount = Math.max(configuredWeeks.size(), 1);
+            int weeklySections = resolveWeeklySections(item, term, weekCount);
             if (itemConfig != null && itemConfig.getMaxWeeklySections() != null
                     && itemConfig.getMaxWeeklySections() > 0) {
                 weeklySections = Math.min(weeklySections, itemConfig.getMaxWeeklySections());
             }
-            int scheduledSections = existingWeeklySections.getOrDefault(item.getId(), 0);
-            int remainSections = Math.max(weeklySections - scheduledSections, 0);
-            if (remainSections <= 0) {
+            int targetArrangeHours = resolveTargetArrangeHours(item, weeklySections, weekCount);
+            int alreadyArrangedHours = existingArrangedHours.getOrDefault(item.getId(), 0);
+            int remainArrangeHours = Math.max(targetArrangeHours - alreadyArrangedHours, 0);
+            int scheduleCapacityHours = Math.max(weeklySections, 0) * weekCount;
+            int arrangeHours = Math.min(remainArrangeHours, scheduleCapacityHours);
+            if (arrangeHours <= 0) {
                 continue;
             }
 
             Long assignedClassroomId = itemConfig != null ? itemConfig.getClassroomId() : null;
-            List<Integer> durations = splitDurations(remainSections, preferredDurations);
+            int estimatedStudentCount = resolveStudentCount(item,
+                    resolveSelectionGroupOptionCount(item, selectionGroupOptionCountMap));
+            List<LessonTaskSeed> taskSeeds = buildTaskSeeds(arrangeHours, weeklySections, configuredWeeks, preferredDurations);
             List<Long> preferredClassrooms;
-            if (assignedClassroomId != null) {
+            if (isVirtualOpenSpaceClassroomId(assignedClassroomId)) {
+                preferredClassrooms = Collections.singletonList(VIRTUAL_OPEN_SPACE_CLASSROOM_ID);
+            } else if (assignedClassroomId != null) {
                 preferredClassrooms = Collections.singletonList(assignedClassroomId);
             } else {
-                preferredClassrooms = resolvePreferredClassrooms(item, classrooms);
+                preferredClassrooms = resolvePreferredClassrooms(item, classrooms, estimatedStudentCount);
             }
-            String weeksText = itemConfig != null && StringUtils.isNotEmpty(itemConfig.getWeeksText())
-                    ? normalizeWeeksText(itemConfig.getWeeksText())
-                    : buildWeeksText(item, term);
             int sequence = 1;
-            for (Integer duration : durations) {
+            for (LessonTaskSeed seed : taskSeeds) {
                 LessonTask task = new LessonTask();
                 task.taskId = item.getId() + "-" + sequence;
                 task.classCourseId = item.getId();
                 task.classId = item.getClassId();
+                task.courseId = item.getCourseId();
                 task.className = item.getClassName();
-                task.courseName = item.getCourseName();
+                task.courseName = resolveDisplayedCourseName(item);
                 task.courseCategory = item.getCourseCategory();
                 task.teacherId = item.getTeacherId();
                 task.teacherName = item.getTeacherName();
                 task.campusName = item.getCampusName();
                 task.openDeptId = item.getOpenDeptId();
-                task.expectedDuration = duration;
-                task.studentCount = resolveStudentCount(item);
-                task.weeksText = weeksText;
+                task.expectedDuration = seed.duration;
+                task.studentCount = estimatedStudentCount;
+                task.weeksText = seed.weeksText;
                 task.preferredClassroomIds = preferredClassrooms;
                 task.fixedClassroom = assignedClassroomId != null;
                 task.excludedWeekDays = excludedWeekDays;
                 task.excludedDayParts = excludedDayParts;
+                task.selectionGroupCode = normalizeSelectionGroupCode(item.getSelectionGroupCode());
+                task.selectionGroupLimit = normalizeSelectionGroupLimit(item.getSelectionGroupLimit());
                 task.priorityScore = (item.getRequiredFlag() != null && "Y".equalsIgnoreCase(item.getRequiredFlag())
                         ? 10
                         : 0)
                         + Math.max(task.studentCount, 0)
-                        + Math.max(remainSections, 0) * 2
+                        + Math.max(arrangeHours, 0) * 2
                         + (assignedClassroomId != null ? 20 : 0);
                 tasks.add(task);
                 sequence++;
@@ -383,7 +410,11 @@ public class CourseScheduleAutoArrangeService {
         return tasks;
     }
 
-    private int resolveWeeklySections(ScClassCourse item, ScSchoolTerm term) {
+    private int resolveWeeklySections(ScClassCourse item, ScSchoolTerm term, int weekCount) {
+        int effectiveWeekCount = Math.max(weekCount, 1);
+        if (item.getTotalHours() != null && item.getTotalHours() > 0) {
+            return Math.max(1, (int) Math.ceil(item.getTotalHours() * 1D / effectiveWeekCount));
+        }
         if (item.getWeeklyHours() != null && item.getWeeklyHours() > 0) {
             return item.getWeeklyHours();
         }
@@ -394,6 +425,13 @@ public class CourseScheduleAutoArrangeService {
             return Math.max(1, (int) Math.ceil(item.getTotalHours() * 1D / requiredWeeks));
         }
         return 0;
+    }
+
+    private int resolveTargetArrangeHours(ScClassCourse item, int weeklySections, int weekCount) {
+        if (item.getTotalHours() != null && item.getTotalHours() > 0) {
+            return item.getTotalHours();
+        }
+        return Math.max(weeklySections, 0) * Math.max(weekCount, 1);
     }
 
     private List<Integer> splitDurations(int remainSections, List<Integer> preferredDurations) {
@@ -416,7 +454,47 @@ public class CourseScheduleAutoArrangeService {
         return durations;
     }
 
-    private int resolveStudentCount(ScClassCourse item) {
+    private List<LessonTaskSeed> buildTaskSeeds(int arrangeHours,
+            int weeklySections,
+            List<Integer> configuredWeeks,
+            List<Integer> preferredDurations) {
+        List<LessonTaskSeed> result = new ArrayList<>();
+        if (arrangeHours <= 0 || configuredWeeks == null || configuredWeeks.isEmpty() || weeklySections <= 0) {
+            return result;
+        }
+        int weekCount = configuredWeeks.size();
+        int fullWeekSections = Math.min(weeklySections, arrangeHours / weekCount);
+        String fullWeeksText = buildWeeksText(configuredWeeks);
+        for (Integer duration : splitDurations(fullWeekSections, preferredDurations)) {
+            result.add(new LessonTaskSeed(duration, fullWeeksText));
+        }
+
+        int remainderHours = arrangeHours - fullWeekSections * weekCount;
+        if (remainderHours > 0 && weeklySections > fullWeekSections) {
+            List<Integer> partialWeeks = new ArrayList<>(configuredWeeks.subList(0, Math.min(remainderHours, weekCount)));
+            if (!partialWeeks.isEmpty()) {
+                result.add(new LessonTaskSeed(1, buildWeeksText(partialWeeks)));
+            }
+        }
+        return result;
+    }
+
+    private int resolveStudentCount(ScClassCourse item, int selectionGroupOptionCount) {
+        int baseStudentCount = resolveBaseStudentCount(item);
+        if (baseStudentCount <= 0 || selectionGroupOptionCount <= 1) {
+            return baseStudentCount;
+        }
+        String groupKey = buildSelectionGroupKey(item);
+        if (StringUtils.isEmpty(groupKey)) {
+            return baseStudentCount;
+        }
+        int groupLimit = Math.max(1,
+                Math.min(normalizeSelectionGroupLimit(item.getSelectionGroupLimit()), selectionGroupOptionCount));
+        int estimatedStudentCount = (int) Math.ceil(baseStudentCount * groupLimit * 1D / selectionGroupOptionCount);
+        return Math.max(1, Math.min(baseStudentCount, estimatedStudentCount));
+    }
+
+    private int resolveBaseStudentCount(ScClassCourse item) {
         if (item.getActualStudentCount() != null && item.getActualStudentCount() > 0) {
             return item.getActualStudentCount();
         }
@@ -426,9 +504,38 @@ public class CourseScheduleAutoArrangeService {
         return 0;
     }
 
-    private List<Long> resolvePreferredClassrooms(ScClassCourse item, List<ScClassroom> classrooms) {
-        int studentCount = resolveStudentCount(item);
+    private Map<String, Integer> buildSelectionGroupOptionCountMap(List<ScClassCourse> classCourses, ScSchoolTerm term) {
+        Map<String, Integer> result = new HashMap<>();
+        if (classCourses == null || term == null || term.getTermId() == null) {
+            return result;
+        }
+        for (ScClassCourse item : classCourses) {
+            if (item == null || !"0".equals(StringUtils.defaultIfEmpty(item.getStatus(), "0"))) {
+                continue;
+            }
+            if (!Objects.equals(item.getTermId(), term.getTermId())) {
+                continue;
+            }
+            String groupKey = buildSelectionGroupKey(item);
+            if (StringUtils.isEmpty(groupKey)) {
+                continue;
+            }
+            result.merge(groupKey, 1, Integer::sum);
+        }
+        return result;
+    }
+
+    private int resolveSelectionGroupOptionCount(ScClassCourse item, Map<String, Integer> selectionGroupOptionCountMap) {
+        String groupKey = buildSelectionGroupKey(item);
+        if (StringUtils.isEmpty(groupKey) || selectionGroupOptionCountMap == null) {
+            return 0;
+        }
+        return selectionGroupOptionCountMap.getOrDefault(groupKey, 0);
+    }
+
+    private List<Long> resolvePreferredClassrooms(ScClassCourse item, List<ScClassroom> classrooms, int studentCount) {
         List<Long> preferred = classrooms.stream()
+                .filter(room -> !isVirtualOpenSpaceClassroom(room))
                 .filter(room -> room.getClassroomId() != null)
                 .filter(room -> room.getCapacity() == null || room.getCapacity() <= 0 || studentCount <= 0
                         || room.getCapacity() >= studentCount)
@@ -444,7 +551,9 @@ public class CourseScheduleAutoArrangeService {
         if (!preferred.isEmpty()) {
             return preferred;
         }
-        return classrooms.stream().map(ScClassroom::getClassroomId).filter(Objects::nonNull)
+        return classrooms.stream()
+                .filter(room -> !isVirtualOpenSpaceClassroom(room))
+                .map(ScClassroom::getClassroomId).filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
 
@@ -532,6 +641,59 @@ public class CourseScheduleAutoArrangeService {
             return "1周";
         }
         return "1-" + requiredWeeks + "周";
+    }
+
+    private String buildWeeksText(List<Integer> weeks) {
+        if (weeks == null || weeks.isEmpty()) {
+            return "";
+        }
+        List<Integer> sortedWeeks = weeks.stream().filter(Objects::nonNull).distinct().sorted().collect(Collectors.toList());
+        if (sortedWeeks.isEmpty()) {
+            return "";
+        }
+        List<String> segments = new ArrayList<>();
+        int start = sortedWeeks.get(0);
+        int previous = start;
+        for (int index = 1; index < sortedWeeks.size(); index++) {
+            int current = sortedWeeks.get(index);
+            if (current == previous + 1) {
+                previous = current;
+                continue;
+            }
+            segments.add(formatWeekSegment(start, previous));
+            start = current;
+            previous = current;
+        }
+        segments.add(formatWeekSegment(start, previous));
+        return String.join(",", segments);
+    }
+
+    private String formatWeekSegment(int start, int end) {
+        return start == end ? start + "周" : start + "-" + end + "周";
+    }
+
+    private List<Integer> resolveConfiguredWeeks(CourseScheduleAutoArrangeItemDto itemConfig,
+            ScClassCourse item,
+            ScSchoolTerm term) {
+        if (itemConfig != null && StringUtils.isNotEmpty(itemConfig.getWeeksJson())) {
+            try {
+                List<Integer> weeks = objectMapper.readValue(itemConfig.getWeeksJson(), new TypeReference<List<Integer>>() {
+                });
+                List<Integer> normalized = weeks.stream()
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .sorted()
+                        .collect(Collectors.toList());
+                if (!normalized.isEmpty()) {
+                    return normalized;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        String weeksText = itemConfig != null && StringUtils.isNotEmpty(itemConfig.getWeeksText())
+                ? normalizeWeeksText(itemConfig.getWeeksText())
+                : buildWeeksText(item, term);
+        return extractWeeks(weeksText).stream().sorted().collect(Collectors.toList());
     }
 
     private String buildWeeksJsonFromText(String weeksText) {
@@ -821,6 +983,12 @@ public class CourseScheduleAutoArrangeService {
         if (!preferred.isEmpty()) {
             return preferred.get(random.nextInt(preferred.size()));
         }
+        List<ScClassroom> assignableClassrooms = classrooms.stream()
+                .filter(room -> !isVirtualOpenSpaceClassroom(room))
+                .collect(Collectors.toList());
+        if (!assignableClassrooms.isEmpty()) {
+            return assignableClassrooms.get(random.nextInt(assignableClassrooms.size())).getClassroomId();
+        }
         return classrooms.get(random.nextInt(classrooms.size())).getClassroomId();
     }
 
@@ -837,7 +1005,7 @@ public class CourseScheduleAutoArrangeService {
 
         double score = 0D;
         Map<String, List<LessonAssignment>> slotMap = new HashMap<>();
-        Map<Long, Integer> classDailyCount = new HashMap<>();
+        Map<Long, Set<Integer>> classDailySections = new HashMap<>();
         Map<Long, Set<Integer>> classDays = new HashMap<>();
         Map<Long, Integer> classCourseDailyCount = new HashMap<>();
 
@@ -865,9 +1033,13 @@ public class CourseScheduleAutoArrangeService {
             if (room == null) {
                 score -= 180D;
             } else {
-                if (task.studentCount > 0 && room.getCapacity() != null && room.getCapacity() > 0
+                if (!isVirtualOpenSpaceClassroom(room)
+                        && task.studentCount > 0 && room.getCapacity() != null && room.getCapacity() > 0
                         && room.getCapacity() < task.studentCount) {
                     score -= (task.studentCount - room.getCapacity()) * 6D;
+                }
+                if (isVirtualOpenSpaceClassroom(room)) {
+                    score += 4D;
                 }
                 if (sameCampus(task, room)) {
                     score += 8D;
@@ -885,7 +1057,11 @@ public class CourseScheduleAutoArrangeService {
 
             if (task.classId != null) {
                 long classDailyKey = task.classId * 10 + assignment.weekDay;
-                classDailyCount.merge(classDailyKey, assignment.getDuration(), Integer::sum);
+                Set<Integer> occupiedSections = classDailySections.computeIfAbsent(classDailyKey,
+                        key -> new LinkedHashSet<>());
+                for (int section = assignment.startSection; section <= assignment.endSection; section++) {
+                    occupiedSections.add(section);
+                }
                 classDays.computeIfAbsent(task.classId, key -> new LinkedHashSet<>()).add(assignment.weekDay);
             }
             if (task.classCourseId != null) {
@@ -901,15 +1077,25 @@ public class CourseScheduleAutoArrangeService {
                 for (int rightIndex = leftIndex + 1; rightIndex < sameSlotAssignments.size(); rightIndex++) {
                     LessonAssignment right = sameSlotAssignments.get(rightIndex);
                     LessonTask rightTask = taskMap.get(right.taskId);
-                    if (left.classroomId != null && left.classroomId.equals(right.classroomId)) {
+                    if (leftTask != null && rightTask != null
+                            && !isWeekOverlap(leftTask.weeksText, rightTask.weeksText)) {
+                        continue;
+                    }
+                    if (left.classroomId != null && left.classroomId.equals(right.classroomId)
+                            && !isVirtualOpenSpaceClassroomId(left.classroomId)) {
                         score -= 260D;
                     }
                     if (leftTask != null && rightTask != null) {
                         if (leftTask.teacherId != null && leftTask.teacherId.equals(rightTask.teacherId)) {
                             score -= 250D;
                         }
-                        if (leftTask.classId != null && leftTask.classId.equals(rightTask.classId)) {
+                        boolean allowParallelSelectionGroup = canParallelSelectionGroup(leftTask, rightTask);
+                        if (leftTask.classId != null && leftTask.classId.equals(rightTask.classId)
+                                && !allowParallelSelectionGroup) {
                             score -= 280D;
+                        }
+                        if (allowParallelSelectionGroup) {
+                            score += 36D;
                         }
                         if (leftTask.classCourseId != null && leftTask.classCourseId.equals(rightTask.classCourseId)) {
                             score -= 60D;
@@ -919,9 +1105,9 @@ public class CourseScheduleAutoArrangeService {
             }
         }
 
-        for (Map.Entry<Long, Integer> entry : classDailyCount.entrySet()) {
-            if (entry.getValue() > 6) {
-                score -= (entry.getValue() - 6) * 12D;
+        for (Set<Integer> sections : classDailySections.values()) {
+            if (sections.size() > 6) {
+                score -= (sections.size() - 6) * 12D;
             }
         }
         for (Set<Integer> days : classDays.values()) {
@@ -952,7 +1138,8 @@ public class CourseScheduleAutoArrangeService {
                 if (!isWeekOverlap(task.weeksText, locked.getWeeksText())) {
                     continue;
                 }
-                if (assignment.classroomId != null && assignment.classroomId.equals(locked.getClassroomId())) {
+                if (assignment.classroomId != null && assignment.classroomId.equals(locked.getClassroomId())
+                        && !isVirtualOpenSpaceClassroomId(assignment.classroomId)) {
                     score -= 280D;
                 }
                 ScClassCourse lockedClassCourse = classCourseMap.get(locked.getClassCourseId());
@@ -960,7 +1147,8 @@ public class CourseScheduleAutoArrangeService {
                     if (task.teacherId != null && task.teacherId.equals(lockedClassCourse.getTeacherId())) {
                         score -= 250D;
                     }
-                    if (task.classId != null && task.classId.equals(lockedClassCourse.getClassId())) {
+                    if (task.classId != null && task.classId.equals(lockedClassCourse.getClassId())
+                            && !canParallelSelectionGroup(task, lockedClassCourse)) {
                         score -= 280D;
                     }
                 }
@@ -1084,11 +1272,13 @@ public class CourseScheduleAutoArrangeService {
         if (room == null) {
             return false;
         }
-        if (task.studentCount > 0 && room.getCapacity() != null && room.getCapacity() > 0
+        if (!isVirtualOpenSpaceClassroom(room)
+                && task.studentCount > 0 && room.getCapacity() != null && room.getCapacity() > 0
                 && room.getCapacity() < task.studentCount) {
             return false;
         }
-        if ((StringUtils.contains(StringUtils.defaultIfEmpty(task.courseCategory, ""), "实训")
+        if (!isVirtualOpenSpaceClassroom(room)
+                && (StringUtils.contains(StringUtils.defaultIfEmpty(task.courseCategory, ""), "实训")
                 || StringUtils.contains(StringUtils.defaultIfEmpty(task.courseCategory, ""), "实验"))
                 && StringUtils.isNotEmpty(room.getRoomType())
                 && !(StringUtils.contains(room.getRoomType(), "实验室")
@@ -1107,13 +1297,18 @@ public class CourseScheduleAutoArrangeService {
             if (current == null) {
                 continue;
             }
-            if (assignment.classroomId != null && assignment.classroomId.equals(item.classroomId)) {
+            if (!isWeekOverlap(task.weeksText, current.weeksText)) {
+                continue;
+            }
+            if (assignment.classroomId != null && assignment.classroomId.equals(item.classroomId)
+                    && !isVirtualOpenSpaceClassroomId(assignment.classroomId)) {
                 return false;
             }
             if (task.teacherId != null && task.teacherId.equals(current.teacherId)) {
                 return false;
             }
-            if (task.classId != null && task.classId.equals(current.classId)) {
+            if (task.classId != null && task.classId.equals(current.classId)
+                    && !canParallelSelectionGroup(task, current)) {
                 return false;
             }
         }
@@ -1132,7 +1327,8 @@ public class CourseScheduleAutoArrangeService {
             if (!isWeekOverlap(task.weeksText, locked.getWeeksText())) {
                 continue;
             }
-            if (assignment.classroomId != null && assignment.classroomId.equals(locked.getClassroomId())) {
+            if (assignment.classroomId != null && assignment.classroomId.equals(locked.getClassroomId())
+                    && !isVirtualOpenSpaceClassroomId(assignment.classroomId)) {
                 return false;
             }
             ScClassCourse lockedClassCourse = classCourseMap.get(locked.getClassCourseId());
@@ -1140,7 +1336,8 @@ public class CourseScheduleAutoArrangeService {
                 if (task.teacherId != null && task.teacherId.equals(lockedClassCourse.getTeacherId())) {
                     return false;
                 }
-                if (task.classId != null && task.classId.equals(lockedClassCourse.getClassId())) {
+                if (task.classId != null && task.classId.equals(lockedClassCourse.getClassId())
+                        && !canParallelSelectionGroup(task, lockedClassCourse)) {
                     return false;
                 }
             }
@@ -1168,6 +1365,39 @@ public class CourseScheduleAutoArrangeService {
             result.add(item);
         }
         return result;
+    }
+
+    private boolean canParallelSelectionGroup(LessonTask leftTask, LessonTask rightTask) {
+        if (leftTask == null || rightTask == null) {
+            return false;
+        }
+        if (!Objects.equals(leftTask.classId, rightTask.classId) || !Objects.equals(leftTask.courseId, rightTask.courseId)) {
+            return false;
+        }
+        String leftGroupKey = buildSelectionGroupKey(leftTask.classId, leftTask.courseId, leftTask.selectionGroupCode);
+        String rightGroupKey = buildSelectionGroupKey(rightTask.classId, rightTask.courseId, rightTask.selectionGroupCode);
+        if (StringUtils.isEmpty(leftGroupKey) || !leftGroupKey.equals(rightGroupKey)) {
+            return false;
+        }
+        return normalizeSelectionGroupLimit(leftTask.selectionGroupLimit) == 1
+                && normalizeSelectionGroupLimit(rightTask.selectionGroupLimit) == 1;
+    }
+
+    private boolean canParallelSelectionGroup(LessonTask task, ScClassCourse classCourse) {
+        if (task == null || classCourse == null) {
+            return false;
+        }
+        if (!Objects.equals(task.classId, classCourse.getClassId()) || !Objects.equals(task.courseId, classCourse.getCourseId())) {
+            return false;
+        }
+        String taskGroupKey = buildSelectionGroupKey(task.classId, task.courseId, task.selectionGroupCode);
+        String classCourseGroupKey = buildSelectionGroupKey(classCourse.getClassId(), classCourse.getCourseId(),
+                classCourse.getSelectionGroupCode());
+        if (StringUtils.isEmpty(taskGroupKey) || !taskGroupKey.equals(classCourseGroupKey)) {
+            return false;
+        }
+        return normalizeSelectionGroupLimit(task.selectionGroupLimit) == 1
+                && normalizeSelectionGroupLimit(classCourse.getSelectionGroupLimit()) == 1;
     }
 
     private Map<String, Object> buildArrangedLessonMap(LessonAssignment assignment, ScSchoolTerm term,
@@ -1211,6 +1441,10 @@ public class CourseScheduleAutoArrangeService {
         if (task == null || classroom == null) {
             return reasons;
         }
+        if (isVirtualOpenSpaceClassroom(classroom)) {
+            reasons.add("空场地");
+            return reasons;
+        }
         if (sameDept(task, classroom)) {
             reasons.add("同部门优先");
         }
@@ -1227,6 +1461,35 @@ public class CourseScheduleAutoArrangeService {
             reasons.add("容量可承载");
         }
         return reasons;
+    }
+
+    private boolean hasVirtualOpenSpaceSelection(Map<Long, CourseScheduleAutoArrangeItemDto> itemConfigMap) {
+        if (itemConfigMap == null || itemConfigMap.isEmpty()) {
+            return false;
+        }
+        return itemConfigMap.values().stream()
+                .filter(Objects::nonNull)
+                .map(CourseScheduleAutoArrangeItemDto::getClassroomId)
+                .anyMatch(this::isVirtualOpenSpaceClassroomId);
+    }
+
+    private ScClassroom createVirtualOpenSpaceClassroom() {
+        ScClassroom classroom = new ScClassroom();
+        classroom.setClassroomId(VIRTUAL_OPEN_SPACE_CLASSROOM_ID);
+        classroom.setClassroomName(VIRTUAL_OPEN_SPACE_CLASSROOM_NAME);
+        classroom.setRoomType(VIRTUAL_OPEN_SPACE_ROOM_TYPE);
+        classroom.setCapacity(Integer.MAX_VALUE);
+        classroom.setStatus("0");
+        classroom.setSortOrder(Integer.MAX_VALUE);
+        return classroom;
+    }
+
+    private boolean isVirtualOpenSpaceClassroom(ScClassroom classroom) {
+        return classroom != null && isVirtualOpenSpaceClassroomId(classroom.getClassroomId());
+    }
+
+    private boolean isVirtualOpenSpaceClassroomId(Long classroomId) {
+        return classroomId != null && classroomId.longValue() == VIRTUAL_OPEN_SPACE_CLASSROOM_ID;
     }
 
     private boolean isOverlap(Integer leftStart, Integer leftEnd, Integer rightStart, Integer rightEnd) {
@@ -1249,6 +1512,45 @@ public class CourseScheduleAutoArrangeService {
             }
         }
         return false;
+    }
+
+    private String buildSelectionGroupKey(ScClassCourse item) {
+        if (item == null) {
+            return null;
+        }
+        return buildSelectionGroupKey(item.getClassId(), item.getCourseId(), item.getSelectionGroupCode());
+    }
+
+    private String buildSelectionGroupKey(Long classId, Long courseId, String selectionGroupCode) {
+        String normalizedGroupCode = normalizeSelectionGroupCode(selectionGroupCode);
+        if (classId == null || courseId == null || StringUtils.isEmpty(normalizedGroupCode)) {
+            return null;
+        }
+        return classId + ":" + courseId + ":" + normalizedGroupCode;
+    }
+
+    private String normalizeSelectionGroupCode(String selectionGroupCode) {
+        String normalized = StringUtils.trimToEmpty(selectionGroupCode);
+        return StringUtils.isEmpty(normalized) ? null : normalized;
+    }
+
+    private int normalizeSelectionGroupLimit(Integer selectionGroupLimit) {
+        return selectionGroupLimit == null || selectionGroupLimit <= 0 ? 1 : selectionGroupLimit;
+    }
+
+    private String resolveDisplayedCourseName(ScClassCourse classCourse) {
+        if (classCourse == null) {
+            return null;
+        }
+        String baseCourseName = StringUtils.trimToEmpty(classCourse.getCourseName());
+        String selectionOptionName = StringUtils.trimToEmpty(classCourse.getSelectionOptionName());
+        if (StringUtils.isEmpty(selectionOptionName) || StringUtils.equals(baseCourseName, selectionOptionName)) {
+            return StringUtils.defaultIfEmpty(baseCourseName, selectionOptionName);
+        }
+        if (StringUtils.isEmpty(baseCourseName)) {
+            return selectionOptionName;
+        }
+        return baseCourseName + " / " + selectionOptionName;
     }
 
     private Set<Integer> extractWeeks(String weeksText) {
@@ -1344,6 +1646,7 @@ public class CourseScheduleAutoArrangeService {
         private String taskId;
         private Long classCourseId;
         private Long classId;
+        private Long courseId;
         private String className;
         private String courseName;
         private String courseCategory;
@@ -1355,10 +1658,22 @@ public class CourseScheduleAutoArrangeService {
         private int studentCount;
         private int priorityScore;
         private String weeksText;
+        private String selectionGroupCode;
+        private int selectionGroupLimit;
         private List<Long> preferredClassroomIds = new ArrayList<>();
         private Set<Integer> excludedWeekDays = new LinkedHashSet<>();
         private Set<String> excludedDayParts = new LinkedHashSet<>();
         private boolean fixedClassroom;
+    }
+
+    private static class LessonTaskSeed {
+        private final int duration;
+        private final String weeksText;
+
+        private LessonTaskSeed(int duration, String weeksText) {
+            this.duration = duration;
+            this.weeksText = weeksText;
+        }
     }
 
     private static class LessonAssignment {

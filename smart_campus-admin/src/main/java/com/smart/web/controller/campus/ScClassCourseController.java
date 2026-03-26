@@ -42,6 +42,12 @@ public class ScClassCourseController extends BaseController {
         return success(teachingCodeRuleService.generateTeachingClassCode(scClassCourse));
     }
 
+    @PreAuthorize("@ss.hasPermi('campus:course:edit')")
+    @PostMapping("/generate-selection-group-code")
+    public AjaxResult generateSelectionGroupCode(@RequestBody ScClassCourse scClassCourse) {
+        return success(teachingCodeRuleService.generateSelectionGroupCode(scClassCourse));
+    }
+
     @PreAuthorize("@ss.hasPermi('campus:course:add')")
     @Log(title = "班级课程", businessType = BusinessType.INSERT)
     @PostMapping

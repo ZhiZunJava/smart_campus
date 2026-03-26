@@ -319,7 +319,7 @@
           </el-radio-group>
         </el-form-item>
         <el-form-item label="反馈内容">
-          <el-input v-model="feedbackForm.feedbackContent" type="textarea" rows="5" maxlength="200" show-word-limit
+          <el-input v-model="feedbackForm.feedbackContent" type="textarea" :rows="5" maxlength="200" show-word-limit
             placeholder="可以补充说明哪里回答得好，或哪里还需要改进" />
         </el-form-item>
       </el-form>
@@ -333,6 +333,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import type { ComponentPublicInstance } from 'vue'
 import type { ElMessageBoxOptions } from 'element-plus'
 import { ElMessage, ElMessageBox } from '@/utils/feedback'
 import { getToken } from '@/utils/auth'
@@ -733,8 +734,18 @@ function stopStreaming() {
   inputText.value = '请从刚才中断的位置继续回答。'
 }
 
-function setMessageRef(id: string, el: Element | null) {
-  messageRefs.value[id] = el as HTMLElement | null
+function resolveMessageElement(target: Element | ComponentPublicInstance | null) {
+  if (target instanceof HTMLElement) {
+    return target
+  }
+  if (target && '$el' in target && target.$el instanceof HTMLElement) {
+    return target.$el
+  }
+  return null
+}
+
+function setMessageRef(id: string, el: Element | ComponentPublicInstance | null) {
+  messageRefs.value[id] = resolveMessageElement(el)
 }
 
 function getUserQuestionOrder(index: number) {

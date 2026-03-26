@@ -10,6 +10,8 @@ public interface ScCourseStudentMapper {
 
     ScCourseStudent selectDuplicateScCourseStudent(ScCourseStudent scCourseStudent);
 
+    int countActiveByClassCourseId(Long classCourseId);
+
     int insertScCourseStudent(ScCourseStudent scCourseStudent);
 
     int updateScCourseStudent(ScCourseStudent scCourseStudent);

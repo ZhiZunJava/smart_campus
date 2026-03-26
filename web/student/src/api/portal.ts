@@ -60,6 +60,10 @@ export function listPortalTeacherCourses(params: any) {
   return request({ url: '/campus/portal/teacher/my-courses', method: 'get', params })
 }
 
+export function getPortalTeacherCourseStudents(params: any) {
+  return request({ url: '/campus/portal/teacher/course-students', method: 'get', params })
+}
+
 export function getPortalTeacherSchedule(params: any) {
   return request({ url: '/campus/portal/teacher/my-schedule', method: 'get', params })
 }
@@ -276,8 +280,45 @@ export function listPortalMyCourses(params: any) {
   return request({ url: '/campus/portal/student/my-courses', method: 'get', params })
 }
 
+export function listPortalMyClassCourses(params: any) {
+  return request({ url: '/campus/portal/student/class-courses', method: 'get', params })
+}
+
 export function getPortalCourseDetail(params: any) {
   return request({ url: '/campus/portal/student/course-detail', method: 'get', params })
+}
+
+export function getPortalCourseSelectionOptions(params: any) {
+  return request({ url: '/campus/portal/student/course-selection/options', method: 'get', params })
+}
+
+export function selectPortalCourse(data: any) {
+  return request({ url: '/campus/portal/student/course-selection/select', method: 'post', data })
+}
+
+export function dropPortalCourse(data: any) {
+  return request({ url: '/campus/portal/student/course-selection/drop', method: 'post', data })
+}
+
+export function listPortalPersonalizedSelectionOptions(params: any) {
+  return request({ url: '/campus/portal/student/personalized-selection/options', method: 'get', params })
+}
+
+export function listPortalPersonalizedSelectionRequests(params: any) {
+  return request({ url: '/campus/portal/student/personalized-selection/requests', method: 'get', params })
+}
+
+export function createPortalPersonalizedSelectionRequest(data: any) {
+  return request({ url: '/campus/portal/student/personalized-selection/request', method: 'post', data })
+}
+
+export function cancelPortalPersonalizedSelectionRequest(requestId: number, userId: number) {
+  return request({
+    url: '/campus/portal/student/personalized-selection/cancel',
+    method: 'post',
+    params: { userId },
+    data: { requestId },
+  })
 }
 
 export function getPortalTaskCenter(params: any) {
@@ -321,8 +362,24 @@ export function getPortalMySchedule(params: any) {
   return request({ url: '/campus/portal/student/my-schedule', method: 'get', params })
 }
 
+export function getPortalMyClassSchedule(params: any) {
+  return request({ url: '/campus/portal/student/class-schedule', method: 'get', params })
+}
+
 export function listPortalTermOptions() {
   return request({ url: '/campus/portal/term/options', method: 'get' })
+}
+
+export function listPortalScore(query: any) {
+  return request({ url: '/campus/portal/score/list', method: 'get', params: query })
+}
+
+export function getPortalScoreOverview(query: any) {
+  return request({ url: '/campus/portal/score/overview', method: 'get', params: query })
+}
+
+export function getPortalScoreDetail(query: any) {
+  return request({ url: '/campus/portal/score/detail', method: 'get', params: query })
 }
 
 export async function fetchPortalUserOptions(userType?: string) {

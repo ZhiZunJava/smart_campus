@@ -18,10 +18,13 @@ public class TeachingCodeRuleService
 {
     private static final String COURSE_PREFIX = "KC";
     private static final String TEACHING_CLASS_PREFIX = "TB";
+    private static final String SELECTION_GROUP_PREFIX = "SG";
     /** 课程编码：KC + 3位流水号，如 KC001 */
     private static final int COURSE_SEQ_WIDTH = 3;
     /** 教学班编码：TB + 4位流水号，如 TB0001 */
     private static final int TEACHING_CLASS_SEQ_WIDTH = 4;
+    /** 专项分组编码：SG + 4位流水号，如 SG0001 */
+    private static final int SELECTION_GROUP_SEQ_WIDTH = 4;
 
     @Autowired
     private IScCourseService scCourseService;
@@ -59,6 +62,46 @@ public class TeachingCodeRuleService
         String generatedCode = TEACHING_CLASS_PREFIX + String.format(Locale.ROOT, "%0" + TEACHING_CLASS_SEQ_WIDTH + "d", seq);
         result.put("teachingClassCode", generatedCode);
         result.put("rule", "TB + 四位流水号");
+        result.put("preview", generatedCode);
+        return result;
+    }
+
+    public Map<String, Object> generateSelectionGroupCode(ScClassCourse classCourse)
+    {
+        Map<String, Object> result = new LinkedHashMap<>();
+
+        if (classCourse != null && classCourse.getClassId() != null && classCourse.getCourseId() != null
+                && classCourse.getTermId() != null)
+        {
+            ScClassCourse query = new ScClassCourse();
+            query.setClassId(classCourse.getClassId());
+            query.setCourseId(classCourse.getCourseId());
+            query.setTermId(classCourse.getTermId());
+            List<ScClassCourse> siblings = scClassCourseMapper.selectScClassCourseList(query);
+            String existsCode = siblings.stream()
+                    .map(ScClassCourse::getSelectionGroupCode)
+                    .filter(StringUtils::isNotEmpty)
+                    .findFirst()
+                    .orElse(null);
+            if (StringUtils.isNotEmpty(existsCode))
+            {
+                result.put("selectionGroupCode", existsCode);
+                result.put("rule", "复用同班级同课程同学期已有专项分组编码");
+                result.put("preview", existsCode);
+                return result;
+            }
+        }
+
+        List<ScClassCourse> existingClassCourses = scClassCourseMapper.selectScClassCourseList(new ScClassCourse());
+        int seq = nextSequence(existingClassCourses.stream()
+            .map(ScClassCourse::getSelectionGroupCode)
+            .filter(StringUtils::isNotEmpty)
+            .filter(code -> code.startsWith(SELECTION_GROUP_PREFIX))
+            .collect(Collectors.toList()), SELECTION_GROUP_PREFIX, SELECTION_GROUP_SEQ_WIDTH);
+
+        String generatedCode = SELECTION_GROUP_PREFIX + String.format(Locale.ROOT, "%0" + SELECTION_GROUP_SEQ_WIDTH + "d", seq);
+        result.put("selectionGroupCode", generatedCode);
+        result.put("rule", "SG + 四位流水号；如同班同课同学期已存在分组则自动复用");
         result.put("preview", generatedCode);
         return result;
     }

@@ -15,6 +15,8 @@ public class ScCourseStudent extends BaseEntity {
     private static final long serialVersionUID = 1L;
 
     private Long id;
+    private Long classCourseId;
+    private String teachingClassCode;
     private Long courseId;
     private String courseName;
     private Long studentUserId;
@@ -22,6 +24,11 @@ public class ScCourseStudent extends BaseEntity {
     private String studentNo;
     private Long classId;
     private String className;
+    private Long teacherId;
+    private String teacherName;
+    private Long termId;
+    private String termName;
+    private String requiredFlag;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date joinTime;
@@ -34,6 +41,22 @@ public class ScCourseStudent extends BaseEntity {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Long getClassCourseId() {
+        return classCourseId;
+    }
+
+    public void setClassCourseId(Long classCourseId) {
+        this.classCourseId = classCourseId;
+    }
+
+    public String getTeachingClassCode() {
+        return teachingClassCode;
+    }
+
+    public void setTeachingClassCode(String teachingClassCode) {
+        this.teachingClassCode = teachingClassCode;
     }
 
     public Long getCourseId() {
@@ -92,6 +115,46 @@ public class ScCourseStudent extends BaseEntity {
         this.className = className;
     }
 
+    public Long getTeacherId() {
+        return teacherId;
+    }
+
+    public void setTeacherId(Long teacherId) {
+        this.teacherId = teacherId;
+    }
+
+    public String getTeacherName() {
+        return teacherName;
+    }
+
+    public void setTeacherName(String teacherName) {
+        this.teacherName = teacherName;
+    }
+
+    public Long getTermId() {
+        return termId;
+    }
+
+    public void setTermId(Long termId) {
+        this.termId = termId;
+    }
+
+    public String getTermName() {
+        return termName;
+    }
+
+    public void setTermName(String termName) {
+        this.termName = termName;
+    }
+
+    public String getRequiredFlag() {
+        return requiredFlag;
+    }
+
+    public void setRequiredFlag(String requiredFlag) {
+        this.requiredFlag = requiredFlag;
+    }
+
     public Date getJoinTime() {
         return joinTime;
     }
@@ -112,6 +175,8 @@ public class ScCourseStudent extends BaseEntity {
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.MULTI_LINE_STYLE)
                 .append("id", getId())
+                .append("classCourseId", getClassCourseId())
+                .append("teachingClassCode", getTeachingClassCode())
                 .append("courseId", getCourseId())
                 .append("courseName", getCourseName())
                 .append("studentUserId", getStudentUserId())
@@ -119,6 +184,11 @@ public class ScCourseStudent extends BaseEntity {
                 .append("studentNo", getStudentNo())
                 .append("classId", getClassId())
                 .append("className", getClassName())
+                .append("teacherId", getTeacherId())
+                .append("teacherName", getTeacherName())
+                .append("termId", getTermId())
+                .append("termName", getTermName())
+                .append("requiredFlag", getRequiredFlag())
                 .append("joinTime", getJoinTime())
                 .append("status", getStatus())
                 .append("remark", getRemark())

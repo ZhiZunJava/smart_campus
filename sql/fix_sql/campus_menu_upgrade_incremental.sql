@@ -74,12 +74,24 @@ SELECT 2046, '节次布局', '2003', '13', 'timeTableLayout', 'campus/timeTableL
        'C', '0', '0', 'campus:timetable:list', 'ri-layout-grid-line', 'admin', NOW(), '', NULL, '课表节次与时间布局配置'
 WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE menu_id = 2046);
 
+INSERT INTO sys_menu (
+  menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache,
+  menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark
+)
+SELECT 2047, '个性化选课', '2003', '14', 'courseSelectionRequest', 'campus/courseSelectionRequest/index', '', '', 1, 0,
+       'C', '0', '0', 'campus:courseSelectionRequest:list', 'ri-file-edit-line', 'admin', NOW(), '', NULL, '个性化选课申请审核'
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE menu_id = 2047);
+
 -- 3. 补齐教室管理与节次布局按钮权限
 INSERT INTO sys_menu VALUES
 (2221, '教室查询', '2045', '1', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:classroom:query', '#', 'admin', NOW(), '', NULL, ''),
 (2222, '教室新增', '2045', '2', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:classroom:add', '#', 'admin', NOW(), '', NULL, ''),
 (2223, '教室修改', '2045', '3', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:classroom:edit', '#', 'admin', NOW(), '', NULL, ''),
 (2224, '教室删除', '2045', '4', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:classroom:remove', '#', 'admin', NOW(), '', NULL, ''),
+(2227, '教室导出', '2045', '5', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:classroom:export', '#', 'admin', NOW(), '', NULL, ''),
+(2228, '教室导入', '2045', '6', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:classroom:import', '#', 'admin', NOW(), '', NULL, ''),
+(2237, '申请查询', '2047', '1', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:courseSelectionRequest:query', '#', 'admin', NOW(), '', NULL, ''),
+(2238, '申请审核', '2047', '2', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:courseSelectionRequest:review', '#', 'admin', NOW(), '', NULL, ''),
 (2225, '布局查询', '2046', '1', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:timetable:list', '#', 'admin', NOW(), '', NULL, ''),
 (2226, '布局修改', '2046', '2', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:timetable:edit', '#', 'admin', NOW(), '', NULL, '')
 ON DUPLICATE KEY UPDATE
@@ -95,9 +107,8 @@ remark = VALUES(remark);
 INSERT INTO sys_role_menu (role_id, menu_id)
 SELECT 1, m.menu_id
 FROM sys_menu m
-WHERE m.menu_id IN (2045, 2046, 2221, 2222, 2223, 2224, 2225, 2226)
+WHERE m.menu_id IN (2045, 2046, 2047, 2221, 2222, 2223, 2224, 2225, 2226, 2227, 2228, 2237, 2238)
   AND NOT EXISTS (
     SELECT 1 FROM sys_role_menu rm
     WHERE rm.role_id = 1 AND rm.menu_id = m.menu_id
   );
-

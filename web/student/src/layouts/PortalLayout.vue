@@ -103,7 +103,7 @@
               <transition :name="resolveChildTransitionName(childRoute, 'portal-content-shift')" mode="out-in">
                 <div :key="childRoute.path" class="portal-route-transition-shell">
                   <keep-alive :include="tabsStore.cachedViews">
-                    <component :is="Component" v-if="!isRefreshing" />
+                    <component :is="Component" :key="resolveRouteViewKey(childRoute)" v-if="!isRefreshing" />
                   </keep-alive>
                 </div>
               </transition>
@@ -149,12 +149,35 @@ const activeTab = computed({
 })
 
 const isRefreshing = ref(false)
+const refreshKeyMap = ref<Record<string, number>>({})
 
-function handleRefresh() {
+function resolveRouteRefreshId(targetRoute: RouteLocationNormalizedLoaded) {
+  return String(targetRoute.name || targetRoute.path)
+}
+
+function resolveRouteViewKey(targetRoute: RouteLocationNormalizedLoaded) {
+  const refreshId = resolveRouteRefreshId(targetRoute)
+  return `${refreshId}:${refreshKeyMap.value[refreshId] || 0}`
+}
+
+async function handleRefresh() {
+  const currentViewName = typeof route.name === 'string' ? route.name : ''
+  const refreshId = resolveRouteRefreshId(route)
+  if (currentViewName) {
+    tabsStore.excludeCacheView(currentViewName)
+    await nextTick()
+  }
   isRefreshing.value = true
-  nextTick(() => {
-    isRefreshing.value = false
-  })
+  await nextTick()
+  refreshKeyMap.value = {
+    ...refreshKeyMap.value,
+    [refreshId]: (refreshKeyMap.value[refreshId] || 0) + 1,
+  }
+  isRefreshing.value = false
+  await nextTick()
+  if (currentViewName) {
+    tabsStore.restoreCacheView(currentViewName)
+  }
 }
 
 function handleTabClick(pane: TabsPaneContext) {
@@ -195,13 +218,18 @@ watch(
 const menus: Record<string, MenuItem[]> = {
   student: [
     { title: '学习首页', path: '/student/dashboard', desc: '诊断、工作台与关键指标' },
-    { title: '我的课程', path: '/student/courses', desc: '查看学期课程与班级课程' },
-    { title: '我的课表', path: '/student/schedule', desc: '按周查看课程安排' },
+    { title: '我的课程', path: '/student/courses', desc: '查看当前已选教学班课程' },
+    { title: '我的班级课程', path: '/student/class-courses', desc: '查看班级默认开设课程' },
+    { title: '选课中心', path: '/student/selection', desc: '办理标准选课与退课' },
+    { title: '选课申请', path: '/student/personalized-selection', desc: '提交特殊场景下的个性化选课申请' },
+    { title: '我的课表', path: '/student/schedule', desc: '按周查看已选课程安排' },
+    { title: '我的班级课表', path: '/student/class-schedule', desc: '按周查看班级默认课表' },
     { title: '资源中心', path: '/student/resources', desc: '查询学习资料与课程资源' },
     { title: '我的收藏', path: '/student/favorites', desc: '查看已收藏的课时和资源' },
     { title: '智能问答', path: '/student/qa', desc: '围绕课程内容进行智能问答' },
     { title: '任务广场', path: '/student/plaza', desc: '浏览通用试卷、开放挑战与通用题目' },
     { title: '我的考试', path: '/student/exams', desc: '查看考试安排、记录与成绩反馈' },
+    { title: '我的成绩', path: '/student/scores', desc: '查看课程总评、构成与排名' },
     { title: '我的错题本', path: '/student/wrongbook', desc: '错题回顾、练习与复盘' },
   ],
   teacher: [
@@ -224,8 +252,8 @@ const groupedMenus: Record<string, MenuGroup[]> = {
       label: '综合服务',
       items: [
         menus.student[0],
-        menus.student[3],
-        menus.student[4],
+        menus.student[7],
+        menus.student[8],
       ],
     },
     {
@@ -235,21 +263,32 @@ const groupedMenus: Record<string, MenuGroup[]> = {
         menus.student[1],
         menus.student[2],
         menus.student[5],
+        menus.student[6],
+        menus.student[9],
+      ],
+    },
+    {
+      key: 'student-selection',
+      label: '选课服务',
+      items: [
+        menus.student[3],
+        menus.student[4],
       ],
     },
     {
       key: 'student-plaza',
       label: '任务与练习',
       items: [
-        menus.student[6],
+        menus.student[10],
       ],
     },
     {
       key: 'student-growth',
       label: '考试与成长',
       items: [
-        menus.student[7],
-        menus.student[8],
+        menus.student[11],
+        menus.student[12],
+        menus.student[13],
       ],
     },
   ],

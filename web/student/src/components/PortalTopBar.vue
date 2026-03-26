@@ -154,34 +154,38 @@
         <section class="portal-topbar__menu-surface" @click.stop @mouseenter="cancelCloseTimer" @mouseleave="closeMenuTimer">
           <div class="portal-topbar__menu-content" @mouseenter="cancelCloseTimer">
             <div class="portal-topbar__menu-filter"></div>
-            <aside class="menu-side-wrapper">
-              <div class="menu-side-item active">
-                <el-icon><Grid /></el-icon>
-                <span>{{ currentRoleLabel }}全部服务</span>
-              </div>
-            </aside>
-            <div class="second-menu-wrapper">
-              <section
-                v-for="group in normalizedGroups"
-                :key="group.key"
-                class="portal-topbar__menu-group"
-              >
-                <h3>{{ group.label }}</h3>
-                <div class="portal-topbar__menu-links">
-                  <button
-                    v-for="item in group.items"
-                    :key="item.path"
-                    type="button"
-                    class="portal-topbar__menu-link"
-                    :class="{ 'is-active': item.path === activePath }"
-                    @click="handleNav(item.path)"
-                  >
-                    <strong>{{ item.title }}</strong>
-                    <span>{{ item.desc || '点击进入对应功能页面' }}</span>
-                  </button>
+            <el-scrollbar class="menu-side-scrollbar">
+              <aside class="menu-side-wrapper">
+                <div class="menu-side-item active">
+                  <el-icon><Grid /></el-icon>
+                  <span>{{ currentRoleLabel }}全部服务</span>
                 </div>
-              </section>
-            </div>
+              </aside>
+            </el-scrollbar>
+            <el-scrollbar class="second-menu-scrollbar">
+              <div class="second-menu-wrapper">
+                <section
+                  v-for="group in normalizedGroups"
+                  :key="group.key"
+                  class="portal-topbar__menu-group"
+                >
+                  <h3>{{ group.label }}</h3>
+                  <div class="portal-topbar__menu-links">
+                    <button
+                      v-for="item in group.items"
+                      :key="item.path"
+                      type="button"
+                      class="portal-topbar__menu-link"
+                      :class="{ 'is-active': item.path === activePath }"
+                      @click="handleNav(item.path)"
+                    >
+                      <strong>{{ item.title }}</strong>
+                      <span>{{ item.desc || '点击进入对应功能页面' }}</span>
+                    </button>
+                  </div>
+                </section>
+              </div>
+            </el-scrollbar>
           </div>
         </section>
       </div>
@@ -560,6 +564,8 @@ function normalizeTopbarMessage(message: any, index: number) {
     messageId: key,
     messageKind: message?.noticeType === '2'
       ? 'NOTICE'
+      : message?.messageType === 'COURSE_SELECTION'
+        ? 'COURSE_SELECTION'
       : message?.messageType === 'EXAM_REMINDER'
         ? 'EXAM_REMINDER'
         : message?.messageType === 'ACHIEVEMENT'
@@ -584,6 +590,7 @@ function markMessageRead(message: any) {
 function messageIconTone(message: any) {
   if (message?.messageKind === 'ACHIEVEMENT') return 'success'
   if (message?.messageKind === 'EXAM_REMINDER') return 'warning'
+  if (message?.messageKind === 'COURSE_SELECTION') return 'primary'
   return 'info'
 }
 
@@ -1073,17 +1080,37 @@ onBeforeUnmount(() => {
   z-index: 0;
 }
 
-.second-menu-wrapper {
+.menu-side-scrollbar,
+.second-menu-scrollbar {
   position: relative;
   z-index: 1;
+  height: 100%;
+  min-height: 0;
+}
+
+.menu-side-scrollbar {
+  background: #f8fafc;
+  border-right: 1px solid #e2e8f0;
+}
+
+.menu-side-scrollbar :deep(.el-scrollbar__wrap),
+.second-menu-scrollbar :deep(.el-scrollbar__wrap) {
+  height: 100%;
+}
+
+.menu-side-scrollbar :deep(.el-scrollbar__view),
+.second-menu-scrollbar :deep(.el-scrollbar__view) {
+  min-height: 100%;
+}
+
+.second-menu-wrapper {
   padding: 32px 36px;
   display: flex;
   flex-wrap: wrap;
   gap: 20px 32px;
   align-content: flex-start;
   min-width: 0;
-  overflow-x: auto;
-  overflow-y: auto;
+  box-sizing: border-box;
 }
 
 .portal-topbar__menu-group {
@@ -1152,16 +1179,12 @@ onBeforeUnmount(() => {
 }
 
 .menu-side-wrapper {
-  position: relative;
-  z-index: 1;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   gap: 16px;
   padding: 0;
-  background: #f8fafc;
-  border-right: 1px solid #e2e8f0;
-  overflow-y: auto;
+  min-height: 100%;
 }
 
 .menu-side-item {
@@ -1507,6 +1530,11 @@ onBeforeUnmount(() => {
 .portal-topbar__notice-icon.is-success {
   background: #f0fdf4;
   color: #22c55e;
+}
+
+.portal-topbar__notice-icon.is-primary {
+  background: #eff6ff;
+  color: #2563eb;
 }
 
 .portal-topbar__notice-icon.is-info {

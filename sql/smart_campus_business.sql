@@ -178,6 +178,7 @@ CREATE TABLE `sc_course_chapter` (
 DROP TABLE IF EXISTS `sc_course_student`;
 CREATE TABLE `sc_course_student` (
   `id`                   bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `class_course_id`      bigint DEFAULT NULL COMMENT '班级课程ID',
   `course_id`            bigint NOT NULL COMMENT '课程ID',
   `student_user_id`      bigint NOT NULL COMMENT '学生用户ID',
   `class_id`             bigint DEFAULT NULL COMMENT '班级ID',
@@ -185,13 +186,70 @@ CREATE TABLE `sc_course_student` (
   `status`               char(1) DEFAULT '0' COMMENT '状态(0正常 1停用)',
   `remark`               varchar(500) DEFAULT NULL COMMENT '备注',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_sc_course_student` (`course_id`, `student_user_id`),
+  UNIQUE KEY `uk_sc_course_student` (`class_course_id`, `student_user_id`),
+  KEY `idx_sc_course_student_class_course_id` (`class_course_id`),
   KEY `idx_sc_course_student_class_id` (`class_id`),
   KEY `idx_sc_course_student_student` (`student_user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='智慧校园-课程学生关系表';
 
 -- ----------------------------
--- 9. 知识点表
+-- 9. 选课计划表
+-- ----------------------------
+DROP TABLE IF EXISTS `sc_course_selection_plan`;
+CREATE TABLE `sc_course_selection_plan` (
+  `plan_id`                bigint NOT NULL AUTO_INCREMENT COMMENT '计划ID',
+  `plan_name`              varchar(100) DEFAULT NULL COMMENT '计划名称',
+  `term_id`                bigint NOT NULL COMMENT '学期ID',
+  `plan_type`              varchar(32) DEFAULT 'GENERAL' COMMENT '计划类型',
+  `selection_start_time`   datetime DEFAULT NULL COMMENT '选课开始时间',
+  `selection_end_time`     datetime DEFAULT NULL COMMENT '选课结束时间',
+  `drop_start_time`        datetime DEFAULT NULL COMMENT '退课开始时间',
+  `drop_end_time`          datetime DEFAULT NULL COMMENT '退课结束时间',
+  `request_start_time`     datetime DEFAULT NULL COMMENT '申请开始时间',
+  `request_end_time`       datetime DEFAULT NULL COMMENT '申请结束时间',
+  `notice_content`         varchar(1000) DEFAULT NULL COMMENT '公告内容',
+  `rule_content`           varchar(1500) DEFAULT NULL COMMENT '规则说明',
+  `status`                 char(1) DEFAULT '0' COMMENT '状态(0启用 1停用)',
+  `create_by`              varchar(64) DEFAULT '' COMMENT '创建者',
+  `create_time`            datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by`              varchar(64) DEFAULT '' COMMENT '更新者',
+  `update_time`            datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `remark`                 varchar(500) DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (`plan_id`),
+  KEY `idx_course_selection_plan_term` (`term_id`),
+  KEY `idx_course_selection_plan_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='选课计划表';
+
+-- ----------------------------
+-- 10. 个性化选课申请表
+-- ----------------------------
+DROP TABLE IF EXISTS `sc_course_selection_request`;
+CREATE TABLE `sc_course_selection_request` (
+  `request_id`              bigint NOT NULL AUTO_INCREMENT COMMENT '申请ID',
+  `request_no`              varchar(64) DEFAULT NULL COMMENT '申请编号',
+  `student_user_id`         bigint NOT NULL COMMENT '学生用户ID',
+  `target_class_course_id`  bigint NOT NULL COMMENT '目标教学班ID',
+  `request_type`            varchar(32) DEFAULT 'PERSONALIZED' COMMENT '申请类型',
+  `request_reason`          varchar(1000) DEFAULT NULL COMMENT '申请理由',
+  `request_status`          char(1) DEFAULT '0' COMMENT '状态(0待审 1通过 2驳回 3撤回)',
+  `review_remark`           varchar(500) DEFAULT NULL COMMENT '审核说明',
+  `review_user_id`          bigint DEFAULT NULL COMMENT '审核人ID',
+  `review_time`             datetime DEFAULT NULL COMMENT '审核时间',
+  `cancel_time`             datetime DEFAULT NULL COMMENT '撤回时间',
+  `create_by`               varchar(64) DEFAULT '' COMMENT '创建者',
+  `create_time`             datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by`               varchar(64) DEFAULT '' COMMENT '更新者',
+  `update_time`             datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `remark`                  varchar(500) DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (`request_id`),
+  UNIQUE KEY `uk_course_selection_request_no` (`request_no`),
+  KEY `idx_course_selection_request_student` (`student_user_id`),
+  KEY `idx_course_selection_request_class_course` (`target_class_course_id`),
+  KEY `idx_course_selection_request_status` (`request_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='个性化选课申请表';
+
+-- ----------------------------
+-- 11. 知识点表
 -- ----------------------------
 DROP TABLE IF EXISTS `sc_knowledge_point`;
 CREATE TABLE `sc_knowledge_point` (

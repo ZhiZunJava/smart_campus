@@ -32,20 +32,52 @@
         <el-table-column label="班级" prop="className" min-width="140" />
         <el-table-column label="学科类型" prop="subjectType" width="120" />
         <el-table-column label="周学时" prop="weeklyHours" width="90" />
+        <el-table-column label="已选人数" width="100">
+          <template #default="{ row }">{{ row.selectedStudentCount ?? row.actualStudentCount ?? 0 }}</template>
+        </el-table-column>
         <el-table-column label="人数上限" prop="studentLimit" width="100" />
         <el-table-column label="学期" min-width="180">
           <template #default="{ row }">{{ row.termName || '-' }} {{ row.schoolYear ? `· ${row.schoolYear}` : '' }}</template>
         </el-table-column>
         <el-table-column label="课程简介" prop="intro" min-width="260" show-overflow-tooltip />
+        <el-table-column label="操作" width="160" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" @click="openStudentDialog(row)">查看学生</el-button>
+          </template>
+        </el-table-column>
       </el-table>
       <el-empty v-if="!loading && !filteredCourses.length" description="当前学期暂无授课安排" />
     </div>
+
+    <el-dialog v-model="studentDialogOpen" :title="studentDialogTitle" width="900px" append-to-body>
+      <div class="teacher-course-students">
+        <div class="teacher-course-students__summary">
+          <span>已选人数 {{ studentDialogSummary.selectedStudentCount || 0 }}</span>
+          <span>人数上限 {{ studentDialogSummary.studentLimit || '-' }}</span>
+          <span>{{ studentDialogSummary.termName || '-' }}</span>
+        </div>
+        <el-table v-loading="studentLoading" :data="studentList" max-height="480">
+          <el-table-column label="学生" min-width="220">
+            <template #default="{ row }">
+              <div class="course-cell">
+                <strong>{{ row.studentName || '-' }}</strong>
+                <span>{{ row.studentNo ? `学号：${row.studentNo}` : `用户ID：${row.studentUserId}` }}</span>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column label="班级" prop="className" min-width="180" />
+          <el-table-column label="加入时间" prop="joinTime" min-width="180" />
+          <el-table-column label="备注" prop="remark" min-width="220" show-overflow-tooltip />
+        </el-table>
+        <el-empty v-if="!studentLoading && !studentList.length" description="当前教学班暂无选课学生" />
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { listPortalTeacherCourses, listPortalTermOptions } from '@/api/portal'
+import { getPortalTeacherCourseStudents, listPortalTeacherCourses, listPortalTermOptions } from '@/api/portal'
 import usePortalUserStore from '@/store/user'
 
 const userStore = usePortalUserStore()
@@ -54,6 +86,10 @@ const courseList = ref<any[]>([])
 const termOptions = ref<any[]>([])
 const keyword = ref('')
 const queryParams = reactive<any>({ termId: undefined })
+const studentDialogOpen = ref(false)
+const studentLoading = ref(false)
+const studentDialogSummary = ref<any>({})
+const studentList = ref<any[]>([])
 
 const filteredCourses = computed(() => {
   const value = keyword.value.trim().toLowerCase()
@@ -67,6 +103,9 @@ const filteredCourses = computed(() => {
 const classCount = computed(() => new Set(courseList.value.map((item: any) => item.classId).filter(Boolean)).size)
 const totalHours = computed(() => courseList.value.reduce((sum: number, item: any) => sum + Number(item.weeklyHours || 0), 0))
 const currentTermLabel = computed(() => termOptions.value.find((item: any) => item.value === queryParams.termId)?.label || '全部')
+const studentDialogTitle = computed(() => {
+  return `${studentDialogSummary.value.courseName || '教学班'}${studentDialogSummary.value.className ? ` / ${studentDialogSummary.value.className}` : ''}`
+})
 
 async function loadTerms() {
   const res = await listPortalTermOptions()
@@ -84,6 +123,20 @@ async function loadCourses() {
     courseList.value = res.data || []
   } finally {
     loading.value = false
+  }
+}
+
+async function openStudentDialog(row: any) {
+  const teacherId = userStore.user?.userId
+  if (!teacherId || !row?.id) return
+  studentDialogOpen.value = true
+  studentLoading.value = true
+  try {
+    const res = await getPortalTeacherCourseStudents({ teacherId, classCourseId: row.id, termId: queryParams.termId })
+    studentDialogSummary.value = res.data?.summary || {}
+    studentList.value = res.data?.items || []
+  } finally {
+    studentLoading.value = false
   }
 }
 
@@ -115,6 +168,24 @@ onMounted(async () => {
 
 .course-cell span {
   color: #667085;
+  font-size: 12px;
+}
+
+.teacher-course-students {
+  display: grid;
+  gap: 16px;
+}
+
+.teacher-course-students__summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f6fbff;
+  border: 1px solid #dbe8f8;
+  color: #526076;
   font-size: 12px;
 }
 </style>

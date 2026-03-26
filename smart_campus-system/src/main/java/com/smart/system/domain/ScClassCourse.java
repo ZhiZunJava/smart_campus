@@ -28,6 +28,10 @@ public class ScClassCourse extends BaseEntity {
     private String prerequisiteCourse;
     private String taskType;
     private String requiredFlag;
+    private String selectionOptionName;
+    private String selectionGroupCode;
+    private String selectionGroupName;
+    private Integer selectionGroupLimit;
     private String courseLevelRequirement;
     private Integer totalHours;
     private Integer requiredWeeks;
@@ -213,6 +217,38 @@ public class ScClassCourse extends BaseEntity {
         this.requiredFlag = requiredFlag;
     }
 
+    public String getSelectionOptionName() {
+        return selectionOptionName;
+    }
+
+    public void setSelectionOptionName(String selectionOptionName) {
+        this.selectionOptionName = selectionOptionName;
+    }
+
+    public String getSelectionGroupCode() {
+        return selectionGroupCode;
+    }
+
+    public void setSelectionGroupCode(String selectionGroupCode) {
+        this.selectionGroupCode = selectionGroupCode;
+    }
+
+    public String getSelectionGroupName() {
+        return selectionGroupName;
+    }
+
+    public void setSelectionGroupName(String selectionGroupName) {
+        this.selectionGroupName = selectionGroupName;
+    }
+
+    public Integer getSelectionGroupLimit() {
+        return selectionGroupLimit;
+    }
+
+    public void setSelectionGroupLimit(Integer selectionGroupLimit) {
+        this.selectionGroupLimit = selectionGroupLimit;
+    }
+
     public String getCourseLevelRequirement() {
         return courseLevelRequirement;
     }
@@ -302,6 +338,10 @@ public class ScClassCourse extends BaseEntity {
                 .append("prerequisiteCourse", getPrerequisiteCourse())
                 .append("taskType", getTaskType())
                 .append("requiredFlag", getRequiredFlag())
+                .append("selectionOptionName", getSelectionOptionName())
+                .append("selectionGroupCode", getSelectionGroupCode())
+                .append("selectionGroupName", getSelectionGroupName())
+                .append("selectionGroupLimit", getSelectionGroupLimit())
                 .append("courseLevelRequirement", getCourseLevelRequirement())
                 .append("totalHours", getTotalHours())
                 .append("requiredWeeks", getRequiredWeeks())

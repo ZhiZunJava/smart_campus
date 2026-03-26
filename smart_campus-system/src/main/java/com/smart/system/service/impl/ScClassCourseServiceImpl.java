@@ -59,6 +59,16 @@ public class ScClassCourseServiceImpl implements IScClassCourseService {
         if (scClassCourse == null) {
             return;
         }
+        scClassCourse.setSelectionOptionName(StringUtils.trimToEmpty(scClassCourse.getSelectionOptionName()));
+        scClassCourse.setSelectionGroupCode(StringUtils.trimToEmpty(scClassCourse.getSelectionGroupCode()));
+        scClassCourse.setSelectionGroupName(StringUtils.trimToEmpty(scClassCourse.getSelectionGroupName()));
+        if (StringUtils.isEmpty(scClassCourse.getSelectionGroupCode())) {
+            scClassCourse.setSelectionGroupCode(null);
+            scClassCourse.setSelectionGroupName(null);
+            scClassCourse.setSelectionGroupLimit(null);
+        } else if (scClassCourse.getSelectionGroupLimit() == null || scClassCourse.getSelectionGroupLimit() <= 0) {
+            scClassCourse.setSelectionGroupLimit(1);
+        }
         Integer totalHours = positive(scClassCourse.getTotalHours());
         Integer requiredWeeks = positive(scClassCourse.getRequiredWeeks());
         Integer weeklyHours = positive(scClassCourse.getWeeklyHours());
@@ -113,11 +123,15 @@ public class ScClassCourseServiceImpl implements IScClassCourseService {
         query.setCourseId(scClassCourse.getCourseId());
         query.setTermId(scClassCourse.getTermId());
         List<ScClassCourse> existingList = scClassCourseMapper.selectScClassCourseList(query);
+        String currentOptionName = StringUtils.trimToEmpty(scClassCourse.getSelectionOptionName());
         for (ScClassCourse existing : existingList) {
             if (scClassCourse.getId() != null && scClassCourse.getId().equals(existing.getId())) {
                 continue;
             }
-            throw new ServiceException("班级课程重复：同一班级、课程、学期已存在绑定关系");
+            if (StringUtils.equalsIgnoreCase(currentOptionName,
+                    StringUtils.trimToEmpty(existing.getSelectionOptionName()))) {
+                throw new ServiceException("班级课程重复：同一班级、课程、学期下专项名称重复");
+            }
         }
     }
 

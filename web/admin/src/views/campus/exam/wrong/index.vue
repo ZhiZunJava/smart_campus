@@ -145,8 +145,8 @@
       <el-form :model="retryForm" label-width="100px">
         <el-form-item label="筛题模式">
           <el-radio-group v-model="retryForm.pickMode">
-            <el-radio-button label="selected">已选错题</el-radio-button>
-            <el-radio-button label="smart">智能筛题</el-radio-button>
+            <el-radio-button value="selected">已选错题</el-radio-button>
+            <el-radio-button value="smart">智能筛题</el-radio-button>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="试卷名称"><el-input v-model="retryForm.paperName" /></el-form-item>

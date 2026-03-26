@@ -93,6 +93,17 @@ export function updateClassroom(data: any) {
 export function delClassroom(ids: number | number[]) {
   return request({ url: `/campus/classroom/${ids}`, method: 'delete' })
 }
+export function importClassroom(file: File, updateSupport = true) {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('updateSupport', String(updateSupport))
+  return request({
+    url: '/campus/classroom/importData',
+    method: 'post',
+    data: formData,
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
 
 export function listClassCourse(query: any) {
   return request({ url: '/campus/classCourse/list', method: 'get', params: query })
@@ -105,6 +116,9 @@ export function updateClassCourse(data: any) {
 }
 export function generateTeachingClassCode(data: any) {
   return request({ url: '/campus/classCourse/generate-teaching-code', method: 'post', data })
+}
+export function generateSelectionGroupCode(data: any) {
+  return request({ url: '/campus/classCourse/generate-selection-group-code', method: 'post', data })
 }
 export function delClassCourse(ids: number | number[]) {
   return request({ url: `/campus/classCourse/${ids}`, method: 'delete' })

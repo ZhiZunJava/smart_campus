@@ -3,6 +3,8 @@
 <mapper namespace="com.smart.system.mapper.ScCourseStudentMapper">
   <resultMap type="ScCourseStudent" id="ScCourseStudentResult">
     <id property="id" column="id" />
+    <result property="classCourseId" column="class_course_id" />
+    <result property="teachingClassCode" column="teaching_class_code" />
     <result property="courseId" column="course_id" />
     <result property="courseName" column="course_name" />
     <result property="studentUserId" column="student_user_id" />
@@ -10,39 +12,65 @@
     <result property="studentNo" column="student_no" />
     <result property="classId" column="class_id" />
     <result property="className" column="class_name" />
+    <result property="teacherId" column="teacher_id" />
+    <result property="teacherName" column="teacher_name" />
+    <result property="termId" column="term_id" />
+    <result property="termName" column="term_name" />
+    <result property="requiredFlag" column="required_flag" />
     <result property="joinTime" column="join_time" />
     <result property="status" column="status" />
     <result property="remark" column="remark" />
   </resultMap>
-  <sql id="selectScCourseStudentVo"> select s.id, s.course_id, c.course_name, s.student_user_id,
-    coalesce(p.real_name, u.nick_name, u.user_name) as student_name, p.student_no, s.class_id,
-    cls.class_name, s.join_time, s.status, s.remark from sc_course_student s left join sc_course c
-    on c.course_id = s.course_id left join sc_user_profile p on p.user_id = s.student_user_id left
-    join sys_user u on u.user_id = s.student_user_id left join sc_class cls on cls.class_id =
-    s.class_id </sql>
+  <sql id="selectScCourseStudentVo"> select s.id, s.class_course_id, cc.teaching_class_code,
+    ifnull(cc.course_id, s.course_id) as course_id,
+    ifnull(nullif(cc.selection_option_name, ''), c.course_name) as course_name, s.student_user_id,
+    coalesce(p.real_name, u.nick_name, u.user_name) as student_name, p.student_no,
+    ifnull(cc.class_id, s.class_id) as class_id, cls.class_name, cc.teacher_id,
+    coalesce(tu.nick_name, tu.user_name) as teacher_name, cc.term_id, t.term_name, cc.required_flag,
+    s.join_time, s.status, s.remark
+    from sc_course_student s
+    left join sc_class_course cc on cc.id = s.class_course_id
+    left join sc_course c on c.course_id = ifnull(cc.course_id, s.course_id)
+    left join sc_user_profile p on p.user_id = s.student_user_id
+    left join sys_user u on u.user_id = s.student_user_id
+    left join sc_class cls on cls.class_id = ifnull(cc.class_id, s.class_id)
+    left join sys_user tu on tu.user_id = cc.teacher_id
+    left join sc_school_term t on t.term_id = cc.term_id </sql>
   <select id="selectScCourseStudentById" parameterType="Long" resultMap="ScCourseStudentResult"><include
       refid="selectScCourseStudentVo" /> where id = #{id}</select>
   <select id="selectScCourseStudentList" parameterType="ScCourseStudent"
     resultMap="ScCourseStudentResult">
     <include refid="selectScCourseStudentVo" />
     <where>
+      <if test="classCourseId != null">and s.class_course_id = #{classCourseId}</if>
       <if test="courseId != null">and s.course_id = #{courseId}</if>
       <if test="studentUserId != null">and
     s.student_user_id = #{studentUserId}</if>
       <if test="classId != null">and s.class_id = #{classId}</if>
+      <if test="teacherId != null">and cc.teacher_id = #{teacherId}</if>
+      <if test="termId != null">and cc.term_id = #{termId}</if>
       <if
         test="status != null and status != ''">and s.status = #{status}</if>
     </where> order by
     s.id desc </select>
   <select id="selectDuplicateScCourseStudent" parameterType="ScCourseStudent"
     resultMap="ScCourseStudentResult">
-    <include refid="selectScCourseStudentVo" /> where s.course_id = #{courseId} and
-    s.student_user_id = #{studentUserId} <if test="id != null"> and s.id != #{id} </if> limit 1 </select>
+    <include refid="selectScCourseStudentVo" /> where s.student_user_id = #{studentUserId}
+    and s.status = '0'
+    <choose>
+      <when test="classCourseId != null">and s.class_course_id = #{classCourseId}</when>
+      <otherwise>and s.course_id = #{courseId}</otherwise>
+    </choose>
+    <if test="id != null"> and s.id != #{id} </if> limit 1 </select>
+  <select id="countActiveByClassCourseId" parameterType="Long" resultType="int">
+    select count(1) from sc_course_student where class_course_id = #{classCourseId} and status = '0'
+  </select>
   <insert id="insertScCourseStudent" parameterType="ScCourseStudent" useGeneratedKeys="true"
-    keyProperty="id">insert into sc_course_student(course_id, student_user_id, class_id, join_time,
-    status, remark) values(#{courseId}, #{studentUserId}, #{classId}, #{joinTime}, #{status},
+    keyProperty="id">insert into sc_course_student(class_course_id, course_id, student_user_id, class_id, join_time,
+    status, remark) values(#{classCourseId}, #{courseId}, #{studentUserId}, #{classId}, #{joinTime}, #{status},
     #{remark})</insert>
   <update id="updateScCourseStudent" parameterType="ScCourseStudent">update sc_course_student <set><if
+        test="classCourseId != null">class_course_id = #{classCourseId},</if><if
         test="courseId != null">course_id = #{courseId},</if><if test="studentUserId != null">student_user_id
     = #{studentUserId},</if><if test="classId != null">class_id = #{classId},</if><if
         test="joinTime != null">join_time = #{joinTime},</if><if test="status != null">status =

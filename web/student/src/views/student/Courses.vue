@@ -1,7 +1,7 @@
 <template>
   <div class="portal-page">
     <div class="portal-section-title">
-      <h3>我的课程</h3>
+      <h3>{{ isClassMode ? '我的班级课程' : '我的课程' }}</h3>
     </div>
 
     <section class="course-overview">
@@ -9,7 +9,7 @@
         <div class="course-overview__hero-copy">
           <span class="course-overview__eyebrow">课程总览</span>
           <h4>{{ summaryTermText }}</h4>
-          <p>当前学期共 {{ courseList.length }} 门课程，建议优先查看已排课课程与本周上课安排。</p>
+          <p>{{ overviewDescription }}</p>
           <div class="course-overview__hero-tags">
             <span class="course-overview__tag">总学分 {{ totalCredits }}</span>
             <span class="course-overview__tag">周学时 {{ totalHours }}</span>
@@ -35,7 +35,7 @@
             <div class="course-metric-card__content">
               <div class="course-metric-card__label">课程数</div>
               <div class="course-metric-card__value">{{ courseList.length }}</div>
-              <div class="course-metric-card__sub">当前学期修读课程</div>
+              <div class="course-metric-card__sub">{{ isClassMode ? '当前学期班级默认课程' : '当前学期已选课程' }}</div>
             </div>
           </div>
         </div>
@@ -46,7 +46,7 @@
             <div class="course-metric-card__content">
               <div class="course-metric-card__label">总周学时</div>
               <div class="course-metric-card__value">{{ totalHours }}</div>
-              <div class="course-metric-card__sub">按班级课程累计</div>
+              <div class="course-metric-card__sub">{{ isClassMode ? '按班级默认课程累计' : '按已选教学班累计' }}</div>
             </div>
           </div>
         </div>
@@ -73,6 +73,7 @@
           <div class="course-summary-badge course-summary-badge--highlight">
             <i class="ri-award-line"></i> 总学分：{{ totalCredits }}
           </div>
+          <el-button type="primary" plain class="course-selection-entry" @click="openSelectionPage">选课中心</el-button>
         </div>
         <div class="course-filter">
           <el-select v-model="queryParams.termId" filterable clearable placeholder="切换学期" class="filter-select" @change="loadCourses">
@@ -105,6 +106,8 @@
               <span class="course-tag" title="总学时"><i class="ri-time-line"></i> {{ row.totalHours ?? '-' }}学时</span>
               <span class="course-tag" title="考核方式"><i class="ri-file-list-3-line"></i> {{ row.assessmentType || '未定' }}</span>
               <span class="course-tag" v-if="row.teachingLanguage" title="授课语言"><i class="ri-translate-2"></i> {{ row.teachingLanguage }}</span>
+              <span class="course-tag" v-if="isClassMode && row.requiredSelection" title="修读要求"><i class="ri-lock-line"></i> 必修保留</span>
+              <span class="course-tag" v-if="isClassMode && !row.requiredSelection && row.selected" title="当前状态"><i class="ri-checkbox-circle-line"></i> 已选</span>
             </div>
 
             <div class="course-schedules">
@@ -237,7 +240,6 @@
             <el-table-column label="结束时间" prop="endTime" width="110" />
             <el-table-column label="学时信息" prop="hours" width="90" />
           </el-table>
-          <el-empty v-if="!(currentCourse?.scheduleDetails || []).length" description="当前课程暂无排课信息" />
         </el-tab-pane>
         <el-tab-pane :label="`课程考试（${courseDetail.stats?.paperCount || 0}）`" name="papers">
           <div class="course-tab-hint">仅展示当前课程已配置并开放到课程维度的考试。</div>
@@ -258,7 +260,6 @@
               </template>
             </el-table-column>
           </el-table>
-          <el-empty v-if="!(courseDetail.papers || []).length" description="当前课程暂未配置考试，所以这里为空" />
         </el-tab-pane>
         <el-tab-pane :label="`课程题库（${courseDetail.stats?.questionCount || 0}）`" name="questions">
           <div class="course-tab-hint">这里展示已绑定到当前课程的题目预览；为避免泄题，题干已做半脱敏处理，且不会返回答案、解析与正确项。</div>
@@ -280,7 +281,6 @@
               </template>
             </el-table-column>
           </el-table>
-          <el-empty v-if="!(courseDetail.questions || []).length" description="当前课程没有绑定题库题目，或题目录入时未关联课程" />
         </el-tab-pane>
         <el-tab-pane label="课程统计" name="stats">
           <div class="course-detail-metrics">
@@ -438,9 +438,13 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { getPaperDetail, getPortalCourseDetail, listPortalMyCourses, listPortalTermOptions } from '@/api/portal'
+import { getPaperDetail, getPortalCourseDetail, listPortalMyClassCourses, listPortalMyCourses, listPortalTermOptions } from '@/api/portal'
 import { useRoute, useRouter } from 'vue-router'
 import usePortalUserStore from '@/store/user'
+
+const props = withDefaults(defineProps<{ mode?: 'selected' | 'class' }>(), {
+  mode: 'selected',
+})
 
 const router = useRouter()
 const route = useRoute()
@@ -458,6 +462,7 @@ const paperPreviewOpen = ref(false)
 const paperPreviewData = ref<any>({})
 const questionPreviewOpen = ref(false)
 const questionPreview = ref<any>({})
+const isClassMode = computed(() => props.mode === 'class')
 const taskContext = computed(() => ({
   active: route.query.fromTask === '1',
   taskType: String(route.query.taskType || '').toUpperCase(),
@@ -489,7 +494,9 @@ const filteredCourses = computed(() => {
   if (!value) return courseList.value
   return courseList.value.filter((item: any) =>
     String(item.courseName || '').toLowerCase().includes(value)
-    || String(item.courseCode || '').toLowerCase().includes(value),
+    || String(item.courseCode || '').toLowerCase().includes(value)
+    || String(item.className || '').toLowerCase().includes(value)
+    || String(item.teachingClassCode || '').toLowerCase().includes(value),
   )
 })
 const totalHours = computed(() => courseList.value.reduce((sum: number, item: any) => sum + Number(item.weeklyHours || 0), 0))
@@ -504,6 +511,12 @@ const totalCredits = computed(() => {
 })
 const scheduledCourseCount = computed(() => courseList.value.filter((item: any) => (item.scheduleDetails || []).length > 0).length)
 const unscheduledCourseCount = computed(() => Math.max(courseList.value.length - scheduledCourseCount.value, 0))
+const overviewDescription = computed(() => {
+  if (isClassMode.value) {
+    return `当前学期班级默认开设 ${courseList.value.length} 门课程，这里主要用于查看培养方案视角下的班级课程与排课安排。`
+  }
+  return `当前学期共 ${courseList.value.length} 门课程，建议优先查看已排课课程与本周上课安排。`
+})
 
 function stripHtml(value: string) {
   return String(value || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
@@ -557,6 +570,13 @@ async function openCourseDetail(row: any) {
   detailOpen.value = true
 }
 
+function openSelectionPage() {
+  router.push({
+    path: '/student/selection',
+    query: queryParams.termId ? { termId: String(queryParams.termId) } : {},
+  })
+}
+
 async function previewCoursePaper(row: any) {
   router.push(`/student/exams/preview/${row.paperId}`)
 }
@@ -605,7 +625,9 @@ async function loadCourses() {
   if (!userId) return
   loading.value = true
   try {
-    const res = await listPortalMyCourses({ userId, termId: queryParams.termId })
+    const res = isClassMode.value
+      ? await listPortalMyClassCourses({ userId, termId: queryParams.termId })
+      : await listPortalMyCourses({ userId, termId: queryParams.termId })
     courseList.value = res.data || []
   } finally {
     loading.value = false
@@ -613,6 +635,9 @@ async function loadCourses() {
 }
 
 onMounted(async () => {
+  if (route.query.termId) {
+    queryParams.termId = Number(route.query.termId)
+  }
   await loadTerms()
   await loadCourses()
   const requestedTab = String(route.query.tab || '')
@@ -865,6 +890,11 @@ onMounted(async () => {
   display: flex;
   gap: 12px;
   align-items: center;
+}
+
+.course-selection-entry {
+  height: 34px;
+  border-radius: 10px;
 }
 
 .filter-select {

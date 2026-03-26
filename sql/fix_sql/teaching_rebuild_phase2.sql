@@ -29,6 +29,10 @@ CREATE TABLE IF NOT EXISTS sc_class_course (
   teacher_id BIGINT DEFAULT NULL COMMENT '授课教师ID',
   term_id BIGINT DEFAULT NULL COMMENT '学期ID',
   weekly_hours INT DEFAULT 0 COMMENT '每周课时数',
+  selection_option_name VARCHAR(100) NOT NULL DEFAULT '' COMMENT '专项名称/子项目名称',
+  selection_group_code VARCHAR(64) DEFAULT NULL COMMENT '专项选课分组编码',
+  selection_group_name VARCHAR(100) DEFAULT NULL COMMENT '专项选课分组名称',
+  selection_group_limit INT DEFAULT 1 COMMENT '组内限选门数',
   student_limit INT DEFAULT 0 COMMENT '学生人数上限',
   status CHAR(1) DEFAULT '0' COMMENT '状态：0-禁用 1-启用',
   create_by VARCHAR(64) DEFAULT NULL COMMENT '创建人',
@@ -42,7 +46,7 @@ CREATE TABLE IF NOT EXISTS sc_class_course (
   INDEX idx_term_id (term_id),
   INDEX idx_teacher_id (teacher_id),
   -- 新增联合唯一索引：避免同一班级同一学期重复添加同一课程
-  UNIQUE INDEX uk_class_course_term (class_id, course_id, term_id),
+  UNIQUE INDEX uk_class_course_term_option (class_id, course_id, term_id, selection_option_name),
   INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='班级课程关联表';
 

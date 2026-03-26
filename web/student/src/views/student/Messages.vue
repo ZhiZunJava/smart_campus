@@ -85,6 +85,7 @@
                     <div class="message-type-chip" :class="{ 'is-active': messageTypeFilter === 'all' }" @click="messageTypeFilter = 'all'">全部</div>
                     <div class="message-type-chip" :class="{ 'is-active': messageTypeFilter === 'EXAM_REMINDER' }" @click="messageTypeFilter = 'EXAM_REMINDER'">考试提醒</div>
                     <div class="message-type-chip" :class="{ 'is-active': messageTypeFilter === 'ACHIEVEMENT' }" @click="messageTypeFilter = 'ACHIEVEMENT'">成长提醒</div>
+                    <div class="message-type-chip" :class="{ 'is-active': messageTypeFilter === 'COURSE_SELECTION' }" @click="messageTypeFilter = 'COURSE_SELECTION'">选课服务</div>
                     <div class="message-type-chip" :class="{ 'is-active': messageTypeFilter === 'SYSTEM' }" @click="messageTypeFilter = 'SYSTEM'">系统消息</div>
                   </div>
                 </div>
@@ -283,7 +284,7 @@ interface MessageItem {
   actionTarget?: string | number
   paperId?: string | number
   isRead?: boolean
-  messageKind?: 'EXAM_REMINDER' | 'ACHIEVEMENT' | 'SYSTEM' | 'NOTICE'
+  messageKind?: 'EXAM_REMINDER' | 'ACHIEVEMENT' | 'COURSE_SELECTION' | 'SYSTEM' | 'NOTICE'
   sourceKind?: 'notice' | 'synthetic'
   canMarkRead?: boolean
 }
@@ -312,7 +313,7 @@ const noticePage = ref(1)
 
 const todoFilter = ref('all')
 const messageFilter = ref('unread')
-const messageTypeFilter = ref<'all' | 'EXAM_REMINDER' | 'ACHIEVEMENT' | 'SYSTEM'>('all')
+const messageTypeFilter = ref<'all' | 'EXAM_REMINDER' | 'ACHIEVEMENT' | 'COURSE_SELECTION' | 'SYSTEM'>('all')
 const noticeFilter = ref('unread')
 
 const detailVisible = ref(false)
@@ -354,6 +355,8 @@ function normalizeMessageItem(item: any, index: number): MessageItem {
     : localReadMessageIds.value.includes(key)
   const messageKind = item?.noticeType === '2'
     ? 'NOTICE'
+    : item?.messageType === 'COURSE_SELECTION'
+      ? 'COURSE_SELECTION'
     : item?.messageType === 'EXAM_REMINDER'
       ? 'EXAM_REMINDER'
       : item?.messageType === 'ACHIEVEMENT'
@@ -376,12 +379,14 @@ function isMessageRead(item: any) {
 function messageTagType(item: any) {
   if (item?.messageKind === 'ACHIEVEMENT') return 'success'
   if (item?.messageKind === 'EXAM_REMINDER') return 'warning'
+  if (item?.messageKind === 'COURSE_SELECTION') return 'primary'
   return 'info'
 }
 
 function messageIconTone(item: any) {
   if (item?.messageKind === 'ACHIEVEMENT') return 'success'
   if (item?.messageKind === 'EXAM_REMINDER') return 'warning'
+  if (item?.messageKind === 'COURSE_SELECTION') return 'primary'
   return 'info'
 }
 
@@ -394,7 +399,7 @@ const filteredTodoRows = computed(() => {
 })
 const filteredMessageRows = computed(() => {
   let list = messageRows.value.filter(includesKeyword)
-  if (messageTypeFilter.value === 'EXAM_REMINDER' || messageTypeFilter.value === 'ACHIEVEMENT') {
+  if (messageTypeFilter.value === 'EXAM_REMINDER' || messageTypeFilter.value === 'ACHIEVEMENT' || messageTypeFilter.value === 'COURSE_SELECTION') {
     list = list.filter((item: any) => item.messageKind === messageTypeFilter.value)
   } else if (messageTypeFilter.value === 'SYSTEM') {
     list = list.filter((item: any) => item.messageKind === 'SYSTEM')
@@ -418,7 +423,7 @@ const filteredNoticeRows = computed(() => {
 
 const tabOptions = computed<TabOption[]>(() => [
   { value: 'todo' as MessageTab, label: '我的待办', count: Number(taskCenter.value?.stats?.todoCount || todoRows.value.length || 0) },
-  { value: 'message' as MessageTab, label: '未读消息', count: Number(overview.value?.stats?.unreadMessageCount || messageRows.value.length || 0) },
+  { value: 'message' as MessageTab, label: '消息提醒', count: Number(overview.value?.stats?.unreadMessageCount || messageRows.value.length || 0) },
   { value: 'notice' as MessageTab, label: '通知公告', count: Number(overview.value?.stats?.noticeCount || noticeRows.value.length || 0) },
 ])
 
@@ -475,6 +480,7 @@ function formatDateTime(value?: string | number | Date | null) {
 function resolveMessageTypeLabel(item: any) {
   if (item?.messageKind === 'EXAM_REMINDER') return '考试提醒'
   if (item?.messageKind === 'ACHIEVEMENT') return '成长提醒'
+  if (item?.messageKind === 'COURSE_SELECTION') return '选课服务'
   if (item?.messageKind === 'NOTICE') return '通知公告'
   return '系统消息'
 }
@@ -501,7 +507,7 @@ async function loadData() {
     const [taskRes, overviewRes, messageRes] = await Promise.all([
       getPortalTaskCenter({ userId }),
       getPortalMessageOverview({ userId }),
-      getPortalMessageCenter({ userId, limit: 100 }),
+      getPortalMessageCenter({ userId, limit: 100, includeRead: true }),
     ])
     taskCenter.value = taskRes.data || {}
     overview.value = overviewRes.data || {}
@@ -876,6 +882,11 @@ onMounted(() => {
 .message-card__icon.is-success {
   background: #f0fdf4;
   color: #22c55e;
+}
+
+.message-card__icon.is-primary {
+  background: #eff6ff;
+  color: #2563eb;
 }
 
 .message-card__icon.is-info {

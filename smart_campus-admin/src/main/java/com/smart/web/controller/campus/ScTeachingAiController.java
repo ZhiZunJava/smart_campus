@@ -186,8 +186,8 @@ public class ScTeachingAiController extends BaseController {
                 Arrays.asList("courseId: 课程ID", "parentId: 父章节ID，顶级一般为0", "chapterName: 章节名称", "chapterOrder: 章节排序",
                         "status: 0正常 1停用", "remark: 章节说明")));
         configs.put("courseStudent", new ModuleConfig("courseStudent", "选课关系",
-                Arrays.asList("courseId", "studentUserId", "classId", "status", "remark"),
-                Arrays.asList("courseId: 课程ID", "studentUserId: 学生用户ID", "classId: 班级ID", "status: 0正常 1停用",
+                Arrays.asList("classCourseId", "studentUserId", "status", "remark"),
+                Arrays.asList("classCourseId: 班级课程ID/教学班ID", "studentUserId: 学生用户ID", "status: 0正常 1停用",
                         "remark: 选课备注")));
         configs.put("knowledgePoint", new ModuleConfig("knowledgePoint", "知识点管理",
                 Arrays.asList("courseId", "parentId", "knowledgeName", "difficultyLevel", "keyword", "description",

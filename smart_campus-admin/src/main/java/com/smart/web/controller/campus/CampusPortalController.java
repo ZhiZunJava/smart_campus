@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,6 +32,9 @@ import com.smart.framework.web.service.TokenService;
 import com.smart.system.domain.ScUserProfile;
 import com.smart.system.domain.ScClass;
 import com.smart.system.domain.ScClassCourse;
+import com.smart.system.domain.ScCourseSelectionPlan;
+import com.smart.system.domain.ScCourseSelectionRequest;
+import com.smart.system.domain.ScCourseStudent;
 import com.smart.system.domain.ScCourse;
 import com.smart.system.domain.ScCourseSchedule;
 import com.smart.system.domain.ScExamPaper;
@@ -44,10 +48,15 @@ import com.smart.system.domain.ScLearningTaskSubmission;
 import com.smart.system.domain.ScWrongQuestionBook;
 import com.smart.system.domain.ScParentStudentRel;
 import com.smart.system.domain.SysNotice;
+import com.smart.system.domain.dto.CourseSelectionOperateDto;
+import com.smart.system.domain.dto.CourseSelectionRequestReviewDto;
 import com.smart.system.service.ICampusOverviewService;
 import com.smart.system.service.IScClassCourseService;
 import com.smart.system.service.IScClassService;
+import com.smart.system.service.IScCourseStudentService;
 import com.smart.system.service.IScCourseScheduleService;
+import com.smart.system.service.IScCourseSelectionPlanService;
+import com.smart.system.service.IScCourseSelectionRequestService;
 import com.smart.system.service.IScCourseService;
 import com.smart.system.service.IScExamPaperService;
 import com.smart.system.service.IScExamRecordService;
@@ -94,6 +103,15 @@ public class CampusPortalController extends BaseController {
 
     @Autowired
     private IScClassCourseService scClassCourseService;
+
+    @Autowired
+    private IScCourseStudentService scCourseStudentService;
+
+    @Autowired
+    private IScCourseSelectionRequestService scCourseSelectionRequestService;
+
+    @Autowired
+    private IScCourseSelectionPlanService scCourseSelectionPlanService;
 
     @Autowired
     private IScCourseScheduleService scCourseScheduleService;
@@ -154,63 +172,46 @@ public class CampusPortalController extends BaseController {
     @PreAuthorize("@ss.hasAnyRoles('student,admin')")
     @GetMapping("/student/my-courses")
     public AjaxResult studentMyCourses(@RequestParam Long userId, @RequestParam(required = false) Long termId) {
+        termId = termId == null ? resolveCurrentPortalTermId() : termId;
         ScUserProfile profile = scUserProfileService.selectScUserProfileByUserId(userId);
         if (profile == null || profile.getClassId() == null) {
             return success(Collections.emptyList());
         }
 
-        ScClassCourse query = new ScClassCourse();
-        query.setClassId(profile.getClassId());
-        query.setTermId(termId);
-        query.setStatus("0");
-        List<ScClassCourse> classCourses = scClassCourseService.selectScClassCourseList(query);
+        List<ScClassCourse> classCourses = loadStudentSelectedClassCourses(userId, termId, true);
         Map<Long, List<ScCourseSchedule>> scheduleMap = loadScheduleMap(classCourses);
         List<Map<String, Object>> result = new ArrayList<>();
         for (ScClassCourse classCourse : classCourses) {
-            ScCourse course = classCourse.getCourseId() == null ? null
-                    : scCourseService.selectScCourseByCourseId(classCourse.getCourseId());
             ScSchoolTerm term = classCourse.getTermId() == null ? null
                     : scSchoolTermService.selectScSchoolTermByTermId(classCourse.getTermId());
             List<ScCourseSchedule> schedules = scheduleMap.getOrDefault(classCourse.getId(), Collections.emptyList());
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("id", classCourse.getId());
-            item.put("classId", classCourse.getClassId());
-            item.put("className", classCourse.getClassName());
-            item.put("courseId", classCourse.getCourseId());
-            item.put("courseName", classCourse.getCourseName());
-            item.put("courseCode", course == null ? null : course.getCourseCode());
-            item.put("subjectType", course == null ? null : course.getSubjectType());
-            item.put("intro", course == null ? null : course.getIntro());
-            item.put("teacherId", classCourse.getTeacherId());
-            item.put("termId", classCourse.getTermId());
-            item.put("termName", classCourse.getTermName());
-            item.put("schoolYear", term == null ? null : term.getSchoolYear());
-            item.put("businessType", classCourse.getBusinessType());
-            item.put("teachingClassCode", classCourse.getTeachingClassCode());
-            item.put("credits",
-                    classCourse.getCredits() == null ? estimateCredits(course, classCourse) : classCourse.getCredits());
-            item.put("courseCategory", classCourse.getCourseCategory());
-            item.put("openDeptId", classCourse.getOpenDeptId());
-            item.put("openDeptName", classCourse.getOpenDeptName());
-            item.put("major", classCourse.getMajor());
-            item.put("campusName", classCourse.getCampusName());
-            item.put("assessmentType", classCourse.getAssessmentType());
-            item.put("teachingLanguage", classCourse.getTeachingLanguage());
-            item.put("prerequisiteCourse", classCourse.getPrerequisiteCourse());
-            item.put("taskType", classCourse.getTaskType());
-            item.put("requiredFlag", classCourse.getRequiredFlag());
-            item.put("courseLevelRequirement", classCourse.getCourseLevelRequirement());
-            item.put("totalHours", classCourse.getTotalHours());
-            item.put("requiredWeeks", classCourse.getRequiredWeeks());
-            item.put("weeklyHours", classCourse.getWeeklyHours());
-            item.put("arrangedHours", classCourse.getArrangedHours());
-            item.put("studentLimit", classCourse.getStudentLimit());
-            item.put("actualStudentCount", classCourse.getActualStudentCount());
-            item.put("remark", classCourse.getRemark());
-            item.put("semesterLabel", term == null ? classCourse.getTermName() : buildTermLabel(term));
-            item.put("scheduleText", buildScheduleTextVm(classCourse, schedules));
-            item.put("scheduleDetails", buildCourseScheduleDetails(classCourse, schedules, term));
-            result.add(item);
+            result.add(buildStudentCourseSelectionItem(classCourse, term, schedules, profile, true));
+        }
+        return success(result);
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('student,admin')")
+    @GetMapping("/student/class-courses")
+    public AjaxResult studentClassCourses(@RequestParam Long userId, @RequestParam(required = false) Long termId) {
+        termId = termId == null ? resolveCurrentPortalTermId() : termId;
+        ScUserProfile profile = scUserProfileService.selectScUserProfileByUserId(userId);
+        if (profile == null || profile.getClassId() == null) {
+            return success(Collections.emptyList());
+        }
+        List<ScClassCourse> classCourses = loadStudentClassCourses(profile.getClassId(), termId);
+        Map<Long, List<ScCourseSchedule>> scheduleMap = loadScheduleMap(classCourses);
+        Set<Long> selectedIds = loadStudentSelectedClassCourses(userId, termId, true).stream()
+                .map(ScClassCourse::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (ScClassCourse classCourse : classCourses) {
+            ScSchoolTerm term = classCourse.getTermId() == null ? null
+                    : scSchoolTermService.selectScSchoolTermByTermId(classCourse.getTermId());
+            List<ScCourseSchedule> schedules = scheduleMap.getOrDefault(classCourse.getId(), Collections.emptyList());
+            boolean selected = selectedIds.contains(classCourse.getId())
+                    || "Y".equalsIgnoreCase(StringUtils.defaultIfEmpty(classCourse.getRequiredFlag(), "N"));
+            result.add(buildStudentCourseSelectionItem(classCourse, term, schedules, profile, selected));
         }
         return success(result);
     }
@@ -223,14 +224,18 @@ public class CampusPortalController extends BaseController {
             return success(Collections.emptyMap());
         }
         ScClassCourse classCourse = scClassCourseService.selectScClassCourseById(classCourseId);
-        if (classCourse == null || !Objects.equals(classCourse.getClassId(), profile.getClassId())) {
+        if (classCourse == null || !canStudentPreviewCourse(userId, classCourse)) {
             return success(Collections.emptyMap());
         }
 
         Map<Long, List<ScCourseSchedule>> scheduleMap = loadScheduleMap(Collections.singletonList(classCourse));
         ScSchoolTerm term = classCourse.getTermId() == null ? null
                 : scSchoolTermService.selectScSchoolTermByTermId(classCourse.getTermId());
-        Map<String, Object> currentCourse = buildStudentCourseItem(classCourse, term, scheduleMap.getOrDefault(classCourse.getId(), Collections.emptyList()));
+        boolean selected = scCourseStudentService.findActiveSelection(userId, classCourseId) != null
+                || (Objects.equals(profile.getClassId(), classCourse.getClassId())
+                && "Y".equalsIgnoreCase(StringUtils.defaultIfEmpty(classCourse.getRequiredFlag(), "N")));
+        Map<String, Object> currentCourse = buildStudentCourseSelectionItem(classCourse, term,
+                scheduleMap.getOrDefault(classCourse.getId(), Collections.emptyList()), profile, selected);
 
         ScExamPaper paperQuery = new ScExamPaper();
         paperQuery.setCourseId(classCourse.getCourseId());
@@ -273,6 +278,293 @@ public class CampusPortalController extends BaseController {
         result.put("records", records.stream().limit(20).collect(Collectors.toList()));
         result.put("stats", stats);
         return success(result);
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('student,admin')")
+    @GetMapping("/student/course-selection/options")
+    public AjaxResult studentCourseSelectionOptions(@RequestParam Long userId,
+            @RequestParam(required = false) Long termId) {
+        termId = termId == null ? resolveCurrentPortalTermId() : termId;
+        ScUserProfile profile = scUserProfileService.selectScUserProfileByUserId(userId);
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (profile == null || profile.getClassId() == null) {
+            result.put("selectedCourses", Collections.emptyList());
+            result.put("availableCourses", Collections.emptyList());
+            result.put("stats", Collections.emptyMap());
+            return success(result);
+        }
+        List<ScClassCourse> selectedClassCourses = loadStudentSelectedClassCourses(userId, termId, true);
+        Set<Long> selectedIds = selectedClassCourses.stream()
+                .map(ScClassCourse::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        Map<String, List<ScClassCourse>> selectedGroupMap = buildSelectedGroupMap(selectedClassCourses);
+        ScCourseSelectionPlan plan = resolveSelectionPlan(termId);
+        boolean selectionOpen = isSelectionWindowOpen(plan);
+        boolean dropOpen = isDropWindowOpen(plan);
+        List<ScClassCourse> availableClassCourses = scCourseStudentService.listAvailableClassCoursesForStudent(userId, termId);
+        LinkedHashMap<Long, ScClassCourse> mergedMap = new LinkedHashMap<>();
+        for (ScClassCourse item : selectedClassCourses) {
+            if (item != null && item.getId() != null) {
+                mergedMap.put(item.getId(), item);
+            }
+        }
+        for (ScClassCourse item : availableClassCourses) {
+            if (item != null && item.getId() != null) {
+                mergedMap.putIfAbsent(item.getId(), item);
+            }
+        }
+        List<ScClassCourse> mergedCourses = new ArrayList<>(mergedMap.values());
+        Map<Long, List<ScCourseSchedule>> scheduleMap = loadScheduleMap(mergedCourses);
+        List<Map<String, Object>> selectedCourses = new ArrayList<>();
+        List<Map<String, Object>> availableCourses = new ArrayList<>();
+        for (ScClassCourse classCourse : mergedCourses) {
+            ScSchoolTerm term = classCourse.getTermId() == null ? null
+                    : scSchoolTermService.selectScSchoolTermByTermId(classCourse.getTermId());
+            List<ScCourseSchedule> schedules = scheduleMap.getOrDefault(classCourse.getId(), Collections.emptyList());
+            boolean selected = selectedIds.contains(classCourse.getId());
+            Map<String, Object> item = buildStudentCourseSelectionItem(classCourse, term, schedules, profile, selected);
+            String groupLimitReason = selected ? null : resolveGroupSelectionLimitReason(classCourse, selectedGroupMap);
+            if (StringUtils.isNotEmpty(groupLimitReason)) {
+                item.put("canSelect", false);
+                item.put("actionDisabledReason", groupLimitReason);
+            }
+            if (!selected && !selectionOpen) {
+                item.put("canSelect", false);
+                item.put("actionDisabledReason", "当前不在选课开放时间");
+            }
+            if (selected && Boolean.TRUE.equals(item.get("canDrop")) && !dropOpen) {
+                item.put("canDrop", false);
+                item.put("actionDisabledReason", "当前不在退课开放时间");
+            }
+            availableCourses.add(item);
+            if (selected) {
+                selectedCourses.add(item);
+            }
+        }
+        Map<String, Object> stats = new LinkedHashMap<>();
+        stats.put("selectedCount", selectedCourses.size());
+        stats.put("availableCount", availableCourses.size());
+        stats.put("requiredCount", availableCourses.stream()
+                .filter(item -> Boolean.TRUE.equals(item.get("requiredSelection")))
+                .count());
+        stats.put("optionalCount", availableCourses.stream()
+                .filter(item -> !Boolean.TRUE.equals(item.get("requiredSelection")))
+                .count());
+        result.put("plan", buildSelectionPlanVm(plan));
+        result.put("selectionOpen", selectionOpen);
+        result.put("dropOpen", dropOpen);
+        result.put("selectedCourses", selectedCourses);
+        result.put("availableCourses", availableCourses);
+        result.put("stats", stats);
+        return success(result);
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('student,admin')")
+    @PostMapping("/student/course-selection/select")
+    public AjaxResult studentSelectCourse(@RequestBody CourseSelectionOperateDto dto) {
+        if (dto == null || dto.getUserId() == null || dto.getClassCourseId() == null) {
+            return error("选课参数不能为空");
+        }
+        if (!canOperateStudentSelection(dto.getUserId())) {
+            return error("无权操作其他学生的选课");
+        }
+        ScClassCourse classCourse = scClassCourseService.selectScClassCourseById(dto.getClassCourseId());
+        ScCourseSelectionPlan plan = resolveSelectionPlan(classCourse == null ? null : classCourse.getTermId());
+        if (!isSelectionWindowOpen(plan)) {
+            return error("当前不在选课开放时间");
+        }
+        return success(scCourseStudentService.selectCourse(dto.getUserId(), dto.getClassCourseId(), getUsername()));
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('student,admin')")
+    @PostMapping("/student/course-selection/drop")
+    public AjaxResult studentDropCourse(@RequestBody CourseSelectionOperateDto dto) {
+        if (dto == null || dto.getUserId() == null || dto.getClassCourseId() == null) {
+            return error("退课参数不能为空");
+        }
+        if (!canOperateStudentSelection(dto.getUserId())) {
+            return error("无权操作其他学生的选课");
+        }
+        ScClassCourse classCourse = scClassCourseService.selectScClassCourseById(dto.getClassCourseId());
+        ScCourseSelectionPlan plan = resolveSelectionPlan(classCourse == null ? null : classCourse.getTermId());
+        if (!isDropWindowOpen(plan)) {
+            return error("当前不在退课开放时间");
+        }
+        return success(scCourseStudentService.cancelCourse(dto.getUserId(), dto.getClassCourseId(), getUsername()));
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('student,admin')")
+    @GetMapping("/student/personalized-selection/options")
+    public AjaxResult studentPersonalizedSelectionOptions(@RequestParam Long userId,
+            @RequestParam(required = false) Long termId) {
+        termId = termId == null ? resolveCurrentPortalTermId() : termId;
+        ScUserProfile profile = scUserProfileService.selectScUserProfileByUserId(userId);
+        if (profile == null || profile.getClassId() == null) {
+            return success(Collections.emptyMap());
+        }
+        ScCourseSelectionPlan plan = resolveSelectionPlan(termId);
+        boolean selectionOpen = isSelectionWindowOpen(plan);
+        boolean dropOpen = isDropWindowOpen(plan);
+        boolean requestOpen = isRequestWindowOpen(plan);
+        List<ScClassCourse> allClassCourses = loadActiveTermClassCourses(termId);
+        Map<Long, List<ScCourseSchedule>> scheduleMap = loadScheduleMap(allClassCourses);
+        List<ScClassCourse> selectedClassCourses = loadStudentSelectedClassCourses(userId, termId, true);
+        Set<Long> selectedIds = selectedClassCourses.stream()
+                .map(ScClassCourse::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        Map<String, List<ScClassCourse>> selectedGroupMap = buildSelectedGroupMap(selectedClassCourses);
+        ScCourseSelectionRequest requestQuery = new ScCourseSelectionRequest();
+        requestQuery.setStudentUserId(userId);
+        requestQuery.setTermId(termId);
+        List<ScCourseSelectionRequest> allRequests = scCourseSelectionRequestService
+                .selectScCourseSelectionRequestList(requestQuery)
+                .stream()
+                .filter(item -> item.getTargetClassCourseId() != null)
+                .collect(Collectors.toList());
+        Map<Long, ScCourseSelectionRequest> pendingAddMap = allRequests.stream()
+                .filter(item -> "0".equals(item.getRequestStatus()) && "ADD".equalsIgnoreCase(StringUtils.defaultIfEmpty(item.getRequestType(), "ADD")))
+                .collect(Collectors.toMap(ScCourseSelectionRequest::getTargetClassCourseId, item -> item,
+                        (left, right) -> left, LinkedHashMap::new));
+        Map<Long, ScCourseSelectionRequest> pendingDropMap = allRequests.stream()
+                .filter(item -> "0".equals(item.getRequestStatus()) && "DROP".equalsIgnoreCase(StringUtils.defaultIfEmpty(item.getRequestType(), "ADD")))
+                .collect(Collectors.toMap(ScCourseSelectionRequest::getTargetClassCourseId, item -> item,
+                        (left, right) -> left, LinkedHashMap::new));
+        List<Map<String, Object>> addOptions = new ArrayList<>();
+        List<Map<String, Object>> dropOptions = new ArrayList<>();
+        for (ScClassCourse classCourse : allClassCourses) {
+            if (classCourse == null || classCourse.getId() == null || selectedIds.contains(classCourse.getId())) {
+                if (classCourse == null || classCourse.getId() == null || !selectedIds.contains(classCourse.getId())) {
+                    continue;
+                }
+                ScSchoolTerm term = classCourse.getTermId() == null ? null
+                        : scSchoolTermService.selectScSchoolTermByTermId(classCourse.getTermId());
+                List<ScCourseSchedule> schedules = scheduleMap.getOrDefault(classCourse.getId(), Collections.emptyList());
+                Map<String, Object> item = buildStudentCourseSelectionItem(classCourse, term, schedules, profile, true);
+                ScCourseSelectionRequest pendingRequest = pendingDropMap.get(classCourse.getId());
+                boolean requiredSelection = Boolean.TRUE.equals(item.get("requiredSelection"));
+                boolean standardCanDrop = Boolean.TRUE.equals(item.get("canDrop")) && dropOpen;
+                item.put("pendingRequest", pendingRequest != null);
+                item.put("pendingRequestId", pendingRequest == null ? null : pendingRequest.getRequestId());
+                item.put("requestType", "DROP");
+                String requestHint;
+                boolean canRequest = false;
+                if (pendingRequest != null) {
+                    requestHint = "你已提交退课申请，请等待审核结果";
+                } else if (requiredSelection) {
+                    requestHint = StringUtils.defaultIfEmpty(String.valueOf(item.get("actionDisabledReason")),
+                            "本班必修课默认保留，不支持退课申请");
+                } else if (standardCanDrop) {
+                    requestHint = "当前可直接退课，请优先使用选课中心";
+                } else if (!requestOpen) {
+                    requestHint = "当前不在个性化申请开放时间";
+                } else {
+                    requestHint = "可发起个性化退课申请";
+                    canRequest = true;
+                }
+                item.put("requestHint", requestHint);
+                item.put("canRequest", canRequest);
+                dropOptions.add(item);
+                continue;
+            }
+            ScSchoolTerm term = classCourse.getTermId() == null ? null
+                    : scSchoolTermService.selectScSchoolTermByTermId(classCourse.getTermId());
+            List<ScCourseSchedule> schedules = scheduleMap.getOrDefault(classCourse.getId(), Collections.emptyList());
+            Map<String, Object> item = buildStudentCourseSelectionItem(classCourse, term, schedules, profile, false);
+            boolean standardCanSelect = Boolean.TRUE.equals(item.get("canSelect"));
+            ScCourseSelectionRequest pendingRequest = pendingAddMap.get(classCourse.getId());
+            boolean hasPending = pendingRequest != null;
+            String groupLimitReason = resolveGroupSelectionLimitReason(classCourse, selectedGroupMap);
+            if (standardCanSelect && selectionOpen && !hasPending) {
+                if (StringUtils.isEmpty(groupLimitReason)) {
+                    continue;
+                }
+            }
+            item.put("pendingRequest", hasPending);
+            item.put("pendingRequestId", hasPending ? pendingRequest.getRequestId() : null);
+            item.put("requestStatus", hasPending ? pendingRequest.getRequestStatus() : null);
+            item.put("requestStatusLabel", hasPending ? "待审核" : null);
+            item.put("requestType", "ADD");
+            if (StringUtils.isNotEmpty(groupLimitReason)) {
+                item.put("requestHint", groupLimitReason);
+                item.put("canRequest", false);
+                addOptions.add(item);
+                continue;
+            }
+            String requestHint;
+            boolean canRequest = false;
+            if (hasPending) {
+                requestHint = "你已提交选课申请，请等待审核结果";
+            } else if (standardCanSelect && selectionOpen) {
+                requestHint = "当前教学班支持直接选课，请优先使用选课中心";
+            } else if (!requestOpen) {
+                requestHint = "当前不在个性化申请开放时间";
+            } else {
+                requestHint = "可发起个性化选课申请";
+                canRequest = true;
+            }
+            item.put("requestHint", requestHint);
+            item.put("canRequest", canRequest);
+            addOptions.add(item);
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("plan", buildSelectionPlanVm(plan));
+        result.put("requestOpen", requestOpen);
+        result.put("selectionOpen", selectionOpen);
+        result.put("dropOpen", dropOpen);
+        result.put("addOptions", addOptions);
+        result.put("dropOptions", dropOptions);
+        result.put("stats", rowMap(
+                "pendingCount", allRequests.stream().filter(item -> "0".equals(item.getRequestStatus())).count(),
+                "approvedCount", allRequests.stream().filter(item -> "1".equals(item.getRequestStatus())).count(),
+                "rejectedCount", allRequests.stream().filter(item -> "2".equals(item.getRequestStatus())).count(),
+                "withdrawnCount", allRequests.stream().filter(item -> "3".equals(item.getRequestStatus())).count()));
+        return success(result);
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('student,admin')")
+    @GetMapping("/student/personalized-selection/requests")
+    public AjaxResult studentPersonalizedSelectionRequests(@RequestParam Long userId,
+            @RequestParam(required = false) Long termId) {
+        if (!canOperateStudentSelection(userId)) {
+            return error("无权查看其他学生的申请");
+        }
+        termId = termId == null ? resolveCurrentPortalTermId() : termId;
+        ScCourseSelectionRequest query = new ScCourseSelectionRequest();
+        query.setStudentUserId(userId);
+        query.setTermId(termId);
+        return success(scCourseSelectionRequestService.selectScCourseSelectionRequestList(query));
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('student,admin')")
+    @PostMapping("/student/personalized-selection/request")
+    public AjaxResult studentCreatePersonalizedSelectionRequest(@RequestBody ScCourseSelectionRequest request) {
+        if (request == null || request.getStudentUserId() == null || request.getTargetClassCourseId() == null) {
+            return error("申请参数不能为空");
+        }
+        if (!canOperateStudentSelection(request.getStudentUserId())) {
+            return error("无权提交其他学生的申请");
+        }
+        ScClassCourse classCourse = scClassCourseService.selectScClassCourseById(request.getTargetClassCourseId());
+        ScCourseSelectionPlan plan = resolveSelectionPlan(classCourse == null ? null : classCourse.getTermId());
+        if (!isRequestWindowOpen(plan)) {
+            return error("当前不在个性化申请开放时间");
+        }
+        return success(scCourseSelectionRequestService.createRequest(request, getUsername()));
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('student,admin')")
+    @PostMapping("/student/personalized-selection/cancel")
+    public AjaxResult studentCancelPersonalizedSelectionRequest(@RequestBody CourseSelectionRequestReviewDto dto,
+            @RequestParam Long userId) {
+        if (dto == null || dto.getRequestId() == null) {
+            return error("撤回参数不能为空");
+        }
+        if (!canOperateStudentSelection(userId)) {
+            return error("无权撤回其他学生的申请");
+        }
+        return success(scCourseSelectionRequestService.cancelRequest(dto.getRequestId(), userId, getUsername()));
     }
 
     @PreAuthorize("@ss.hasAnyRoles('student,admin')")
@@ -543,11 +835,14 @@ public class CampusPortalController extends BaseController {
     @GetMapping("/student/messages")
     public AjaxResult studentMessages(@RequestParam Long userId,
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false, defaultValue = "12") Integer limit) {
+            @RequestParam(required = false, defaultValue = "12") Integer limit,
+            @RequestParam(required = false, defaultValue = "false") Boolean includeRead) {
         List<Map<String, Object>> result = new ArrayList<>();
         String receiverScope = "STUDENT";
+        String readFlag = Boolean.TRUE.equals(includeRead) ? null : "0";
+        int resultLimit = limit == null || limit <= 0 ? 12 : limit;
 
-        List<SysNotice> notices = noticeService.selectPortalNoticeList(userId, receiverScope, "MESSAGE", "0", keyword, limit);
+        List<SysNotice> notices = noticeService.selectPortalNoticeList(userId, receiverScope, "MESSAGE", readFlag, keyword, resultLimit);
         for (SysNotice notice : notices) {
             result.add(toPortalNoticeItem(notice, "MESSAGE"));
         }
@@ -595,7 +890,7 @@ public class CampusPortalController extends BaseController {
         });
 
         result.sort(Comparator.comparing(item -> parseAnyDate(item.get("createTime")), Comparator.nullsLast(Comparator.reverseOrder())));
-        return success(result.stream().limit(12).collect(Collectors.toList()));
+        return success(result.stream().limit(resultLimit).collect(Collectors.toList()));
     }
 
     @PreAuthorize("@ss.hasAnyRoles('student,admin')")
@@ -623,16 +918,35 @@ public class CampusPortalController extends BaseController {
     @PreAuthorize("@ss.hasAnyRoles('student,admin')")
     @GetMapping("/student/my-schedule")
     public AjaxResult studentMySchedule(@RequestParam Long userId, @RequestParam(required = false) Long termId) {
+        termId = termId == null ? resolveCurrentPortalTermId() : termId;
         ScUserProfile profile = scUserProfileService.selectScUserProfileByUserId(userId);
         if (profile == null || profile.getClassId() == null) {
             return success(Collections.emptyMap());
         }
 
-        ScClassCourse classCourseQuery = new ScClassCourse();
-        classCourseQuery.setClassId(profile.getClassId());
-        classCourseQuery.setTermId(termId);
-        classCourseQuery.setStatus("0");
-        List<ScClassCourse> classCourses = scClassCourseService.selectScClassCourseList(classCourseQuery);
+        List<ScClassCourse> classCourses = loadStudentSelectedClassCourses(userId, termId, true);
+        ScSchoolTerm currentTerm = resolveTerm(termId, classCourses);
+        Map<String, Object> result = buildSchedulePayload(classCourses, currentTerm);
+        result.put("classId", profile.getClassId());
+        result.put("gradeId", profile.getGradeId());
+        result.put("className", resolveClassName(profile.getClassId()));
+        result.put("studentUserId", userId);
+        result.put("studentName", resolveProfileName(userId, profile));
+        result.put("studentNo", resolveProfileStudentNo(userId, profile));
+        result.put("major", profile.getMajor());
+        result.put("admissionYear", profile.getAdmissionYear());
+        return success(result);
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('student,admin')")
+    @GetMapping("/student/class-schedule")
+    public AjaxResult studentClassSchedule(@RequestParam Long userId, @RequestParam(required = false) Long termId) {
+        termId = termId == null ? resolveCurrentPortalTermId() : termId;
+        ScUserProfile profile = scUserProfileService.selectScUserProfileByUserId(userId);
+        if (profile == null || profile.getClassId() == null) {
+            return success(Collections.emptyMap());
+        }
+        List<ScClassCourse> classCourses = loadStudentClassCourses(profile.getClassId(), termId);
         ScSchoolTerm currentTerm = resolveTerm(termId, classCourses);
         Map<String, Object> result = buildSchedulePayload(classCourses, currentTerm);
         result.put("classId", profile.getClassId());
@@ -651,14 +965,12 @@ public class CampusPortalController extends BaseController {
     public AjaxResult studentKnowledgePoints(@RequestParam Long userId,
             @RequestParam(required = false) Long courseId,
             @RequestParam(required = false, defaultValue = "200") Integer limit) {
+        Long effectiveTermId = resolveCurrentPortalTermId();
         ScUserProfile profile = scUserProfileService.selectScUserProfileByUserId(userId);
         if (profile == null || profile.getClassId() == null) {
             return success(Collections.emptyList());
         }
-        ScClassCourse query = new ScClassCourse();
-        query.setClassId(profile.getClassId());
-        query.setStatus("0");
-        List<ScClassCourse> classCourses = scClassCourseService.selectScClassCourseList(query);
+        List<ScClassCourse> classCourses = loadStudentSelectedClassCourses(userId, effectiveTermId, true);
         Set<Long> allowedCourseIds = classCourses.stream()
                 .map(ScClassCourse::getCourseId)
                 .filter(Objects::nonNull)
@@ -745,7 +1057,7 @@ public class CampusPortalController extends BaseController {
             item.put("classId", classCourse.getClassId());
             item.put("className", classCourse.getClassName());
             item.put("courseId", classCourse.getCourseId());
-            item.put("courseName", classCourse.getCourseName());
+            item.put("courseName", resolveDisplayedCourseName(classCourse));
             item.put("courseCode", course == null ? null : course.getCourseCode());
             item.put("subjectType", course == null ? null : course.getSubjectType());
             item.put("intro", course == null ? null : course.getIntro());
@@ -757,10 +1069,47 @@ public class CampusPortalController extends BaseController {
             item.put("schoolYear", term == null ? null : term.getSchoolYear());
             item.put("weeklyHours", classCourse.getWeeklyHours());
             item.put("studentLimit", classCourse.getStudentLimit());
-            item.put("actualStudentCount", classCourse.getActualStudentCount());
+            item.put("actualStudentCount", resolveSelectedStudentCount(classCourse));
+            item.put("selectedStudentCount", resolveSelectedStudentCount(classCourse));
             item.put("remark", classCourse.getRemark());
             result.add(item);
         }
+        return success(result);
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('teacher,admin')")
+    @GetMapping("/teacher/course-students")
+    public AjaxResult teacherCourseStudents(@RequestParam Long teacherId,
+            @RequestParam Long classCourseId,
+            @RequestParam(required = false) Long termId) {
+        ScClassCourse classCourse = scClassCourseService.selectScClassCourseById(classCourseId);
+        if (classCourse == null || !Objects.equals(classCourse.getTeacherId(), teacherId)) {
+            return success(Collections.emptyMap());
+        }
+        List<ScCourseStudent> students = scCourseStudentService.listTeacherCourseStudents(teacherId, classCourseId, termId);
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("classCourseId", classCourse.getId());
+        summary.put("courseName", resolveDisplayedCourseName(classCourse));
+        summary.put("className", classCourse.getClassName());
+        summary.put("termName", classCourse.getTermName());
+        summary.put("teachingClassCode", classCourse.getTeachingClassCode());
+        summary.put("selectedStudentCount", students.size());
+        summary.put("studentLimit", classCourse.getStudentLimit());
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("summary", summary);
+        result.put("items", students.stream().map(item -> {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("id", item.getId());
+            row.put("studentUserId", item.getStudentUserId());
+            row.put("studentName", item.getStudentName());
+            row.put("studentNo", item.getStudentNo());
+            row.put("classId", item.getClassId());
+            row.put("className", item.getClassName());
+            row.put("joinTime", item.getJoinTime());
+            row.put("status", item.getStatus());
+            row.put("remark", item.getRemark());
+            return row;
+        }).collect(Collectors.toList()));
         return success(result);
     }
 
@@ -997,6 +1346,200 @@ public class CampusPortalController extends BaseController {
         return StringUtils.defaultIfEmpty(profile.getStudentNo(), student == null ? null : student.getUserName());
     }
 
+    private boolean canOperateStudentSelection(Long userId) {
+        LoginUser loginUser = getLoginUser();
+        Long currentUserId = loginUser == null ? null : loginUser.getUserId();
+        return SecurityUtils.isAdmin() || Objects.equals(currentUserId, userId);
+    }
+
+    private List<ScClassCourse> loadStudentSelectedClassCourses(Long userId, Long termId, boolean autoFillRequired) {
+        List<ScCourseStudent> selections = scCourseStudentService.listStudentCourseSelections(userId, termId, autoFillRequired);
+        List<ScClassCourse> classCourses = new ArrayList<>();
+        for (ScCourseStudent item : selections) {
+            if (item == null || item.getClassCourseId() == null) {
+                continue;
+            }
+            ScClassCourse classCourse = scClassCourseService.selectScClassCourseById(item.getClassCourseId());
+            if (classCourse == null || !"0".equals(StringUtils.defaultIfEmpty(classCourse.getStatus(), "0"))) {
+                continue;
+            }
+            classCourses.add(classCourse);
+        }
+        return classCourses;
+    }
+
+    private List<ScClassCourse> loadStudentClassCourses(Long classId, Long termId) {
+        if (classId == null) {
+            return Collections.emptyList();
+        }
+        ScClassCourse query = new ScClassCourse();
+        query.setClassId(classId);
+        query.setTermId(termId);
+        query.setStatus("0");
+        return scClassCourseService.selectScClassCourseList(query);
+    }
+
+    private List<ScClassCourse> loadActiveTermClassCourses(Long termId) {
+        ScClassCourse query = new ScClassCourse();
+        query.setTermId(termId);
+        query.setStatus("0");
+        return scClassCourseService.selectScClassCourseList(query);
+    }
+
+    private boolean canStudentPreviewCourse(Long userId, ScClassCourse classCourse) {
+        if (classCourse == null || classCourse.getId() == null) {
+            return false;
+        }
+        if (scCourseStudentService.findActiveSelection(userId, classCourse.getId()) != null) {
+            return true;
+        }
+        return scCourseStudentService.listAvailableClassCoursesForStudent(userId, classCourse.getTermId()).stream()
+                .anyMatch(item -> Objects.equals(item.getId(), classCourse.getId()));
+    }
+
+    private int resolveSelectedStudentCount(ScClassCourse classCourse) {
+        if (classCourse == null || classCourse.getId() == null) {
+            return 0;
+        }
+        int count = scCourseStudentService.countActiveByClassCourseId(classCourse.getId());
+        if (count == 0
+                && "Y".equalsIgnoreCase(StringUtils.defaultIfEmpty(classCourse.getRequiredFlag(), "N"))
+                && classCourse.getActualStudentCount() != null) {
+            return classCourse.getActualStudentCount();
+        }
+        return count;
+    }
+
+    private Map<String, Object> buildStudentCourseSelectionItem(ScClassCourse classCourse, ScSchoolTerm term,
+            List<ScCourseSchedule> schedules, ScUserProfile profile, boolean selected) {
+        Map<String, Object> item = buildStudentCourseItem(classCourse, term, schedules);
+        int selectedCount = resolveSelectedStudentCount(classCourse);
+        boolean requiredSelection = profile != null
+                && Objects.equals(profile.getClassId(), classCourse.getClassId())
+                && "Y".equalsIgnoreCase(StringUtils.defaultIfEmpty(classCourse.getRequiredFlag(), "N"));
+        boolean capacityLimited = classCourse.getStudentLimit() != null && classCourse.getStudentLimit() > 0;
+        boolean capacityFull = capacityLimited && selectedCount >= classCourse.getStudentLimit() && !selected;
+        item.put("actualStudentCount", selectedCount);
+        item.put("selectedStudentCount", selectedCount);
+        item.put("selected", selected);
+        item.put("requiredSelection", requiredSelection);
+        item.put("canSelect", !selected && !capacityFull);
+        item.put("canDrop", selected && !requiredSelection);
+        item.put("remainingSeats", capacityLimited ? Math.max(classCourse.getStudentLimit() - selectedCount, 0) : null);
+        item.put("actionDisabledReason", requiredSelection ? "本班必修课默认保留，不支持退选" : (capacityFull ? "人数已满" : ""));
+        return item;
+    }
+
+    private Long resolveCurrentPortalTermId() {
+        ScSchoolTerm query = new ScSchoolTerm();
+        query.setStatus("0");
+        List<ScSchoolTerm> terms = scSchoolTermService.selectScSchoolTermList(query);
+        ScSchoolTerm current = terms.stream()
+                .filter(item -> "1".equals(String.valueOf(item.getIsCurrent())))
+                .findFirst()
+                .orElse(terms.isEmpty() ? null : terms.get(0));
+        return current == null ? null : current.getTermId();
+    }
+
+    private ScCourseSelectionPlan resolveSelectionPlan(Long termId) {
+        return scCourseSelectionPlanService.resolveActivePlan(termId);
+    }
+
+    private boolean isSelectionWindowOpen(ScCourseSelectionPlan plan) {
+        return isWindowOpen(plan == null ? null : plan.getSelectionStartTime(), plan == null ? null : plan.getSelectionEndTime());
+    }
+
+    private boolean isDropWindowOpen(ScCourseSelectionPlan plan) {
+        return isWindowOpen(plan == null ? null : plan.getDropStartTime(), plan == null ? null : plan.getDropEndTime());
+    }
+
+    private boolean isRequestWindowOpen(ScCourseSelectionPlan plan) {
+        return isWindowOpen(plan == null ? null : plan.getRequestStartTime(), plan == null ? null : plan.getRequestEndTime());
+    }
+
+    private boolean isWindowOpen(Date startTime, Date endTime) {
+        if (startTime == null || endTime == null) {
+            return false;
+        }
+        Date now = new Date();
+        return !now.before(startTime) && !now.after(endTime);
+    }
+
+    private Map<String, Object> buildSelectionPlanVm(ScCourseSelectionPlan plan) {
+        if (plan == null) {
+            return rowMap(
+                    "enabled", false,
+                    "planName", "暂未配置选课计划",
+                    "noticeContent", "",
+                    "ruleContent", "",
+                    "selectionOpen", false,
+                    "dropOpen", false,
+                    "requestOpen", false);
+        }
+        return rowMap(
+                "enabled", "0".equals(String.valueOf(plan.getStatus())),
+                "planId", plan.getPlanId(),
+                "planName", plan.getPlanName(),
+                "termId", plan.getTermId(),
+                "termName", plan.getTermName(),
+                "planType", plan.getPlanType(),
+                "noticeContent", plan.getNoticeContent(),
+                "ruleContent", plan.getRuleContent(),
+                "selectionStartTime", plan.getSelectionStartTime(),
+                "selectionEndTime", plan.getSelectionEndTime(),
+                "dropStartTime", plan.getDropStartTime(),
+                "dropEndTime", plan.getDropEndTime(),
+                "requestStartTime", plan.getRequestStartTime(),
+                "requestEndTime", plan.getRequestEndTime(),
+                "selectionOpen", isSelectionWindowOpen(plan),
+                "dropOpen", isDropWindowOpen(plan),
+                "requestOpen", isRequestWindowOpen(plan));
+    }
+
+    private Map<String, List<ScClassCourse>> buildSelectedGroupMap(List<ScClassCourse> classCourses) {
+        Map<String, List<ScClassCourse>> result = new LinkedHashMap<>();
+        if (classCourses == null) {
+            return result;
+        }
+        for (ScClassCourse classCourse : classCourses) {
+            if (classCourse == null) {
+                continue;
+            }
+            String groupCode = StringUtils.trimToEmpty(classCourse.getSelectionGroupCode());
+            if (StringUtils.isEmpty(groupCode)) {
+                continue;
+            }
+            result.computeIfAbsent(groupCode, key -> new ArrayList<>()).add(classCourse);
+        }
+        return result;
+    }
+
+    private String resolveGroupSelectionLimitReason(ScClassCourse classCourse,
+            Map<String, List<ScClassCourse>> selectedGroupMap) {
+        if (classCourse == null || selectedGroupMap == null) {
+            return null;
+        }
+        String groupCode = StringUtils.trimToEmpty(classCourse.getSelectionGroupCode());
+        if (StringUtils.isEmpty(groupCode)) {
+            return null;
+        }
+        List<ScClassCourse> selectedCourses = selectedGroupMap.getOrDefault(groupCode, Collections.emptyList());
+        int groupLimit = classCourse.getSelectionGroupLimit() == null || classCourse.getSelectionGroupLimit() <= 0
+                ? 1
+                : classCourse.getSelectionGroupLimit();
+        if (selectedCourses.size() < groupLimit) {
+            return null;
+        }
+        String selectedNames = selectedCourses.stream()
+                .map(this::resolveDisplayedCourseName)
+                .filter(StringUtils::isNotEmpty)
+                .distinct()
+                .collect(Collectors.joining("、"));
+        String groupName = StringUtils.defaultIfEmpty(StringUtils.trimToEmpty(classCourse.getSelectionGroupName()), groupCode);
+        return "专项组【" + groupName + "】最多可选 " + groupLimit + " 门，当前已选《"
+                + StringUtils.defaultIfEmpty(selectedNames, "同组课程") + "》";
+    }
+
     private Map<String, Object> buildSchedulePayload(List<ScClassCourse> classCourses, ScSchoolTerm currentTerm) {
         Map<Long, List<ScCourseSchedule>> scheduleMap = loadScheduleMap(classCourses);
         List<Map<String, Object>> activities = new ArrayList<>();
@@ -1045,7 +1588,7 @@ public class CampusPortalController extends BaseController {
         result.put("code", course == null ? null : course.getCourseCode());
         result.put("remark", classCourse.getRemark());
         result.put("courseId", classCourse.getCourseId());
-        result.put("courseName", classCourse.getCourseName());
+        result.put("courseName", resolveDisplayedCourseName(classCourse));
         result.put("classId", classCourse.getClassId());
         result.put("className", classCourse.getClassName());
         result.put("teacherId", classCourse.getTeacherId());
@@ -1066,7 +1609,7 @@ public class CampusPortalController extends BaseController {
         result.put("scheduleId", schedule.getScheduleId());
         result.put("classCourseId", classCourse.getId());
         result.put("courseCode", course == null ? null : course.getCourseCode());
-        result.put("courseName", classCourse.getCourseName());
+        result.put("courseName", resolveDisplayedCourseName(classCourse));
         result.put("courseId", classCourse.getCourseId());
         result.put("classId", classCourse.getClassId());
         result.put("className", classCourse.getClassName());
@@ -1089,8 +1632,7 @@ public class CampusPortalController extends BaseController {
         result.put("courseType", course == null ? null : course.getSubjectType());
         result.put("credits", estimateCredits(course, classCourse));
         result.put("studentLimit", classCourse.getStudentLimit());
-        result.put("studentCount", classCourse.getActualStudentCount() == null ? classCourse.getStudentLimit()
-                : classCourse.getActualStudentCount());
+        result.put("studentCount", resolveSelectedStudentCount(classCourse));
         return result;
     }
 
@@ -1226,16 +1768,24 @@ public class CampusPortalController extends BaseController {
     private Map<String, Object> buildStudentCourseItem(ScClassCourse classCourse, ScSchoolTerm term, List<ScCourseSchedule> schedules) {
         ScCourse course = classCourse.getCourseId() == null ? null
                 : scCourseService.selectScCourseByCourseId(classCourse.getCourseId());
+        Map<String, Object> scheduleVm = buildScheduleTextVm(classCourse, schedules);
         Map<String, Object> item = new LinkedHashMap<>();
         item.put("id", classCourse.getId());
         item.put("classId", classCourse.getClassId());
         item.put("className", classCourse.getClassName());
         item.put("courseId", classCourse.getCourseId());
-        item.put("courseName", classCourse.getCourseName());
+        item.put("courseName", resolveDisplayedCourseName(classCourse));
+        item.put("baseCourseName", classCourse.getCourseName());
+        item.put("selectionOptionName", classCourse.getSelectionOptionName());
+        item.put("selectionGroupCode", classCourse.getSelectionGroupCode());
+        item.put("selectionGroupName", classCourse.getSelectionGroupName());
+        item.put("selectionGroupLimit", classCourse.getSelectionGroupLimit());
         item.put("courseCode", course == null ? null : course.getCourseCode());
         item.put("subjectType", course == null ? null : course.getSubjectType());
         item.put("intro", course == null ? null : course.getIntro());
         item.put("teacherId", classCourse.getTeacherId());
+        item.put("teacherName", StringUtils.defaultIfEmpty(classCourse.getTeacherName(),
+                resolveTeacherName(classCourse.getTeacherId())));
         item.put("termId", classCourse.getTermId());
         item.put("termName", classCourse.getTermName());
         item.put("schoolYear", term == null ? null : term.getSchoolYear());
@@ -1257,10 +1807,15 @@ public class CampusPortalController extends BaseController {
         item.put("weeklyHours", classCourse.getWeeklyHours());
         item.put("arrangedHours", classCourse.getArrangedHours());
         item.put("studentLimit", classCourse.getStudentLimit());
-        item.put("actualStudentCount", classCourse.getActualStudentCount());
+        item.put("actualStudentCount", resolveSelectedStudentCount(classCourse));
+        item.put("selectedStudentCount", resolveSelectedStudentCount(classCourse));
         item.put("remark", classCourse.getRemark());
         item.put("semesterLabel", term == null ? classCourse.getTermName() : buildTermLabel(term));
-        item.put("scheduleText", buildScheduleTextVm(classCourse, schedules));
+        item.put("scheduleVm", scheduleVm);
+        item.put("scheduleText", resolveTextBlockValue(scheduleVm.get("dateTimeText")));
+        item.put("schedulePlaceText", resolveTextBlockValue(scheduleVm.get("dateTimePlaceText")));
+        item.put("scheduleTeacherText", resolveTextBlockValue(scheduleVm.get("dateTimePlacePersonText")));
+        item.put("classroom", resolveTextBlockValue(scheduleVm.get("roomSeatText")));
         item.put("scheduleDetails", buildCourseScheduleDetails(classCourse, schedules, term));
         return item;
     }
@@ -1803,7 +2358,7 @@ public class CampusPortalController extends BaseController {
         item.put("noticeId", notice.getNoticeId());
         item.put("messageId", "notice-" + notice.getNoticeId());
         item.put("bizCategory", category);
-        item.put("messageType", "NOTICE".equals(category) ? "NOTICE" : "SYSTEM_MESSAGE");
+        item.put("messageType", resolvePortalMessageType(notice, category));
         item.put("messageTitle", notice.getNoticeTitle());
         item.put("messageContent", notice.getNoticeContent());
         item.put("messageSummary", StringUtils.defaultIfEmpty(notice.getNoticeSummary(), notice.getNoticeTitle()));
@@ -1820,6 +2375,20 @@ public class CampusPortalController extends BaseController {
         item.put("readTime", notice.getReadTime());
         item.put("createBy", notice.getCreateBy());
         return item;
+    }
+
+    private String resolvePortalMessageType(SysNotice notice, String category) {
+        if ("NOTICE".equals(category)) {
+            return "NOTICE";
+        }
+        String actionType = StringUtils.defaultIfEmpty(notice.getActionType(), "");
+        String actionPath = StringUtils.defaultIfEmpty(notice.getActionPath(), "");
+        if (StringUtils.equalsIgnoreCase(actionType, "courseSelectionReview")
+                || StringUtils.contains(actionPath, "/student/selection")
+                || StringUtils.contains(actionPath, "/student/personalized-selection")) {
+            return "COURSE_SELECTION";
+        }
+        return "SYSTEM_MESSAGE";
     }
 
     private Map<String, Object> actionItem(String type, Long targetId, Long recordId, Map<String, Object> row, String path) {
@@ -2113,6 +2682,40 @@ public class CampusPortalController extends BaseController {
         result.put("textEn", StringUtils.isEmpty(text) ? null : text);
         result.put("text", StringUtils.isEmpty(text) ? null : text);
         return result;
+    }
+
+    private String resolveDisplayedCourseName(ScClassCourse classCourse) {
+        if (classCourse == null) {
+            return null;
+        }
+        String baseCourseName = StringUtils.trimToEmpty(classCourse.getCourseName());
+        String selectionOptionName = StringUtils.trimToEmpty(classCourse.getSelectionOptionName());
+        if (StringUtils.isEmpty(selectionOptionName) || StringUtils.equals(baseCourseName, selectionOptionName)) {
+            return StringUtils.defaultIfEmpty(baseCourseName, selectionOptionName);
+        }
+        if (StringUtils.isEmpty(baseCourseName)) {
+            return selectionOptionName;
+        }
+        return baseCourseName + " / " + selectionOptionName;
+    }
+
+    @SuppressWarnings("unchecked")
+    private String resolveTextBlockValue(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Map) {
+            Map<String, Object> block = (Map<String, Object>) value;
+            Object text = block.get("text");
+            if (text == null) {
+                text = block.get("textZh");
+            }
+            if (text == null) {
+                text = block.get("textEn");
+            }
+            return text == null ? null : String.valueOf(text);
+        }
+        return String.valueOf(value);
     }
 
     private String buildScheduleWeeksInfo(List<ScCourseSchedule> schedules) {

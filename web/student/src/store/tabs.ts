@@ -10,7 +10,8 @@ export interface TabItem {
 export const useTabsStore = defineStore('portal-tabs', {
   state: () => ({
     visitedTabs: [] as TabItem[],
-    activeTabPath: ''
+    activeTabPath: '',
+    excludedCacheViews: [] as string[],
   }),
   actions: {
     addTab(tab: TabItem) {
@@ -42,6 +43,16 @@ export const useTabsStore = defineStore('portal-tabs', {
     setActiveTab(path: string) {
       this.activeTabPath = path
     },
+    excludeCacheView(name: string) {
+      if (!name) return
+      if (!this.excludedCacheViews.includes(name)) {
+        this.excludedCacheViews.push(name)
+      }
+    },
+    restoreCacheView(name: string) {
+      if (!name) return
+      this.excludedCacheViews = this.excludedCacheViews.filter((item) => item !== name)
+    },
     closeAll() {
       this.visitedTabs = this.visitedTabs.filter(t => !t.closable)
       this.activeTabPath = ''
@@ -49,7 +60,9 @@ export const useTabsStore = defineStore('portal-tabs', {
   },
   getters: {
     cachedViews: (state) => {
-      return state.visitedTabs.map(t => t.name).filter(Boolean) as string[]
+      return state.visitedTabs
+        .map(t => t.name)
+        .filter((name): name is string => Boolean(name) && !state.excludedCacheViews.includes(name as string))
     }
   }
 })

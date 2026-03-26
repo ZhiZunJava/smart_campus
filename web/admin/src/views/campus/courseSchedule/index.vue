@@ -21,8 +21,8 @@
       <el-col :span="1.8"><el-button type="info" plain icon="Upload" @click="openImportDialog">Excel导入</el-button></el-col>
       <el-col :span="4">
         <el-radio-group v-model="viewMode" size="default">
-          <el-radio-button label="table">列表视图</el-radio-button>
-          <el-radio-button label="board">周课表</el-radio-button>
+          <el-radio-button value="table">列表视图</el-radio-button>
+          <el-radio-button value="board">周课表</el-radio-button>
         </el-radio-group>
       </el-col>
       <right-toolbar v-model:showSearch="showSearch" @queryTable="handleSearch" />
@@ -38,7 +38,7 @@
     <el-table v-if="viewMode === 'table'" v-loading="loading" :data="dataList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" />
       <el-table-column label="班级" min-width="140"><template #default="{ row }">{{ getMergedSchedule(row)?.className || '-' }}</template></el-table-column>
-      <el-table-column label="课程" min-width="160"><template #default="{ row }">{{ getMergedSchedule(row)?.courseName || '-' }}</template></el-table-column>
+      <el-table-column label="课程" min-width="180"><template #default="{ row }">{{ displayClassCourseName(getMergedSchedule(row)) }}</template></el-table-column>
       <el-table-column label="教师" min-width="100"><template #default="{ row }">{{ getMergedSchedule(row)?.teacherName || '-' }}</template></el-table-column>
       <el-table-column label="星期" width="90"><template #default="{ row }">{{ weekLabel(row.weekDay) }}</template></el-table-column>
       <el-table-column label="节次" width="120"><template #default="{ row }">{{ getSectionText(row) }}</template></el-table-column>
@@ -71,7 +71,7 @@
               <template v-for="day in weekOptions" :key="`${day.value}-${row.key}`">
                 <td v-if="shouldRenderCell(row.key, day.value)" class="schedule-board__cell" :rowspan="getRowSpan(row.key, day.value)">
                   <div v-if="getSchedule(row.key, day.value)" class="schedule-card" :style="getCardStyle(getSchedule(row.key, day.value))">
-                    <div class="course-name">{{ getSchedule(row.key, day.value)?.courseName || '-' }}</div>
+                    <div class="course-name">{{ displayClassCourseName(getSchedule(row.key, day.value)) }}</div>
                     <div class="course-meta-list">
                       <div class="course-meta-item course-meta-item--wide"><i class="ri-calendar-event-line"></i><span>{{ getSchedule(row.key, day.value)?.weeksText || '全周' }} · {{ getSectionText(getSchedule(row.key, day.value)) }}</span></div>
                       <div class="course-meta-item course-meta-item--wide"><i class="ri-map-pin-2-line"></i><span>{{ getScheduleRoom(getSchedule(row.key, day.value)) }}</span></div>
@@ -111,8 +111,16 @@
         <div class="dialog-panel">
           <div class="dialog-panel__title">节次与周次</div>
           <el-form :model="form" label-width="92px">
-            <el-form-item label="开始节次"><el-input-number v-model="form.startSection" :min="1" :max="12" style="width:100%" /></el-form-item>
-            <el-form-item label="结束节次"><el-input-number v-model="form.endSection" :min="1" :max="12" style="width:100%" /></el-form-item>
+            <el-form-item label="开始节次">
+              <el-select v-model="form.startSection" style="width:100%" placeholder="请选择开始节次">
+                <el-option v-for="item in sectionUnitOptions" :key="`d-start-section-${item.value}`" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="结束节次">
+              <el-select v-model="form.endSection" style="width:100%" placeholder="请选择结束节次">
+                <el-option v-for="item in endSectionOptions" :key="`d-end-section-${item.value}`" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
             <div class="section-preview"><strong>当前节次显示</strong><span>{{ getSectionText(form) || '未选择节次' }}</span></div>
             <el-form-item label="周次">
               <div class="weeks-field">
@@ -183,11 +191,11 @@
       <el-table :data="autoArrangeItems" max-height="420">
         <el-table-column label="参与" width="70"><template #default="{ row }"><el-switch v-model="row.selected" /></template></el-table-column>
         <el-table-column label="班级" min-width="120"><template #default="{ row }">{{ row.className || '-' }}</template></el-table-column>
-        <el-table-column label="课程" min-width="140"><template #default="{ row }">{{ row.courseName || '-' }}</template></el-table-column>
+        <el-table-column label="课程" min-width="180"><template #default="{ row }">{{ displayClassCourseName(row) }}</template></el-table-column>
         <el-table-column label="教师" min-width="100"><template #default="{ row }">{{ row.teacherName || '-' }}</template></el-table-column>
         <el-table-column label="指定教室" min-width="200">
           <template #default="{ row }">
-            <el-select v-model="row.assignedClassroomId" filterable clearable placeholder="自动分配" style="width:100%"><el-option v-for="item in classroomOptions" :key="`a-cr-${row.id}-${item.value}`" :label="item.label" :value="item.value" /></el-select>
+            <el-select v-model="row.assignedClassroomId" filterable clearable placeholder="自动分配" style="width:100%"><el-option v-for="item in autoArrangeClassroomOptions" :key="`a-cr-${row.id}-${item.value}`" :label="item.label" :value="item.value" /></el-select>
           </template>
         </el-table-column>
         <el-table-column label="排课周次" min-width="200">
@@ -309,6 +317,8 @@ import { getToken } from '@/utils/auth'
 import TeachingAiAssist from '@/components/Teaching/TeachingAiAssist.vue'
 import { resolveCurrentWeek } from '@/utils/termWeek'
 
+const AUTO_ARRANGE_EMPTY_CLASSROOM_ID = -1
+
 const loading = ref(false), showSearch = ref(true), total = ref(0), open = ref(false), title = ref('')
 const ids = ref<any[]>([]), single = ref(true), multiple = ref(true), dataList = ref<any[]>([]), selectedRows = ref<any[]>([])
 const autoArrangeLoading = ref(false), autoArrangeOpen = ref(false), autoArrangeResultOpen = ref(false)
@@ -334,6 +344,25 @@ const defaultTableRows = [
   { key: '9', unit: 9, label: '9', sideColor: '#d7eef8' }, { key: '10', unit: 10, label: '10', sideColor: '#d7eef8' },
 ]
 const tableRows = ref<any[]>([...defaultTableRows])
+const sectionUnitOptions = computed(() => {
+  return tableRows.value
+    .filter((row: any) => Number.isFinite(Number(row?.unit)) && Number(row?.unit) > 0)
+    .map((row: any) => {
+      const timeText = row?.startText && row?.endText ? `${row.startText}-${row.endText}` : ''
+      const dayPartText = row?.dayPartLabel || ''
+      const extra = [timeText, dayPartText].filter(Boolean).join(' / ')
+      return {
+        value: Number(row.unit),
+        label: extra
+          ? `${row.label || row.unit}（第${row.unit}节 / ${extra}）`
+          : `${row.label || row.unit}（第${row.unit}节）`,
+      }
+    })
+})
+const endSectionOptions = computed(() => {
+  const startSection = Number(form.startSection || 0)
+  return sectionUnitOptions.value.filter((item: any) => !startSection || Number(item.value) >= startSection)
+})
 
 function getDefaultTermId() { return termOptions.value.find((t: any) => t.isCurrent === '1')?.value ?? termOptions.value[0]?.value }
 const currentFormTerm = computed(() => termOptions.value.find((t: any) => t.value === form.termId))
@@ -346,6 +375,10 @@ const autoArrangeWeekOptions = computed(() => {
   const term = termOptions.value.find((t: any) => t.value === autoArrangeForm.termId) || currentTermMeta.value || {}
   return Array.from({ length: Math.max(Number(term?.totalWeeks || 20), 1) }, (_, i) => i + 1)
 })
+const autoArrangeClassroomOptions = computed(() => ([
+  { label: '空场地 / 不占用教室', value: AUTO_ARRANGE_EMPTY_CLASSROOM_ID, classroomName: '空场地', buildingName: '', campusName: '' },
+  ...classroomOptions.value,
+]))
 
 const courseFilterOptions = computed(() => {
   let items = Array.from(classCourseMap.value.values())
@@ -416,13 +449,29 @@ function findDeptLabel(options: any[], value: any): string {
   }
   return ''
 }
+function dayPartLabel(value?: string) {
+  return value === 'NOON' ? '中午' : value === 'AFTERNOON' ? '下午' : value === 'EVENING' ? '晚上' : '上午'
+}
 function dayPartColor(p?: string) { return p === 'NOON' ? '#ffe7a3' : p === 'AFTERNOON' ? '#c9f0ea' : p === 'EVENING' ? '#d7eef8' : '#dcecff' }
 function buildTableRowsFromLayout(layout: any) {
   const units = Array.isArray(layout?.courseUnitList) ? layout.courseUnitList : []
   if (!units.length) { tableRows.value = [...defaultTableRows]; return }
   tableRows.value = units.slice().sort((a: any, b: any) => (a.indexNo || 0) - (b.indexNo || 0)).map((item: any, i: number) => ({
-    key: String(item.indexNo || i + 1), unit: Number(item.indexNo || i + 1), label: item.nameZh || String(item.indexNo || i + 1), sideColor: dayPartColor(item.dayPart),
+    key: String(item.indexNo || i + 1),
+    unit: Number(item.indexNo || i + 1),
+    label: item.nameZh || String(item.indexNo || i + 1),
+    sideColor: dayPartColor(item.dayPart),
+    dayPart: item.dayPart,
+    dayPartLabel: dayPartLabel(item.dayPart),
+    startText: item.startTime ? formatTimeText(Number(item.startTime)) : '',
+    endText: item.endTime ? formatTimeText(Number(item.endTime)) : '',
   }))
+}
+function formatTimeText(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return ''
+  const hours = String(Math.floor(value / 100)).padStart(2, '0')
+  const minutes = String(value % 100).padStart(2, '0')
+  return `${hours}:${minutes}`
 }
 function parseWeeksText(text?: string) {
   if (!text) return []
@@ -458,6 +507,13 @@ function buildWeeksText(weeks: number[]) {
 }
 function matchesWeek(text: string | undefined, week: number) { const w = parseWeeksText(text); return w.length ? w.includes(week) : true }
 function getMergedSchedule(item: any) { return { ...classCourseMap.value.get(Number(item.classCourseId)), ...item } }
+function displayClassCourseName(item: any) {
+  const displayName = String(item?.courseName || '').trim()
+  const baseCourseName = String(item?.baseCourseName || '').trim()
+  const selectionOptionName = String(item?.selectionOptionName || '').trim()
+  if (baseCourseName && selectionOptionName && baseCourseName !== selectionOptionName) return `${baseCourseName} / ${selectionOptionName}`
+  return displayName || baseCourseName || selectionOptionName || '-'
+}
 function shouldRenderCell(rowKey: string, day: number) {
   const row = tableRows.value.find((r: any) => r.key === rowKey); if (!row?.unit) return true
   const occ = occupiedMap.value.get(`${row.unit}-${day}`); return !occ || occ.startKey === String(row.unit)
@@ -529,14 +585,33 @@ function shiftWeek(offset: number) {
 function setCurrentWeek() {
   const cur = resolveCurrentWeek(currentTermMeta.value || {}); currentWeek.value = weekNumberOptions.value.includes(cur) ? cur : (weekNumberOptions.value[0] || 1)
 }
+function normalizeFormSections() {
+  const values = sectionUnitOptions.value.map((item: any) => Number(item.value)).filter((item: number) => Number.isFinite(item))
+  if (!values.length) {
+    form.startSection = undefined
+    form.endSection = undefined
+    return
+  }
+  const startValue = Number(form.startSection || values[0])
+  form.startSection = values.includes(startValue) ? startValue : values[0]
+  const availableEndValues = values.filter((item: number) => item >= Number(form.startSection))
+  const endValue = Number(form.endSection || form.startSection)
+  form.endSection = availableEndValues.includes(endValue) ? endValue : (availableEndValues[0] || Number(form.startSection))
+}
 
 function resetForm() {
   const tid = queryParams.termId ?? getDefaultTermId(), tw = Math.max(Number(termOptions.value.find((t: any) => t.value === tid)?.totalWeeks || 20), 1)
-  Object.assign(form, { scheduleId: undefined, termId: tid, classCourseId: undefined, classroomId: undefined, classroom: '', weekDay: 1, startSection: 1, endSection: 2, selectedWeeks: Array.from({ length: tw }, (_, i) => i + 1), weeksText: '', status: '0', remark: '' })
+  const sectionValues = sectionUnitOptions.value.map((item: any) => Number(item.value)).filter((item: number) => Number.isFinite(item))
+  const defaultStartSection = sectionValues[0] || 1
+  const defaultEndSection = sectionValues[1] || sectionValues[0] || 1
+  Object.assign(form, { scheduleId: undefined, termId: tid, classCourseId: undefined, classroomId: undefined, classroom: '', weekDay: 1, startSection: defaultStartSection, endSection: defaultEndSection, selectedWeeks: Array.from({ length: tw }, (_, i) => i + 1), weeksText: '', status: '0', remark: '' })
   form.weeksText = buildWeeksText(form.selectedWeeks); Object.assign(conflictState, { hasConflict: false })
 }
 function applyAiDraft(draft: Record<string, any>) {
   Object.assign(form, draft)
+  form.startSection = Number(form.startSection || 0) || form.startSection
+  form.endSection = Number(form.endSection || 0) || form.endSection
+  normalizeFormSections()
   form.selectedWeeks = Array.isArray(draft.selectedWeeks) && draft.selectedWeeks.length ? draft.selectedWeeks.map(Number).filter(Number.isFinite) : parseWeeksText(draft.weeksText)
   form.weeksText = buildWeeksText(form.selectedWeeks)
 }
@@ -545,7 +620,7 @@ async function reloadClassCourses() {
   const res = await listClassCourse({ pageNum: 1, pageSize: 500, status: '0', termId: queryParams.termId, openDeptId: queryParams.deptId })
   const rows = res.rows || []
   classCourseMap.value = new Map(rows.map((r: any) => [Number(r.id), r]))
-  classCourseOptions.value = rows.map((r: any) => ({ label: `${r.className || '-'} - ${r.courseName || '-'}（${r.id}）`, value: r.id }))
+  classCourseOptions.value = rows.map((r: any) => ({ label: `${r.className || '-'} - ${displayClassCourseName(r)}（${r.id}）`, value: r.id }))
   if (!classCourseOptions.value.some((item: any) => item.value === form.classCourseId)) form.classCourseId = undefined
 }
 
@@ -594,6 +669,9 @@ function handleAdd() { resetForm(); title.value = '新增排课'; open.value = t
 function handleUpdate(row?: any) {
   const item = row || dataList.value.find((i: any) => i.scheduleId === ids.value[0]); if (!item) return
   resetForm(); Object.assign(form, item); form.weekDay = Number(form.weekDay || 1)
+  form.startSection = Number(form.startSection || 0) || form.startSection
+  form.endSection = Number(form.endSection || 0) || form.endSection
+  normalizeFormSections()
   form.selectedWeeks = parseWeeksText(form.weeksText); form.weeksText = buildWeeksText(form.selectedWeeks)
   title.value = '修改排课'; open.value = true
 }
@@ -625,6 +703,15 @@ async function handleDelete(row?: any) {
 
 function handleAutoArrangeScopeChange() { autoArrangeForm.deptId = undefined; autoArrangeForm.classId = undefined; autoArrangeForm.courseId = undefined; refreshAutoArrangeItems() }
 function toggleAllAutoArrangeItems(selected: boolean) { autoArrangeItems.value.forEach((i: any) => { i.selected = selected }) }
+function resolveAutoArrangeWeeklyCap(item: any) {
+  const total = Number(item?.totalHours || 0)
+  const weeks = Number(item?.requiredWeeks || 0)
+  const weekly = Number(item?.weeklyHours || 0)
+  if (total > 0 && weeks > 0) {
+    return Math.max(1, Math.ceil(total / weeks))
+  }
+  return Math.max(1, weekly || 2)
+}
 function refreshAutoArrangeItems() {
   let items = Array.from(classCourseMap.value.values())
   if (autoArrangeForm.scopeType === 'dept' && autoArrangeForm.deptId) items = items.filter((c: any) => c.openDeptId === autoArrangeForm.deptId || c.deptId === autoArrangeForm.deptId)
@@ -633,7 +720,7 @@ function refreshAutoArrangeItems() {
   autoArrangeItems.value = items.map((c: any) => ({
     ...c, weeksText: c.requiredWeeks ? `1-${c.requiredWeeks}周` : '',
     selectedWeeks: c.requiredWeeks ? Array.from({ length: c.requiredWeeks }, (_, i) => i + 1) : [...autoArrangeWeekOptions.value],
-    maxWeeklySections: c.weeklyHours || 2, selected: true, assignedClassroomId: undefined, excludedWeekDays: [...(autoArrangeForm.excludedWeekDays || [])], excludedDayParts: [...(autoArrangeForm.excludedDayParts || [])],
+    maxWeeklySections: resolveAutoArrangeWeeklyCap(c), selected: true, assignedClassroomId: undefined, excludedWeekDays: [...(autoArrangeForm.excludedWeekDays || [])], excludedDayParts: [...(autoArrangeForm.excludedDayParts || [])],
   }))
 }
 async function openAutoArrangeDialog() {
@@ -714,6 +801,8 @@ watch(() => autoArrangeForm.termId, () => {
   const lim = autoArrangeWeekOptions.value
   autoArrangeItems.value.forEach((i: any) => { const c = Array.isArray(i.selectedWeeks) ? i.selectedWeeks.map(Number).filter((n: number) => lim.includes(n)) : []; i.selectedWeeks = c.length ? c : [...lim]; i.weeksText = buildWeeksText(i.selectedWeeks) })
 })
+watch(sectionUnitOptions, () => { normalizeFormSections() })
+watch(() => form.startSection, () => { normalizeFormSections() })
 watch(() => queryParams.deptId, async () => {
   classOptions.value = await fetchClassOptions(undefined, queryParams.deptId)
   await reloadClassCourses()

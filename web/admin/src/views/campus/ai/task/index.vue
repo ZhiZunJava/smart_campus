@@ -3,8 +3,8 @@
     <el-form :inline="true" :model="queryParams" class="mb16">
       <el-form-item label="查看视角">
         <el-radio-group v-model="viewMode" @change="handleViewModeChange">
-          <el-radio-button label="business">业务任务</el-radio-button>
-          <el-radio-button label="all">全部日志</el-radio-button>
+          <el-radio-button value="business">业务任务</el-radio-button>
+          <el-radio-button value="all">全部日志</el-radio-button>
         </el-radio-group>
       </el-form-item>
       <el-form-item label="业务类型">

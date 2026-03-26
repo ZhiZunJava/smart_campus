@@ -45,6 +45,8 @@ INSERT INTO `sys_menu` VALUES
 (2045, '教室管理', '2003', '11', 'classroom', 'campus/classroom/index', '', '', 1, 0, 'C', '0', '0', 'campus:classroom:list', 'ri-building-line', 'admin', NOW(), '', NULL, '统一维护教室、楼栋与校区'),
 (2044, '班级课表', '2003', '12', 'classSchedule', 'campus/classSchedule/index', '', '', 1, 0, 'C', '0', '0', 'campus:course:list', 'ri-table-view', 'admin', NOW(), '', NULL, '班级课表视图'),
 (2046, '节次布局', '2003', '13', 'timeTableLayout', 'campus/timeTableLayout/index', '', '', 1, 0, 'C', '0', '0', 'campus:timetable:list', 'ri-layout-grid-line', 'admin', NOW(), '', NULL, '课表节次与时间布局配置'),
+(2047, '个性化选课', '2003', '14', 'courseSelectionRequest', 'campus/courseSelectionRequest/index', '', '', 1, 0, 'C', '0', '0', 'campus:courseSelectionRequest:list', 'ri-file-edit-line', 'admin', NOW(), '', NULL, '个性化选课申请审核'),
+(2048, '选课计划', '2003', '15', 'courseSelectionPlan', 'campus/courseSelectionPlan/index', '', '', 1, 0, 'C', '0', '0', 'campus:courseSelectionPlan:list', 'ri-timer-line', 'admin', NOW(), '', NULL, '选课开放时间与规则配置'),
 
 (2040, '资源管理', '2004', '1', 'resource', 'campus/resource/index', '', '', 1, 0, 'C', '0', '0', 'campus:resource:list', 'ri-article-line', 'admin', NOW(), '', NULL, '学习资源管理'),
 
@@ -136,6 +138,14 @@ INSERT INTO `sys_menu` VALUES
 (2222, '教室新增', '2045', '2', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:classroom:add', '#', 'admin', NOW(), '', NULL, ''),
 (2223, '教室修改', '2045', '3', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:classroom:edit', '#', 'admin', NOW(), '', NULL, ''),
 (2224, '教室删除', '2045', '4', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:classroom:remove', '#', 'admin', NOW(), '', NULL, ''),
+(2227, '教室导出', '2045', '5', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:classroom:export', '#', 'admin', NOW(), '', NULL, ''),
+(2228, '教室导入', '2045', '6', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:classroom:import', '#', 'admin', NOW(), '', NULL, ''),
+(2237, '申请查询', '2047', '1', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:courseSelectionRequest:query', '#', 'admin', NOW(), '', NULL, ''),
+(2238, '申请审核', '2047', '2', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:courseSelectionRequest:review', '#', 'admin', NOW(), '', NULL, ''),
+(2239, '计划查询', '2048', '1', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:courseSelectionPlan:query', '#', 'admin', NOW(), '', NULL, ''),
+(2240, '计划新增', '2048', '2', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:courseSelectionPlan:add', '#', 'admin', NOW(), '', NULL, ''),
+(2241, '计划修改', '2048', '3', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:courseSelectionPlan:edit', '#', 'admin', NOW(), '', NULL, ''),
+(2242, '计划删除', '2048', '4', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:courseSelectionPlan:remove', '#', 'admin', NOW(), '', NULL, ''),
 
 (2217, '教学AI配置', '2003', '12', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:grade:edit', '#', 'admin', NOW(), '', NULL, '教学基础 AI 配置能力'),
 (2218, '班级课表查询', '2044', '1', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:course:query', '#', 'admin', NOW(), '', NULL, ''),
@@ -143,4 +153,4 @@ INSERT INTO `sys_menu` VALUES
 (2226, '布局修改', '2046', '2', '', '', '', '', 1, 0, 'F', '0', '0', 'campus:timetable:edit', '#', 'admin', NOW(), '', NULL, '');
 
 INSERT INTO `sys_role_menu` (`role_id`, `menu_id`)
-SELECT 1, `menu_id` FROM `sys_menu` WHERE `menu_id` BETWEEN 2000 AND 2226;
+SELECT 1, `menu_id` FROM `sys_menu` WHERE `menu_id` BETWEEN 2000 AND 2242;

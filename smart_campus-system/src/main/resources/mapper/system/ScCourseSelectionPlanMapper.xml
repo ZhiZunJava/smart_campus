@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScCourseSelectionPlanMapper">
+  <resultMap type="ScCourseSelectionPlan" id="ScCourseSelectionPlanResult">
+    <id property="planId" column="plan_id" />
+    <result property="planName" column="plan_name" />
+    <result property="termId" column="term_id" />
+    <result property="termName" column="term_name" />
+    <result property="planType" column="plan_type" />
+    <result property="selectionStartTime" column="selection_start_time" />
+    <result property="selectionEndTime" column="selection_end_time" />
+    <result property="dropStartTime" column="drop_start_time" />
+    <result property="dropEndTime" column="drop_end_time" />
+    <result property="requestStartTime" column="request_start_time" />
+    <result property="requestEndTime" column="request_end_time" />
+    <result property="noticeContent" column="notice_content" />
+    <result property="ruleContent" column="rule_content" />
+    <result property="status" column="status" />
+    <result property="createBy" column="create_by" />
+    <result property="createTime" column="create_time" />
+    <result property="updateBy" column="update_by" />
+    <result property="updateTime" column="update_time" />
+    <result property="remark" column="remark" />
+  </resultMap>
+  <sql id="selectScCourseSelectionPlanVo">
+    select p.plan_id, p.plan_name, p.term_id, t.term_name, p.plan_type,
+      p.selection_start_time, p.selection_end_time, p.drop_start_time, p.drop_end_time,
+      p.request_start_time, p.request_end_time, p.notice_content, p.rule_content,
+      p.status, p.create_by, p.create_time, p.update_by, p.update_time, p.remark
+    from sc_course_selection_plan p
+    left join sc_school_term t on t.term_id = p.term_id
+  </sql>
+  <select id="selectScCourseSelectionPlanByPlanId" parameterType="Long" resultMap="ScCourseSelectionPlanResult">
+    <include refid="selectScCourseSelectionPlanVo" /> where p.plan_id = #{planId}
+  </select>
+  <select id="selectScCourseSelectionPlanList" parameterType="ScCourseSelectionPlan" resultMap="ScCourseSelectionPlanResult">
+    <include refid="selectScCourseSelectionPlanVo" />
+    <where>
+      <if test="planName != null and planName != ''">and p.plan_name like concat('%', #{planName}, '%')</if>
+      <if test="termId != null">and p.term_id = #{termId}</if>
+      <if test="planType != null and planType != ''">and p.plan_type = #{planType}</if>
+      <if test="status != null and status != ''">and p.status = #{status}</if>
+    </where>
+    order by p.plan_id desc
+  </select>
+  <insert id="insertScCourseSelectionPlan" parameterType="ScCourseSelectionPlan" useGeneratedKeys="true" keyProperty="planId">
+    insert into sc_course_selection_plan(
+      plan_name, term_id, plan_type, selection_start_time, selection_end_time,
+      drop_start_time, drop_end_time, request_start_time, request_end_time,
+      notice_content, rule_content, status, create_by, create_time, remark
+    ) values(
+      #{planName}, #{termId}, #{planType}, #{selectionStartTime}, #{selectionEndTime},
+      #{dropStartTime}, #{dropEndTime}, #{requestStartTime}, #{requestEndTime},
+      #{noticeContent}, #{ruleContent}, #{status}, #{createBy}, sysdate(), #{remark}
+    )
+  </insert>
+  <update id="updateScCourseSelectionPlan" parameterType="ScCourseSelectionPlan">
+    update sc_course_selection_plan
+    <set>
+      <if test="planName != null">plan_name = #{planName},</if>
+      <if test="termId != null">term_id = #{termId},</if>
+      <if test="planType != null">plan_type = #{planType},</if>
+      <if test="selectionStartTime != null">selection_start_time = #{selectionStartTime},</if>
+      <if test="selectionEndTime != null">selection_end_time = #{selectionEndTime},</if>
+      <if test="dropStartTime != null">drop_start_time = #{dropStartTime},</if>
+      <if test="dropEndTime != null">drop_end_time = #{dropEndTime},</if>
+      <if test="requestStartTime != null">request_start_time = #{requestStartTime},</if>
+      <if test="requestEndTime != null">request_end_time = #{requestEndTime},</if>
+      <if test="noticeContent != null">notice_content = #{noticeContent},</if>
+      <if test="ruleContent != null">rule_content = #{ruleContent},</if>
+      <if test="status != null">status = #{status},</if>
+      <if test="updateBy != null">update_by = #{updateBy},</if>
+      <if test="remark != null">remark = #{remark},</if>
+      update_time = sysdate()
+    </set>
+    where plan_id = #{planId}
+  </update>
+  <delete id="deleteScCourseSelectionPlanByPlanId" parameterType="Long">
+    delete from sc_course_selection_plan where plan_id = #{planId}
+  </delete>
+  <delete id="deleteScCourseSelectionPlanByPlanIds" parameterType="Long">
+    delete from sc_course_selection_plan where plan_id in
+    <foreach item="planId" collection="array" open="(" separator="," close=")">
+      #{planId}
+    </foreach>
+  </delete>
+</mapper>

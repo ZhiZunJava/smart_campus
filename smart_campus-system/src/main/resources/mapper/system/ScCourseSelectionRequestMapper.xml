@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScCourseSelectionRequestMapper">
+  <resultMap type="ScCourseSelectionRequest" id="ScCourseSelectionRequestResult">
+    <id property="requestId" column="request_id" />
+    <result property="requestNo" column="request_no" />
+    <result property="studentUserId" column="student_user_id" />
+    <result property="studentName" column="student_name" />
+    <result property="studentNo" column="student_no" />
+    <result property="classId" column="class_id" />
+    <result property="className" column="class_name" />
+    <result property="targetClassCourseId" column="target_class_course_id" />
+    <result property="targetTeachingClassCode" column="target_teaching_class_code" />
+    <result property="targetCourseId" column="target_course_id" />
+    <result property="targetCourseName" column="target_course_name" />
+    <result property="targetClassId" column="target_class_id" />
+    <result property="targetClassName" column="target_class_name" />
+    <result property="targetTeacherId" column="target_teacher_id" />
+    <result property="targetTeacherName" column="target_teacher_name" />
+    <result property="termId" column="term_id" />
+    <result property="termName" column="term_name" />
+    <result property="requestType" column="request_type" />
+    <result property="requestReason" column="request_reason" />
+    <result property="requestStatus" column="request_status" />
+    <result property="reviewRemark" column="review_remark" />
+    <result property="reviewUserId" column="review_user_id" />
+    <result property="reviewUserName" column="review_user_name" />
+    <result property="reviewTime" column="review_time" />
+    <result property="cancelTime" column="cancel_time" />
+    <result property="createBy" column="create_by" />
+    <result property="createTime" column="create_time" />
+    <result property="updateBy" column="update_by" />
+    <result property="updateTime" column="update_time" />
+    <result property="remark" column="remark" />
+  </resultMap>
+  <sql id="selectScCourseSelectionRequestVo">
+    select r.request_id, r.request_no, r.student_user_id,
+      coalesce(p.real_name, su.nick_name, su.user_name) as student_name,
+      p.student_no, p.class_id, cls.class_name,
+      r.target_class_course_id, cc.teaching_class_code as target_teaching_class_code,
+      cc.course_id as target_course_id, cc.course_name as target_course_name,
+      cc.class_id as target_class_id, cc.class_name as target_class_name,
+      cc.teacher_id as target_teacher_id,
+      coalesce(tu.nick_name, tu.user_name) as target_teacher_name,
+      cc.term_id, cc.term_name, r.request_type, r.request_reason, r.request_status,
+      r.review_remark, r.review_user_id,
+      coalesce(ru.nick_name, ru.user_name) as review_user_name,
+      r.review_time, r.cancel_time,
+      r.create_by, r.create_time, r.update_by, r.update_time, r.remark
+    from sc_course_selection_request r
+    left join sc_user_profile p on p.user_id = r.student_user_id
+    left join sys_user su on su.user_id = r.student_user_id
+    left join sc_class cls on cls.class_id = p.class_id
+    left join (
+      select c.id, c.teaching_class_code, c.course_id,
+             case
+               when nullif(trim(c.selection_option_name), '') is null then crs.course_name
+               when c.selection_option_name = crs.course_name then crs.course_name
+               when nullif(trim(crs.course_name), '') is null then c.selection_option_name
+               else concat(crs.course_name, ' / ', c.selection_option_name)
+             end as course_name,
+             c.class_id, cl.class_name, c.teacher_id, c.term_id, t.term_name
+      from sc_class_course c
+      left join sc_course crs on crs.course_id = c.course_id
+      left join sc_class cl on cl.class_id = c.class_id
+      left join sc_school_term t on t.term_id = c.term_id
+    ) cc on cc.id = r.target_class_course_id
+    left join sys_user tu on tu.user_id = cc.teacher_id
+    left join sys_user ru on ru.user_id = r.review_user_id
+  </sql>
+  <select id="selectScCourseSelectionRequestByRequestId" parameterType="Long" resultMap="ScCourseSelectionRequestResult">
+    <include refid="selectScCourseSelectionRequestVo" /> where r.request_id = #{requestId}
+  </select>
+  <select id="selectScCourseSelectionRequestList" parameterType="ScCourseSelectionRequest" resultMap="ScCourseSelectionRequestResult">
+    <include refid="selectScCourseSelectionRequestVo" />
+    <where>
+      <if test="requestNo != null and requestNo != ''">and r.request_no like concat('%', #{requestNo}, '%')</if>
+      <if test="studentUserId != null">and r.student_user_id = #{studentUserId}</if>
+      <if test="targetClassCourseId != null">and r.target_class_course_id = #{targetClassCourseId}</if>
+      <if test="termId != null">and cc.term_id = #{termId}</if>
+      <if test="requestStatus != null and requestStatus != ''">and r.request_status = #{requestStatus}</if>
+      <if test="requestType != null and requestType != ''">and r.request_type = #{requestType}</if>
+      <if test="classId != null">and p.class_id = #{classId}</if>
+    </where>
+    order by r.request_id desc
+  </select>
+  <select id="selectPendingByStudentAndClassCourse" parameterType="ScCourseSelectionRequest" resultMap="ScCourseSelectionRequestResult">
+    <include refid="selectScCourseSelectionRequestVo" />
+    where r.student_user_id = #{studentUserId}
+      and r.target_class_course_id = #{targetClassCourseId}
+      and r.request_status = '0'
+      <if test="requestId != null">and r.request_id != #{requestId}</if>
+    limit 1
+  </select>
+  <insert id="insertScCourseSelectionRequest" parameterType="ScCourseSelectionRequest" useGeneratedKeys="true" keyProperty="requestId">
+    insert into sc_course_selection_request(
+      request_no, student_user_id, target_class_course_id, request_type, request_reason, request_status,
+      review_remark, review_user_id, review_time, cancel_time, create_by, create_time, remark
+    ) values(
+      #{requestNo}, #{studentUserId}, #{targetClassCourseId}, #{requestType}, #{requestReason}, #{requestStatus},
+      #{reviewRemark}, #{reviewUserId}, #{reviewTime}, #{cancelTime}, #{createBy}, sysdate(), #{remark}
+    )
+  </insert>
+  <update id="updateScCourseSelectionRequest" parameterType="ScCourseSelectionRequest">
+    update sc_course_selection_request
+    <set>
+      <if test="requestNo != null">request_no = #{requestNo},</if>
+      <if test="studentUserId != null">student_user_id = #{studentUserId},</if>
+      <if test="targetClassCourseId != null">target_class_course_id = #{targetClassCourseId},</if>
+      <if test="requestType != null">request_type = #{requestType},</if>
+      <if test="requestReason != null">request_reason = #{requestReason},</if>
+      <if test="requestStatus != null">request_status = #{requestStatus},</if>
+      <if test="reviewRemark != null">review_remark = #{reviewRemark},</if>
+      <if test="reviewUserId != null">review_user_id = #{reviewUserId},</if>
+      <if test="reviewTime != null">review_time = #{reviewTime},</if>
+      <if test="cancelTime != null">cancel_time = #{cancelTime},</if>
+      <if test="updateBy != null">update_by = #{updateBy},</if>
+      <if test="remark != null">remark = #{remark},</if>
+      update_time = sysdate()
+    </set>
+    where request_id = #{requestId}
+  </update>
+  <delete id="deleteScCourseSelectionRequestByRequestId" parameterType="Long">
+    delete from sc_course_selection_request where request_id = #{requestId}
+  </delete>
+  <delete id="deleteScCourseSelectionRequestByRequestIds" parameterType="Long">
+    delete from sc_course_selection_request where request_id in
+    <foreach item="requestId" collection="array" open="(" separator="," close=")">
+      #{requestId}
+    </foreach>
+  </delete>
+</mapper>

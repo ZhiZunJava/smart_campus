@@ -185,19 +185,24 @@
           </span>
         </div>
       </div>
-
-      <el-empty v-if="!loading && !activities.length" description="当前条件下暂无课表数据" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { getPortalMySchedule, listPortalTermOptions } from '@/api/portal'
+import { getPortalMyClassSchedule, getPortalMySchedule, listPortalTermOptions } from '@/api/portal'
+import { useRoute } from 'vue-router'
 import usePortalUserStore from '@/store/user'
 import { resolveCurrentWeek } from '@/utils/termWeek'
 
+const props = withDefaults(defineProps<{ mode?: 'selected' | 'class' }>(), {
+  mode: 'selected',
+})
+
 type WeekValue = number | 'all'
+
+const route = useRoute()
 
 const DEFAULT_ROW_CONFIG = [
   { key: '1', unit: 1, label: '1', sideColor: '#dcecff', rowClass: 'row-morning' },
@@ -223,6 +228,7 @@ const remarkLessons = ref<any[]>([])
 const currentWeek = ref(1)
 const selectedWeek = ref<WeekValue>('all')
 const currentWeekFromApi = ref(1)
+const isClassMode = computed(() => props.mode === 'class')
 
 const weekDays = [
   { label: '星期一', value: 1 },
@@ -322,7 +328,9 @@ async function loadSchedule() {
   if (!userId) return
   loading.value = true
   try {
-    const res = await getPortalMySchedule({ userId, termId: queryParams.termId })
+    const res = isClassMode.value
+      ? await getPortalMyClassSchedule({ userId, termId: queryParams.termId })
+      : await getPortalMySchedule({ userId, termId: queryParams.termId })
     activities.value = res.data?.activities || []
     remarkLessons.value = res.data?.remarkLessons || []
     applyTimeTableLayout(res.data?.timeTableLayout)
@@ -779,6 +787,9 @@ function hexToRgba(hex: string, alpha: number) {
 }
 
 onMounted(async () => {
+  if (route.query.termId) {
+    queryParams.termId = Number(route.query.termId)
+  }
   await loadTerms()
   await loadSchedule()
 })

@@ -2,11 +2,22 @@ package com.smart.system.domain.dto;
 
 public class CourseStudentBatchAddDto
 {
+    private Long classCourseId;
     private Long courseId;
     private Long classId;
     private Long[] studentUserIds;
     private String status;
     private String remark;
+
+    public Long getClassCourseId()
+    {
+        return classCourseId;
+    }
+
+    public void setClassCourseId(Long classCourseId)
+    {
+        this.classCourseId = classCourseId;
+    }
 
     public Long getCourseId()
     {

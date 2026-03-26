@@ -41,6 +41,8 @@
       <el-col :span="1.5"><el-button type="primary" plain icon="Plus" @click="handleAdd">新增</el-button></el-col>
       <el-col :span="1.5"><el-button type="success" plain icon="Edit" :disabled="single" @click="handleUpdate()">修改</el-button></el-col>
       <el-col :span="1.5"><el-button type="danger" plain icon="Delete" :disabled="multiple" @click="handleDelete()">删除</el-button></el-col>
+      <el-col :span="1.5"><el-button type="info" plain icon="Upload" @click="openImportDialog" v-hasPermi="['campus:classroom:import']">导入</el-button></el-col>
+      <el-col :span="1.5"><el-button type="warning" plain icon="Download" @click="handleExport" v-hasPermi="['campus:classroom:export']">导出</el-button></el-col>
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />
     </el-row>
 
@@ -125,6 +127,39 @@
       </el-form>
       <template #footer><el-button @click="open=false">取消</el-button><el-button type="primary" @click="submitForm">确定</el-button></template>
     </el-dialog>
+
+    <el-dialog v-model="importOpen" title="导入教室数据" width="640px">
+      <div class="classroom-import">
+        <el-upload
+          ref="importUploadRef"
+          :auto-upload="false"
+          :limit="1"
+          accept=".xls,.xlsx"
+          :on-change="handleImportFileChange"
+          :on-remove="handleImportFileRemove"
+          :file-list="importFileList"
+          drag
+          style="width:100%"
+        >
+          <el-icon style="font-size:36px;color:#8c939d;margin-bottom:8px"><UploadFilled /></el-icon>
+          <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+          <template #tip>
+            <div class="el-upload__tip">
+              仅支持 .xls / .xlsx 文件，
+              <el-button link type="primary" @click.stop="downloadImportTemplate">下载模板</el-button>
+            </div>
+          </template>
+        </el-upload>
+        <el-checkbox v-model="importUpdateSupport">遇到同名同位置教室时，更新已有数据</el-checkbox>
+        <div class="classroom-import__hint">
+          系统会按“校区 + 教学楼 + 教室名称”识别是否为同一间教室，导入完成后会自动刷新列表和筛选项。
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="importOpen = false">取消</el-button>
+        <el-button type="primary" :loading="importing" :disabled="!importFileList.length" @click="submitImport">开始导入</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -132,12 +167,19 @@
 // @ts-nocheck
 import { computed, getCurrentInstance, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { addClassroom, delClassroom, listClassroom, updateClassroom } from '@/api/campus/teaching'
+import { UploadFilled } from '@element-plus/icons-vue'
+import { addClassroom, delClassroom, importClassroom, listClassroom, updateClassroom } from '@/api/campus/teaching'
 import { deptTreeSelect } from '@/api/system/user'
 
 const { proxy } = getCurrentInstance() as any
 const { campus_area_type, classroom_room_type, campus_building_type } = proxy.useDict('campus_area_type', 'classroom_room_type', 'campus_building_type')
 const loading=ref(false), showSearch=ref(true), total=ref(0), open=ref(false), title=ref(''), ids=ref<any[]>([]), single=ref(true), multiple=ref(true), dataList=ref<any[]>([])
+const importOpen = ref(false)
+const importing = ref(false)
+const importUpdateSupport = ref(true)
+const importUploadRef = ref()
+const importFileList = ref<any[]>([])
+const importRawFile = ref<File | null>(null)
 const allClassrooms = ref<any[]>([])
 const deptOptions=ref<any[]>([])
 const queryParams=reactive<any>({ pageNum:1,pageSize:10,classroomName:undefined,deptId:undefined,buildingName:undefined,campusName:undefined,roomType:undefined })
@@ -208,9 +250,53 @@ async function submitForm(){
   if(form.classroomId){ await updateClassroom(form); ElMessage.success('修改成功') } else { await addClassroom(form); ElMessage.success('新增成功') }
   open.value=false
   await loadDictionaryOptions()
-  getList()
+  await getList()
 }
-async function handleDelete(row?:any){ const target=row?.classroomId || ids.value; if(!target || (Array.isArray(target)&&!target.length)) return; await ElMessageBox.confirm('确认删除所选教室吗？','提示',{type:'warning'}); await delClassroom(target); ElMessage.success('删除成功'); getList() }
+async function handleDelete(row?:any){ const target=row?.classroomId || ids.value; if(!target || (Array.isArray(target)&&!target.length)) return; await ElMessageBox.confirm('确认删除所选教室吗？','提示',{type:'warning'}); await delClassroom(target); ElMessage.success('删除成功'); await loadDictionaryOptions(); await getList() }
+function openImportDialog() {
+  importOpen.value = true
+  importUpdateSupport.value = true
+  importRawFile.value = null
+  importFileList.value = []
+}
+function handleImportFileChange(file: any, fileList: any[]) {
+  importRawFile.value = file.raw || null
+  importFileList.value = fileList.slice(-1)
+}
+function handleImportFileRemove() {
+  importRawFile.value = null
+  importFileList.value = []
+}
+function downloadImportTemplate() {
+  proxy.download('campus/classroom/importTemplate', {}, `classroom_template_${new Date().getTime()}.xlsx`)
+}
+function handleExport() {
+  proxy.download('campus/classroom/export', { ...queryParams }, `classroom_${new Date().getTime()}.xlsx`)
+}
+async function submitImport() {
+  if (!importRawFile.value) {
+    ElMessage.warning('请先选择导入文件')
+    return
+  }
+  importing.value = true
+  try {
+    const res = await importClassroom(importRawFile.value, importUpdateSupport.value)
+    const data = res.data || {}
+    const errors = (data.errors || []) as string[]
+    importOpen.value = false
+    await ElMessageBox.alert(
+      `导入完成：新增 ${data.insertCount || 0} 条，更新 ${data.updateCount || 0} 条，跳过 ${data.skipCount || 0} 条${errors.length ? `<br/><br/>${errors.slice(0, 8).join('<br/>')}` : ''}`,
+      '导入结果',
+      { dangerouslyUseHTMLString: true }
+    )
+    await loadDictionaryOptions()
+    await getList()
+  } catch (error) {
+    // request.ts 已统一提示错误，这里保留弹窗并结束 loading 即可
+  } finally {
+    importing.value = false
+  }
+}
 onMounted(async()=>{ resetForm(); await loadDictionaryOptions(); getList() })
 </script>
 
@@ -218,6 +304,8 @@ onMounted(async()=>{ resetForm(); await loadDictionaryOptions(); getList() })
 .mb16{margin-bottom:16px}
 .filter-tag-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:-2px 0 16px;padding:10px 12px;border-radius:14px;background:linear-gradient(180deg,#f8fbff 0%,#f3f8ff 100%);border:1px solid #dbe6f5}
 .filter-tag-bar__label{color:#526076;font-size:12px;font-weight:600}
+.classroom-import{display:grid;gap:16px}
+.classroom-import__hint{color:#667085;font-size:12px;line-height:1.7;padding:12px 14px;border-radius:12px;background:#f8fbff;border:1px solid #dbe8f7}
 .classroom-form-preview{
   margin-top:4px;
   padding-left:90px;

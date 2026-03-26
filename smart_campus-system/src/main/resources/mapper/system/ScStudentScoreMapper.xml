@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScStudentScoreMapper">
+  <resultMap type="ScStudentScore" id="ScStudentScoreResult">
+    <id property="scoreId" column="score_id" />
+    <result property="classCourseId" column="class_course_id" />
+    <result property="teachingClassCode" column="teaching_class_code" />
+    <result property="termId" column="term_id" />
+    <result property="termName" column="term_name" />
+    <result property="courseId" column="course_id" />
+    <result property="courseName" column="course_name" />
+    <result property="classId" column="class_id" />
+    <result property="className" column="class_name" />
+    <result property="studentUserId" column="student_user_id" />
+    <result property="studentName" column="student_name" />
+    <result property="studentNo" column="student_no" />
+    <result property="assessmentType" column="assessment_type" />
+    <result property="credits" column="credits" />
+    <result property="usualScore" column="usual_score" />
+    <result property="attendanceScore" column="attendance_score" />
+    <result property="homeworkScore" column="homework_score" />
+    <result property="labScore" column="lab_score" />
+    <result property="examScore" column="exam_score" />
+    <result property="examAvgScore" column="exam_avg_score" />
+    <result property="bonusScore" column="bonus_score" />
+    <result property="penaltyScore" column="penalty_score" />
+    <result property="usualWeight" column="usual_weight" />
+    <result property="attendanceWeight" column="attendance_weight" />
+    <result property="homeworkWeight" column="homework_weight" />
+    <result property="labWeight" column="lab_weight" />
+    <result property="examWeight" column="exam_weight" />
+    <result property="totalScore" column="total_score" />
+    <result property="gradePoint" column="grade_point" />
+    <result property="gradeLevel" column="grade_level" />
+    <result property="passFlag" column="pass_flag" />
+    <result property="rankNo" column="rank_no" />
+    <result property="percentile" column="percentile" />
+    <result property="examRecordCount" column="exam_record_count" />
+    <result property="syncTime" column="sync_time" />
+    <result property="publishStatus" column="publish_status" />
+    <result property="publishTime" column="publish_time" />
+    <result property="publishBy" column="publish_by" />
+    <result property="teacherComment" column="teacher_comment" />
+    <result property="status" column="status" />
+    <result property="createBy" column="create_by" />
+    <result property="createTime" column="create_time" />
+    <result property="updateBy" column="update_by" />
+    <result property="updateTime" column="update_time" />
+    <result property="remark" column="remark" />
+  </resultMap>
+
+  <sql id="selectScStudentScoreVo">
+    select s.score_id, s.class_course_id, cc.teaching_class_code, s.term_id, t.term_name,
+      s.course_id, c.course_name, s.class_id, cls.class_name, s.student_user_id,
+      coalesce(p.real_name, u.nick_name, u.user_name) as student_name, p.student_no,
+      cc.assessment_type, cc.credits, s.usual_score, s.attendance_score, s.homework_score,
+      s.lab_score, s.exam_score, s.exam_avg_score, s.bonus_score, s.penalty_score,
+      s.usual_weight, s.attendance_weight, s.homework_weight, s.lab_weight, s.exam_weight,
+      s.total_score, s.grade_point, s.grade_level, s.pass_flag, s.rank_no, s.percentile,
+      s.exam_record_count, s.sync_time, s.publish_status, s.publish_time, s.publish_by,
+      s.teacher_comment, s.status, s.create_by, s.create_time, s.update_by, s.update_time,
+      s.remark
+    from sc_student_score s
+    left join sc_class_course cc on cc.id = s.class_course_id
+    left join sc_school_term t on t.term_id = s.term_id
+    left join sc_course c on c.course_id = s.course_id
+    left join sc_class cls on cls.class_id = s.class_id
+    left join sc_user_profile p on p.user_id = s.student_user_id
+    left join sys_user u on u.user_id = s.student_user_id
+  </sql>
+
+  <select id="selectScStudentScoreByScoreId" parameterType="Long" resultMap="ScStudentScoreResult">
+    <include refid="selectScStudentScoreVo" />
+    where s.score_id = #{scoreId}
+  </select>
+
+  <select id="selectScStudentScoreList" parameterType="ScStudentScore" resultMap="ScStudentScoreResult">
+    <include refid="selectScStudentScoreVo" />
+    <where>
+      <if test="scoreId != null">and s.score_id = #{scoreId}</if>
+      <if test="classCourseId != null">and s.class_course_id = #{classCourseId}</if>
+      <if test="termId != null">and s.term_id = #{termId}</if>
+      <if test="courseId != null">and s.course_id = #{courseId}</if>
+      <if test="classId != null">and s.class_id = #{classId}</if>
+      <if test="studentUserId != null">and s.student_user_id = #{studentUserId}</if>
+      <if test="courseName != null and courseName != ''">and c.course_name like concat('%', #{courseName}, '%')</if>
+      <if test="studentName != null and studentName != ''">and coalesce(p.real_name, u.nick_name, u.user_name) like concat('%', #{studentName}, '%')</if>
+      <if test="gradeLevel != null and gradeLevel != ''">and s.grade_level = #{gradeLevel}</if>
+      <if test="publishStatus != null and publishStatus != ''">and s.publish_status = #{publishStatus}</if>
+      <if test="status != null and status != ''">and s.status = #{status}</if>
+      <if test="passFlag != null and passFlag != ''">and s.pass_flag = #{passFlag}</if>
+    </where>
+    order by s.term_id desc, s.class_course_id desc, s.rank_no asc, s.total_score desc, s.score_id desc
+  </select>
+
+  <insert id="insertScStudentScore" parameterType="ScStudentScore" useGeneratedKeys="true" keyProperty="scoreId">
+    insert into sc_student_score(
+      class_course_id, term_id, course_id, class_id, student_user_id,
+      usual_score, attendance_score, homework_score, lab_score, exam_score, exam_avg_score,
+      bonus_score, penalty_score, usual_weight, attendance_weight, homework_weight, lab_weight,
+      exam_weight, total_score, grade_point, grade_level, pass_flag, rank_no, percentile,
+      exam_record_count, sync_time, publish_status, publish_time, publish_by, teacher_comment,
+      status, create_by, create_time, remark
+    ) values (
+      #{classCourseId}, #{termId}, #{courseId}, #{classId}, #{studentUserId},
+      #{usualScore}, #{attendanceScore}, #{homeworkScore}, #{labScore}, #{examScore}, #{examAvgScore},
+      #{bonusScore}, #{penaltyScore}, #{usualWeight}, #{attendanceWeight}, #{homeworkWeight}, #{labWeight},
+      #{examWeight}, #{totalScore}, #{gradePoint}, #{gradeLevel}, #{passFlag}, #{rankNo}, #{percentile},
+      #{examRecordCount}, #{syncTime}, #{publishStatus}, #{publishTime}, #{publishBy}, #{teacherComment},
+      #{status}, #{createBy}, sysdate(), #{remark}
+    )
+  </insert>
+
+  <update id="updateScStudentScore" parameterType="ScStudentScore">
+    update sc_student_score
+    <set>
+      <if test="classCourseId != null">class_course_id = #{classCourseId},</if>
+      <if test="termId != null">term_id = #{termId},</if>
+      <if test="courseId != null">course_id = #{courseId},</if>
+      <if test="classId != null">class_id = #{classId},</if>
+      <if test="studentUserId != null">student_user_id = #{studentUserId},</if>
+      <if test="usualScore != null">usual_score = #{usualScore},</if>
+      <if test="attendanceScore != null">attendance_score = #{attendanceScore},</if>
+      <if test="homeworkScore != null">homework_score = #{homeworkScore},</if>
+      <if test="labScore != null">lab_score = #{labScore},</if>
+      <if test="examScore != null">exam_score = #{examScore},</if>
+      <if test="examAvgScore != null">exam_avg_score = #{examAvgScore},</if>
+      <if test="bonusScore != null">bonus_score = #{bonusScore},</if>
+      <if test="penaltyScore != null">penalty_score = #{penaltyScore},</if>
+      <if test="usualWeight != null">usual_weight = #{usualWeight},</if>
+      <if test="attendanceWeight != null">attendance_weight = #{attendanceWeight},</if>
+      <if test="homeworkWeight != null">homework_weight = #{homeworkWeight},</if>
+      <if test="labWeight != null">lab_weight = #{labWeight},</if>
+      <if test="examWeight != null">exam_weight = #{examWeight},</if>
+      <if test="totalScore != null">total_score = #{totalScore},</if>
+      <if test="gradePoint != null">grade_point = #{gradePoint},</if>
+      <if test="gradeLevel != null">grade_level = #{gradeLevel},</if>
+      <if test="passFlag != null">pass_flag = #{passFlag},</if>
+      <if test="rankNo != null">rank_no = #{rankNo},</if>
+      <if test="percentile != null">percentile = #{percentile},</if>
+      <if test="examRecordCount != null">exam_record_count = #{examRecordCount},</if>
+      <if test="syncTime != null">sync_time = #{syncTime},</if>
+      <if test="publishStatus != null">publish_status = #{publishStatus},</if>
+      <if test="publishStatus != null or publishTime != null">publish_time = #{publishTime},</if>
+      <if test="publishBy != null">publish_by = #{publishBy},</if>
+      <if test="teacherComment != null">teacher_comment = #{teacherComment},</if>
+      <if test="status != null">status = #{status},</if>
+      <if test="updateBy != null">update_by = #{updateBy},</if>
+      <if test="remark != null">remark = #{remark},</if>
+      update_time = sysdate()
+    </set>
+    where score_id = #{scoreId}
+  </update>
+
+  <delete id="deleteScStudentScoreByScoreId" parameterType="Long">
+    delete from sc_student_score where score_id = #{scoreId}
+  </delete>
+
+  <delete id="deleteScStudentScoreByScoreIds" parameterType="Long">
+    delete from sc_student_score
+    where score_id in
+    <foreach item="scoreId" collection="array" open="(" separator="," close=")">
+      #{scoreId}
+    </foreach>
+  </delete>
+</mapper>
