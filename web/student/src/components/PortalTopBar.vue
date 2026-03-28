@@ -5,9 +5,14 @@
         <div 
           class="portal-topbar__menu-trigger-wrapper" 
           @mouseenter="openMenu" 
-          @mouseleave="closeMenuTimer"
         >
-          <button v-if="showMenu && menuItems.length" type="button" class="portal-topbar__menu-trigger" @click="toggleMenu">
+          <button
+            v-if="showMenu && menuItems.length"
+            type="button"
+            class="portal-topbar__menu-trigger"
+            @mouseenter="openMenu"
+            @click.stop="toggleMenu"
+          >
             <el-icon><Menu /></el-icon>
             <span>菜单</span>
           </button>
@@ -15,11 +20,8 @@
 
         <div class="portal-topbar__brand" @click="goHome">
           <div class="portal-topbar__logo">
-            <i class="portal-topbar__logo-main ri-graduation-cap-line"></i>
-          </div>
-          <div class="portal-topbar__brand-text">
-            <strong>教务管理信息系统</strong>
-            <span>Course Management Information System</span>
+            <img class="portal-topbar__logo-image portal-topbar__logo-image--full" :src="portalLogo" alt="教务管理信息系统">
+            <img class="portal-topbar__logo-image portal-topbar__logo-image--compact" :src="portalSmallLogo" alt="教务管理信息系统">
           </div>
         </div>
       </div>
@@ -112,7 +114,7 @@
                 <el-icon><Files /></el-icon>
                 <span>我的档案</span>
               </el-dropdown-item>
-              <el-dropdown-item @click="goFavoritesPage">
+              <el-dropdown-item v-if="userStore.availablePortalRoles.includes('student')" @click="goFavoritesPage">
                 <el-icon><Grid /></el-icon>
                 <span>我的收藏</span>
               </el-dropdown-item>
@@ -150,7 +152,7 @@
     </div>
 
     <transition name="portal-menu-overlay">
-      <div v-if="showMenu && menuItems.length && isMenuOpen" class="portal-topbar__menu-overlay" @click.self="closeMenu" @mouseenter="closeMenuTimer" @mouseleave="closeMenuTimer">
+      <div v-if="showMenu && menuItems.length && isMenuOpen" class="portal-topbar__menu-overlay" @click.self="closeMenu">
         <section class="portal-topbar__menu-surface" @click.stop @mouseenter="cancelCloseTimer" @mouseleave="closeMenuTimer">
           <div class="portal-topbar__menu-content" @mouseenter="cancelCloseTimer">
             <div class="portal-topbar__menu-filter"></div>
@@ -322,6 +324,8 @@ import {
 import usePortalUserStore from '@/store/user'
 import usePortalThemeStore from '@/store/theme'
 import { getPortalHelpCenter, getPortalMessageCenter } from '@/api/portal'
+import portalLogo from '@/assets/img/logo.png'
+import portalSmallLogo from '@/assets/img/small-logo.png'
 
 interface MenuItem {
   title: string
@@ -395,6 +399,7 @@ const roleOptions = computed(() => {
   const roleMap: Record<string, string> = {
     student: '学生',
     teacher: '教师',
+    advisor: '辅导员',
     parent: '家长',
     admin: '管理员',
   }
@@ -620,6 +625,8 @@ async function openNoticeCenter() {
   }
   if (filteredMessages.value.length) {
     activeMessage.value = filteredMessages.value[0]
+  } else {
+    activeMessage.value = null
   }
 }
 
@@ -656,7 +663,11 @@ function goProfilePage() {
 }
 
 function goFavoritesPage() {
-  router.push('/student/favorites')
+  if (userStore.availablePortalRoles.includes('student')) {
+    router.push('/student/favorites')
+    return
+  }
+  router.push('/account/profile')
 }
 
 function goAccountSettingsPage() {
@@ -682,6 +693,16 @@ onMounted(() => {
   }
 })
 
+watch(filteredMessages, (list) => {
+  if (!list.length) {
+    activeMessage.value = null
+    return
+  }
+  if (!activeMessage.value || !list.some((item: any) => item.messageId === activeMessage.value?.messageId)) {
+    activeMessage.value = list[0]
+  }
+})
+
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
 })
@@ -690,21 +711,23 @@ onBeforeUnmount(() => {
 <style scoped>
 .portal-topbar {
   --topbar-height: 58px;
-  --auth-topbar-text: #ffffff;
-  --auth-topbar-muted: rgba(255, 255, 255, 0.72);
-  --auth-topbar-line: rgba(255, 255, 255, 0.12);
-  --auth-topbar-surface: rgba(255, 255, 255, 0.08);
-  --topbar-search-text: #ffffff;
-  --topbar-search-muted: rgba(255, 255, 255, 0.7);
-  --topbar-search-border: rgba(255, 255, 255, 0.2);
-  --topbar-search-surface: rgba(255, 255, 255, 0.15);
-  --topbar-search-surface-strong: rgba(255, 255, 255, 0.25);
+  --auth-topbar-text: #173c69;
+  --auth-topbar-muted: rgba(23, 60, 105, 0.7);
+  --auth-topbar-line: rgba(23, 60, 105, 0.14);
+  --auth-topbar-surface: rgba(255, 255, 255, 0.34);
+  --topbar-search-text: #173c69;
+  --topbar-search-muted: rgba(23, 60, 105, 0.5);
+  --topbar-search-border: rgba(150, 183, 219, 0.58);
+  --topbar-search-surface: rgba(255, 255, 255, 0.34);
+  --topbar-search-surface-strong: rgba(255, 255, 255, 0.56);
   position: sticky;
   top: 0;
   z-index: 100;
   color: var(--auth-topbar-text);
-  background: transparent;
-  box-shadow: none;
+  background: rgba(232, 243, 253, 0.82);
+  backdrop-filter: blur(12px) saturate(1.08);
+  -webkit-backdrop-filter: blur(12px) saturate(1.08);
+  box-shadow: 0 8px 20px rgba(76, 120, 168, 0.08);
   overflow: visible;
 }
 
@@ -715,14 +738,18 @@ onBeforeUnmount(() => {
   right: 0;
   bottom: 0;
   height: 1px;
-  background: transparent;
+  background: linear-gradient(90deg, rgba(119, 160, 206, 0.12), rgba(119, 160, 206, 0.34), rgba(119, 160, 206, 0.12));
 }
 
 .portal-topbar::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: rgba(15, 23, 42, 0.4);
+  background:
+    linear-gradient(135deg, rgba(235, 244, 252, 0.96) 0%, rgba(214, 229, 246, 0.92) 36%, rgba(201, 231, 246, 0.88) 100%),
+    radial-gradient(circle at 16% 18%, rgba(255, 255, 255, 0.54), transparent 30%),
+    radial-gradient(circle at 82% 14%, rgba(178, 234, 239, 0.32), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.04));
   pointer-events: none;
   z-index: 1;
 }
@@ -763,8 +790,8 @@ onBeforeUnmount(() => {
   border: none;
   border-radius: 4px;
   color: inherit;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.46);
+  border: 1px solid rgba(150, 183, 219, 0.52);
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
@@ -773,55 +800,41 @@ onBeforeUnmount(() => {
 
 .portal-topbar__menu-trigger:hover,
 .portal-topbar.is-menu-open .portal-topbar__menu-trigger {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.68);
+  border-color: rgba(125, 163, 205, 0.76);
 }
 
 .portal-topbar__brand {
   display: flex;
   align-items: center;
-  gap: 12px;
   padding: 4px 2px 4px 0;
   min-width: 0;
   cursor: pointer;
 }
 
 .portal-topbar__logo {
-  width: 32px;
-  height: 32px;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.portal-topbar__logo-main {
-  font-size: 20px;
-  color: #fff;
-  line-height: 1;
-}
-
-.portal-topbar__brand-text {
-  display: flex;
-  flex-direction: column;
   min-width: 0;
+  padding: 2px 0;
 }
 
-.portal-topbar__brand-text strong {
-  font-size: 15px;
-  line-height: 1.1;
-  letter-spacing: 0;
-  color: var(--auth-topbar-text);
-  white-space: nowrap;
-  font-weight: 600;
+.portal-topbar__logo-image {
+  display: block;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(17, 49, 93, 0.08));
 }
 
-.portal-topbar__brand-text span {
-  margin-top: 2px;
-  font-size: 10px;
-  letter-spacing: 0;
-  line-height: 1.4;
-  color: var(--auth-topbar-muted);
-  white-space: nowrap;
+.portal-topbar__logo-image--full {
+  width: 176px;
+  height: 38px;
+}
+
+.portal-topbar__logo-image--compact {
+  display: none;
+  width: 32px;
+  height: 32px;
 }
 
 .portal-topbar__search {
@@ -833,30 +846,30 @@ onBeforeUnmount(() => {
 .portal-topbar__search :deep(.el-input__wrapper) {
   height: 32px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.48);
   box-shadow: none;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(150, 183, 219, 0.58);
   transition: border-color .2s ease, background-color .2s ease;
 }
 
 .portal-topbar__search :deep(.el-input__inner),
 .portal-topbar__search :deep(.el-input__prefix) {
-  color: #ffffff;
+  color: var(--topbar-search-text);
   font-size: 13px;
 }
 
 .portal-topbar__search :deep(.el-input__inner::placeholder) {
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--topbar-search-muted);
 }
 
 .portal-topbar__search :deep(.el-input__prefix) {
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--topbar-search-muted);
 }
 
 .portal-topbar__search :deep(.el-input__wrapper.is-focus),
 .portal-topbar__search :deep(.el-input__wrapper:hover) {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.74);
+  border-color: rgba(125, 163, 205, 0.76);
   box-shadow: none;
 }
 
@@ -928,9 +941,9 @@ onBeforeUnmount(() => {
   height: 32px;
   padding: 0 12px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #ffffff;
+  background: rgba(255, 255, 255, 0.46);
+  border: 1px solid rgba(150, 183, 219, 0.58);
+  color: var(--auth-topbar-text);
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
@@ -953,8 +966,8 @@ onBeforeUnmount(() => {
 
 .portal-topbar__role-pill:hover,
 .portal-topbar__role-pill--switchable:focus-visible {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(125, 163, 205, 0.76);
 }
 
 .portal-topbar__role-pill:focus,
@@ -974,10 +987,10 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(150, 183, 219, 0.58);
   border-radius: 50%;
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.1);
+  color: var(--auth-topbar-text);
+  background: rgba(255, 255, 255, 0.46);
   cursor: pointer;
   font-weight: 600;
   font-size: 14px;
@@ -985,8 +998,8 @@ onBeforeUnmount(() => {
 }
 
 .portal-topbar__avatar:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(125, 163, 205, 0.76);
 }
 
 .portal-topbar__guest-actions {
@@ -1040,12 +1053,14 @@ onBeforeUnmount(() => {
 }
 
 .portal-topbar__menu-overlay {
-  position: fixed;
+  position: absolute;
   left: 0;
   right: 0;
-  top: var(--topbar-height);
-  bottom: 0;
-  background: rgba(15, 23, 42, 0.4);
+  top: 100%;
+  height: calc(100vh - var(--topbar-height));
+  height: calc(100dvh - var(--topbar-height));
+  background: rgba(15, 23, 42, 0.28);
+  z-index: 5400;
 }
 
 .portal-topbar__menu-surface {
@@ -1058,10 +1073,12 @@ onBeforeUnmount(() => {
   background: transparent;
   color: #333;
   padding: 0;
+  z-index: 5401;
 }
 
 .portal-topbar__menu-content {
   position: relative;
+  z-index: 5402;
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr);
   width: 100%;
@@ -1070,7 +1087,7 @@ onBeforeUnmount(() => {
   border-radius: 0;
   overflow: hidden;
   isolation: isolate;
-  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.3);
+  box-shadow: 14px 0 40px rgba(15, 23, 42, 0.22);
 }
 
 .portal-topbar__menu-filter {
@@ -1714,9 +1731,20 @@ onBeforeUnmount(() => {
     --topbar-height: 56px;
   }
 
-  .portal-topbar__brand-text span,
   .portal-topbar__icon-group {
     display: none;
+  }
+
+  .portal-topbar__logo {
+    padding: 6px 10px;
+  }
+
+  .portal-topbar__logo-image--full {
+    display: none;
+  }
+
+  .portal-topbar__logo-image--compact {
+    display: block;
   }
 
   .portal-topbar__search {

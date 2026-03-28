@@ -1,6 +1,9 @@
 <template>
   <div class="register">
     <el-form ref="registerRef" :model="registerForm" :rules="registerRules" class="register-form">
+      <div class="auth-brand">
+        <img class="auth-brand__logo" :src="fullLogo" alt="校园智学后台">
+      </div>
       <h3 class="title">{{ title }}</h3>
       <el-form-item prop="username">
         <el-input 
@@ -81,6 +84,7 @@ import { ElMessageBox } from "element-plus"
 import { getCodeImg, register } from "@/api/login"
 import defaultSettings from '@/settings'
 import type { RegisterForm } from '@/types/api/login'
+import fullLogo from '@/assets/logo/logo.png'
 
 const title = import.meta.env.VITE_APP_TITLE
 const footerContent = defaultSettings.footerContent
@@ -172,6 +176,20 @@ getCode()
   margin: 0px auto 30px auto;
   text-align: center;
   color: #707070;
+}
+
+.auth-brand {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+.auth-brand__logo {
+  display: block;
+  width: 180px;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
 }
 
 .register-form {

@@ -22,3 +22,11 @@ export function reviewCourseSelectionRequest(data: any) {
     data,
   })
 }
+
+export function batchReviewCourseSelectionRequest(data: any[]) {
+  return request({
+    url: '/campus/courseSelectionRequest/batchReview',
+    method: 'put',
+    data,
+  })
+}

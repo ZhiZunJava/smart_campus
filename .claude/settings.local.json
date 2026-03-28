@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find E:/smart_campus/web/student/src -type f -name *.css -o -name *.scss)",
+      "Bash(find /smart_campus -type f -name *.vue -path */student/*)",
+      "Bash(grep -E \"\\\\.\\(java|ts|js\\)$\")",
+      "Bash(grep -iE \"\\\\.\\(java|kt\\)$\")",
+      "Bash(grep -E \"\\\\.\\(java|kt\\)$\")",
+      "Bash(grep -E \"\\\\.java$\")",
+      "Bash(ls:*)"
+    ]
+  }
+}

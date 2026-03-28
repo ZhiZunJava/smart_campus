@@ -6,6 +6,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -41,8 +42,20 @@ public class ScCourseSelectionRequestController extends BaseController {
     @PreAuthorize("@ss.hasPermi('campus:courseSelectionRequest:review')")
     @Log(title = "个性化选课申请", businessType = BusinessType.UPDATE)
     @PutMapping("/review")
-    public AjaxResult review(@RequestBody CourseSelectionRequestReviewDto dto) {
+    public AjaxResult review(@Validated @RequestBody CourseSelectionRequestReviewDto dto) {
         return success(scCourseSelectionRequestService.reviewRequest(dto, getUsername(), getUserId()));
+    }
+
+    @PreAuthorize("@ss.hasPermi('campus:courseSelectionRequest:review')")
+    @Log(title = "批量审核选课申请", businessType = BusinessType.UPDATE)
+    @PutMapping("/batchReview")
+    public AjaxResult batchReview(@Validated @RequestBody List<CourseSelectionRequestReviewDto> dtos) {
+        int successCount = 0;
+        for (CourseSelectionRequestReviewDto dto : dtos) {
+            scCourseSelectionRequestService.reviewRequest(dto, getUsername(), getUserId());
+            successCount++;
+        }
+        return success("成功审核 " + successCount + " 条申请");
     }
 
 }

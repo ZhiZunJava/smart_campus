@@ -7,8 +7,10 @@ type RequestInstance = AxiosInstance & {
   <T = any>(config: AxiosRequestConfig): Promise<T>
 }
 
+const resolvedBaseURL = import.meta.env.VITE_APP_BASE_API || (import.meta.env.DEV ? '/dev-api' : '/prod-api')
+
 const service = axios.create({
-  baseURL: import.meta.env.VITE_APP_BASE_API,
+  baseURL: resolvedBaseURL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json;charset=utf-8'
@@ -41,6 +43,9 @@ service.interceptors.request.use((config: any) => {
 
 service.interceptors.response.use(
   (res: any) => {
+    if (res.request?.responseType === 'blob' || res.request?.responseType === 'arraybuffer') {
+      return Promise.resolve(res.data)
+    }
     const code = res.data.code || 200
     const msg = errorCode[code] || res.data.msg || errorCode.default
     if (code === 401) {

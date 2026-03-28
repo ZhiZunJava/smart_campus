@@ -50,8 +50,8 @@
     c.selection_option_name,
     c.selection_group_code, c.selection_group_name, c.selection_group_limit,
     c.course_level_requirement, c.total_hours, c.required_weeks, c.weekly_hours, c.arranged_hours,
-    c.student_limit, (select count(1) from sc_user_profile p where p.class_id = c.class_id and
-    p.user_type = 'student' and p.status = '0') as actual_student_count, c.status, c.create_by,
+    c.student_limit, (select count(1) from sc_course_student cs where cs.class_course_id = c.id
+    and cs.status = '0') as actual_student_count, c.status, c.create_by,
     c.create_time, c.update_by, c.update_time, c.remark from sc_class_course c left join sc_class
     cls on cls.class_id = c.class_id left join sc_course crs on crs.course_id = c.course_id left
     join sys_user u on u.user_id = c.teacher_id left join sc_school_term t on t.term_id = c.term_id
@@ -72,6 +72,16 @@
       <if test="major != null and major != ''">and c.major =
     #{major}</if>
       <if test="status != null and status != ''">and c.status = #{status}</if>
+      <if test="courseName != null and courseName != ''">and crs.course_name like concat('%', #{courseName}, '%')</if>
+      <if test="courseCategory != null and courseCategory != ''">and c.course_category = #{courseCategory}</if>
+      <if test="campusName != null and campusName != ''">and c.campus_name = #{campusName}</if>
+      <if test="requiredFlag != null and requiredFlag != ''">and c.required_flag = #{requiredFlag}</if>
+      <if test="assessmentType != null and assessmentType != ''">and c.assessment_type = #{assessmentType}</if>
+      <if test="credits != null">and c.credits = #{credits}</if>
+      <if test="teachingClassCode != null and teachingClassCode != ''">and c.teaching_class_code like concat('%', #{teachingClassCode}, '%')</if>
+      <if test="businessType != null and businessType != ''">and c.business_type = #{businessType}</if>
+      <if test="teachingLanguage != null and teachingLanguage != ''">and c.teaching_language = #{teachingLanguage}</if>
+      <if test="className != null and className != ''">and cls.class_name like concat('%', #{className}, '%')</if>
     </where>
     order by c.id desc </select>
   <insert id="insertScClassCourse" parameterType="ScClassCourse" useGeneratedKeys="true"

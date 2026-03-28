@@ -34,11 +34,19 @@ const usePortalUserStore = defineStore('portal-user', {
       const roles = state.roles || []
       const isAdmin = roles.includes('admin') || roles.includes('ROLE_admin')
       if (isAdmin) {
-        return ['student', 'teacher', 'parent']
+        return ['student', 'teacher', 'advisor', 'parent']
       }
       const result: string[] = []
       if (roles.includes('student') || roles.includes('ROLE_student')) result.push('student')
       if (roles.includes('teacher') || roles.includes('ROLE_teacher')) result.push('teacher')
+      if (
+        roles.includes('campus_head_teacher')
+        || roles.includes('ROLE_campus_head_teacher')
+        || roles.includes('advisor')
+        || roles.includes('ROLE_advisor')
+        || roles.includes('head_teacher')
+        || roles.includes('ROLE_head_teacher')
+      ) result.push('advisor')
       if (roles.includes('parent') || roles.includes('ROLE_parent')) result.push('parent')
       if (result.length === 0) result.push('student')
       return result

@@ -16,6 +16,9 @@
       <section class="register-card">
         <div class="register-card__top">
           <div>
+            <div class="register-card__brand">
+              <img class="register-card__brand-logo" :src="portalLogo" alt="教务管理信息系统">
+            </div>
             <div class="register-card__eyebrow">Account Register</div>
             <h1>统一身份注册</h1>
             <p>按角色完成账号创建，系统将根据身份类型识别对应门户与权限。</p>
@@ -173,6 +176,7 @@ import PortalTopBar from '@/components/PortalTopBar.vue'
 import usePortalUserStore from '@/store/user'
 import { getCodeImg, register } from '@/api/auth'
 import loginBackground from '@/assets/img/login-background.jpg'
+import portalLogo from '@/assets/img/logo.png'
 
 const router = useRouter()
 const userStore = usePortalUserStore()
@@ -431,6 +435,26 @@ getCode().catch(() => {
 .register-card__top > div {
   min-width: 0;
   flex: 1;
+}
+
+.register-card__brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #dbe6f5;
+  box-shadow: 0 10px 22px rgba(17, 38, 68, 0.08);
+}
+
+.register-card__brand-logo {
+  display: block;
+  width: 168px;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
 }
 
 .register-card__eyebrow {

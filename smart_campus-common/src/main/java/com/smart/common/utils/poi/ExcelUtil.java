@@ -1188,6 +1188,7 @@ public class ExcelUtil<T>
                     // 设置列类型
                     setCellVo(value, attr, cell);
                 }
+                adjustRowHeight(attr, row, cell);
                 addStatisticsData(column, Convert.toStr(value), attr);
             }
         }
@@ -1196,6 +1197,75 @@ public class ExcelUtil<T>
             log.error("导出Excel失败{}", e);
         }
         return cell;
+    }
+
+    /**
+     * 针对启用自动换行的列，根据内容长度动态抬高行高，避免导出后文本被截断。
+     */
+    private void adjustRowHeight(Excel attr, Row row, Cell cell)
+    {
+        if (!attr.wrapText() || row == null || cell == null)
+        {
+            return;
+        }
+        String text = resolveCellText(cell);
+        if (StringUtils.isEmpty(text))
+        {
+            return;
+        }
+        int lineCount = estimateWrappedLineCount(text, attr.width());
+        if (lineCount <= 1)
+        {
+            return;
+        }
+        float currentHeight = row.getHeightInPoints() > 0 ? row.getHeightInPoints() : (float) attr.height();
+        double baseHeight = Math.max(attr.height(), 15D);
+        float preferredHeight = (float) (baseHeight * lineCount + 2D);
+        if (preferredHeight > currentHeight)
+        {
+            row.setHeightInPoints(preferredHeight);
+        }
+    }
+
+    private String resolveCellText(Cell cell)
+    {
+        if (cell == null)
+        {
+            return null;
+        }
+        return StringUtils.trimToEmpty(cell.toString());
+    }
+
+    private int estimateWrappedLineCount(String text, double columnWidth)
+    {
+        if (StringUtils.isEmpty(text))
+        {
+            return 1;
+        }
+        double availableWidth = Math.max(1D, columnWidth - 1.5D);
+        String[] rawLines = text.replace("\r", StringUtils.EMPTY).split("\n", -1);
+        int totalLines = 0;
+        for (String rawLine : rawLines)
+        {
+            String line = StringUtils.defaultString(rawLine);
+            int displayWidth = calculateDisplayWidth(line);
+            totalLines += Math.max(1, (int) Math.ceil(displayWidth / availableWidth));
+        }
+        return Math.max(1, totalLines);
+    }
+
+    private int calculateDisplayWidth(String text)
+    {
+        if (StringUtils.isEmpty(text))
+        {
+            return 1;
+        }
+        int width = 0;
+        for (char current : text.toCharArray())
+        {
+            width += current <= 255 ? 1 : 2;
+        }
+        return Math.max(1, width);
     }
 
     /**

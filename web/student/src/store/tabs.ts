@@ -15,7 +15,13 @@ export const useTabsStore = defineStore('portal-tabs', {
   }),
   actions: {
     addTab(tab: TabItem) {
-      if (tab.path === '/student/dashboard' || tab.path === '/' || tab.path === '/teacher/dashboard' || tab.path === '/parent/dashboard') {
+      if (
+        tab.path === '/student/dashboard'
+        || tab.path === '/'
+        || tab.path === '/teacher/dashboard'
+        || tab.path === '/parent/dashboard'
+        || tab.path === '/advisor/dashboard'
+      ) {
         this.activeTabPath = tab.path
         return
       }

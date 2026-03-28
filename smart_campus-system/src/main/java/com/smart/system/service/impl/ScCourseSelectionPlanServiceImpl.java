@@ -39,6 +39,14 @@ public class ScCourseSelectionPlanServiceImpl implements IScCourseSelectionPlanS
 
     @Override
     public int deleteScCourseSelectionPlanByPlanIds(Long[] planIds) {
+        if (planIds != null) {
+            for (Long planId : planIds) {
+                ScCourseSelectionPlan plan = scCourseSelectionPlanMapper.selectScCourseSelectionPlanByPlanId(planId);
+                if (plan != null && "0".equals(plan.getStatus())) {
+                    throw new ServiceException("不能删除启用中的选课计划【" + plan.getPlanName() + "】，请先停用");
+                }
+            }
+        }
         return scCourseSelectionPlanMapper.deleteScCourseSelectionPlanByPlanIds(planIds);
     }
 
@@ -67,6 +75,12 @@ public class ScCourseSelectionPlanServiceImpl implements IScCourseSelectionPlanS
 
         if (StringUtils.isEmpty(plan.getPlanName())) {
             throw new ServiceException("选课计划名称不能为空");
+        }
+        if (plan.getNoticeContent() != null && plan.getNoticeContent().length() > 1000) {
+            throw new ServiceException("选课公告不能超过1000字");
+        }
+        if (plan.getRuleContent() != null && plan.getRuleContent().length() > 1500) {
+            throw new ServiceException("规则说明不能超过1500字");
         }
         validateWindowRange(plan.getSelectionStartTime(), plan.getSelectionEndTime(), "选课开放");
         validateWindowRange(plan.getDropStartTime(), plan.getDropEndTime(), "退课开放");

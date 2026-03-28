@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.smart.common.exception.ServiceException;
 import com.smart.common.utils.StringUtils;
+import org.springframework.web.util.HtmlUtils;
 import com.smart.system.domain.ScClassCourse;
 import com.smart.system.domain.ScCourseSelectionRequest;
 import com.smart.system.domain.ScUserProfile;
@@ -197,21 +198,31 @@ public class ScCourseSelectionRequestServiceImpl implements IScCourseSelectionRe
 
     private String buildReviewNoticeContent(ScCourseSelectionRequest request, String requestType, String courseName,
             String className, String teachingClassCode, String resultText, String reviewRemark) {
+        if (courseName == null) { courseName = ""; }
+        if (className == null) { className = ""; }
+        if (teachingClassCode == null) { teachingClassCode = ""; }
+        if (reviewRemark == null) { reviewRemark = ""; }
+        String safeCourseName = HtmlUtils.htmlEscape(courseName);
+        String safeClassName = HtmlUtils.htmlEscape(className);
+        String safeTeachingClassCode = HtmlUtils.htmlEscape(teachingClassCode);
+        String reqNo = (request != null && request.getRequestNo() != null) ? request.getRequestNo() : "";
+        String safeRequestNo = HtmlUtils.htmlEscape(reqNo);
+        String safeReviewRemark = HtmlUtils.htmlEscape(reviewRemark);
         StringBuilder content = new StringBuilder();
         content.append("<div style='line-height:1.8;'>");
         content.append("<p>你的个性化").append(requestType).append("申请结果已更新。</p>");
-        content.append("<p><strong>课程：</strong>").append(courseName).append("</p>");
-        content.append("<p><strong>教学班：</strong>").append(className);
+        content.append("<p><strong>课程：</strong>").append(safeCourseName).append("</p>");
+        content.append("<p><strong>教学班：</strong>").append(safeClassName);
         if (StringUtils.isNotEmpty(teachingClassCode)) {
-            content.append(" / ").append(teachingClassCode);
+            content.append("/").append(safeTeachingClassCode);
         }
         content.append("</p>");
-        if (request != null && StringUtils.isNotEmpty(request.getRequestNo())) {
-            content.append("<p><strong>申请编号：</strong>").append(request.getRequestNo()).append("</p>");
+        if (StringUtils.isNotEmpty(safeRequestNo)) {
+            content.append("<p><strong>申请编号：</strong>").append(safeRequestNo).append("</p>");
         }
         content.append("<p><strong>审核结果：</strong>").append(resultText).append("</p>");
-        content.append("<p><strong>审核说明：</strong>").append(reviewRemark).append("</p>");
-        content.append("<p>你可以前往“选课申请”页面查看完整记录，消息中心也会保留本次通知。</p>");
+        content.append("<p><strong>审核说明：</strong>”).append(safeReviewRemark).append(“</p>");
+        content.append("<p>你可以前往”选课申请”页面查看完整记录，消息中心也会保留本次通知。</p>");
         content.append("</div>");
         return content.toString();
     }
@@ -273,6 +284,6 @@ public class ScCourseSelectionRequestServiceImpl implements IScCourseSelectionRe
     }
 
     private String buildRequestNo() {
-        return "PSR" + System.currentTimeMillis() + String.format("%03d", (int) (Math.random() * 1000));
+        return "PSR" + System.currentTimeMillis() + String.format("%06d", (int) (Math.random() * 1000000));
     }
 }

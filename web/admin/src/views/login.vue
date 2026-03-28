@@ -1,6 +1,9 @@
 <template>
   <div class="login">
     <el-form ref="loginRef" :model="loginForm" :rules="loginRules" class="login-form">
+      <div class="auth-brand">
+        <img class="auth-brand__logo" :src="fullLogo" alt="校园智学后台">
+      </div>
       <h3 class="title">{{ title }}</h3>
       <el-form-item prop="username">
         <el-input
@@ -73,6 +76,7 @@ import useUserStore from '@/store/modules/user'
 import defaultSettings from '@/settings'
 import type { CaptchaInfoResult } from '@/types/api/login'
 import type { LoginForm } from '@/types/api/login'
+import fullLogo from '@/assets/logo/logo.png'
 
 const title = import.meta.env.VITE_APP_TITLE
 const footerContent = defaultSettings.footerContent
@@ -181,6 +185,20 @@ getCookie()
   margin: 0px auto 30px auto;
   text-align: center;
   color: #707070;
+}
+
+.auth-brand {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+.auth-brand__logo {
+  display: block;
+  width: 180px;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
 }
 
 .login-form {

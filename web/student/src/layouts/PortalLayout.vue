@@ -231,17 +231,27 @@ const menus: Record<string, MenuItem[]> = {
     { title: '我的考试', path: '/student/exams', desc: '查看考试安排、记录与成绩反馈' },
     { title: '我的成绩', path: '/student/scores', desc: '查看课程总评、构成与排名' },
     { title: '我的错题本', path: '/student/wrongbook', desc: '错题回顾、练习与复盘' },
+    { title: '全校开课查询', path: '/student/course-offerings', desc: '查询全校各学期课程开设情况' },
   ],
   teacher: [
     { title: '教学概览', path: '/teacher/dashboard', desc: '课程与教学资源概览' },
     { title: '我的课程', path: '/teacher/courses', desc: '查看本学期授课安排' },
     { title: '我的课表', path: '/teacher/schedule', desc: '按周查看教学安排' },
     { title: '教学资源', path: '/teacher/resources', desc: '资源查看与更新' },
+    { title: '消息中心', path: '/teacher/messages', desc: '查看系统消息与通知公告' },
+    { title: '全校开课查询', path: '/teacher/course-offerings', desc: '查询全校各学期开课与教学班信息' },
+  ],
+  advisor: [
+    { title: '辅导员概览', path: '/advisor/dashboard', desc: '查看负责班级、学生与成绩概况' },
+    { title: '学生管理', path: '/advisor/students', desc: '查看负责班级的学生名册与基本信息' },
+    { title: '成绩管理', path: '/advisor/scores', desc: '查看行政班成绩、发布状态与分布概况' },
+    { title: '消息中心', path: '/advisor/messages', desc: '查看系统消息与通知公告' },
   ],
   parent: [
     { title: '孩子概览', path: '/parent/dashboard', desc: '查看孩子课程与考试概况' },
     { title: '孩子课程', path: '/parent/courses', desc: '查看孩子当前学期课程' },
     { title: '孩子课表', path: '/parent/schedule', desc: '按周查看孩子课程安排' },
+    { title: '消息中心', path: '/parent/messages', desc: '查看系统消息与通知公告' },
   ],
 }
 
@@ -273,6 +283,7 @@ const groupedMenus: Record<string, MenuGroup[]> = {
       items: [
         menus.student[3],
         menus.student[4],
+        menus.student[14],
       ],
     },
     {
@@ -299,6 +310,8 @@ const groupedMenus: Record<string, MenuGroup[]> = {
       items: [
         menus.teacher[0],
         menus.teacher[1],
+        menus.teacher[4],
+        menus.teacher[5],
       ],
     },
     {
@@ -310,12 +323,31 @@ const groupedMenus: Record<string, MenuGroup[]> = {
       ],
     },
   ],
+  advisor: [
+    {
+      key: 'advisor-general',
+      label: '综合服务',
+      items: [
+        menus.advisor[0],
+        menus.advisor[3],
+      ],
+    },
+    {
+      key: 'advisor-student',
+      label: '学生与成绩',
+      items: [
+        menus.advisor[1],
+        menus.advisor[2],
+      ],
+    },
+  ],
   parent: [
     {
       key: 'parent-general',
       label: '综合服务',
       items: [
         menus.parent[0],
+        menus.parent[3],
       ],
     },
     {
@@ -347,25 +379,39 @@ const isWorkspaceRoute = computed(() => Boolean(route.meta.workspace))
 const isDashboardRoute = computed(() => route.path === `/${activeRole.value}/dashboard` || route.path === '/')
 
 const roleLabel = computed(() => {
-  const map: Record<string, string> = { student: '学生', teacher: '教师', parent: '家长', admin: '管理员' }
+  const map: Record<string, string> = { student: '学生', teacher: '教师', advisor: '辅导员', parent: '家长', admin: '管理员' }
   return map[activeRole.value] || '系统'
 })
 
+const resolvedMenuPath = computed(() => {
+  const menuPath = typeof route.meta.menuPath === 'string' ? route.meta.menuPath : ''
+  if (menuPath) {
+    return menuPath
+  }
+  if (route.path.startsWith('/student/exams/session/')) {
+    return '/student/exams'
+  }
+  return route.path
+})
+
 const currentMenuTitle = computed(() => {
-  const item = menuItems.value.find(m => m.path === route.path)
+  const item = menuItems.value.find(m => m.path === resolvedMenuPath.value)
+  if (typeof route.meta.menuPath === 'string' && route.meta.title) {
+    return route.meta.title as string
+  }
   return item ? item.title : route.meta.title || '详情'
 })
 
 const currentMenuGroup = computed(() => {
   for (const group of menuGroups.value) {
-    if (group.items.some(m => m.path === route.path)) {
+    if (group.items.some(m => m.path === resolvedMenuPath.value)) {
       return group.label
     }
   }
   return ''
 })
 const currentMenuGroupItems = computed(() => {
-  const group = menuGroups.value.find(item => item.items.some(menu => menu.path === route.path))
+  const group = menuGroups.value.find(item => item.items.some(menu => menu.path === resolvedMenuPath.value))
   return group?.items || []
 })
 
@@ -376,10 +422,7 @@ const showOngoingExamBanner = computed(() => {
   return !userStore.isOngoingExamDismissed(ongoingExam.recordId)
 })
 const activeMenuPath = computed(() => {
-  if (route.path.startsWith('/student/exams/session/')) {
-    return '/student/exams'
-  }
-  return route.path
+  return resolvedMenuPath.value
 })
 
 function resolveChildTransitionName(childRoute: RouteLocationNormalizedLoaded, fallback: string) {

@@ -16,6 +16,9 @@
       <section class="auth-card">
         <div class="auth-card__top">
           <div>
+            <div class="auth-card__brand">
+              <img class="auth-card__brand-logo" :src="portalLogo" alt="教务管理信息系统">
+            </div>
             <div class="auth-card__eyebrow">Campus Access</div>
             <h1>账号登录</h1>
             <p>统一登录入口，登录后将根据当前角色设置进入对应工作台。</p>
@@ -97,6 +100,7 @@ import { useRouter } from 'vue-router'
 import PortalTopBar from '@/components/PortalTopBar.vue'
 import usePortalUserStore from '@/store/user'
 import loginBackground from '@/assets/img/login-background.jpg'
+import portalLogo from '@/assets/img/logo.png'
 import { createScanLoginSession, getScanLoginStatus } from '@/api/auth'
 
 const router = useRouter()
@@ -280,6 +284,26 @@ onBeforeUnmount(() => {
 .auth-card__top > div {
   min-width: 0;
   flex: 1;
+}
+
+.auth-card__brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #dbe6f5;
+  box-shadow: 0 10px 22px rgba(17, 38, 68, 0.08);
+}
+
+.auth-card__brand-logo {
+  display: block;
+  width: 168px;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
 }
 
 .auth-card__eyebrow {

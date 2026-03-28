@@ -12,6 +12,9 @@ public interface ScCourseStudentMapper {
 
     int countActiveByClassCourseId(Long classCourseId);
 
+    /** 带行锁的容量计数，用于事务内并发安全校验 */
+    int countActiveByClassCourseIdForUpdate(Long classCourseId);
+
     int insertScCourseStudent(ScCourseStudent scCourseStudent);
 
     int updateScCourseStudent(ScCourseStudent scCourseStudent);

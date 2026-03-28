@@ -1,5 +1,5 @@
 <template>
-  <div class="dashboard-container">
+  <div class="dashboard-container" :style="themeVars">
     <div class="dashboard-main-content">
       <div class="hello-wrapper">
         <div class="greetings">
@@ -11,10 +11,11 @@
           <span>{{ currentDate }}</span>，
           <span style="margin: 0 10px">第<span class="font-size-11 m-2">{{ currentTeachingWeek }}</span>教学周</span>
         </div>
-        <div class="hello-other-info login-info">
-          <span>考试记录：{{ dashboard.examRecordCount || 0 }} 条</span>
-          <span>上次登录时间：{{ lastLoginTime }}</span>
+        <div v-if="secondaryInfo.length" class="hello-other-info login-info">
+          <span v-for="item in secondaryInfo" :key="item">{{ item }}</span>
         </div>
+
+        <slot name="greeting-extra" />
 
         <div v-if="recentTabs.length > 0" class="recent-tabs-container">
           <div class="recent-tabs-title">最近访问：</div>
@@ -35,110 +36,100 @@
         <div class="dashboard-module module-progress">
           <div class="module-header">
             <div class="module-header__content">
-              <h3>课程预览</h3>
+              <h3>{{ previewModuleTitle }}</h3>
               <div class="schedule-switcher">
                 <button
+                  v-for="item in scheduleModes"
+                  :key="item.key"
                   type="button"
                   class="schedule-switcher__btn"
-                  :class="{ active: activeScheduleMode === 'today' }"
-                  @click="activeScheduleMode = 'today'"
+                  :class="{ active: activeScheduleMode === item.key }"
+                  @click="activeScheduleMode = item.key"
                 >
-                  今日课程
-                </button>
-                <button
-                  type="button"
-                  class="schedule-switcher__btn"
-                  :class="{ active: activeScheduleMode === 'tomorrow' }"
-                  @click="activeScheduleMode = 'tomorrow'"
-                >
-                  明日课程
+                  {{ item.label }}
                 </button>
               </div>
             </div>
-            <el-button link type="primary" @click="go(`/${activeRole}/schedule`)">查看课表</el-button>
+            <el-button v-if="previewLinkPath" link type="primary" @click="go(previewLinkPath)">{{ previewLinkText }}</el-button>
           </div>
           <div class="module-content">
-          <el-skeleton :loading="loading" animated>
-            <template #template>
-              <div style="display: flex; flex-direction: column; gap: 12px; height: 100%;">
-                <el-skeleton-item variant="rect" style="height: 80px; border-radius: 8px;" />
-                <el-skeleton-item variant="rect" style="height: 80px; border-radius: 8px;" />
-              </div>
-            </template>
-            <template #default>
-                <div class="schedule-preview-summary">
-                  <div class="schedule-preview-summary__title">{{ activeScheduleTitle }}</div>
-                  <div class="schedule-preview-summary__desc">{{ activeScheduleSummary }}</div>
+            <el-skeleton :loading="loading" animated>
+              <template #template>
+                <div class="skeleton-column">
+                  <el-skeleton-item variant="rect" class="skeleton-card" />
+                  <el-skeleton-item variant="rect" class="skeleton-card" />
                 </div>
-                <template v-if="activeScheduleCourses.length > 0">
+              </template>
+              <template #default>
+                <div class="schedule-preview-summary">
+                  <div class="schedule-preview-summary__title">{{ previewSummaryTitle }}</div>
+                  <div class="schedule-preview-summary__desc">{{ previewSummaryText }}</div>
+                </div>
+                <template v-if="previewCards.length > 0">
                   <el-carousel
-                    v-if="activeScheduleCourses.length > 1"
+                    v-if="previewCards.length > 1"
                     class="schedule-carousel"
                     :autoplay="false"
                     arrow="always"
                     indicator-position="outside"
                     height="214px"
                   >
-                    <el-carousel-item v-for="course in activeScheduleCourses" :key="course.key">
+                    <el-carousel-item v-for="card in previewCards" :key="card.key">
                       <div class="modern-progress-card modern-progress-card--featured">
                         <div class="modern-progress-top">
                           <div class="modern-progress-head">
-                            <h4>{{ course.courseName }}</h4>
-                            <el-tag size="small" effect="plain">{{ course.weekDayLabel }}</el-tag>
+                            <h4>{{ card.title }}</h4>
+                            <el-tag v-if="card.tag" size="small" effect="plain">{{ card.tag }}</el-tag>
                           </div>
-                          <div class="modern-progress-badges">
-                            <span class="modern-progress-pill modern-progress-pill--primary">{{ course.sectionText }}</span>
-                            <span class="modern-progress-pill">{{ course.weeksText || '本学期授课' }}</span>
+                          <div v-if="card.badges?.length" class="modern-progress-badges">
+                            <span
+                              v-for="(badge, index) in card.badges"
+                              :key="`${card.key}-badge-${badge}`"
+                              class="modern-progress-pill"
+                              :class="{ 'modern-progress-pill--primary': index === 0 }"
+                            >
+                              {{ badge }}
+                            </span>
                           </div>
                         </div>
-                        <div class="modern-progress-facts">
-                          <div class="modern-progress-fact">
-                            <span class="modern-progress-fact__label">时间</span>
-                            <strong class="modern-progress-fact__value">{{ course.timeText }}</strong>
-                          </div>
-                          <div class="modern-progress-fact">
-                            <span class="modern-progress-fact__label">地点</span>
-                            <span class="modern-progress-fact__value">{{ course.locationText || '地点待定' }}</span>
-                          </div>
-                          <div class="modern-progress-fact">
-                            <span class="modern-progress-fact__label">教师</span>
-                            <span class="modern-progress-fact__value">{{ course.teacherName || '待分配教师' }}</span>
+                        <div v-if="card.facts?.length" class="modern-progress-facts">
+                          <div v-for="fact in card.facts" :key="`${card.key}-${fact.label}`" class="modern-progress-fact">
+                            <span class="modern-progress-fact__label">{{ fact.label }}</span>
+                            <strong class="modern-progress-fact__value">{{ fact.value }}</strong>
                           </div>
                         </div>
                       </div>
                     </el-carousel-item>
                   </el-carousel>
                   <div v-else class="schedule-single">
-                    <div v-for="course in activeScheduleCourses" :key="course.key" class="modern-progress-card modern-progress-card--featured">
+                    <div v-for="card in previewCards" :key="card.key" class="modern-progress-card modern-progress-card--featured">
                       <div class="modern-progress-top">
                         <div class="modern-progress-head">
-                          <h4>{{ course.courseName }}</h4>
-                          <el-tag size="small" effect="plain">{{ course.weekDayLabel }}</el-tag>
+                          <h4>{{ card.title }}</h4>
+                          <el-tag v-if="card.tag" size="small" effect="plain">{{ card.tag }}</el-tag>
                         </div>
-                        <div class="modern-progress-badges">
-                          <span class="modern-progress-pill modern-progress-pill--primary">{{ course.sectionText }}</span>
-                          <span class="modern-progress-pill">{{ course.weeksText || '本学期授课' }}</span>
+                        <div v-if="card.badges?.length" class="modern-progress-badges">
+                          <span
+                            v-for="(badge, index) in card.badges"
+                            :key="`${card.key}-single-badge-${badge}`"
+                            class="modern-progress-pill"
+                            :class="{ 'modern-progress-pill--primary': index === 0 }"
+                          >
+                            {{ badge }}
+                          </span>
                         </div>
                       </div>
-                      <div class="modern-progress-facts">
-                        <div class="modern-progress-fact">
-                          <span class="modern-progress-fact__label">时间</span>
-                          <strong class="modern-progress-fact__value">{{ course.timeText }}</strong>
-                        </div>
-                        <div class="modern-progress-fact">
-                          <span class="modern-progress-fact__label">地点</span>
-                          <span class="modern-progress-fact__value">{{ course.locationText || '地点待定' }}</span>
-                        </div>
-                        <div class="modern-progress-fact">
-                          <span class="modern-progress-fact__label">教师</span>
-                          <span class="modern-progress-fact__value">{{ course.teacherName || '待分配教师' }}</span>
+                      <div v-if="card.facts?.length" class="modern-progress-facts">
+                        <div v-for="fact in card.facts" :key="`${card.key}-single-${fact.label}`" class="modern-progress-fact">
+                          <span class="modern-progress-fact__label">{{ fact.label }}</span>
+                          <strong class="modern-progress-fact__value">{{ fact.value }}</strong>
                         </div>
                       </div>
                     </div>
                   </div>
                 </template>
                 <template v-else>
-                  <el-empty :description="activeScheduleEmptyDescription" :image-size="100" />
+                  <el-empty :description="previewEmptyDescription" :image-size="100" />
                 </template>
               </template>
             </el-skeleton>
@@ -147,26 +138,26 @@
 
         <div class="dashboard-module module-tasks">
           <div class="module-header">
-            <h3>近期任务</h3>
-            <el-button link type="primary" @click="go('/student/plaza')">任务中心</el-button>
+            <h3>{{ taskModuleTitle }}</h3>
+            <el-button v-if="taskLinkPath" link type="primary" @click="go(taskLinkPath)">{{ taskLinkText }}</el-button>
           </div>
           <div class="module-content task-list">
-          <el-skeleton :loading="loading" animated>
-            <template #template>
-              <div style="display: flex; flex-direction: column; gap: 12px; height: 100%;">
-                <el-skeleton-item variant="rect" style="height: 80px; border-radius: 8px;" />
-                <el-skeleton-item variant="rect" style="height: 80px; border-radius: 8px;" />
-              </div>
-            </template>
-            <template #default>
+            <el-skeleton :loading="loading" animated>
+              <template #template>
+                <div class="skeleton-column">
+                  <el-skeleton-item variant="rect" class="skeleton-card" />
+                  <el-skeleton-item variant="rect" class="skeleton-card" />
+                </div>
+              </template>
+              <template #default>
                 <div v-if="taskOverviewBadges.length" class="task-overview-badges">
                   <span v-for="badge in taskOverviewBadges" :key="badge" class="task-overview-badge">{{ badge }}</span>
                 </div>
-                <template v-if="recentTasks.length">
+                <template v-if="taskCards.length">
                   <el-scrollbar max-height="392px" class="task-scrollbar">
                     <div class="task-scroll-content">
                       <div
-                        v-for="task in recentTasks"
+                        v-for="task in taskCards"
                         :key="task.key"
                         class="modern-task-card"
                       >
@@ -185,7 +176,7 @@
                           <div v-if="task.recommendationReason" class="modern-task-reason">{{ task.recommendationReason }}</div>
                         </div>
                         <div class="modern-task-actions">
-                          <el-button plain type="primary" size="small" @click="openTask(task.raw)">
+                          <el-button plain type="primary" size="small" @click="emit('task-click', task.raw)">
                             {{ task.actionLabel }}
                           </el-button>
                         </div>
@@ -198,6 +189,10 @@
             </el-skeleton>
           </div>
         </div>
+      </div>
+
+      <div v-if="$slots['module-extra']" class="dashboard-extra-wrapper">
+        <slot name="module-extra" />
       </div>
     </div>
 
@@ -262,20 +257,20 @@
       <template #header>
         <div class="dashboard-quick-drawer__header">
           <div class="dashboard-quick-drawer__title">{{ drawerTitle }}（{{ drawerCount }}）</div>
-          <el-button type="primary" link @click="openMessageCenter">查看全部</el-button>
+          <el-button type="primary" link @click="emit('message-center', activeDrawerTab)">查看全部</el-button>
         </div>
       </template>
       <div class="dashboard-quick-drawer__body" v-loading="drawerLoading">
         <template v-if="activeDrawerTab === 'todo'">
           <div v-if="drawerTodoList.length" class="dashboard-quick-list">
-            <article v-for="item in drawerTodoList" :key="item.key" class="dashboard-quick-item" @click="openDrawerTask(item)">
-              <div class="dashboard-quick-item__icon" style="background: linear-gradient(135deg, #ecf5ff, #d9ecff); color: #409eff;">
+            <article v-for="item in drawerTodoList" :key="item.key || item.title" class="dashboard-quick-item" @click="emit('drawer-task-click', item)">
+              <div class="dashboard-quick-item__icon drawer-icon--todo">
                 <el-icon><i class="ri-mac-line"></i></el-icon>
               </div>
               <div class="dashboard-quick-item__main">
                 <div class="dashboard-quick-item__head">
                   <h4 class="dashboard-quick-item__title" :title="item.title">{{ item.title }}</h4>
-                  <span v-if="item.createTime" class="dashboard-quick-item__time">{{ item.createTime.substring(0, 10) }}</span>
+                  <span v-if="item.createTime" class="dashboard-quick-item__time">{{ String(item.createTime).substring(0, 10) }}</span>
                 </div>
                 <p class="dashboard-quick-item__desc" :title="item.desc || item.status || '待处理事项'">{{ item.desc || item.status || '待处理事项' }}</p>
               </div>
@@ -288,14 +283,14 @@
         </template>
         <template v-else-if="activeDrawerTab === 'message'">
           <div v-if="drawerMessageList.length" class="dashboard-quick-list">
-            <article v-for="item in drawerMessageList" :key="item.messageId" class="dashboard-quick-item" @click="openDrawerMessage(item)">
-              <div class="dashboard-quick-item__icon" style="background: linear-gradient(135deg, #fdf6ec, #faecd8); color: #e6a23c;">
+            <article v-for="item in drawerMessageList" :key="item.messageId || item.noticeId" class="dashboard-quick-item" @click="emit('drawer-message-click', { tab: 'message', item })">
+              <div class="dashboard-quick-item__icon drawer-icon--message">
                 <el-icon><i class="ri-message-3-line"></i></el-icon>
               </div>
               <div class="dashboard-quick-item__main">
                 <div class="dashboard-quick-item__head">
                   <h4 class="dashboard-quick-item__title" :title="item.messageTitle">{{ item.messageTitle }}</h4>
-                  <span v-if="item.createTime" class="dashboard-quick-item__time">{{ item.createTime.substring(0, 10) }}</span>
+                  <span v-if="item.createTime" class="dashboard-quick-item__time">{{ String(item.createTime).substring(0, 10) }}</span>
                 </div>
                 <p class="dashboard-quick-item__desc" :title="item.messageSummary || item.messageContent">{{ item.messageSummary || item.messageContent || '暂无内容摘要' }}</p>
               </div>
@@ -308,14 +303,14 @@
         </template>
         <template v-else>
           <div v-if="drawerNoticeList.length" class="dashboard-quick-list">
-            <article v-for="item in drawerNoticeList" :key="item.messageId" class="dashboard-quick-item" @click="openDrawerMessage(item)">
-              <div class="dashboard-quick-item__icon" style="background: linear-gradient(135deg, #f0f9eb, #e1f3d8); color: #67c23a;">
+            <article v-for="item in drawerNoticeList" :key="item.messageId || item.noticeId" class="dashboard-quick-item" @click="emit('drawer-message-click', { tab: 'notice', item })">
+              <div class="dashboard-quick-item__icon drawer-icon--notice">
                 <el-icon><i class="ri-notification-3-line"></i></el-icon>
               </div>
               <div class="dashboard-quick-item__main">
                 <div class="dashboard-quick-item__head">
                   <h4 class="dashboard-quick-item__title" :title="item.messageTitle">{{ item.messageTitle }}</h4>
-                  <span v-if="item.createTime" class="dashboard-quick-item__time">{{ item.createTime.substring(0, 10) }}</span>
+                  <span v-if="item.createTime" class="dashboard-quick-item__time">{{ String(item.createTime).substring(0, 10) }}</span>
                 </div>
                 <p class="dashboard-quick-item__desc" :title="item.messageSummary || item.messageContent">{{ item.messageSummary || item.messageContent || '暂无内容摘要' }}</p>
               </div>
@@ -410,57 +405,99 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
-import { useRoute, useRouter } from 'vue-router'
-import {
-  getPortalMySchedule,
-  getPortalTaskCenter,
-  getStudentDashboard,
-  getPortalUnreadMessages,
-  listExamRecord,
-  listPortalTermOptions,
-  listPortalNotice,
-  markPortalTaskRead,
-} from '@/api/portal'
-import usePortalUserStore from '@/store/user'
+import { useRouter } from 'vue-router'
 import { useTabsStore } from '@/store/tabs'
-import { recordTaskFeedback, sortTasksWithFeedback, syncTaskFeedback } from '@/utils/taskFeedback'
+import type { DashboardDrawerTab, DashboardPreviewCard, DashboardTaskCard } from '@/utils/portalDashboard'
+
+interface ScheduleModeItem {
+  key: string
+  label: string
+}
+
+interface ShortcutVisualItem {
+  path: string
+  title: string
+  icon: string
+  bg: string
+}
+
+interface ShortcutItemOverride {
+  path: string
+  title: string
+  icon?: string
+  bg?: string
+}
+
+const props = withDefaults(defineProps<{
+  role: string
+  themeColor: string
+  userName: string
+  currentSemesterLabel: string
+  currentTeachingWeek: string | number
+  secondaryInfo?: string[]
+  loading?: boolean
+  previewModuleTitle?: string
+  previewLinkText?: string
+  previewLinkPath?: string
+  scheduleModes: ScheduleModeItem[]
+  scheduleMode: string
+  previewSummaryTitle: string
+  previewSummaryText: string
+  previewCards: DashboardPreviewCard[]
+  previewEmptyDescription: string
+  taskModuleTitle?: string
+  taskLinkText?: string
+  taskLinkPath?: string
+  taskOverviewBadges?: string[]
+  taskCards?: DashboardTaskCard[]
+  drawerTodoList?: any[]
+  drawerMessageList?: any[]
+  drawerNoticeList?: any[]
+  drawerLoading?: boolean
+  shortcutItemsOverride?: ShortcutItemOverride[]
+}>(), {
+  secondaryInfo: () => [],
+  loading: false,
+  previewModuleTitle: '课程预览',
+  previewLinkText: '查看详情',
+  previewLinkPath: '',
+  taskModuleTitle: '近期任务',
+  taskLinkText: '任务中心',
+  taskLinkPath: '',
+  taskOverviewBadges: () => [],
+  taskCards: () => [],
+  drawerTodoList: () => [],
+  drawerMessageList: () => [],
+  drawerNoticeList: () => [],
+  drawerLoading: false,
+  shortcutItemsOverride: () => [],
+})
+
+const emit = defineEmits<{
+  (e: 'update:scheduleMode', value: string): void
+  (e: 'task-click', task: any): void
+  (e: 'open-drawer', tab: DashboardDrawerTab): void
+  (e: 'drawer-task-click', item: any): void
+  (e: 'drawer-message-click', payload: { tab: 'message' | 'notice'; item: any }): void
+  (e: 'message-center', tab: DashboardDrawerTab): void
+}>()
 
 const router = useRouter()
-const route = useRoute()
-const userStore = usePortalUserStore()
 const tabsStore = useTabsStore()
 
-const dashboard = ref<any>({})
-const taskCenter = ref<any>({})
-const examRecords = ref<any[]>([])
-const schedulePayload = ref<any>({})
-const termOptions = ref<any[]>([])
 const shortcutDialogVisible = ref(false)
 const storedShortcutPaths = ref<string[]>([])
 const editingShortcutPaths = ref<string[]>([])
 const quickDrawerVisible = ref(false)
-const drawerLoading = ref(false)
-const activeDrawerTab = ref<'todo' | 'message' | 'notice'>('todo')
-const drawerMessageList = ref<any[]>([])
-const drawerNoticeList = ref<any[]>([])
+const activeDrawerTab = ref<DashboardDrawerTab>('todo')
 
-const activeRole = computed(() => {
-  const firstSegment = route.path.split('/')[1]
-  if (userStore.availablePortalRoles.includes(firstSegment)) {
-    return firstSegment
-  }
-  return userStore.preferredPortalRole || 'student'
+const activeScheduleMode = computed({
+  get: () => props.scheduleMode,
+  set: (value: string) => emit('update:scheduleMode', value),
 })
-
-const recentTabs = computed(() => {
-  const dashboardPath = `/${activeRole.value}/dashboard`
-  return tabsStore.visitedTabs.filter((tab) => tab.path !== dashboardPath).slice(-5)
-})
-
-const userName = computed(() => userStore.user?.realName || userStore.user?.userName || '同学')
 
 const greetingLabel = computed(() => {
   const hour = new Date().getHours()
@@ -480,197 +517,33 @@ const currentDate = computed(() => {
   return `${year}年${month}月${day}日 ${weekDays[now.getDay()]}`
 })
 
-const currentTerm = computed(() => {
-  const currentTermId = schedulePayload.value?.termId
-  return termOptions.value.find((item: any) => item.value === currentTermId)
-    || termOptions.value.find((item: any) => item.isCurrent === '1')
-    || termOptions.value[0]
-    || null
+const recentTabs = computed(() => {
+  const dashboardPath = `/${props.role}/dashboard`
+  return tabsStore.visitedTabs.filter((tab) => tab.path !== dashboardPath).slice(-5)
 })
 
-const currentSemesterLabel = computed(() => {
-  if (!currentTerm.value) return '当前学期'
-  const schoolYear = currentTerm.value.schoolYear ? `${currentTerm.value.schoolYear}` : ''
-  const termName = currentTerm.value.termName ? `${currentTerm.value.termName}` : ''
-  return [schoolYear, termName].filter(Boolean).join(' ')
-})
-
-const currentTeachingWeek = computed(() => Number(schedulePayload.value?.currentWeek || 1))
-
-const lastLoginTime = computed(() => formatDateTime(userStore.user?.loginDate) || '暂无记录')
-
-const todayMeta = computed(() => {
-  const today = new Date()
-  return {
-    date: today,
-    weekDay: convertWeekDay(today),
-    targetWeek: Number(schedulePayload.value?.currentWeek || 1),
-  }
-})
-
-const tomorrowMeta = computed(() => {
-  const tomorrow = new Date()
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  const todayWeekDay = convertWeekDay(new Date())
-  const tomorrowWeekDay = convertWeekDay(tomorrow)
-  const baseWeek = Number(schedulePayload.value?.currentWeek || 1)
-  const targetWeek = tomorrowWeekDay < todayWeekDay ? baseWeek + 1 : baseWeek
-  return {
-    date: tomorrow,
-    weekDay: tomorrowWeekDay,
-    targetWeek,
-  }
-})
-
-function formatMonthDay(date: Date) {
-  const month = `${date.getMonth() + 1}`.padStart(2, '0')
-  const day = `${date.getDate()}`.padStart(2, '0')
-  return `${month}.${day}`
-}
-
-function formatWeeksBadgeText(value?: string) {
-  const text = String(value || '').trim()
-  if (!text) return '本学期授课'
-  if (text.includes('周')) return text
-  return `${text}周`
-}
-
-function buildSchedulePreviewCourses(meta: { weekDay: number; targetWeek: number }, prefix: string) {
-  const activities = Array.isArray(schedulePayload.value?.activities) ? schedulePayload.value.activities : []
-  return activities
-    .filter((item: any) => {
-      const sameDay = Number(item.weekDay) === meta.weekDay
-      if (!sameDay) return false
-      const weekIndexes = Array.isArray(item.weekIndexes) ? item.weekIndexes.map((value: any) => Number(value)) : []
-      if (!weekIndexes.length) return true
-      return weekIndexes.includes(meta.targetWeek)
-    })
-    .sort((left: any, right: any) => Number(left.startSection || 0) - Number(right.startSection || 0))
-    .map((item: any) => ({
-      key: `${prefix}-${item.scheduleId || item.classCourseId}-${item.weekDay}-${item.startSection}`,
-      courseName: item.courseName || '未命名课程',
-      teacherName: item.teacherName || '',
-      timeText: `${formatWeekDayLabel(item.weekDay)} ${item.startTime || '--:--'} - ${item.endTime || '--:--'}`,
-      locationText: [item.campus, item.buildingName, item.classroom].filter(Boolean).join(' / '),
-      sectionText: `${item.startSection || '-'}-${item.endSection || item.startSection || '-'} 节`,
-      weekDayLabel: formatWeekDayLabel(item.weekDay),
-      weeksText: formatWeeksBadgeText(item.weeksStr || item.weeksText || ''),
-    }))
-}
-
-const todayCourses = computed(() => buildSchedulePreviewCourses(todayMeta.value, 'today'))
-const tomorrowCourses = computed(() => buildSchedulePreviewCourses(tomorrowMeta.value, 'tomorrow'))
-
-const activeScheduleMode = ref<'today' | 'tomorrow'>('today')
-
-const activeScheduleCourses = computed(() =>
-  activeScheduleMode.value === 'today' ? todayCourses.value : tomorrowCourses.value,
-)
-
-const activeScheduleTitle = computed(() => {
-  const meta = activeScheduleMode.value === 'today' ? todayMeta.value : tomorrowMeta.value
-  const prefix = activeScheduleMode.value === 'today' ? '今日课程' : '明日课程'
-  return `${prefix} · ${formatMonthDay(meta.date)}`
-})
-
-const activeScheduleSummary = computed(() => {
-  const count = activeScheduleCourses.value.length
-  if (!count) {
-    return activeScheduleMode.value === 'today'
-      ? '今天暂无排课，适合整理资料或推进任务。'
-      : '明天暂无排课，提前安排好自己的学习节奏。'
-  }
-  return activeScheduleMode.value === 'today'
-    ? `今天共有 ${count} 门课程，建议优先关注最近一节课的时间地点。`
-    : `明天共有 ${count} 门课程，可以提前查看教室和节次安排。`
-})
-
-const activeScheduleEmptyDescription = computed(() =>
-  activeScheduleMode.value === 'today'
-    ? '今天没有课程安排，适合整理学习计划。'
-    : '明天没有课程安排，好好休息吧！',
-)
-
-const recentTasks = computed(() => {
-  const source = Array.isArray(taskCenter.value.homepageTasks) && taskCenter.value.homepageTasks.length
-    ? taskCenter.value.homepageTasks
-    : [
-      ...(taskCenter.value.todoTasks || []),
-      ...(taskCenter.value.recommendedTasks || []),
-    ]
-  const seen = new Set<string>()
-  const ongoingPaperId = String(userStore.ongoingExam?.paperId || '')
-  const dedupedTasks = source
-    .filter((item: any) => {
-      const actionType = String(item?.action?.type || '').toLowerCase()
-      const taskPaperId = String(item?.action?.targetId || item?.action?.paperId || item?.action?.row?.paperId || '')
-
-      // If the user is already inside this exam, hide the duplicate "start exam" task
-      // and keep only the "resume exam" card visible on the homepage.
-      if (ongoingPaperId && actionType === 'exam' && taskPaperId && taskPaperId === ongoingPaperId) {
-        return false
-      }
-
-      const key = String(item?.key || '')
-      if (!key || seen.has(key)) return false
-      seen.add(key)
-      return true
-     })
-
-  const regularTasks = dedupedTasks.filter((item: any) => !isWrongTask(item))
-  const wrongReviewTasks = dedupedTasks.filter((item: any) => isWrongTask(item))
-  const selectedTasks = regularTasks.length
-    ? sortTasksWithFeedback(regularTasks)
-    : wrongReviewTasks.slice(0, 1)
-
-  return selectedTasks.map((item: any) => buildTaskCard(item))
-})
-const taskOverviewBadges = computed(() => {
-  const summary = taskCenter.value?.recommendationSummary || {}
-  const badges: string[] = []
-  const urgentCount = Number(summary.urgentCount || 0)
-  const examCount = Number(summary.examCount || 0)
-  const wrongbookCount = Number(summary.wrongbookCount || 0)
-  if (urgentCount > 0) badges.push(`优先处理 ${urgentCount}`)
-  if (examCount > 0) badges.push(`考试相关 ${examCount}`)
-  if (wrongbookCount > 0) badges.push(`薄弱巩固 ${wrongbookCount}`)
-  const reasons = Array.isArray(summary.topReasons) ? summary.topReasons : []
-  reasons.slice(0, 2).forEach((reason: string) => {
-    if (reason) badges.push(reason)
-  })
-  return badges.slice(0, 4)
-})
-const examAttemptCountMap = computed(() =>
-  examRecords.value.reduce((acc: Record<string, number>, item: any) => {
-    const key = String(item.paperId || '')
-    if (!key) return acc
-    acc[key] = (acc[key] || 0) + 1
-    return acc
-  }, {}),
-)
-const latestExamRecordMap = computed(() =>
-  examRecords.value.reduce((acc: Record<string, any>, item: any) => {
-    const key = String(item.paperId || '')
-    if (!key || acc[key]) return acc
-    acc[key] = item
-    return acc
-  }, {}),
-)
-
-const drawerTodoList = computed(() => (taskCenter.value?.todoTasks || []).slice(0, 6))
 const drawerTitle = computed(() => {
   if (activeDrawerTab.value === 'message') return '未读消息'
   if (activeDrawerTab.value === 'notice') return '通知公告'
   return '我的待办'
 })
+
 const drawerCount = computed(() => {
-  if (activeDrawerTab.value === 'message') return drawerMessageList.value.length
-  if (activeDrawerTab.value === 'notice') return drawerNoticeList.value.length
-  return drawerTodoList.value.length
+  if (activeDrawerTab.value === 'message') return props.drawerMessageList.length
+  if (activeDrawerTab.value === 'notice') return props.drawerNoticeList.length
+  return props.drawerTodoList.length
 })
 
 const availableShortcutItems = computed(() => {
-  const prefix = `/${activeRole.value}/`
+  if (props.shortcutItemsOverride.length) {
+    return props.shortcutItemsOverride.map((item) => ({
+      path: item.path,
+      title: item.title,
+      icon: item.icon || resolveShortcutVisual(item.path, item.title).icon,
+      bg: item.bg || resolveShortcutVisual(item.path, item.title).bg,
+    }))
+  }
+  const prefix = `/${props.role}/`
   return router.getRoutes()
     .filter((item) => {
       if (!item.path.startsWith(prefix)) return false
@@ -701,14 +574,14 @@ const displayShortcutItems = computed(() => {
   return selected
     .map((path) => itemMap.get(path))
     .filter(Boolean)
-    .slice(0, 9) as Array<{ path: string; title: string; icon: string; bg: string }>
+    .slice(0, 9) as ShortcutVisualItem[]
 })
 
 const selectedShortcutItems = computed(() => {
   const itemMap = new Map(availableShortcutItems.value.map((item) => [item.path, item]))
   return editingShortcutPaths.value
     .map((path) => itemMap.get(path))
-    .filter(Boolean) as Array<{ path: string; title: string; icon: string; bg: string }>
+    .filter(Boolean) as ShortcutVisualItem[]
 })
 
 const shortcutDialogItems = computed(() => {
@@ -721,32 +594,20 @@ const shortcutDialogItems = computed(() => {
   })
 })
 
-function isUnreadMessage(item: any) {
-  return String(item?.readFlag || '0') === '0'
-}
-
-function isUnreadNotice(item: any) {
-  return String(item?.readFlag || '0') === '0'
-}
+const themeVars = computed(() => ({
+  '--dashboard-primary': props.themeColor,
+  '--dashboard-primary-soft': hexToRgba(props.themeColor, 0.12),
+  '--dashboard-primary-soft-strong': hexToRgba(props.themeColor, 0.2),
+  '--dashboard-primary-border': hexToRgba(props.themeColor, 0.24),
+  '--dashboard-primary-shadow': hexToRgba(props.themeColor, 0.14),
+  '--dashboard-primary-glow': hexToRgba(props.themeColor, 0.08),
+  '--dashboard-primary-text': props.themeColor,
+}))
 
 watch(
-  [activeRole, availableShortcutItems],
+  availableShortcutItems,
   () => {
     restoreShortcutSelection()
-  },
-  { immediate: true },
-)
-
-watch(
-  [todayCourses, tomorrowCourses],
-  ([todayList, tomorrowList]) => {
-    if (activeScheduleMode.value === 'today' && !todayList.length && tomorrowList.length) {
-      activeScheduleMode.value = 'tomorrow'
-      return
-    }
-    if (activeScheduleMode.value === 'tomorrow' && !tomorrowList.length && todayList.length) {
-      activeScheduleMode.value = 'today'
-    }
   },
   { immediate: true },
 )
@@ -755,35 +616,10 @@ function go(path: string) {
   router.push(path)
 }
 
-function convertWeekDay(date: Date) {
-  const day = date.getDay()
-  return day === 0 ? 7 : day
-}
-
-function formatWeekDayLabel(weekDay: number) {
-  const labels: Record<number, string> = {
-    1: '星期一',
-    2: '星期二',
-    3: '星期三',
-    4: '星期四',
-    5: '星期五',
-    6: '星期六',
-    7: '星期日',
-  }
-  return labels[Number(weekDay)] || '未知星期'
-}
-
-function formatDateTime(value?: string | number | Date | null) {
-  if (!value) return ''
-  const date = value instanceof Date ? value : new Date(value)
-  if (Number.isNaN(date.getTime())) return String(value)
-  const year = date.getFullYear()
-  const month = `${date.getMonth() + 1}`.padStart(2, '0')
-  const day = `${date.getDate()}`.padStart(2, '0')
-  const hour = `${date.getHours()}`.padStart(2, '0')
-  const minute = `${date.getMinutes()}`.padStart(2, '0')
-  const second = `${date.getSeconds()}`.padStart(2, '0')
-  return `${year}-${month}-${day} ${hour}:${minute}:${second}`
+function openQuickDrawer(tab: DashboardDrawerTab) {
+  activeDrawerTab.value = tab
+  quickDrawerVisible.value = true
+  emit('open-drawer', tab)
 }
 
 function resolveShortcutVisual(path: string, title: string) {
@@ -800,298 +636,20 @@ function resolveShortcutVisual(path: string, title: string) {
   if (text.includes('resource') || title.includes('资源')) {
     return { icon: 'ri-folder-chart-line', bg: 'linear-gradient(135deg, #ffb86a, #ff8f3c)' }
   }
-  if (text.includes('recommend') || title.includes('推荐')) {
-    return { icon: 'ri-lightbulb-flash-line', bg: 'linear-gradient(135deg, #ffd36e, #f1a702)' }
+  if (text.includes('student') || title.includes('学生')) {
+    return { icon: 'ri-team-line', bg: 'linear-gradient(135deg, #7aa5ff, #4b68f3)' }
   }
-  if (text.includes('qa') || title.includes('问答')) {
-    return { icon: 'ri-chat-3-line', bg: 'linear-gradient(135deg, #77d3ef, #2f8de4)' }
+  if (text.includes('score') || title.includes('成绩')) {
+    return { icon: 'ri-bar-chart-box-line', bg: 'linear-gradient(135deg, #89d5ff, #3c9fec)' }
   }
-  if (text.includes('plaza') || title.includes('任务')) {
-    return { icon: 'ri-task-line', bg: 'linear-gradient(135deg, #ff9595, #f15f5f)' }
-  }
-  if (text.includes('exam') || title.includes('考试')) {
-    return { icon: 'ri-file-paper-2-line', bg: 'linear-gradient(135deg, #9ea2ff, #7168f1)' }
-  }
-  if (text.includes('wrongbook') || title.includes('错题')) {
-    return { icon: 'ri-bookmark-3-line', bg: 'linear-gradient(135deg, #f7a9c4, #ef668f)' }
-  }
-  if (text.includes('warning') || title.includes('预警')) {
-    return { icon: 'ri-alarm-warning-line', bg: 'linear-gradient(135deg, #ffc46a, #ee8b1f)' }
-  }
-  if (text.includes('report') || title.includes('报告')) {
-    return { icon: 'ri-bar-chart-box-line', bg: 'linear-gradient(135deg, #8bd8af, #2ca675)' }
+  if (text.includes('message') || title.includes('消息')) {
+    return { icon: 'ri-message-3-line', bg: 'linear-gradient(135deg, #ffc98d, #f59e0b)' }
   }
   return { icon: 'ri-grid-line', bg: 'linear-gradient(135deg, #a6b4c8, #6f8097)' }
 }
 
-function priorityLabel(value?: string) {
-  const normalized = String(value || '').trim().toUpperCase()
-  const map: Record<string, string> = {
-    LOW: '低',
-    NORMAL: '普通',
-    MEDIUM: '中',
-    HIGH: '高',
-    URGENT: '紧急',
-    P0: '紧急',
-    P1: '高',
-    P2: '中',
-    P3: '普通',
-    P4: '低',
-  }
-  return map[normalized] || String(value || '').trim()
-}
-
-function normalizeTaskMetaText(value: unknown) {
-  const text = String(value || '').trim()
-  if (!text) return ''
-
-  const priorityMatch = text.match(/^(优先级)\s*[:：]?\s*(.+)$/i) || text.match(/^(priority)\s*[:：]?\s*(.+)$/i)
-  if (priorityMatch) {
-    const rawValue = priorityMatch[2].trim()
-    const label = priorityLabel(rawValue)
-    return `处理优先级：${label}`
-  }
-
-  return text
-}
-
-function resolveExamRetakeInfo(task: any) {
-  const actionType = String(task?.action?.type || '').toLowerCase()
-  if (actionType !== 'exam') return null
-  const paperId = String(task?.action?.targetId || task?.action?.paperId || task?.action?.row?.paperId || '')
-  if (!paperId) return null
-  const attemptCount = examAttemptCountMap.value[paperId] || 0
-  if (attemptCount <= 0) return null
-  const maxAttemptCount = Number(task?.maxAttemptCount || 0)
-  return {
-    attemptCount,
-    maxAttemptCount,
-    remainingCount: maxAttemptCount > 0 ? Math.max(0, maxAttemptCount - attemptCount) : null,
-    isMakeup: maxAttemptCount > 0,
-    latestRecord: latestExamRecordMap.value[paperId] || null,
-  }
-}
-
-function isWrongTask(task: any) {
-  const actionType = String(task?.action?.type || '').toLowerCase()
-  if (actionType === 'wrongbook') return true
-
-  const tag = String(task?.tag || '')
-  const title = String(task?.title || '')
-  const desc = String(task?.desc || '')
-  const path = String(task?.action?.path || '')
-  const metaText = Array.isArray(task?.meta) ? task.meta.join(' ') : ''
-  const combinedText = `${tag} ${title} ${desc} ${path} ${metaText}`.toLowerCase()
-
-  return ['wrongbook', '错题', '回练', '薄弱项'].some((keyword) => combinedText.includes(keyword.toLowerCase()))
-}
-
-function resolveTaskTag(task: any) {
-  const actionType = String(task?.action?.type || '').toLowerCase()
-  const tag = String(task?.tag || '').trim()
-
-  if (actionType === 'resume') return '进行中的考试'
-  if (actionType === 'exam') {
-    const retakeInfo = resolveExamRetakeInfo(task)
-    if (retakeInfo?.isMakeup) return '可补考'
-    return retakeInfo ? '可再次参加考试' : '待参加考试'
-  }
-  if (actionType === 'wrongbook') return '错题复习'
-  if (actionType === 'course') return '课程任务'
-
-  if (tag === '待办考试') return '待参加考试'
-  if (tag === '考试任务') return '待参加考试'
-  return tag || '任务'
-}
-
-function resolveTaskStatusText(task: any) {
-  const actionType = String(task?.action?.type || '').toLowerCase()
-  const status = String(task?.status || '').trim()
-  const desc = String(task?.desc || '').trim()
-
-  if (actionType === 'resume') {
-    return '你已开始答题，可继续完成'
-  }
-  if (actionType === 'exam') {
-    const retakeInfo = resolveExamRetakeInfo(task)
-    if (retakeInfo) {
-      if (retakeInfo.isMakeup) {
-        return `你已参加 ${retakeInfo.attemptCount}/${retakeInfo.maxAttemptCount} 次，还可补考 ${retakeInfo.remainingCount} 次`
-      }
-      return `你已参加 ${retakeInfo.attemptCount} 次，可再次作答`
-    }
-    return '考试尚未开始作答'
-  }
-  if (status === '进行中') return '正在处理中'
-  if (status === '待处理') return desc || '等待你处理'
-  return status || desc || '待处理'
-}
-
-function buildTaskCard(task: any) {
-  const actionType = task?.action?.type || ''
-  let icon = 'ri-task-line'
-  let iconClass = 'task-icon--default'
-  if (actionType === 'exam' || actionType === 'resume' || actionType === 'record') {
-    icon = 'ri-file-paper-2-line'
-    iconClass = 'task-icon--exam'
-  } else if (actionType === 'wrongbook') {
-    icon = 'ri-book-read-line'
-    iconClass = 'task-icon--homework'
-  } else if (actionType === 'course') {
-    icon = 'ri-calendar-check-line'
-    iconClass = 'task-icon--practice'
-  }
-
-  const retakeInfo = resolveExamRetakeInfo(task)
-  const tag = resolveTaskTag(task)
-  return {
-    raw: task,
-    key: task?.key,
-    title: task?.title || '未命名任务',
-    tag,
-    tagType: task?.tagType || 'info',
-    meta: [
-      ...(Array.isArray(task?.meta) ? task.meta.map((item: unknown) => normalizeTaskMetaText(item)).filter(Boolean) : []),
-      ...(retakeInfo?.isMakeup && retakeInfo.remainingCount !== null ? [`剩余补考次数：${retakeInfo.remainingCount}`] : []),
-      ...(retakeInfo?.latestRecord?.submitTime ? [`最近参加：${String(retakeInfo.latestRecord.submitTime).slice(0, 16).replace('T', ' ')}`] : []),
-    ],
-    icon,
-    iconClass,
-    statusText: resolveTaskStatusText(task),
-    metaClass: resolveTaskMetaClass(task?.tagType),
-    actionLabel: resolveTaskActionLabel(task),
-    recommendationReason: String(task?.recommendationReason || '').trim(),
-  }
-}
-
-function resolveTaskMetaClass(tagType?: string) {
-  if (tagType === 'danger') return 'text-danger'
-  if (tagType === 'warning') return 'text-warning'
-  if (tagType === 'success') return 'text-success'
-  return 'text-muted'
-}
-
-function resolveTaskActionLabel(task: any) {
-  const type = task?.action?.type
-  const dispatchId = Number(task?.action?.row?.dispatchId || 0)
-  if (dispatchId > 0) return '去处理'
-  if (type === 'resume') return '继续作答'
-  if (type === 'exam') {
-    const retakeInfo = resolveExamRetakeInfo(task)
-    if (retakeInfo?.isMakeup) return '去补考'
-    return retakeInfo ? '再次考试' : '去考试'
-  }
-  if (type === 'course') return '查看课程'
-  if (type === 'wrongbook') return '去复习'
-  if (type === 'record') return '查看记录'
-  return '查看详情'
-}
-
-function openTask(task: any) {
-  const action = task?.action || {}
-  recordTaskFeedback(task)
-  syncTaskFeedback(task, 'dashboard')
-  const dispatchId = Number(action?.row?.dispatchId || 0)
-  if (dispatchId) {
-    markPortalTaskRead(dispatchId).catch(() => {})
-  }
-  if (dispatchId) {
-    router.push(`/student/tasks/${dispatchId}?from=dashboard`)
-    return
-  }
-  if (action.type === 'exam') {
-    router.push('/student/exams')
-    return
-  }
-  if (action.type === 'resume' && action.recordId) {
-    router.push({
-      path: `/student/exams/session/${action.recordId}`,
-      query: {
-        paperId: String(action.targetId || action.row?.paperId || ''),
-        startedAt: String(action.row.startTime || ''),
-      },
-    })
-    return
-  }
-  if (action.type === 'record') {
-    router.push('/student/exams?tab=records')
-    return
-  }
-  if (action.type === 'wrongbook') {
-    router.push('/student/wrongbook')
-    return
-  }
-  if (action.type === 'course') {
-    router.push({
-      path: '/student/courses',
-      query: action.targetId ? { openCourseId: String(action.targetId) } : {},
-    })
-    return
-  }
-  router.push(action.path || '/student/plaza')
-}
-
-async function openQuickDrawer(tab: 'todo' | 'message' | 'notice') {
-  activeDrawerTab.value = tab
-  quickDrawerVisible.value = true
-  await refreshQuickDrawer(tab)
-}
-
-async function refreshQuickDrawer(tab = activeDrawerTab.value) {
-  const userId = userStore.user?.userId
-  if (!userId) return
-  drawerLoading.value = true
-  try {
-    if (tab === 'todo') {
-      if (!taskCenter.value?.todoTasks) {
-        await loadTaskCenter()
-      }
-      return
-    }
-    if (tab === 'message') {
-      const res = await getPortalUnreadMessages({ userId, limit: 6 })
-      drawerMessageList.value = (res.data || []).filter((item: any) => isUnreadMessage(item))
-      return
-    }
-    const res = await listPortalNotice({ limit: 6 })
-    drawerNoticeList.value = (res.data || []).filter((item: any) => isUnreadNotice(item))
-  } finally {
-    drawerLoading.value = false
-  }
-}
-
-async function preloadQuickBadges() {
-  const userId = userStore.user?.userId
-  if (!userId) return
-  try {
-    const [messageRes, noticeRes] = await Promise.all([
-      getPortalUnreadMessages({ userId, limit: 20 }),
-      listPortalNotice({ limit: 20 }),
-    ])
-    drawerMessageList.value = (messageRes.data || []).filter((item: any) => isUnreadMessage(item))
-    drawerNoticeList.value = (noticeRes.data || []).filter((item: any) => isUnreadNotice(item))
-  } catch {
-    // Keep badge preload non-blocking for the dashboard
-  }
-}
-
-function openMessageCenter() {
-  quickDrawerVisible.value = false
-  router.push(`/student/messages?tab=${activeDrawerTab.value}`)
-}
-
-function openDrawerTask(task: any) {
-  quickDrawerVisible.value = false
-  openTask(task)
-}
-
-function openDrawerMessage(item: any) {
-  quickDrawerVisible.value = false
-  router.push(`/student/messages?tab=${activeDrawerTab.value}`)
-}
-
 function shortcutStorageKey() {
-  return `portal-shortcuts:${activeRole.value}`
+  return `portal-shortcuts:${props.role}${props.shortcutItemsOverride.length ? ':custom' : ''}`
 }
 
 function restoreShortcutSelection() {
@@ -1149,64 +707,14 @@ function saveShortcutSettings() {
   ElMessage.success('快捷入口已更新')
 }
 
-async function loadTerms() {
-  const res = await listPortalTermOptions()
-  termOptions.value = res.data || []
+function hexToRgba(hex: string, alpha: number) {
+  const normalized = hex.replace('#', '')
+  const bigint = Number.parseInt(normalized.length === 3 ? normalized.split('').map((item) => item + item).join('') : normalized, 16)
+  const r = (bigint >> 16) & 255
+  const g = (bigint >> 8) & 255
+  const b = bigint & 255
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
-
-async function loadDashboardData() {
-  const userId = userStore.user?.userId
-  if (!userId) return
-  const res = await getStudentDashboard({ userId, recommendLimit: 5 })
-  dashboard.value = res.data || {}
-}
-
-async function loadTaskCenter() {
-  const userId = userStore.user?.userId
-  if (!userId) return
-  const res = await getPortalTaskCenter({ userId })
-  taskCenter.value = res.data || {}
-}
-
-async function loadExamRecords() {
-  const res = await listExamRecord({ pageNum: 1, pageSize: 50 })
-  examRecords.value = res.rows || []
-}
-
-async function loadScheduleData() {
-  const userId = userStore.user?.userId
-  if (!userId) return
-  const current = termOptions.value.find((item: any) => item.isCurrent === '1') || termOptions.value[0]
-  const res = await getPortalMySchedule({
-    userId,
-    termId: current?.value,
-  })
-  schedulePayload.value = res.data || {}
-}
-
-const loading = ref(true)
-
-async function loadData() {
-  if (!userStore.user?.userId) return
-  loading.value = true
-  try {
-    await loadTerms()
-    await Promise.all([
-      loadDashboardData(),
-      loadTaskCenter(),
-      loadScheduleData(),
-      loadExamRecords(),
-      preloadQuickBadges(),
-    ])
-  } finally {
-    // 增加一点延迟，防止接口过快返回导致的闪烁
-    setTimeout(() => {
-      loading.value = false
-    }, 300)
-  }
-}
-
-onMounted(loadData)
 </script>
 
 <style scoped>
@@ -1273,6 +781,11 @@ onMounted(loadData)
   flex-wrap: wrap;
 }
 
+.currentSemester {
+  color: var(--dashboard-primary-text);
+  font-weight: 700;
+}
+
 .m-2 {
   margin: 0 0.5rem;
 }
@@ -1280,6 +793,7 @@ onMounted(loadData)
 .font-size-11 {
   font-size: 2rem;
   font-weight: 600;
+  color: var(--dashboard-primary-text);
 }
 
 .recent-tabs-container {
@@ -1287,6 +801,7 @@ onMounted(loadData)
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .recent-tabs-title {
@@ -1315,14 +830,19 @@ onMounted(loadData)
 
 .recent-tab-item:hover {
   background-color: #ffffff;
-  border-color: rgba(48, 49, 51, 0.3);
+  border-color: var(--dashboard-primary-border);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px var(--dashboard-primary-glow);
 }
 
 .dashboard-modules-wrapper {
   display: flex;
   gap: 20px;
+  margin-left: 1%;
+}
+
+.dashboard-extra-wrapper {
+  margin-top: 20px;
   margin-left: 1%;
 }
 
@@ -1343,6 +863,7 @@ onMounted(loadData)
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  gap: 16px;
 }
 
 .module-header__content {
@@ -1363,6 +884,18 @@ onMounted(loadData)
   flex: 1;
 }
 
+.skeleton-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+}
+
+.skeleton-card {
+  height: 80px;
+  border-radius: 8px;
+}
+
 .schedule-switcher {
   display: inline-flex;
   align-items: center;
@@ -1371,7 +904,7 @@ onMounted(loadData)
 }
 
 .schedule-switcher__btn {
-  border: 1px solid #dbe7ff;
+  border: 1px solid rgba(203, 213, 225, 0.9);
   background: #f8fbff;
   color: #5c6b7f;
   border-radius: 999px;
@@ -1383,14 +916,14 @@ onMounted(loadData)
 }
 
 .schedule-switcher__btn:hover {
-  border-color: #bdd1ff;
-  color: #2563eb;
+  border-color: var(--dashboard-primary-border);
+  color: var(--dashboard-primary-text);
 }
 
 .schedule-switcher__btn.active {
-  background: linear-gradient(135deg, #e8f1ff, #dce9ff);
-  border-color: #9ebdff;
-  color: #1d4ed8;
+  background: linear-gradient(135deg, var(--dashboard-primary-soft), rgba(255, 255, 255, 0.92));
+  border-color: var(--dashboard-primary-border);
+  color: var(--dashboard-primary-text);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
@@ -1402,8 +935,8 @@ onMounted(loadData)
   margin-bottom: 14px;
   padding: 12px 14px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #f8fbff, #eef5ff);
-  border: 1px solid #edf2ff;
+  background: linear-gradient(135deg, rgba(248, 251, 255, 0.94), var(--dashboard-primary-soft));
+  border: 1px solid rgba(237, 242, 255, 0.9);
 }
 
 .schedule-preview-summary__title {
@@ -1445,8 +978,8 @@ onMounted(loadData)
   width: 30px;
   height: 30px;
   background: rgba(255, 255, 255, 0.96);
-  color: #2563eb;
-  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.12);
+  color: var(--dashboard-primary-text);
+  box-shadow: 0 6px 14px var(--dashboard-primary-shadow);
   top: calc(50% - 12px);
 }
 
@@ -1470,7 +1003,7 @@ onMounted(loadData)
 }
 
 .schedule-carousel :deep(.is-active .el-carousel__button) {
-  background: #2563eb;
+  background: var(--dashboard-primary-text);
 }
 
 .schedule-single {
@@ -1492,8 +1025,8 @@ onMounted(loadData)
 }
 
 .modern-progress-card:hover {
-  border-color: #e4e7ed;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  border-color: var(--dashboard-primary-border);
+  box-shadow: 0 4px 16px var(--dashboard-primary-glow);
   transform: translateY(-1px);
 }
 
@@ -1554,8 +1087,8 @@ onMounted(loadData)
 }
 
 .modern-progress-pill--primary {
-  background: linear-gradient(135deg, #eef4ff, #dfeaff);
-  color: #2563eb;
+  background: linear-gradient(135deg, var(--dashboard-primary-soft), rgba(255, 255, 255, 0.95));
+  color: var(--dashboard-primary-text);
   font-size: 1.15rem;
   font-weight: 800;
 }
@@ -1610,8 +1143,8 @@ onMounted(loadData)
   align-items: center;
   padding: 4px 10px;
   border-radius: 999px;
-  background: #eef5ff;
-  color: #285ea8;
+  background: var(--dashboard-primary-soft);
+  color: var(--dashboard-primary-text);
   font-size: 1.1rem;
   line-height: 1.4;
 }
@@ -1639,8 +1172,8 @@ onMounted(loadData)
 }
 
 .modern-task-card:hover {
-  border-color: #e4e7ed;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  border-color: var(--dashboard-primary-border);
+  box-shadow: 0 4px 16px var(--dashboard-primary-glow);
   transform: translateY(-1px);
 }
 
@@ -1791,10 +1324,8 @@ onMounted(loadData)
 }
 
 .shortcut-item:hover {
-  background-color: #f5f7fa;
-  box-shadow: none;
+  background-color: rgba(248, 250, 252, 0.9);
   transform: translateY(-2px);
-  border-color: transparent;
 }
 
 .shortcut-item__icon {
@@ -1875,14 +1406,14 @@ onMounted(loadData)
   justify-content: center;
   align-items: center;
   font-size: 22px;
-  color: #409eff;
+  color: var(--dashboard-primary-text);
   transition: all 0.3s;
   position: relative;
 }
 
 .suspension-item:hover .icon-wrapper {
-  background: #ecf5ff;
-  color: #2563eb;
+  background: var(--dashboard-primary-soft);
+  color: var(--dashboard-primary-text);
 }
 
 .icon-badge {
@@ -1957,8 +1488,8 @@ onMounted(loadData)
 }
 
 .dashboard-quick-item:hover {
-  border-color: #c6e2ff;
-  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.08);
+  border-color: var(--dashboard-primary-border);
+  box-shadow: 0 8px 24px var(--dashboard-primary-glow);
   transform: translateY(-2px);
   background-color: #ffffff;
 }
@@ -1982,6 +1513,21 @@ onMounted(loadData)
   font-size: 24px;
   flex-shrink: 0;
   transition: transform 0.3s;
+}
+
+.drawer-icon--todo {
+  background: linear-gradient(135deg, #ecf5ff, #d9ecff);
+  color: #409eff;
+}
+
+.drawer-icon--message {
+  background: linear-gradient(135deg, #fdf6ec, #faecd8);
+  color: #e6a23c;
+}
+
+.drawer-icon--notice {
+  background: linear-gradient(135deg, #f0f9eb, #e1f3d8);
+  color: #67c23a;
 }
 
 .dashboard-quick-item:hover .dashboard-quick-item__icon {
@@ -2305,6 +1851,10 @@ html {
 
   .dashboard-modules-wrapper {
     flex-direction: column;
+  }
+
+  .dashboard-extra-wrapper {
+    margin-top: 16px;
   }
 
   .shortcut-panel {

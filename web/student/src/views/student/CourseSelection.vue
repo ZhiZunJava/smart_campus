@@ -61,16 +61,25 @@
 
           <template v-else>
           <div class="selection-notice-bar">
-            <div class="selection-notice-bar__item">
-              <span>计划名称</span>
+            <div class="selection-notice-bar__item" :class="{ 'is-active': selectionOpen }">
+              <span>
+                <i v-if="selectionOpen" class="notice-pulse"></i>
+                计划名称
+              </span>
               <strong>{{ planInfo?.planName || '当前选课计划' }}</strong>
             </div>
-            <div class="selection-notice-bar__item">
-              <span>直接选课</span>
+            <div class="selection-notice-bar__item" :class="{ 'is-active': selectionOpen }">
+              <span>
+                <i v-if="selectionOpen" class="notice-pulse"></i>
+                直接选课
+              </span>
               <strong>{{ formatDateRange(planInfo?.selectionStartTime, planInfo?.selectionEndTime) }}</strong>
             </div>
-            <div class="selection-notice-bar__item">
-              <span>直接退课</span>
+            <div class="selection-notice-bar__item" :class="{ 'is-active': dropOpen }">
+              <span>
+                <i v-if="dropOpen" class="notice-pulse"></i>
+                直接退课
+              </span>
               <strong>{{ formatDateRange(planInfo?.dropStartTime, planInfo?.dropEndTime) }}</strong>
             </div>
             <div class="selection-notice-bar__item">
@@ -91,11 +100,12 @@
               >
                 <el-option v-for="item in termOptions" :key="item.value" :label="item.label" :value="item.value" />
               </el-select>
-              <el-input v-model="keyword" clearable placeholder="搜索课程、班级、教师或教学班代码" style="width: 340px">
+              <el-input v-model="searchInput" clearable placeholder="搜索课程、班级、教师或教学班代码" style="width: 340px" @input="onSearchInput">
                 <template #prefix><i class="ri-search-line"></i></template>
               </el-input>
             </div>
             <div class="selection-toolbar__right">
+              <el-button :icon="Refresh" circle @click="loadSelectionOptions" title="刷新数据" />
               <el-button plain @click="goClassCourses">我的班级课程</el-button>
               <el-button type="primary" plain @click="goPersonalizedSelection">选课申请</el-button>
             </div>
@@ -103,7 +113,7 @@
 
           <el-tabs v-model="activeTab" class="selection-tabs">
             <el-tab-pane :label="`直接选课 (${filteredAddCourses.length})`" name="add">
-              <el-table v-loading="loading" :data="filteredAddCourses" max-height="620">
+              <el-table v-loading="loading" :data="filteredAddCourses" max-height="620" stripe>
                 <el-table-column label="课程 / 教学班" min-width="300">
                   <template #default="{ row }">
                     <div class="selection-cell">
@@ -141,11 +151,20 @@
                     </div>
                   </template>
                 </el-table-column>
-                <el-table-column label="容量" min-width="150">
+                <el-table-column label="容量" min-width="170">
                   <template #default="{ row }">
                     <div class="selection-cell">
                       <strong>{{ row.selectedStudentCount ?? row.actualStudentCount ?? 0 }} / {{ row.studentLimit || '-' }}</strong>
-                      <span v-if="row.remainingSeats != null">剩余 {{ row.remainingSeats }}</span>
+                      <el-progress
+                        v-if="row.studentLimit"
+                        :percentage="capacityPercent(row)"
+                        :color="capacityColor(row)"
+                        :stroke-width="6"
+                        :show-text="false"
+                        style="margin-top: 4px"
+                      />
+                      <span v-if="row.studentLimit && capacityPercent(row) >= 100" style="color: #ef4444; font-weight: 600;">已满</span>
+                      <span v-else-if="row.remainingSeats != null">剩余 {{ row.remainingSeats }}</span>
                       <span v-else>不限制人数</span>
                     </div>
                   </template>
@@ -154,7 +173,7 @@
                   <template #default="{ row }">
                     <div class="selection-actions">
                       <el-button link type="primary" @click.stop="previewClassCourse(row)">查看教学班</el-button>
-                      <el-button type="primary" size="small" :disabled="!row.canSelect" @click.stop="handleSelectCourse(row)">立即选课</el-button>
+                      <el-button type="primary" size="small" :disabled="!row.canSelect" :loading="row.__selecting" @click.stop="handleSelectCourse(row)">立即选课</el-button>
                     </div>
                   </template>
                 </el-table-column>
@@ -163,7 +182,7 @@
             </el-tab-pane>
 
             <el-tab-pane :label="`直接退课 (${filteredDropCourses.length})`" name="drop">
-              <el-table v-loading="loading" :data="filteredDropCourses" max-height="620">
+              <el-table v-loading="loading" :data="filteredDropCourses" max-height="620" stripe>
                 <el-table-column label="已选教学班" min-width="300">
                   <template #default="{ row }">
                     <div class="selection-cell">
@@ -196,7 +215,7 @@
                   <template #default="{ row }">
                     <div class="selection-actions">
                       <el-button link type="primary" @click.stop="previewClassCourse(row)">查看教学班</el-button>
-                      <el-button type="danger" size="small" plain :disabled="!row.canDrop" @click.stop="handleDropCourse(row)">立即退课</el-button>
+                      <el-button type="danger" size="small" plain :disabled="!row.canDrop" :loading="row.__dropping" @click.stop="handleDropCourse(row)">立即退课</el-button>
                     </div>
                   </template>
                 </el-table-column>
@@ -215,6 +234,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
+import { Refresh } from '@element-plus/icons-vue'
 import { dropPortalCourse, getPortalCourseSelectionOptions, listPortalTermOptions, selectPortalCourse } from '@/api/portal'
 import usePortalUserStore from '@/store/user'
 import PlanUnavailableState from '@/components/selection/PlanUnavailableState.vue'
@@ -233,6 +253,12 @@ const allCourses = ref<any[]>([])
 const selectedCourses = ref<any[]>([])
 const selectionStats = ref<any>({})
 const keyword = ref('')
+const searchInput = ref('')
+let searchTimer: ReturnType<typeof setTimeout> | null = null
+function onSearchInput(val: string) {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => { keyword.value = val }, 300)
+}
 const activeTab = ref<'add' | 'drop'>('add')
 const planInfo = ref<any>(null)
 const selectionOpen = ref(false)
@@ -324,6 +350,20 @@ function formatDateRange(startTime?: string, endTime?: string) {
   return `${formatDateValue(startTime)} ~ ${formatDateValue(endTime)}`
 }
 
+function capacityPercent(row: any) {
+  const current = row.selectedStudentCount ?? row.actualStudentCount ?? 0
+  const limit = row.studentLimit || 0
+  if (limit <= 0) return 0
+  return Math.min(100, Math.round((current / limit) * 100))
+}
+
+function capacityColor(row: any) {
+  const pct = capacityPercent(row)
+  if (pct >= 90) return '#ef4444'
+  if (pct >= 70) return '#f59e0b'
+  return '#10b981'
+}
+
 function resolveTextValue(value: any) {
   if (value == null) return ''
   if (typeof value === 'string') return value
@@ -368,18 +408,28 @@ async function loadSelectionOptions() {
 async function handleSelectCourse(row: any) {
   const userId = userStore.user?.userId
   if (!userId || !row?.id) return
-  await selectPortalCourse({ userId, classCourseId: row.id })
-  await loadSelectionOptions()
-  ElMessage.success(`已加入《${row.courseName || '当前课程'}》`)
+  row.__selecting = true
+  try {
+    await selectPortalCourse({ userId, classCourseId: row.id })
+    await loadSelectionOptions()
+    ElMessage.success(`已加入《${row.courseName || '当前课程'}》`)
+  } finally {
+    row.__selecting = false
+  }
 }
 
 async function handleDropCourse(row: any) {
   const userId = userStore.user?.userId
   if (!userId || !row?.id) return
   await ElMessageBox.confirm(`确认退选《${row.courseName || '当前课程'}》吗？`, '提示', { type: 'warning' })
-  await dropPortalCourse({ userId, classCourseId: row.id })
-  await loadSelectionOptions()
-  ElMessage.success(`已退选《${row.courseName || '当前课程'}》`)
+  row.__dropping = true
+  try {
+    await dropPortalCourse({ userId, classCourseId: row.id })
+    await loadSelectionOptions()
+    ElMessage.success(`已退选《${row.courseName || '当前课程'}》`)
+  } finally {
+    row.__dropping = false
+  }
 }
 
 function previewClassCourse(row: any) {
@@ -602,6 +652,28 @@ onMounted(async () => {
   border-radius: 14px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
+  transition: border-color 0.3s, background 0.3s;
+}
+
+.selection-notice-bar__item.is-active {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.notice-pulse {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #3b82f6;
+  margin-right: 4px;
+  vertical-align: middle;
+  animation: notice-pulse-anim 1.5s ease-in-out infinite;
+}
+
+@keyframes notice-pulse-anim {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
 }
 
 .selection-notice-bar__item span {

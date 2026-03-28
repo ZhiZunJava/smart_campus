@@ -62,8 +62,21 @@
         </template>
       </el-table-column>
       <el-table-column label="学期" prop="termName" min-width="180" />
-      <el-table-column label="窗口配置" min-width="260">
-        <template #default="{ row }">{{ buildWindowSummary(row) }}</template>
+      <el-table-column label="窗口配置" min-width="280">
+        <template #default="{ row }">
+          <div class="window-tags">
+            <span v-if="row.selectionStartTime && row.selectionEndTime" class="window-tag" :class="windowStatusClass(row.selectionStartTime, row.selectionEndTime)">
+              <i class="window-dot"></i>直接选课
+            </span>
+            <span v-if="row.dropStartTime && row.dropEndTime" class="window-tag" :class="windowStatusClass(row.dropStartTime, row.dropEndTime)">
+              <i class="window-dot"></i>直接退课
+            </span>
+            <span v-if="row.requestStartTime && row.requestEndTime" class="window-tag" :class="windowStatusClass(row.requestStartTime, row.requestEndTime)">
+              <i class="window-dot"></i>审核申请
+            </span>
+            <span v-if="!buildWindowSummary(row).includes('选课') && !buildWindowSummary(row).includes('退课') && !buildWindowSummary(row).includes('申请')" class="window-tag is-none">未配置</span>
+          </div>
+        </template>
       </el-table-column>
       <el-table-column label="学生端公告" min-width="220" show-overflow-tooltip>
         <template #default="{ row }">{{ row.noticeContent || '未填写公告' }}</template>
@@ -73,9 +86,10 @@
           <el-tag :type="row.status === '0' ? 'success' : 'info'">{{ row.status === '0' ? '启用' : '停用' }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="150" fixed="right">
+      <el-table-column label="操作" width="210" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" icon="Edit" @click="handleUpdate(row)">修改</el-button>
+          <el-button link type="primary" icon="CopyDocument" @click="handleDuplicate(row)">复制</el-button>
           <el-button link type="danger" icon="Delete" @click="handleDelete(row)">删除</el-button>
         </template>
       </el-table-column>
@@ -120,10 +134,7 @@
                 </el-col>
                 <el-col :span="12">
                   <el-form-item label="计划状态" prop="status">
-                    <el-radio-group v-model="form.status">
-                      <el-radio-button value="0">启用</el-radio-button>
-                      <el-radio-button value="1">停用</el-radio-button>
-                    </el-radio-group>
+                    <el-switch v-model="form.status" active-value="0" inactive-value="1" active-text="启用" inactive-text="停用" inline-prompt />
                   </el-form-item>
                 </el-col>
               </el-row>
@@ -266,15 +277,24 @@
             </div>
             <div class="preview-card__list">
               <div v-if="showsStandardWindows" class="preview-card__list-item">
-                <label>直接选课</label>
+                <div class="preview-timeline-row">
+                  <i class="window-dot" :class="selectionRange?.length === 2 ? 'is-configured' : ''"></i>
+                  <label>直接选课</label>
+                </div>
                 <p>{{ formatRange(selectionRange) }}</p>
               </div>
               <div v-if="showsStandardWindows" class="preview-card__list-item">
-                <label>直接退课</label>
+                <div class="preview-timeline-row">
+                  <i class="window-dot" :class="dropRange?.length === 2 ? 'is-configured' : ''"></i>
+                  <label>直接退课</label>
+                </div>
                 <p>{{ formatRange(dropRange) }}</p>
               </div>
               <div v-if="showsRequestWindow" class="preview-card__list-item">
-                <label>审核申请</label>
+                <div class="preview-timeline-row">
+                  <i class="window-dot" :class="requestRange?.length === 2 ? 'is-configured' : ''"></i>
+                  <label>审核申请</label>
+                </div>
                 <p>{{ formatRange(requestRange) }}</p>
               </div>
             </div>
@@ -522,9 +542,27 @@ function handleSelectionChange(selection: any[]) {
   multiple.value = !selection.length
 }
 
+function windowStatusClass(start: string, end: string) {
+  const now = Date.now()
+  const s = new Date(start).getTime()
+  const e = new Date(end).getTime()
+  if (now >= s && now <= e) return 'is-active'
+  if (now < s) return 'is-upcoming'
+  return 'is-expired'
+}
+
 function handleAdd() {
   resetForm()
   title.value = '新增选课计划'
+  open.value = true
+}
+
+function handleDuplicate(row: any) {
+  resetForm()
+  Object.assign(form, { ...row, planId: undefined, planName: (row.planName || '') + ' (副本)' })
+  fillRangesFromForm()
+  planNameTouched.value = true
+  title.value = '复制选课计划'
   open.value = true
 }
 
@@ -781,6 +819,10 @@ onMounted(async () => {
   border-top: 1px solid #edf2f7;
 }
 
+.preview-timeline-row { display: flex; align-items: center; gap: 6px; }
+.preview-timeline-row .window-dot { width: 8px; height: 8px; border-radius: 50%; background: #cbd5e1; flex-shrink: 0; }
+.preview-timeline-row .window-dot.is-configured { background: #10b981; }
+
 .preview-card__list-item p,
 .preview-card__hint p {
   margin: 4px 0 0;
@@ -795,6 +837,17 @@ onMounted(async () => {
   border-radius: 14px;
   background: #eff6ff;
 }
+
+/* Window status tags */
+.window-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+.window-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #64748b; }
+.window-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #cbd5e1; }
+.window-tag.is-active .window-dot { background: #10b981; }
+.window-tag.is-active { color: #059669; font-weight: 600; }
+.window-tag.is-upcoming .window-dot { background: #3b82f6; }
+.window-tag.is-upcoming { color: #2563eb; }
+.window-tag.is-expired .window-dot { background: #cbd5e1; }
+.window-tag.is-none { color: #94a3b8; }
 
 @media (max-width: 1080px) {
   .plan-overview,

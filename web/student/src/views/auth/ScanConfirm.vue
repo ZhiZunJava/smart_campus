@@ -1,6 +1,9 @@
 <template>
   <main class="scan-confirm-page">
     <section class="scan-confirm-card">
+      <div class="scan-confirm-card__brand">
+        <img class="scan-confirm-card__brand-logo" :src="portalLogo" alt="教务管理信息系统">
+      </div>
       <div class="scan-confirm-card__eyebrow">Scan Confirm</div>
       <h1>确认扫码登录</h1>
       <p v-if="ticket">当前桌面端会话：{{ ticket }}</p>
@@ -40,6 +43,7 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from '@/utils/feedback'
 import { confirmScanLogin, getCodeImg } from '@/api/auth'
+import portalLogo from '@/assets/img/logo.png'
 
 const route = useRoute()
 const ticket = ref<string>(String(route.query.ticket || ''))
@@ -120,6 +124,20 @@ onMounted(async () => {
   background: rgba(255, 255, 255, 0.96);
   border: 1px solid var(--portal-border);
   box-shadow: var(--portal-shadow);
+}
+
+.scan-confirm-card__brand {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.scan-confirm-card__brand-logo {
+  display: block;
+  width: 168px;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
 }
 
 .scan-confirm-card__eyebrow {

@@ -44,7 +44,8 @@ const routes = [
       { path: 'scores', component: () => import('@/views/student/Scores.vue'), meta: { title: '我的成绩' } },
       { path: 'exams/preview/:paperId', component: () => import('@/views/student/ExamPreviewPage.vue'), meta: { title: '试卷预览' } },
       { path: 'exams/session/:recordId', component: () => import('@/views/student/ExamSession.vue'), meta: { title: '在线考试' } },
-      { path: 'wrongbook', component: () => import('@/views/student/wrongbook/index.vue'), meta: { title: '我的错题本' } }
+      { path: 'wrongbook', component: () => import('@/views/student/wrongbook/index.vue'), meta: { title: '我的错题本' } },
+      { path: 'course-offerings', component: () => import('@/views/student/CourseOfferings.vue'), meta: { title: '全校开课查询' } }
     ]
   },
   {
@@ -55,7 +56,22 @@ const routes = [
       { path: 'dashboard', component: () => import('@/views/teacher/Dashboard.vue'), meta: { title: '教学概览' } },
       { path: 'courses', component: () => import('@/views/teacher/Courses.vue'), meta: { title: '课程管理' } },
       { path: 'schedule', component: () => import('@/views/teacher/Schedule.vue'), meta: { title: '我的课表' } },
-      { path: 'resources', component: () => import('@/views/teacher/Resources.vue'), meta: { title: '教学资源' } }
+      { path: 'resources', component: () => import('@/views/teacher/Resources.vue'), meta: { title: '教学资源' } },
+      { path: 'messages', component: () => import('@/views/student/Messages.vue'), meta: { title: '消息中心', hideShortcut: true } },
+      { path: 'notices', component: () => import('@/views/student/Notices.vue'), meta: { title: '消息中心', hideShortcut: true } },
+      { path: 'course-offerings', component: () => import('@/views/student/CourseOfferings.vue'), meta: { title: '全校开课查询' } }
+    ]
+  },
+  {
+    path: '/advisor',
+    component: PortalLayout,
+    meta: { title: '辅导员端', role: 'advisor' },
+    children: [
+      { path: 'dashboard', component: () => import('@/views/advisor/Dashboard.vue'), meta: { title: '辅导员概览' } },
+      { path: 'students', component: () => import('@/views/advisor/Students.vue'), meta: { title: '学生管理' } },
+      { path: 'scores', component: () => import('@/views/advisor/Scores.vue'), meta: { title: '成绩管理' } },
+      { path: 'messages', component: () => import('@/views/student/Messages.vue'), meta: { title: '消息中心', hideShortcut: true } },
+      { path: 'notices', component: () => import('@/views/student/Notices.vue'), meta: { title: '消息中心', hideShortcut: true } },
     ]
   },
   {
@@ -65,7 +81,9 @@ const routes = [
     children: [
       { path: 'dashboard', component: () => import('@/views/parent/Dashboard.vue'), meta: { title: '孩子概览' } },
       { path: 'courses', component: () => import('@/views/parent/Courses.vue'), meta: { title: '孩子课程' } },
-      { path: 'schedule', component: () => import('@/views/parent/Schedule.vue'), meta: { title: '孩子课表' } }
+      { path: 'schedule', component: () => import('@/views/parent/Schedule.vue'), meta: { title: '孩子课表' } },
+      { path: 'messages', component: () => import('@/views/student/Messages.vue'), meta: { title: '消息中心', hideShortcut: true } },
+      { path: 'notices', component: () => import('@/views/student/Notices.vue'), meta: { title: '消息中心', hideShortcut: true } }
     ]
   }
 ]

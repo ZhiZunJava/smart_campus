@@ -3,7 +3,9 @@
     <aside class="qa-sidebar">
       <div class="qa-sidebar__brand">
         <div class="qa-sidebar__brand-top">
-          <div class="qa-sidebar__logo"><i class="ri-sparkling-2-line"></i></div>
+          <div class="qa-sidebar__logo">
+            <img class="qa-sidebar__logo-image" :src="portalLogo" alt="校园智学助手">
+          </div>
           <div class="qa-sidebar__badge">校园专属</div>
         </div>
         <div class="qa-sidebar__brand-text">
@@ -341,6 +343,7 @@ import { normalizeQaErrorMessage, parseAssistantReferenceSource, parseQaAttachme
 import usePortalUserStore from '@/store/user'
 import { addQaFeedback, addQaSession, deletePortalQaAttachment, deleteQaSession, fetchPortalCourseOptions, getWrongBookOverview, listExamRecord, listQaMessage, listQaModelOptions, listQaSession, updateQaSession, uploadPortalQaAttachment } from '@/api/portal'
 import QaMarkdownRenderer from '@/components/qa/QaMarkdownRenderer.vue'
+import portalLogo from '@/assets/img/logo.png'
 
 const SESSION_PIN_KEY = 'qa-session-pins'
 const SESSION_ACTIVE_KEY = 'qa-active-session-id'
@@ -1081,14 +1084,22 @@ function handleScrollSpy() {
 }
 
 .qa-sidebar__logo {
-  width: 28px;
-  height: 28px;
+  width: 128px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #315fca;
-  font-size: 20px;
-  line-height: 1
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 18px rgba(17, 38, 68, 0.08)
+}
+
+.qa-sidebar__logo-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain
 }
 
 .qa-sidebar__badge {

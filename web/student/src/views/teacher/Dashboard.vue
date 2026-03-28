@@ -1,221 +1,325 @@
 <template>
-  <div class="portal-page service-home">
-    <section class="service-home__hero portal-card service-home__hero--teacher">
-      <div>
-        <div class="service-home__eyebrow">Teacher Portal</div>
-        <div class="service-home__title">教师服务大厅</div>
-        <p class="service-home__desc">
-          聚焦课程、课表和教学资源，把教师日常最常用的入口保留下来，页面更轻更直接。
-        </p>
-      </div>
-      <div class="service-home__hero-stats">
-        <div class="service-home__hero-metric">
-          <span>课程数</span>
-          <strong>{{ data.courseCount || 0 }}</strong>
-        </div>
-        <div class="service-home__hero-metric">
-          <span>资源数</span>
-          <strong>{{ data.resourceCount || 0 }}</strong>
-        </div>
-      </div>
-    </section>
-
-    <section class="portal-kpis">
-      <el-card class="portal-card portal-stat-card"><div class="label">课程数</div><div class="value">{{ data.courseCount || 0 }}</div><div class="sub">当前负责课程数量</div></el-card>
-      <el-card class="portal-card portal-stat-card"><div class="label">班级数</div><div class="value">{{ data.classCount || 0 }}</div><div class="sub">覆盖班级范围</div></el-card>
-      <el-card class="portal-card portal-stat-card"><div class="label">资源数</div><div class="value">{{ data.resourceCount || 0 }}</div><div class="sub">教学资源累计数</div></el-card>
-      <el-card class="portal-card portal-stat-card"><div class="label">题目数</div><div class="value">{{ data.questionCount || 0 }}</div><div class="sub">题库维护规模</div></el-card>
-    </section>
-
-    <div class="service-group-grid mt20">
-      <section v-for="group in groups" :key="group.key" class="service-group-card portal-card">
-        <div class="service-group-card__header">
-          <div>
-            <h3>{{ group.label }}</h3>
-            <p>{{ group.desc }}</p>
-          </div>
-          <i :class="group.icon"></i>
-        </div>
-        <div class="service-group-card__list">
-          <button v-for="item in group.items" :key="item.path" type="button" class="service-link" @click="go(item.path)">
-            <strong>{{ item.title }}</strong>
-            <span>{{ item.desc }}</span>
-          </button>
-        </div>
-      </section>
-    </div>
-  </div>
+  <PortalDashboardShell
+    v-model:schedule-mode="activeScheduleMode"
+    role="teacher"
+    theme-color="#12795a"
+    :user-name="userName"
+    :current-semester-label="currentSemesterLabel"
+    :current-teaching-week="currentTeachingWeek"
+    :secondary-info="secondaryInfo"
+    :loading="loading"
+    preview-module-title="教学日程预览"
+    preview-link-text="查看课表"
+    preview-link-path="/teacher/schedule"
+    :schedule-modes="scheduleModes"
+    :preview-summary-title="activeScheduleTitle"
+    :preview-summary-text="activeScheduleSummary"
+    :preview-cards="activeScheduleCards"
+    :preview-empty-description="activeScheduleEmptyDescription"
+    task-module-title="近期任务"
+    :task-overview-badges="taskOverviewBadges"
+    :task-cards="recentTasks"
+    :drawer-todo-list="drawerTodoList"
+    :drawer-message-list="drawerMessageList"
+    :drawer-notice-list="drawerNoticeList"
+    :drawer-loading="drawerLoading"
+    @task-click="openTask"
+    @open-drawer="openQuickDrawer"
+    @drawer-task-click="openDrawerTask"
+    @drawer-message-click="openDrawerMessage"
+    @message-center="openMessageCenter"
+  />
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { getTeacherDashboard } from '@/api/portal'
+import PortalDashboardShell from '@/components/dashboard/PortalDashboardShell.vue'
+import {
+  getPortalTeacherSchedule,
+  getTeacherDashboard,
+  listPortalTermOptions,
+} from '@/api/portal'
 import usePortalUserStore from '@/store/user'
+import {
+  buildStaticTaskCards,
+  convertWeekDay,
+  formatDateTime,
+  formatMonthDay,
+  formatWeekDayLabel,
+  formatWeeksBadgeText,
+} from '@/utils/portalDashboard'
 
 const router = useRouter()
 const userStore = usePortalUserStore()
-const data = ref<any>({})
 
-const groups = [
-  {
-    key: 'general',
-    label: '综合服务',
-    desc: '总览教学指标和资源协同入口。',
-    icon: 'ri-dashboard-line',
-    items: [
-      { title: '教学概览', path: '/teacher/dashboard', desc: '课程、班级与资源概况' },
-      { title: '教学资源', path: '/teacher/resources', desc: '资源查看与更新' },
-    ],
-  },
-  {
-    key: 'course',
-    label: '课程与课表',
-    desc: '围绕授课课程和课表组织日常教学。',
-    icon: 'ri-book-open-line',
-    items: [
-      { title: '我的课程', path: '/teacher/courses', desc: '查看本学期授课安排' },
-      { title: '我的课表', path: '/teacher/schedule', desc: '按周查看教学安排' },
-    ],
-  },
+const loading = ref(true)
+const drawerLoading = ref(false)
+const dashboard = ref<any>({})
+const schedulePayload = ref<any>({})
+const termOptions = ref<any[]>([])
+const activeScheduleMode = ref('today')
+
+const scheduleModes = [
+  { key: 'today', label: '今日授课' },
+  { key: 'tomorrow', label: '明日授课' },
 ]
 
-function go(path: string) {
-  router.push(path)
+const userName = computed(() => userStore.user?.realName || userStore.user?.userName || '老师')
+const currentTerm = computed(() => {
+  const currentTermId = schedulePayload.value?.termId
+  return termOptions.value.find((item: any) => item.value === currentTermId)
+    || termOptions.value.find((item: any) => item.isCurrent === '1')
+    || termOptions.value[0]
+    || null
+})
+const currentSemesterLabel = computed(() => {
+  if (!currentTerm.value) return '当前学期'
+  const schoolYear = currentTerm.value.schoolYear ? `${currentTerm.value.schoolYear}` : ''
+  const termName = currentTerm.value.termName ? `${currentTerm.value.termName}` : ''
+  return [schoolYear, termName].filter(Boolean).join(' ')
+})
+const currentTeachingWeek = computed(() => Number(schedulePayload.value?.currentWeek || 1))
+const secondaryInfo = computed(() => [
+  `授课课程：${dashboard.value.courseCount || 0} 门`,
+  `覆盖班级：${dashboard.value.classCount || 0} 个`,
+  `资源沉淀：${dashboard.value.resourceCount || 0} 份`,
+  `题库规模：${dashboard.value.questionCount || 0} 题`,
+  `上次登录时间：${formatDateTime(userStore.user?.loginDate) || '暂无记录'}`,
+])
+
+const todayMeta = computed(() => {
+  const today = new Date()
+  return {
+    date: today,
+    weekDay: convertWeekDay(today),
+    targetWeek: Number(schedulePayload.value?.currentWeek || 1),
+  }
+})
+
+const tomorrowMeta = computed(() => {
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  const todayWeekDay = convertWeekDay(new Date())
+  const tomorrowWeekDay = convertWeekDay(tomorrow)
+  const baseWeek = Number(schedulePayload.value?.currentWeek || 1)
+  const targetWeek = tomorrowWeekDay < todayWeekDay ? baseWeek + 1 : baseWeek
+  return {
+    date: tomorrow,
+    weekDay: tomorrowWeekDay,
+    targetWeek,
+  }
+})
+
+const todayScheduleCards = computed(() => buildScheduleCards(todayMeta.value, 'today'))
+const tomorrowScheduleCards = computed(() => buildScheduleCards(tomorrowMeta.value, 'tomorrow'))
+const activeScheduleCards = computed(() => activeScheduleMode.value === 'today' ? todayScheduleCards.value : tomorrowScheduleCards.value)
+const activeScheduleTitle = computed(() => {
+  const meta = activeScheduleMode.value === 'today' ? todayMeta.value : tomorrowMeta.value
+  const prefix = activeScheduleMode.value === 'today' ? '今日授课' : '明日授课'
+  return `${prefix} · ${formatMonthDay(meta.date)}`
+})
+const activeScheduleSummary = computed(() => {
+  const count = activeScheduleCards.value.length
+  if (!count) {
+    return activeScheduleMode.value === 'today'
+      ? '今天暂无授课安排，可集中处理备课、资源或班级沟通工作。'
+      : '明天暂无授课安排，可以提前调整教学节奏和备课重心。'
+  }
+  return activeScheduleMode.value === 'today'
+    ? `今天共有 ${count} 节教学安排，建议优先确认最近一节课的班级与教室。`
+    : `明天共有 ${count} 节教学安排，可以提前查看班级分布与地点变更。`
+})
+const activeScheduleEmptyDescription = computed(() =>
+  activeScheduleMode.value === 'today'
+    ? '今天没有授课安排，适合整理教案与资源。'
+    : '明天没有授课安排，适合预留教研时间。',
+)
+
+const taskSource = computed(() => buildStaticTaskCards([
+  {
+    key: 'teacher-course-manage',
+    title: '查看授课课程',
+    desc: '进入课程管理页查看教学班、学生和授课范围',
+    tag: '课程管理',
+    tagType: 'primary',
+    meta: [`课程数：${dashboard.value.courseCount || 0}`],
+    actionLabel: '查看课程',
+    path: '/teacher/courses',
+    iconType: 'practice',
+  },
+  {
+    key: 'teacher-schedule-check',
+    title: '查看本周课表',
+    desc: `第 ${currentTeachingWeek.value} 教学周的授课安排已经同步，可按周切换查看`,
+    tag: '教学课表',
+    tagType: 'success',
+    meta: [`排课条目：${Array.isArray(schedulePayload.value?.activities) ? schedulePayload.value.activities.length : 0}`],
+    actionLabel: '查看课表',
+    path: '/teacher/schedule',
+    iconType: 'practice',
+  },
+  {
+    key: 'teacher-resources',
+    title: '整理教学资源',
+    desc: '查看资源中心中的资料、浏览量和下载情况',
+    tag: '资源中心',
+    tagType: 'warning',
+    meta: [`资源数：${dashboard.value.resourceCount || 0}`],
+    actionLabel: '查看资源',
+    path: '/teacher/resources',
+    iconType: 'homework',
+  },
+  {
+    key: 'teacher-course-offerings',
+    title: '查看全校开课',
+    desc: '快速查询全校课程开设信息，辅助排课和教学对照',
+    tag: '开课查询',
+    tagType: 'info',
+    meta: [`覆盖班级：${dashboard.value.classCount || 0}`],
+    actionLabel: '立即查看',
+    path: '/teacher/course-offerings',
+    iconType: 'exam',
+  },
+]))
+
+const recentTasks = computed(() => taskSource.value)
+const taskOverviewBadges = computed(() => [
+  `课程 ${dashboard.value.courseCount || 0}`,
+  `班级 ${dashboard.value.classCount || 0}`,
+  `资源 ${dashboard.value.resourceCount || 0}`,
+  `题目 ${dashboard.value.questionCount || 0}`,
+])
+const drawerTodoList = computed(() => recentTasks.value.map((item) => ({
+  key: item.key,
+  title: item.title,
+  desc: item.statusText,
+  action: item.raw?.action,
+})))
+const drawerMessageList = computed(() => [
+  {
+    messageId: 'teacher-course-summary',
+    messageTitle: '授课课程概览',
+    messageSummary: `当前负责 ${dashboard.value.courseCount || 0} 门课程，覆盖 ${dashboard.value.classCount || 0} 个班级`,
+    createTime: formatDateTime(new Date()),
+    readFlag: '0',
+  },
+  {
+    messageId: 'teacher-resource-summary',
+    messageTitle: '资源中心概览',
+    messageSummary: `资源 ${dashboard.value.resourceCount || 0} 份，题库 ${dashboard.value.questionCount || 0} 题`,
+    createTime: formatDateTime(new Date()),
+    readFlag: '0',
+  },
+])
+const drawerNoticeList = computed(() => [
+  {
+    messageId: 'teacher-week-plan',
+    messageTitle: `第 ${currentTeachingWeek.value} 周教学提醒`,
+    messageSummary: `本周共 ${Array.isArray(schedulePayload.value?.activities) ? schedulePayload.value.activities.length : 0} 条授课安排`,
+    createTime: formatDateTime(new Date()),
+    readFlag: '0',
+  },
+  {
+    messageId: 'teacher-tomorrow-plan',
+    messageTitle: '明日授课预览',
+    messageSummary: `明日共有 ${tomorrowScheduleCards.value.length} 节授课安排待关注`,
+    createTime: formatDateTime(new Date()),
+    readFlag: '0',
+  },
+])
+
+function buildScheduleCards(meta: { weekDay: number; targetWeek: number }, prefix: string) {
+  const activities = Array.isArray(schedulePayload.value?.activities) ? schedulePayload.value.activities : []
+  return activities
+    .filter((item: any) => {
+      if (Number(item.weekDay) !== meta.weekDay) return false
+      const weekIndexes = Array.isArray(item.weekIndexes) ? item.weekIndexes.map((value: any) => Number(value)) : []
+      return !weekIndexes.length || weekIndexes.includes(meta.targetWeek)
+    })
+    .sort((left: any, right: any) => Number(left.startSection || 0) - Number(right.startSection || 0))
+    .map((item: any) => ({
+      key: `${prefix}-${item.scheduleId || item.classCourseId}-${item.weekDay}-${item.startSection}`,
+      title: item.courseName || '未命名课程',
+      tag: item.className || formatWeekDayLabel(item.weekDay),
+      badges: [
+        `${item.startSection || '-'}-${item.endSection || item.startSection || '-'} 节`,
+        formatWeeksBadgeText(item.weeksStr || item.weeksText || ''),
+      ],
+      facts: [
+        { label: '时间', value: `${formatWeekDayLabel(item.weekDay)} ${item.startTime || '--:--'} - ${item.endTime || '--:--'}` },
+        { label: '地点', value: [item.campus, item.buildingName, item.classroom].filter(Boolean).join(' / ') || '地点待定' },
+        { label: '班级', value: item.className || '未配置教学班' },
+      ],
+      raw: item,
+    }))
 }
 
-async function loadData() {
+async function loadTerms() {
+  const res = await listPortalTermOptions()
+  termOptions.value = res.data || []
+}
+
+async function loadDashboardData() {
   const teacherId = userStore.user?.userId
   if (!teacherId) return
   const res = await getTeacherDashboard({ teacherId })
-  data.value = res.data || {}
+  dashboard.value = res.data || {}
+}
+
+async function loadScheduleData() {
+  const teacherId = userStore.user?.userId
+  if (!teacherId) return
+  const current = termOptions.value.find((item: any) => item.isCurrent === '1') || termOptions.value[0]
+  const res = await getPortalTeacherSchedule({
+    teacherId,
+    termId: current?.value,
+  })
+  schedulePayload.value = res.data || {}
+}
+
+async function loadData() {
+  if (!userStore.user?.userId) return
+  loading.value = true
+  try {
+    await loadTerms()
+    await Promise.all([
+      loadDashboardData(),
+      loadScheduleData(),
+    ])
+  } finally {
+    setTimeout(() => {
+      loading.value = false
+    }, 300)
+  }
+}
+
+function openTask(task: any) {
+  const path = task?.action?.path || '/teacher/dashboard'
+  router.push(path)
+}
+
+function openDrawerTask(task: any) {
+  openTask(task)
+}
+
+function openQuickDrawer() {
+  drawerLoading.value = false
+}
+
+function openDrawerMessage(payload?: { tab: 'message' | 'notice'; item: any }) {
+  router.push({
+    path: '/teacher/messages',
+    query: { tab: payload?.tab === 'notice' ? 'notice' : 'message' },
+  })
+}
+
+function openMessageCenter(tab?: 'todo' | 'message' | 'notice') {
+  router.push({
+    path: '/teacher/messages',
+    query: { tab: tab === 'notice' ? 'notice' : tab === 'todo' ? 'todo' : 'message' },
+  })
 }
 
 onMounted(loadData)
 </script>
-
-<style scoped>
-.service-home__hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.7fr);
-  gap: 18px;
-  padding: 24px;
-}
-.service-home__hero--teacher {
-  background:
-    radial-gradient(circle at top left, rgba(24, 148, 106, 0.12) 0%, rgba(24, 148, 106, 0) 32%),
-    linear-gradient(135deg, #ffffff 0%, #f2fbf8 100%);
-}
-.service-home__eyebrow {
-  display: inline-flex;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(24, 148, 106, 0.12);
-  color: #12795a;
-  font-size: 12px;
-  font-weight: 700;
-}
-.service-home__title {
-  margin-top: 12px;
-  font-size: 32px;
-  font-weight: 800;
-  color: var(--portal-text);
-}
-.service-home__desc {
-  margin-top: 10px;
-  max-width: 760px;
-  font-size: 14px;
-  line-height: 1.9;
-  color: var(--portal-text-secondary);
-}
-.service-home__hero-stats {
-  display: grid;
-  gap: 14px;
-}
-.service-home__hero-metric {
-  padding: 18px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid var(--portal-border);
-}
-.service-home__hero-metric span {
-  color: var(--portal-text-secondary);
-  font-size: 13px;
-}
-.service-home__hero-metric strong {
-  display: block;
-  margin-top: 8px;
-  font-size: 30px;
-  color: #12795a;
-}
-.service-group-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-.service-group-card {
-  padding: 18px;
-}
-.service-group-card__header {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: flex-start;
-  margin-bottom: 16px;
-}
-.service-group-card__header h3 {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 800;
-  color: var(--portal-text);
-}
-.service-group-card__header p {
-  margin: 8px 0 0;
-  font-size: 13px;
-  line-height: 1.8;
-  color: var(--portal-text-secondary);
-}
-.service-group-card__header i {
-  font-size: 26px;
-  color: #12795a;
-}
-.service-group-card__list {
-  display: grid;
-  gap: 12px;
-}
-.service-link {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  padding: 12px 14px;
-  text-align: left;
-  border: 1px solid var(--portal-border);
-  border-radius: 14px;
-  background: linear-gradient(180deg, #ffffff 0%, #f7fcfa 100%);
-  cursor: pointer;
-  transition: all .2s ease;
-}
-.service-link:hover {
-  transform: translateY(-1px);
-  border-color: var(--portal-border-strong);
-  box-shadow: var(--portal-shadow-soft);
-}
-.service-link strong {
-  font-size: 16px;
-  color: var(--portal-text);
-}
-.service-link span {
-  font-size: 12px;
-  line-height: 1.7;
-  color: var(--portal-text-secondary);
-}
-@media (max-width: 960px) {
-  .service-home__hero {
-    grid-template-columns: 1fr;
-  }
-  .service-group-grid {
-    grid-template-columns: 1fr;
-  }
-}
-</style>

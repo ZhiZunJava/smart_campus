@@ -103,7 +103,7 @@
 
           <el-tabs v-model="activeTab" class="personalized-tabs">
             <el-tab-pane :label="`申请选课 (${visibleAddCandidates.length})`" name="add">
-              <el-table v-loading="loading" :data="visibleAddCandidates" max-height="520">
+              <el-table v-loading="loading" :data="visibleAddCandidates" max-height="520" stripe>
                 <el-table-column label="目标教学班" min-width="300">
                   <template #default="{ row }">
                     <div class="request-cell">
@@ -127,7 +127,10 @@
                 <el-table-column label="申请说明" min-width="220" show-overflow-tooltip>
                   <template #default="{ row }">
                     <div class="request-cell">
-                      <strong>{{ row.canRequest ? '可发起申请' : '暂不可申请' }}</strong>
+                      <strong>
+                        {{ row.canRequest ? '可发起申请' : '暂不可申请' }}
+                        <el-tag v-if="hasPendingRequest(row)" type="warning" size="small" effect="plain" style="margin-left: 4px;">已申请</el-tag>
+                      </strong>
                       <span>{{ row.requestHint || '可发起个性化选课申请' }}</span>
                     </div>
                   </template>
@@ -154,7 +157,7 @@
             </el-tab-pane>
 
             <el-tab-pane :label="`申请退课 (${visibleDropCandidates.length})`" name="drop">
-              <el-table v-loading="loading" :data="visibleDropCandidates" max-height="520">
+              <el-table v-loading="loading" :data="visibleDropCandidates" max-height="520" stripe>
                 <el-table-column label="当前已选教学班" min-width="300">
                   <template #default="{ row }">
                     <div class="request-cell">
@@ -178,7 +181,10 @@
                 <el-table-column label="申请说明" min-width="220" show-overflow-tooltip>
                   <template #default="{ row }">
                     <div class="request-cell">
-                      <strong>{{ row.canRequest ? '可发起申请' : '暂不可申请' }}</strong>
+                      <strong>
+                        {{ row.canRequest ? '可发起申请' : '暂不可申请' }}
+                        <el-tag v-if="hasPendingRequest(row)" type="warning" size="small" effect="plain" style="margin-left: 4px;">已申请</el-tag>
+                      </strong>
                       <span>{{ row.requestHint || '可发起个性化退课申请' }}</span>
                     </div>
                   </template>
@@ -199,16 +205,16 @@
               <div class="personalized-toolbar personalized-toolbar--inner">
                 <div class="personalized-toolbar__left">
                   <el-radio-group v-model="statusFilter">
-                    <el-radio-button label="all">全部申请</el-radio-button>
-                    <el-radio-button label="0">待审核</el-radio-button>
-                    <el-radio-button label="1">已通过</el-radio-button>
-                    <el-radio-button label="2">已驳回</el-radio-button>
-                    <el-radio-button label="3">已撤回</el-radio-button>
+                    <el-radio-button label="all">全部 ({{ requestList.length }})</el-radio-button>
+                    <el-radio-button label="0">待审核 ({{ statusCount('0') }})</el-radio-button>
+                    <el-radio-button label="1">已通过 ({{ statusCount('1') }})</el-radio-button>
+                    <el-radio-button label="2">已驳回 ({{ statusCount('2') }})</el-radio-button>
+                    <el-radio-button label="3">已撤回 ({{ statusCount('3') }})</el-radio-button>
                   </el-radio-group>
                 </div>
               </div>
 
-              <el-table v-loading="loading" :data="filteredRequests" max-height="520">
+              <el-table v-loading="loading" :data="filteredRequests" max-height="520" stripe>
                 <el-table-column label="申请编号" prop="requestNo" width="180" />
                 <el-table-column label="目标教学班" min-width="300">
                   <template #default="{ row }">
@@ -223,9 +229,14 @@
                   <template #default="{ row }">{{ requestTypeLabel(row.requestType) }}</template>
                 </el-table-column>
                 <el-table-column label="申请理由" prop="requestReason" min-width="220" show-overflow-tooltip />
-                <el-table-column label="状态" width="110">
+                <el-table-column label="状态" width="160">
                   <template #default="{ row }">
-                    <el-tag :type="statusTagType(row.requestStatus)" size="small">{{ statusLabel(row.requestStatus) }}</el-tag>
+                    <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                      <el-tag :type="statusTagType(row.requestStatus)" size="small">{{ statusLabel(row.requestStatus) }}</el-tag>
+                      <el-tag v-if="row.requestStatus === '0' && pendingDays(row) > 0" :type="pendingDays(row) >= 3 ? 'danger' : 'warning'" size="small" effect="plain">
+                        等待 {{ pendingDays(row) }}天
+                      </el-tag>
+                    </div>
                   </template>
                 </el-table-column>
                 <el-table-column label="结果说明" min-width="220" show-overflow-tooltip>
@@ -254,12 +265,21 @@
     <el-dialog v-model="createDialogOpen" :title="dialogTitle" width="760px" append-to-body>
       <div class="request-create-layout">
         <div class="request-target-card" v-if="selectedCandidate">
-          <strong>{{ selectedCandidate.courseName || '-' }}</strong>
+          <div class="request-target-card__header">
+            <el-tag :type="requestForm.requestType === 'DROP' ? 'danger' : 'primary'" size="small" effect="dark">
+              {{ requestForm.requestType === 'DROP' ? '退课' : '选课' }}
+            </el-tag>
+            <strong>{{ selectedCandidate.courseName || '-' }}</strong>
+          </div>
           <span>{{ selectedCandidate.className || '-' }}{{ selectedCandidate.teachingClassCode ? ` / ${selectedCandidate.teachingClassCode}` : '' }}</span>
           <span v-if="selectedCandidate.selectionGroupName || selectedCandidate.selectionGroupCode">
             专项分组：{{ selectedCandidate.selectionGroupName || selectedCandidate.selectionGroupCode }} / 限选 {{ selectedCandidate.selectionGroupLimit || 1 }} 门
           </span>
           <span>{{ resolveScheduleText(selectedCandidate) }} / {{ resolveScheduleRoom(selectedCandidate) }}</span>
+          <span v-if="selectedCandidate.studentLimit">
+            容量：{{ selectedCandidate.selectedStudentCount ?? selectedCandidate.actualStudentCount ?? 0 }} / {{ selectedCandidate.studentLimit }}
+            <template v-if="selectedCandidate.remainingSeats != null">（剩余 {{ selectedCandidate.remainingSeats }}）</template>
+          </span>
           <p>{{ selectedCandidate.requestHint || '请结合实际情况填写申请理由。' }}</p>
         </div>
 
@@ -436,6 +456,24 @@ function statusTagType(value?: string) {
 
 function requestTypeLabel(value?: string) {
   return value === 'DROP' ? '退课申请' : '选课申请'
+}
+
+function statusCount(status: string) {
+  return requestList.value.filter((item: any) => String(item.requestStatus) === status).length
+}
+
+function pendingDays(row: any) {
+  if (!row.createTime) return 0
+  return Math.floor((Date.now() - new Date(row.createTime).getTime()) / 86400000)
+}
+
+function hasPendingRequest(row: any) {
+  const targetId = row.id || row.targetClassCourseId
+  if (!targetId) return false
+  return requestList.value.some((req: any) =>
+    String(req.requestStatus) === '0'
+    && (req.targetClassCourseId === targetId || req.id === targetId),
+  )
 }
 
 function formatDateValue(value?: string) {
@@ -837,6 +875,12 @@ onMounted(async () => {
   border-radius: 16px;
   border: 1px solid #f2ddcf;
   background: #fff7ed;
+}
+
+.request-target-card__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .request-target-card strong {

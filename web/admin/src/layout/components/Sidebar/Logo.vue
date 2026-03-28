@@ -1,18 +1,14 @@
 <template>
-  <div class="sidebar-logo-container" :class="{ 'collapse': collapse }">
+  <div class="sidebar-logo-container" :class="{ 'is-collapse': collapse }">
     <transition name="sidebarLogoFade">
       <router-link v-if="collapse" key="collapse" class="sidebar-logo-link" to="/">
-        <div class="sidebar-brand sidebar-brand--collapse">
-          <i class="sidebar-brand__icon ri-school-line"></i>
+        <div class="sidebar-brand sidebar-brand--collapse" aria-label="校园智学后台">
+          <img class="sidebar-brand__image sidebar-brand__image--compact" :src="smallLogo" alt="校园智学后台">
         </div>
       </router-link>
       <router-link v-else key="expand" class="sidebar-logo-link" to="/">
         <div class="sidebar-brand">
-          <i class="sidebar-brand__icon ri-school-line"></i>
-          <div class="sidebar-brand__text">
-            <strong>{{ displayTitle }}</strong>
-            <span>{{ subtitle }}</span>
-          </div>
+          <img class="sidebar-brand__image sidebar-brand__image--full" :src="fullLogo" alt="校园智学后台">
         </div>
       </router-link>
     </transition>
@@ -20,6 +16,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import useSettingsStore from '@/store/modules/settings'
 
 defineProps({
@@ -30,8 +27,8 @@ defineProps({
 })
 
 const settingsStore = useSettingsStore()
-const displayTitle = computed(() => '校园智学后台')
-const subtitle = computed(() => 'Campus Admin')
+const fullLogo = `${import.meta.env.BASE_URL}logo.png`
+const smallLogo = `${import.meta.env.BASE_URL}small-logo.png`
 
 // 获取Logo背景色
 const getLogoBackground = computed(() => {
@@ -41,13 +38,6 @@ const getLogoBackground = computed(() => {
   return '#f8fbff'
 })
 
-// 获取Logo文字颜色
-const getLogoTextColor = computed(() => {
-  if (settingsStore.isDark) {
-    return 'var(--sidebar-text)'
-  }
-  return '#1b3d67'
-})
 </script>
 
 <style lang="scss" scoped>
@@ -77,7 +67,7 @@ const getLogoTextColor = computed(() => {
     width: 100%;
   }
 
-  &.collapse {
+  &.is-collapse {
     .sidebar-logo-link {
       width: 100%;
       justify-content: center;
@@ -89,58 +79,25 @@ const getLogoTextColor = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
   width: 100%;
   height: 58px;
-  padding: 0 12px;
-  color: v-bind(getLogoTextColor);
+  padding: 0 10px;
 }
 
-.sidebar-brand__icon {
-  font-size: 20px;
-  line-height: 1;
-  color: inherit;
+.sidebar-brand__image {
+  display: block;
+  object-fit: contain;
+  max-width: 100%;
   flex-shrink: 0;
 }
-
-.sidebar-brand__text {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
+.sidebar-brand__image--full {
+  width: 146px;
+  height: 34px;
 }
 
-.sidebar-brand__text strong {
-  color: inherit;
-  font-size: 17px;
-  font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: .02em;
-  white-space: nowrap;
-}
-
-.sidebar-brand__text span {
-  margin-top: 2px;
-  color: var(--el-text-color-secondary);
-  font-size: 10px;
-  line-height: 1.2;
-  white-space: nowrap;
-}
-
-.sidebar-brand--collapse {
-  display: grid;
-  place-items: center;
+.sidebar-brand__image--compact {
   width: 100%;
   height: 100%;
-  padding: 0;
 }
 
-.sidebar-logo-container.collapse .sidebar-brand__icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  margin: 0;
-  transform: translateX(1px);
-}
 </style>

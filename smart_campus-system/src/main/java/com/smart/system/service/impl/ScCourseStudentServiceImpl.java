@@ -10,6 +10,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.smart.common.exception.ServiceException;
 import com.smart.common.utils.DateUtils;
 import com.smart.common.utils.StringUtils;
@@ -76,6 +77,7 @@ public class ScCourseStudentServiceImpl implements IScCourseStudentService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> batchAddCourseStudents(CourseStudentBatchAddDto batchDto) {
         if (batchDto == null || batchDto.getStudentUserIds() == null || batchDto.getStudentUserIds().length == 0) {
             throw new ServiceException("请先选择学生");
@@ -167,6 +169,7 @@ public class ScCourseStudentServiceImpl implements IScCourseStudentService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> selectCourse(Long studentUserId, Long classCourseId, String operator) {
         ScUserProfile profile = requireStudentProfile(studentUserId);
         ScClassCourse classCourse = requireClassCourse(classCourseId);
@@ -186,6 +189,7 @@ public class ScCourseStudentServiceImpl implements IScCourseStudentService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> cancelCourse(Long studentUserId, Long classCourseId, String operator) {
         ScUserProfile profile = requireStudentProfile(studentUserId);
         ScClassCourse classCourse = requireClassCourse(classCourseId);
@@ -203,7 +207,9 @@ public class ScCourseStudentServiceImpl implements IScCourseStudentService {
             result.put("updateBy", operator);
             return result;
         }
-        scCourseStudentMapper.deleteScCourseStudentById(existing.getId());
+        existing.setStatus("2");
+        existing.setRemark("学生退课");
+        scCourseStudentMapper.updateScCourseStudent(existing);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("classCourseId", classCourseId);
         result.put("studentUserId", studentUserId);
@@ -214,6 +220,7 @@ public class ScCourseStudentServiceImpl implements IScCourseStudentService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> selectCourseByApproval(Long studentUserId, Long classCourseId, String operator) {
         requireStudentProfile(studentUserId);
         ScClassCourse classCourse = requireClassCourse(classCourseId);
@@ -230,6 +237,7 @@ public class ScCourseStudentServiceImpl implements IScCourseStudentService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> cancelCourseByApproval(Long studentUserId, Long classCourseId, String operator) {
         ScCourseStudent existing = findActiveSelection(studentUserId, classCourseId);
         if (existing == null) {
@@ -241,7 +249,9 @@ public class ScCourseStudentServiceImpl implements IScCourseStudentService {
             result.put("updateBy", operator);
             return result;
         }
-        scCourseStudentMapper.deleteScCourseStudentById(existing.getId());
+        existing.setStatus("2");
+        existing.setRemark("审核退课");
+        scCourseStudentMapper.updateScCourseStudent(existing);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("classCourseId", classCourseId);
         result.put("studentUserId", studentUserId);
@@ -418,7 +428,7 @@ public class ScCourseStudentServiceImpl implements IScCourseStudentService {
                 || classCourse.getStudentLimit() <= 0) {
             return;
         }
-        int currentCount = countActiveByClassCourseId(classCourse.getId());
+        int currentCount = scCourseStudentMapper.countActiveByClassCourseIdForUpdate(classCourse.getId());
         if (excludeId != null) {
             ScCourseStudent existing = selectScCourseStudentById(excludeId);
             if (existing != null && Objects.equals(existing.getClassCourseId(), classCourse.getId())
@@ -467,22 +477,23 @@ public class ScCourseStudentServiceImpl implements IScCourseStudentService {
         query.setTermId(termId);
         query.setStatus("0");
         List<ScCourseStudent> selections = scCourseStudentMapper.selectScCourseStudentList(query);
-        List<ScClassCourse> result = new ArrayList<>();
-        for (ScCourseStudent selection : selections) {
-            if (selection == null || selection.getClassCourseId() == null
-                    || Objects.equals(selection.getClassCourseId(), excludeClassCourseId)) {
-                continue;
-            }
-            ScClassCourse selectedCourse = scClassCourseService.selectScClassCourseById(selection.getClassCourseId());
-            if (selectedCourse == null || !Objects.equals(selectedCourse.getTermId(), termId)) {
-                continue;
-            }
-            if (!StringUtils.equalsIgnoreCase(StringUtils.trimToEmpty(selectedCourse.getSelectionGroupCode()), groupCode)) {
-                continue;
-            }
-            result.add(selectedCourse);
+        List<Long> classCourseIds = selections.stream()
+                .filter(s -> s != null && s.getClassCourseId() != null
+                        && !Objects.equals(s.getClassCourseId(), excludeClassCourseId))
+                .map(ScCourseStudent::getClassCourseId)
+                .distinct()
+                .collect(Collectors.toList());
+        if (classCourseIds.isEmpty()) {
+            return Collections.emptyList();
         }
-        return result;
+        ScClassCourse ccQuery = new ScClassCourse();
+        ccQuery.setTermId(termId);
+        ccQuery.setStatus("0");
+        List<ScClassCourse> allTermCourses = scClassCourseService.selectScClassCourseList(ccQuery);
+        return allTermCourses.stream()
+                .filter(cc -> cc != null && classCourseIds.contains(cc.getId())
+                        && StringUtils.equalsIgnoreCase(StringUtils.trimToEmpty(cc.getSelectionGroupCode()), groupCode))
+                .collect(Collectors.toList());
     }
 
     private String resolveClassCourseDisplayName(ScClassCourse classCourse) {

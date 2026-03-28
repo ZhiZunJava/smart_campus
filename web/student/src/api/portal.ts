@@ -21,19 +21,19 @@ export function getPortalNoticeDetail(noticeId: number) {
 }
 
 export function getPortalMessageCenter(params: any) {
-  return request({ url: '/campus/portal/student/messages', method: 'get', params })
+  return request({ url: '/campus/portal/messages', method: 'get', params })
 }
 
 export function getPortalMessageOverview(params: any) {
-  return request({ url: '/campus/portal/student/message-center', method: 'get', params })
+  return request({ url: '/campus/portal/message-center', method: 'get', params })
 }
 
 export function getPortalUnreadMessages(params: any) {
-  return request({ url: '/campus/portal/student/messages', method: 'get', params })
+  return request({ url: '/campus/portal/messages', method: 'get', params })
 }
 
 export function markPortalMessageRead(noticeId: number) {
-  return request({ url: `/campus/portal/student/message-center/${noticeId}/read`, method: 'put' })
+  return request({ url: `/campus/portal/message-center/${noticeId}/read`, method: 'put' })
 }
 
 export function getPortalProfile() {
@@ -68,8 +68,24 @@ export function getPortalTeacherSchedule(params: any) {
   return request({ url: '/campus/portal/teacher/my-schedule', method: 'get', params })
 }
 
+export function getAdvisorDashboard(params: any) {
+  return request({ url: '/campus/portal/advisor/dashboard', method: 'get', params })
+}
+
+export function listAdvisorStudents(params: any) {
+  return request({ url: '/campus/portal/advisor/students', method: 'get', params })
+}
+
+export function listAdvisorScores(params: any) {
+  return request({ url: '/campus/portal/advisor/scores', method: 'get', params })
+}
+
 export function getParentDashboard(params: any) {
   return request({ url: '/campus/portal/parent/dashboard', method: 'get', params })
+}
+
+export function listPortalParentChildren(params: any) {
+  return request({ url: '/campus/portal/parent/children', method: 'get', params })
 }
 
 export function listPortalParentCourses(params: any) {
@@ -380,6 +396,23 @@ export function getPortalScoreOverview(query: any) {
 
 export function getPortalScoreDetail(query: any) {
   return request({ url: '/campus/portal/score/detail', method: 'get', params: query })
+}
+
+export function listPortalCourseOfferings(params: any) {
+  return request({ url: '/campus/portal/student/course-offerings', method: 'get', params })
+}
+
+export function getPortalCourseOfferingFilterOptions(params?: any) {
+  return request({ url: '/campus/portal/student/course-offerings/options', method: 'get', params })
+}
+
+export function exportPortalCourseOfferings(data: any) {
+  return request({
+    url: '/campus/portal/student/course-offerings/export',
+    method: 'post',
+    data,
+    responseType: 'blob',
+  })
 }
 
 export async function fetchPortalUserOptions(userType?: string) {

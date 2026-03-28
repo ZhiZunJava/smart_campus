@@ -1,52 +1,92 @@
 <template>
-  <div class="portal-page">
-    <div class="portal-section-title">
-      <h3>我的课程</h3>
-      <el-tag type="success">班级课程视图</el-tag>
-    </div>
-
-    <section class="portal-kpis" style="margin-top: 0; margin-bottom: 18px;">
-      <el-card class="portal-card portal-stat-card"><div class="label">课程数</div><div class="value">{{ courseList.length }}</div><div class="sub">当前学期授课数量</div></el-card>
-      <el-card class="portal-card portal-stat-card"><div class="label">班级数</div><div class="value">{{ classCount }}</div><div class="sub">覆盖教学班级</div></el-card>
-      <el-card class="portal-card portal-stat-card"><div class="label">周学时</div><div class="value">{{ totalHours }}</div><div class="sub">授课工作量参考</div></el-card>
-      <el-card class="portal-card portal-stat-card"><div class="label">学期</div><div class="value">{{ currentTermLabel }}</div><div class="sub">支持学期切换</div></el-card>
+  <div class="portal-page teacher-courses-page">
+    <section class="course-overview">
+      <el-card class="portal-card teacher-courses__hero">
+        <div class="teacher-courses__hero-copy">
+          <span class="teacher-courses__eyebrow">授课总览</span>
+          <h4>{{ currentTermLabel }}</h4>
+          <p>把当前学期授课课程、覆盖班级和学生规模集中展示，方便教师先总览再进入具体教学班。</p>
+          <div class="teacher-courses__hero-tags">
+            <span class="teacher-courses__tag">课程 {{ courseList.length }}</span>
+            <span class="teacher-courses__tag">班级 {{ classCount }}</span>
+            <span class="teacher-courses__tag">周学时 {{ totalHours }}</span>
+          </div>
+        </div>
+        <div class="teacher-courses__hero-stats">
+          <div class="teacher-courses__hero-stat">
+            <span>授课课程</span>
+            <strong>{{ courseList.length }}</strong>
+          </div>
+          <div class="teacher-courses__hero-stat">
+            <span>覆盖班级</span>
+            <strong>{{ classCount }}</strong>
+          </div>
+        </div>
+      </el-card>
     </section>
 
-    <div class="portal-card">
-      <div class="course-filter">
-        <el-select v-model="queryParams.termId" filterable clearable placeholder="选择学期" style="width: 240px" @change="loadCourses">
+    <div class="portal-card teacher-courses__toolbar">
+      <div class="teacher-courses__toolbar-left">
+        <div class="teacher-courses__summary-badge">
+          <i class="ri-calendar-2-line"></i> {{ currentTermLabel }}
+        </div>
+      </div>
+      <div class="teacher-courses__filters">
+        <el-select v-model="queryParams.termId" filterable clearable placeholder="切换学期" class="teacher-courses__select" @change="loadCourses">
           <el-option v-for="item in termOptions" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
-        <el-input v-model="keyword" clearable placeholder="搜索课程名称、班级或课程编码" style="width: 320px" />
+        <el-input v-model="keyword" clearable placeholder="搜索课程名称、班级或课程编码..." class="teacher-courses__input">
+          <template #prefix><i class="ri-search-line"></i></template>
+        </el-input>
       </div>
+    </div>
 
-      <el-table v-loading="loading" :data="filteredCourses">
-        <el-table-column label="课程信息" min-width="260">
-          <template #default="{ row }">
-            <div class="course-cell">
-              <strong>{{ row.courseName }}</strong>
-              <span>{{ row.courseCode || '未配置课程编码' }}</span>
+    <div class="portal-card teacher-courses__list-card">
+      <el-skeleton :loading="loading" animated>
+        <template #template>
+          <div class="teacher-courses__grid">
+            <div v-for="index in 4" :key="`teacher-skeleton-${index}`" class="teacher-course-card teacher-course-card--skeleton">
+              <el-skeleton-item variant="text" class="teacher-course-card__skeleton-line teacher-course-card__skeleton-line--short" />
+              <el-skeleton-item variant="text" class="teacher-course-card__skeleton-line teacher-course-card__skeleton-line--title" />
+              <el-skeleton-item variant="text" class="teacher-course-card__skeleton-line" />
+              <el-skeleton-item variant="rect" class="teacher-course-card__skeleton-block" />
             </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="班级" prop="className" min-width="140" />
-        <el-table-column label="学科类型" prop="subjectType" width="120" />
-        <el-table-column label="周学时" prop="weeklyHours" width="90" />
-        <el-table-column label="已选人数" width="100">
-          <template #default="{ row }">{{ row.selectedStudentCount ?? row.actualStudentCount ?? 0 }}</template>
-        </el-table-column>
-        <el-table-column label="人数上限" prop="studentLimit" width="100" />
-        <el-table-column label="学期" min-width="180">
-          <template #default="{ row }">{{ row.termName || '-' }} {{ row.schoolYear ? `· ${row.schoolYear}` : '' }}</template>
-        </el-table-column>
-        <el-table-column label="课程简介" prop="intro" min-width="260" show-overflow-tooltip />
-        <el-table-column label="操作" width="160" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="openStudentDialog(row)">查看学生</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-      <el-empty v-if="!loading && !filteredCourses.length" description="当前学期暂无授课安排" />
+          </div>
+        </template>
+        <template #default>
+          <div class="teacher-courses__grid" v-if="filteredCourses.length">
+            <div v-for="row in filteredCourses" :key="`teacher-course-${row.id || row.courseId}`" class="teacher-course-card">
+              <div class="teacher-course-card__header">
+                <div class="teacher-course-card__type">{{ row.subjectType || row.courseCategory || '通用课程' }}</div>
+                <div class="teacher-course-card__count">{{ row.selectedStudentCount ?? row.actualStudentCount ?? 0 }} / {{ row.studentLimit ?? '-' }} 人</div>
+              </div>
+              <div class="teacher-course-card__body">
+                <h4>{{ row.courseName || '-' }}</h4>
+                <div class="teacher-course-card__code">{{ row.courseCode || '-' }}<span v-if="row.className"> · {{ row.className }}</span></div>
+                <div class="teacher-course-card__meta">
+                  <span><i class="ri-time-line"></i> 周学时 {{ row.weeklyHours ?? '-' }}</span>
+                  <span><i class="ri-calendar-schedule-line"></i> {{ row.termName || '-' }}</span>
+                  <span><i class="ri-group-line"></i> 上限 {{ row.studentLimit ?? '-' }}</span>
+                </div>
+                <p class="teacher-course-card__intro">{{ row.intro || '暂无课程简介，可点击查看学生了解教学班情况。' }}</p>
+              </div>
+              <div class="teacher-course-card__footer">
+                <div class="teacher-course-card__progress">
+                  <div class="teacher-course-card__progress-track">
+                    <div
+                      class="teacher-course-card__progress-bar"
+                      :style="{ width: `${Math.min(((row.selectedStudentCount ?? row.actualStudentCount ?? 0) / Math.max(Number(row.studentLimit || 1), 1)) * 100, 100)}%` }"
+                    ></div>
+                  </div>
+                  <span>选课进度</span>
+                </div>
+                <el-button type="primary" plain @click="openStudentDialog(row)">查看学生</el-button>
+              </div>
+            </div>
+          </div>
+          <el-empty v-else description="当前学期暂无授课安排" />
+        </template>
+      </el-skeleton>
     </div>
 
     <el-dialog v-model="studentDialogOpen" :title="studentDialogTitle" width="900px" append-to-body>
@@ -102,7 +142,7 @@ const filteredCourses = computed(() => {
 })
 const classCount = computed(() => new Set(courseList.value.map((item: any) => item.classId).filter(Boolean)).size)
 const totalHours = computed(() => courseList.value.reduce((sum: number, item: any) => sum + Number(item.weeklyHours || 0), 0))
-const currentTermLabel = computed(() => termOptions.value.find((item: any) => item.value === queryParams.termId)?.label || '全部')
+const currentTermLabel = computed(() => termOptions.value.find((item: any) => item.value === queryParams.termId)?.label || '当前学期')
 const studentDialogTitle = computed(() => {
   return `${studentDialogSummary.value.courseName || '教学班'}${studentDialogSummary.value.className ? ` / ${studentDialogSummary.value.className}` : ''}`
 })
@@ -147,12 +187,247 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.course-filter {
+.teacher-courses-page {
+  padding: 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.teacher-courses__hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.65fr);
+  gap: 18px;
+  padding: 24px;
+  background:
+    radial-gradient(circle at top left, rgba(24, 148, 106, 0.12) 0%, rgba(24, 148, 106, 0) 34%),
+    linear-gradient(135deg, #ffffff 0%, #f2fbf8 100%);
+}
+
+.teacher-courses__eyebrow {
+  display: inline-flex;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(24, 148, 106, 0.12);
+  color: #12795a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.teacher-courses__hero-copy h4 {
+  margin: 12px 0 0;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--portal-text);
+}
+
+.teacher-courses__hero-copy p {
+  margin: 10px 0 0;
+  color: var(--portal-text-secondary);
+  font-size: 14px;
+  line-height: 1.9;
+}
+
+.teacher-courses__hero-tags {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.teacher-courses__tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(18, 121, 90, 0.14);
+  color: #12795a;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.teacher-courses__hero-stats {
+  display: grid;
+  gap: 12px;
+}
+
+.teacher-courses__hero-stat {
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid var(--portal-border);
+}
+
+.teacher-courses__hero-stat span {
+  color: var(--portal-text-secondary);
+  font-size: 13px;
+}
+
+.teacher-courses__hero-stat strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 28px;
+  color: #12795a;
+}
+
+.teacher-courses__toolbar,
+.teacher-courses__list-card {
+  padding: 18px;
+}
+
+.teacher-courses__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.teacher-courses__summary-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.teacher-courses__filters {
   display: flex;
   gap: 12px;
-  align-items: center;
-  margin-bottom: 16px;
   flex-wrap: wrap;
+}
+
+.teacher-courses__select {
+  width: 220px;
+}
+
+.teacher-courses__input {
+  width: 320px;
+}
+
+.teacher-courses__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.teacher-course-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--portal-border);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff, #f7fcfa);
+}
+
+.teacher-course-card--skeleton {
+  min-height: 22rem;
+}
+
+.teacher-course-card__skeleton-line {
+  height: 1.2rem;
+  border-radius: 999px;
+}
+
+.teacher-course-card__skeleton-line--short {
+  width: 34%;
+}
+
+.teacher-course-card__skeleton-line--title {
+  width: 72%;
+  margin-top: 1rem;
+}
+
+.teacher-course-card__skeleton-block {
+  width: 100%;
+  height: 9.6rem;
+  border-radius: 1.2rem;
+  margin-top: auto;
+}
+
+.teacher-course-card__header,
+.teacher-course-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.teacher-course-card__type {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(18, 121, 90, 0.12);
+  color: #12795a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.teacher-course-card__count {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.teacher-course-card__body h4 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--portal-text);
+}
+
+.teacher-course-card__code {
+  margin-top: 6px;
+  color: var(--portal-text-secondary);
+  font-size: 13px;
+}
+
+.teacher-course-card__meta {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: #667085;
+  font-size: 12px;
+}
+
+.teacher-course-card__intro {
+  margin: 10px 0 0;
+  color: var(--portal-text-secondary);
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.teacher-course-card__progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 140px;
+}
+
+.teacher-course-card__progress-track {
+  height: 4px;
+  border-radius: 999px;
+  background: #dcfce7;
+  overflow: hidden;
+}
+
+.teacher-course-card__progress-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: #16a34a;
+}
+
+.teacher-course-card__progress span {
+  color: #64748b;
+  font-size: 12px;
 }
 
 .course-cell {
@@ -187,5 +462,19 @@ onMounted(async () => {
   border: 1px solid #dbe8f8;
   color: #526076;
   font-size: 12px;
+}
+
+@media (max-width: 960px) {
+  .teacher-courses__hero {
+    grid-template-columns: 1fr;
+  }
+
+  .teacher-courses__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .teacher-courses-page {
+    padding: 20px;
+  }
 }
 </style>

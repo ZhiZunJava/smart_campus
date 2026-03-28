@@ -233,6 +233,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Bell, ChatDotRound, Monitor, Search } from '@element-plus/icons-vue'
 import {
+  buildStaticTaskCards,
   getPortalMessageCenter,
   getPortalMessageOverview,
   getPortalTaskCenter,
@@ -318,6 +319,16 @@ const noticeFilter = ref('unread')
 
 const detailVisible = ref(false)
 const activeMessage = ref<any>(null)
+
+const activeRole = computed(() => {
+  const firstSegment = route.path.split('/')[1]
+  if (userStore.availablePortalRoles.includes(firstSegment)) {
+    return firstSegment
+  }
+  return userStore.preferredPortalRole || 'student'
+})
+
+const messageBasePath = computed(() => `/${activeRole.value}/messages`)
 
 const todoRows = computed<TodoItem[]>(() => (taskCenter.value?.todoTasks || []) as TodoItem[])
 const messageRows = computed<MessageItem[]>(() => portalMessages.value)
@@ -490,13 +501,38 @@ function normalizeTab(value?: unknown): MessageTab {
   return 'todo'
 }
 
+function buildRoleTodoRows(role: string): TodoItem[] {
+  if (role === 'teacher') {
+    return buildStaticTaskCards([
+      { key: 'teacher-message-course', title: '查看授课课程', desc: '查看教学班、学生和授课范围', tag: '课程管理', path: '/teacher/courses', iconType: 'practice' },
+      { key: 'teacher-message-schedule', title: '查看教学课表', desc: '按周查看授课安排', tag: '教学课表', path: '/teacher/schedule', iconType: 'practice' },
+      { key: 'teacher-message-resource', title: '查看教学资源', desc: '进入资源中心查看资料和详情', tag: '资源中心', path: '/teacher/resources', iconType: 'homework' },
+    ]).map((item) => ({ key: item.key, title: item.title, desc: item.statusText, action: item.raw?.action }))
+  }
+  if (role === 'advisor') {
+    return buildStaticTaskCards([
+      { key: 'advisor-message-students', title: '查看学生管理', desc: '浏览学生名册和班级档案', tag: '学生管理', path: '/advisor/students', iconType: 'practice' },
+      { key: 'advisor-message-scores', title: '查看成绩管理', desc: '查看班级成绩和发布状态', tag: '成绩管理', path: '/advisor/scores', iconType: 'exam' },
+      { key: 'advisor-message-dashboard', title: '查看重点班级', desc: '回到辅导员概览关注重点班级', tag: '班级跟进', path: '/advisor/dashboard', iconType: 'homework' },
+    ]).map((item) => ({ key: item.key, title: item.title, desc: item.statusText, action: item.raw?.action }))
+  }
+  if (role === 'parent') {
+    return buildStaticTaskCards([
+      { key: 'parent-message-courses', title: '查看孩子课程', desc: '查看当前学期课程和教师信息', tag: '课程概览', path: '/parent/courses', iconType: 'practice' },
+      { key: 'parent-message-schedule', title: '查看孩子课表', desc: '按周查看孩子课程安排', tag: '课表跟进', path: '/parent/schedule', iconType: 'practice' },
+      { key: 'parent-message-dashboard', title: '切换孩子视角', desc: '返回首页切换不同孩子查看', tag: '家庭关系', path: '/parent/dashboard', iconType: 'homework' },
+    ]).map((item) => ({ key: item.key, title: item.title, desc: item.statusText, action: item.raw?.action }))
+  }
+  return []
+}
+
 function syncTabFromRoute() {
   activeTab.value = normalizeTab(route.query.tab)
 }
 
 function switchTab(tab: MessageTab) {
   activeTab.value = tab
-  router.replace({ path: '/student/messages', query: { ...route.query, tab } })
+  router.replace({ path: messageBasePath.value, query: { ...route.query, tab } })
 }
 
 async function loadData() {
@@ -504,12 +540,23 @@ async function loadData() {
   if (!userId) return
   loading.value = true
   try {
-    const [taskRes, overviewRes, messageRes] = await Promise.all([
-      getPortalTaskCenter({ userId }),
+    if (activeRole.value === 'student') {
+      const [taskRes, overviewRes, messageRes] = await Promise.all([
+        getPortalTaskCenter({ userId }),
+        getPortalMessageOverview({ userId }),
+        getPortalMessageCenter({ userId, limit: 100, includeRead: true }),
+      ])
+      taskCenter.value = taskRes.data || {}
+      overview.value = overviewRes.data || {}
+      portalMessages.value = ((messageRes.data || []) as MessageItem[]).map((item, index) => normalizeMessageItem(item, index))
+      return
+    }
+
+    const [overviewRes, messageRes] = await Promise.all([
       getPortalMessageOverview({ userId }),
       getPortalMessageCenter({ userId, limit: 100, includeRead: true }),
     ])
-    taskCenter.value = taskRes.data || {}
+    taskCenter.value = { todoTasks: buildRoleTodoRows(activeRole.value) }
     overview.value = overviewRes.data || {}
     portalMessages.value = ((messageRes.data || []) as MessageItem[]).map((item, index) => normalizeMessageItem(item, index))
   } finally {
@@ -565,6 +612,10 @@ function handleAction(item: any) {
 
 function openTask(task: any) {
   const action = task?.action || {}
+  if (action.type === 'route' && action.path) {
+    router.push(action.path)
+    return
+  }
   recordTaskFeedback(task)
   syncTaskFeedback(task, 'messages')
   const dispatchId = Number(action?.row?.dispatchId || 0)
@@ -599,15 +650,22 @@ function openTask(task: any) {
   }
   if (action.type === 'course') {
     router.push({
-      path: '/student/courses',
+      path: activeRole.value === 'student' ? '/student/courses' : `/${activeRole.value}/dashboard`,
       query: action.targetId ? { openCourseId: String(action.targetId) } : {},
     })
     return
   }
-  router.push(action.path || '/student/plaza')
+  router.push(action.path || (activeRole.value === 'student' ? '/student/plaza' : messageBasePath.value))
 }
 
 watch(() => route.query.tab, syncTabFromRoute, { immediate: true })
+watch(
+  () => route.path,
+  () => {
+    syncTabFromRoute()
+    loadData()
+  },
+)
 watch(keyword, () => {
   todoPage.value = 1
   messagePage.value = 1
