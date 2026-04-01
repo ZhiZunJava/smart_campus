@@ -18,6 +18,7 @@ import com.smart.common.core.domain.AjaxResult;
 import com.smart.common.core.page.TableDataInfo;
 import com.smart.common.enums.BusinessType;
 import com.smart.system.domain.ScUserProfile;
+import com.smart.system.domain.dto.UserProfileAdvisorBindDto;
 import com.smart.system.service.IScUserProfileService;
 
 /**
@@ -59,6 +60,15 @@ public class ScUserProfileController extends BaseController {
     public AjaxResult edit(@Validated @RequestBody ScUserProfile scUserProfile) {
         scUserProfile.setUpdateBy(getUsername());
         return toAjax(scUserProfileService.updateScUserProfile(scUserProfile));
+    }
+
+    @PreAuthorize("@ss.hasPermi('campus:userProfile:edit')")
+    @Log(title = "学生档案辅导员绑定", businessType = BusinessType.UPDATE)
+    @PutMapping("/bindAdvisor")
+    public AjaxResult bindAdvisor(@Validated @RequestBody UserProfileAdvisorBindDto dto) {
+        AjaxResult ajax = success("批量绑定完成");
+        ajax.put("affectedRows", scUserProfileService.batchBindAdvisor(dto, getUsername()));
+        return ajax;
     }
 
     @PreAuthorize("@ss.hasPermi('campus:userProfile:remove')")

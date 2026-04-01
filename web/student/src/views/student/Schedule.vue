@@ -1,7 +1,7 @@
 <template>
   <div class="portal-page schedule-page">
     <div class="schedule-header-user">
-      <h3>{{ userStore.user?.realName || userStore.user?.username || '程安宁' }}({{ userStore.user?.studentNo || '2401036049' }})</h3>
+      <h3>{{ scheduleHeaderTitle }}</h3>
     </div>
 
     <div class="schedule-content">
@@ -87,9 +87,9 @@
                       v-if="getActivity(row.key, day.value)"
                       class="tdHtml tdHtml--print"
                     >
-                      <div class="course-name">{{ getActivity(row.key, day.value).courseName || '未命名课程' }}</div>
+                      <div class="course-name">{{ formatPrintCourseName(getActivity(row.key, day.value)) }}</div>
                       <div>{{ formatWeeksAndUnits(getActivity(row.key, day.value)) }}</div>
-                      <div>{{ formatLocation(getActivity(row.key, day.value)) }} {{ formatTeachers(getActivity(row.key, day.value)) }}</div>
+                      <div>{{ formatPrintLocationTeachers(getActivity(row.key, day.value)) }}</div>
                       <div>{{ getActivity(row.key, day.value).lessonName || getActivity(row.key, day.value).className || '' }}</div>
                       <div>人数:{{ getStudentCount(getActivity(row.key, day.value)) }}</div>
                     </div>
@@ -131,17 +131,34 @@
                   class="td-content"
                   :rowspan="getRowSpan(row.key, day.value)"
                 >
-                  <div
-                    v-if="getActivity(row.key, day.value)"
+                  <el-tooltip v-if="getActivity(row.key, day.value)" placement="right" :show-after="300" :popper-options="{ modifiers: [{ name: 'offset', options: { offset: [0, 8] } }] }">
+                    <template #content>
+                      <div class="schedule-tooltip">
+                        <div><b>{{ displayClassCourseName(getActivity(row.key, day.value)) }}</b></div>
+                        <div v-if="getActivity(row.key, day.value)?._parallelCount">专项课程: {{ (getActivity(row.key, day.value)?._parallelOptionNames || []).join(', ') }}</div>
+                        <div v-if="getActivity(row.key, day.value)?._combinedCount">合班: {{ getActivity(row.key, day.value)._combinedClassNames }}</div>
+                        <div>周次: {{ formatWeeksLabel(getActivity(row.key, day.value)) }}</div>
+                        <div>节次: {{ getSectionText(getActivity(row.key, day.value)) }}</div>
+                        <div v-if="formatLocation(getActivity(row.key, day.value))">教室: {{ formatLocation(getActivity(row.key, day.value)) }}</div>
+                        <div>教师: {{ formatTeachers(getActivity(row.key, day.value)) || '未配置' }}</div>
+                        <div>班级: {{ getActivity(row.key, day.value)?._combinedClassNames || getActivity(row.key, day.value)?.className || '-' }}</div>
+                        <div>人数: {{ getStudentCount(getActivity(row.key, day.value)) }}</div>
+                      </div>
+                    </template>
+<div
                     class="tdHtml"
                     :style="getCardStyle(getActivity(row.key, day.value))"
                   >
-                    <div class="course-name">{{ getActivity(row.key, day.value).courseName || '未命名课程' }}</div>
+                    <div class="course-name">
+                      <span>{{ displayClassCourseName(getActivity(row.key, day.value)) }}</span>
+                      <span v-if="getActivity(row.key, day.value)?._parallelCount" class="schedule-badge schedule-badge--parallel">{{ getActivity(row.key, day.value)._parallelCount }}专项</span>
+                      <span v-if="getActivity(row.key, day.value)?._combinedCount" class="schedule-badge schedule-badge--combined">合班</span>
+                    </div>
                     <div class="course-meta-list">
                       <div class="course-meta-item course-meta-item--wide">
                         <i class="ri-calendar-event-line"></i>
                         <span>
-                          {{ getActivity(row.key, day.value).weeksStr || '全周' }}
+                          {{ formatWeeksLabel(getActivity(row.key, day.value)) }}
                           ·
                           {{ getSectionText(getActivity(row.key, day.value)) }}
                         </span>
@@ -159,13 +176,14 @@
                       </div>
                     </div>
                     <div class="course-footer">
-                      <div class="lesson-name">{{ getActivity(row.key, day.value).lessonName || getActivity(row.key, day.value).className || '' }}</div>
+                      <div class="lesson-name">{{ getActivity(row.key, day.value)?._combinedClassNames || getActivity(row.key, day.value)?.lessonName || getActivity(row.key, day.value)?.className || '' }}</div>
                       <div class="course-population">
                         <i class="ri-group-line"></i>
                         <span>{{ getStudentCount(getActivity(row.key, day.value)) }}</span>
                       </div>
                     </div>
                   </div>
+                    </el-tooltip>
                   <div v-else class="tdHtml tdHtml--empty"></div>
                 </td>
               </template>
@@ -250,9 +268,20 @@ const weekNumberOptions = computed(() => {
   return Array.from({ length: currentTermTotalWeeks.value }).map((_, index) => index + 1)
 })
 
+const scheduleHeaderTitle = computed(() => {
+  const user = userStore.user || {}
+  const sample = activities.value[0] || {}
+  if (isClassMode.value) {
+    return sample.className || user.className || '我的班级课表'
+  }
+  const name = user.realName || user.username || '程安宁'
+  const studentNo = user.studentNo || '2401036049'
+  return `${name}(${studentNo})`
+})
+
 const printSchoolTitle = computed(() => {
   const user = userStore.user || {}
-  return `${user.schoolName || user.orgName || user.deptName || '校园智学'}学生课表`
+  return `${user.schoolName || user.orgName || user.deptName || '校园智学'}${isClassMode.value ? '班级课表' : '学生课表'}`
 })
 const printTermName = computed(() => currentTermMeta.value?.termName || currentTermMeta.value?.label || '-')
 const printTableRows = computed(() => tableRows.value.map((item: any) => ({
@@ -286,13 +315,36 @@ const visibleActivities = computed(() => {
 })
 
 const activityMap = computed(() => {
-  const map = new Map<string, any>()
+  const map = new Map<string, any[]>()
   visibleActivities.value.forEach((item: any) => {
     const startKey = String(item.startSection || '')
     if (!startKey) return
-    map.set(`${startKey}-${item.weekDay}`, item)
+    const key = `${startKey}-${item.weekDay}`
+    if (!map.has(key)) map.set(key, [])
+    map.get(key)!.push(item)
   })
   return map
+})
+// Merged view: group parallel selection-group and combined-class schedules
+const mergedActivityMap = computed(() => {
+  const result = new Map<string, any>()
+  for (const [key, items] of activityMap.value) {
+    if (items.length === 1) { result.set(key, items[0]); continue }
+    const primary = { ...items[0] }
+    const selGroupItems = items.filter((e: any) => e.selectionGroupCode && e.selectionGroupCode === primary.selectionGroupCode && e.classId === primary.classId)
+    if (selGroupItems.length > 1) {
+      primary._parallelOptionNames = selGroupItems.map((e: any) => e.selectionOptionName || e.teacherName || '').filter(Boolean)
+      primary._parallelTeachers = [...new Set(selGroupItems.map((e: any) => e.teacherName).filter(Boolean))]
+      primary._parallelCount = selGroupItems.length
+    }
+    const combinedItems = items.filter((e: any) => e.combinedClassCode && e.combinedClassCode === primary.combinedClassCode)
+    if (combinedItems.length > 1) {
+      primary._combinedClassNames = [...new Set(combinedItems.map((e: any) => e.className).filter(Boolean))].join('+')
+      primary._combinedCount = combinedItems.length
+    }
+    result.set(key, primary)
+  }
+  return result
 })
 
 const occupiedMap = computed(() => {
@@ -308,6 +360,19 @@ const occupiedMap = computed(() => {
     }
   })
   return map
+})
+
+const activityColorMap = computed(() => {
+  const uniqueKeys: string[] = []
+  const seen = new Set<string>()
+  activities.value.forEach((item: any) => {
+    const key = resolveActivityColorKey(item)
+    if (!key || seen.has(key)) return
+    seen.add(key)
+    uniqueKeys.push(key)
+  })
+  uniqueKeys.sort()
+  return new Map(uniqueKeys.map((key, index) => [key, buildActivityColor(index)]))
 })
 
 const remarkItems = computed(() => remarkLessons.value)
@@ -413,7 +478,7 @@ function getRowSpan(rowKey: string, day: number) {
 function getActivity(rowKey: string, day: number) {
   const row = tableRows.value.find((item) => item.key === rowKey)
   if (!row?.unit) return null
-  return activityMap.value.get(`${row.unit}-${day}`) || null
+  return mergedActivityMap.value.get(`${row.unit}-${day}`) || null
 }
 
 function shouldRenderTimeArea(rowKey: string) {
@@ -478,14 +543,53 @@ function extractWeeks(text?: string) {
 }
 
 function getStudentCount(item: any) {
-  return item?.studentCount ?? item?.studentLimit ?? 0
+  const actual = Number(item?.studentCount ?? item?.actualStudentCount)
+  const limit = Number(item?.studentLimit)
+  if (!Number.isFinite(actual) && !Number.isFinite(limit)) return '0'
+  if (!Number.isFinite(limit) || limit <= 0) return `${Number.isFinite(actual) ? actual : 0}`
+  return `${Number.isFinite(actual) ? actual : 0}/${limit}`
 }
 
 function formatTeachers(item: any) {
-  return item.teacherName || ''
+  if (item?._parallelTeachers?.length > 1) return item._parallelTeachers.join(', ')
+  return item?.teacherName || ''
+}
+
+function displayClassCourseName(item: any) {
+  if (!item) return '-'
+  const displayName = String(item?.courseName || '').trim()
+  const baseCourseName = String(item?.baseCourseName || '').trim()
+  const selectionOptionName = String(item?.selectionOptionName || '').trim()
+  if (isClassMode.value && Number(item?._parallelCount || 0) > 1 && baseCourseName) {
+    return baseCourseName
+  }
+  if (baseCourseName && selectionOptionName && baseCourseName !== selectionOptionName) {
+    const compactSelectionOptionName = isClassMode.value
+      ? getClassScheduleSelectionOptionName(selectionOptionName)
+      : selectionOptionName
+    if (isClassMode.value && compactSelectionOptionName && compactSelectionOptionName !== selectionOptionName) {
+      return `${baseCourseName} ${compactSelectionOptionName}`.trim()
+    }
+    return `${baseCourseName} / ${selectionOptionName}`
+  }
+  return displayName || baseCourseName || selectionOptionName || '-'
+}
+
+function getClassScheduleSelectionOptionName(selectionOptionName: string) {
+  const text = String(selectionOptionName || '').trim()
+  if (!text) return ''
+  const match = text.match(/([0-9一二三四五六七八九十百]+\s*专项)$/)
+  return match ? match[1].replace(/\s+/g, '') : text
+}
+
+function isVirtualClassroomText(value: any) {
+  const text = String(value || '').trim()
+  if (!text) return false
+  return ['空教室', '空场地', '不占用教室'].some((keyword) => text.includes(keyword))
 }
 
 function formatLocation(item: any) {
+  if (!item || isVirtualClassroomText(item?.classroom)) return ''
   const values = [item?.campus, item?.buildingName, item?.classroom]
   const result: string[] = []
   values.forEach((value) => {
@@ -498,7 +602,36 @@ function formatLocation(item: any) {
 }
 
 function formatWeeksAndUnits(item: any) {
-  return `(${item?.weeksStr || '全周'}) (${getSectionText(item)})`
+  return `(${formatWeeksLabel(item)}) (${getSectionText(item)})`
+}
+
+function formatWeeksLabel(item: any) {
+  const text = String(item?.weeksStr || item?.weeksText || '').trim()
+  if (!text) return '全周'
+  if (text === '全周' || text.includes('周')) return text
+  return `${text}周`
+}
+
+function formatPrintCourseName(item: any) {
+  const title = displayClassCourseName(item)
+  const flags: string[] = []
+  const parallelOptions = formatPrintParallelOptions(item)
+  if (parallelOptions) flags.push(parallelOptions)
+  else if (Number(item?._parallelCount || 0) > 1) flags.push(`${item._parallelCount}个专项`)
+  if (Number(item?._combinedCount || 0) > 1) flags.push('合班')
+  return `${title}${flags.length ? `（${flags.join('，')}）` : ''}`.trim()
+}
+
+function formatPrintParallelOptions(item: any) {
+  const names = Array.isArray(item?._parallelOptionNames)
+    ? item._parallelOptionNames.map((name: any) => String(name || '').trim()).filter(Boolean)
+    : []
+  if (!names.length) return ''
+  return Array.from(new Set(names)).join('、')
+}
+
+function formatPrintLocationTeachers(item: any) {
+  return [formatLocation(item), formatTeachers(item)].filter(Boolean).join(' ')
 }
 
 function getUnitLabel(unit: number) {
@@ -651,9 +784,9 @@ function buildPrintRowsHtml() {
       const activity = getActivity(row.key, day.value)
       const content = activity ? `
         <div class="tdHtml">
-          <strong>${escapeHtml(activity.courseName || '未命名课程')}</strong>
+          <strong>${escapeHtml(formatPrintCourseName(activity) || '未命名课程')}</strong>
           <div>${escapeHtml(formatWeeksAndUnits(activity))}</div>
-          <div>${escapeHtml(`${formatLocation(activity)} ${formatTeachers(activity)}`.trim())}</div>
+          <div>${escapeHtml(formatPrintLocationTeachers(activity))}</div>
           <div>${escapeHtml(activity.lessonName || activity.className || '')}</div>
           <div>${escapeHtml(`人数:${getStudentCount(activity)}`)}</div>
         </div>
@@ -682,7 +815,34 @@ function buildPrintHtml() {
       <head>
         <meta charset="UTF-8" />
         <title>${escapeHtml(printSchoolTitle.value)}</title>
-        <style>${buildPrintStyles()}</style>
+        <style>${buildPrintStyles()}
+.schedule-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 3px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.schedule-badge--parallel {
+  background: rgba(230, 162, 60, 0.18);
+  color: #b88230;
+}
+.schedule-badge--combined {
+  background: rgba(64, 158, 255, 0.16);
+  color: #2b7fd4;
+}
+.schedule-tooltip {
+  font-size: 12px;
+  line-height: 1.6;
+  max-width: 280px;
+}
+.schedule-tooltip b {
+  font-size: 13px;
+}
+</style>
       </head>
       <body>
         <div class="print-page">
@@ -759,31 +919,29 @@ function printSchedule() {
 }
 
 function getCardStyle(item: any) {
-  const color = colorFromKey(item.courseCode || item.classCourseId || item.scheduleId)
+  const color = activityColorMap.value.get(resolveActivityColorKey(item)) || buildActivityColor(0)
   return {
-    background: `${hexToRgba(color, 0.18)}`,
-    borderLeft: `2px solid ${color}`,
+    background: color.background,
+    borderLeft: `2px solid ${color.border}`,
   }
 }
 
-function colorFromKey(key: string | number) {
-  const palette = ['#d2a1f2', '#38c8b4', '#f49060', '#7996ca', '#a9ce95', '#6fb0f3', '#dac4a5', '#7fc5a6']
-  const value = String(key || '')
-  let hash = 0
-  for (let index = 0; index < value.length; index += 1) {
-    hash = ((hash << 5) - hash) + value.charCodeAt(index)
-    hash |= 0
-  }
-  return palette[Math.abs(hash) % palette.length]
+function resolveActivityColorKey(item: any) {
+  return String(item?.classCourseId || item?.courseCode || item?.scheduleId || '').trim()
 }
 
-function hexToRgba(hex: string, alpha: number) {
-  const normalized = hex.replace('#', '')
-  const bigint = Number.parseInt(normalized, 16)
-  const r = (bigint >> 16) & 255
-  const g = (bigint >> 8) & 255
-  const b = bigint & 255
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+function buildActivityColor(index: number) {
+  const hue = Math.round((index * 137.508 + 18) % 360)
+  const saturationCycle = [84, 74, 88, 78]
+  const lightnessCycle = [48, 44, 52, 46]
+  const backgroundCycle = [95, 93, 96, 94]
+  const saturation = saturationCycle[index % saturationCycle.length]
+  const lightness = lightnessCycle[Math.floor(index / saturationCycle.length) % lightnessCycle.length]
+  const backgroundLightness = backgroundCycle[index % backgroundCycle.length]
+  return {
+    border: `hsl(${hue}, ${saturation}%, ${lightness}%)`,
+    background: `hsl(${hue}, ${Math.max(52, saturation - 22)}%, ${backgroundLightness}%)`,
+  }
 }
 
 onMounted(async () => {
@@ -1052,6 +1210,37 @@ onMounted(async () => {
   color: #23476d;
   font-size: 12px;
   font-weight: 600;
+}
+
+.schedule-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 3px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.schedule-badge--parallel {
+  background: rgba(230, 162, 60, 0.18);
+  color: #b88230;
+}
+
+.schedule-badge--combined {
+  background: rgba(64, 158, 255, 0.16);
+  color: #2b7fd4;
+}
+
+.schedule-tooltip {
+  font-size: 12px;
+  line-height: 1.6;
+  max-width: 280px;
+}
+
+.schedule-tooltip b {
+  font-size: 13px;
 }
 
 .course-table-fontSize {

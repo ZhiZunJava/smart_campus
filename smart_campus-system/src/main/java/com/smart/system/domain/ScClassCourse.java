@@ -32,6 +32,7 @@ public class ScClassCourse extends BaseEntity {
     private String selectionGroupCode;
     private String selectionGroupName;
     private Integer selectionGroupLimit;
+    private String combinedClassCode;
     private String courseLevelRequirement;
     private Integer totalHours;
     private Integer requiredWeeks;
@@ -249,6 +250,14 @@ public class ScClassCourse extends BaseEntity {
         this.selectionGroupLimit = selectionGroupLimit;
     }
 
+    public String getCombinedClassCode() {
+        return combinedClassCode;
+    }
+
+    public void setCombinedClassCode(String combinedClassCode) {
+        this.combinedClassCode = combinedClassCode;
+    }
+
     public String getCourseLevelRequirement() {
         return courseLevelRequirement;
     }
@@ -342,6 +351,7 @@ public class ScClassCourse extends BaseEntity {
                 .append("selectionGroupCode", getSelectionGroupCode())
                 .append("selectionGroupName", getSelectionGroupName())
                 .append("selectionGroupLimit", getSelectionGroupLimit())
+                .append("combinedClassCode", getCombinedClassCode())
                 .append("courseLevelRequirement", getCourseLevelRequirement())
                 .append("totalHours", getTotalHours())
                 .append("requiredWeeks", getRequiredWeeks())

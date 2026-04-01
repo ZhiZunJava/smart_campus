@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScVerificationRecordMapper">
+
+    <resultMap type="ScVerificationRecord" id="ScVerificationRecordResult">
+        <id property="recordId" column="record_id" />
+        <result property="batchId" column="batch_id" />
+        <result property="studentUserId" column="student_user_id" />
+        <result property="studentNo" column="student_no" />
+        <result property="studentName" column="student_name" />
+        <result property="recordStatus" column="record_status" />
+        <result property="snapshotJson" column="snapshot_json" />
+        <result property="submitTime" column="submit_time" />
+        <result property="reviewUserId" column="review_user_id" />
+        <result property="reviewTime" column="review_time" />
+        <result property="reviewComment" column="review_comment" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+        <result property="remark" column="remark" />
+    </resultMap>
+
+    <sql id="selectScVerificationRecordVo">
+        select r.record_id, r.batch_id, r.student_user_id, r.student_no, r.student_name,
+               r.record_status, r.snapshot_json, r.submit_time, r.review_user_id, r.review_time,
+               r.review_comment, r.create_by, r.create_time, r.update_by, r.update_time, r.remark
+        from sc_verification_record r
+    </sql>
+
+    <select id="selectScVerificationRecordByRecordId" parameterType="Long" resultMap="ScVerificationRecordResult">
+        <include refid="selectScVerificationRecordVo" /> where r.record_id = #{recordId}
+    </select>
+
+    <select id="selectScVerificationRecordList" parameterType="ScVerificationRecord" resultMap="ScVerificationRecordResult">
+        <include refid="selectScVerificationRecordVo" />
+        <where>
+            <if test="batchId != null">and r.batch_id = #{batchId}</if>
+            <if test="studentUserId != null">and r.student_user_id = #{studentUserId}</if>
+            <if test="studentNo != null and studentNo != ''">and r.student_no like concat('%', #{studentNo}, '%')</if>
+            <if test="studentName != null and studentName != ''">and r.student_name like concat('%', #{studentName}, '%')</if>
+            <if test="recordStatus != null and recordStatus != ''">and r.record_status = #{recordStatus}</if>
+        </where>
+        order by r.record_id desc
+    </select>
+
+    <select id="selectByBatchAndStudent" resultMap="ScVerificationRecordResult">
+        <include refid="selectScVerificationRecordVo" />
+        where r.batch_id = #{batchId} and r.student_user_id = #{studentUserId}
+        limit 1
+    </select>
+
+    <select id="countByBatchAndStatus" resultType="java.util.Map">
+        select record_status as status, count(*) as cnt
+        from sc_verification_record
+        where batch_id = #{batchId}
+        group by record_status
+    </select>
+
+    <insert id="insertScVerificationRecord" parameterType="ScVerificationRecord" useGeneratedKeys="true" keyProperty="recordId">
+        insert into sc_verification_record
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="batchId != null">batch_id,</if>
+            <if test="studentUserId != null">student_user_id,</if>
+            <if test="studentNo != null">student_no,</if>
+            <if test="studentName != null">student_name,</if>
+            <if test="recordStatus != null and recordStatus != ''">record_status,</if>
+            <if test="snapshotJson != null">snapshot_json,</if>
+            <if test="submitTime != null">submit_time,</if>
+            <if test="reviewUserId != null">review_user_id,</if>
+            <if test="reviewTime != null">review_time,</if>
+            <if test="reviewComment != null">review_comment,</if>
+            <if test="createBy != null and createBy != ''">create_by,</if>
+            <if test="remark != null">remark,</if>
+            create_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="batchId != null">#{batchId},</if>
+            <if test="studentUserId != null">#{studentUserId},</if>
+            <if test="studentNo != null">#{studentNo},</if>
+            <if test="studentName != null">#{studentName},</if>
+            <if test="recordStatus != null and recordStatus != ''">#{recordStatus},</if>
+            <if test="snapshotJson != null">#{snapshotJson},</if>
+            <if test="submitTime != null">#{submitTime},</if>
+            <if test="reviewUserId != null">#{reviewUserId},</if>
+            <if test="reviewTime != null">#{reviewTime},</if>
+            <if test="reviewComment != null">#{reviewComment},</if>
+            <if test="createBy != null and createBy != ''">#{createBy},</if>
+            <if test="remark != null">#{remark},</if>
+            sysdate()
+        </trim>
+    </insert>
+
+    <insert id="batchInsertRecords" parameterType="java.util.List">
+        insert into sc_verification_record (batch_id, student_user_id, student_no, student_name,
+            record_status, create_by, create_time)
+        values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.batchId}, #{item.studentUserId}, #{item.studentNo}, #{item.studentName},
+             'PENDING', #{item.createBy}, sysdate())
+        </foreach>
+    </insert>
+
+    <update id="updateScVerificationRecord" parameterType="ScVerificationRecord">
+        update sc_verification_record
+        <set>
+            <if test="recordStatus != null and recordStatus != ''">record_status = #{recordStatus},</if>
+            <if test="snapshotJson != null">snapshot_json = #{snapshotJson},</if>
+            <if test="submitTime != null">submit_time = #{submitTime},</if>
+            <if test="reviewUserId != null">review_user_id = #{reviewUserId},</if>
+            <if test="reviewTime != null">review_time = #{reviewTime},</if>
+            <if test="reviewComment != null">review_comment = #{reviewComment},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            update_time = sysdate()
+        </set>
+        where record_id = #{recordId}
+    </update>
+
+    <delete id="deleteScVerificationRecordByRecordId" parameterType="Long">
+        delete from sc_verification_record where record_id = #{recordId}
+    </delete>
+
+    <delete id="deleteScVerificationRecordByBatchId" parameterType="Long">
+        delete from sc_verification_record where batch_id = #{batchId}
+    </delete>
+</mapper>

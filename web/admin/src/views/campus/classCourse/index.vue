@@ -42,6 +42,12 @@
       <el-table-column label="开课部门" min-width="180"><template #default="{ row }">{{ row.openDeptName || '-' }}</template></el-table-column>
       <el-table-column label="专业" prop="major" min-width="160" />
       <el-table-column label="教学班代码" prop="teachingClassCode" min-width="150" />
+      <el-table-column label="合班编码" min-width="130">
+        <template #default="{ row }">
+          <el-tag v-if="row.combinedClassCode" size="small" type="warning">{ { row.combinedClassCode } }</el-tag>
+          <span v-else>-</span>
+        </template>
+      </el-table-column>
       <el-table-column label="专项分组" min-width="180">
         <template #default="{ row }">{{ row.selectionGroupName || row.selectionGroupCode || '-' }}</template>
       </el-table-column>
@@ -134,6 +140,7 @@
                 <el-form-item label="组内限选"><el-input-number v-model="form.selectionGroupLimit" :min="1" :max="10" style="width:100%" /></el-form-item>
               </div>
             </div>
+            <el-form-item label="合班编码"><el-input v-model="form.combinedClassCode" placeholder="相同编码的班级课程合班上课" clearable /></el-form-item>
             <el-form-item label="等级要求"><el-input v-model="form.courseLevelRequirement" placeholder="例如 无" /></el-form-item>
             <el-form-item label="总课时"><el-input-number v-model="form.totalHours" :min="0" :max="500" style="width:100%" @change="syncTeachingLoad('total')" /></el-form-item>
             <el-form-item label="要求周数"><el-input-number v-model="form.requiredWeeks" :min="0" :max="40" style="width:100%" @change="syncTeachingLoad('weeks')" /></el-form-item>
@@ -216,7 +223,7 @@ const hasSelectionGroupConfig = computed(() => {
 })
 const isSelectionGroupScenario = computed(() => isSportsLikeCourse.value || hasSelectionGroupConfig.value)
 const selectionGroupPanelExpanded = computed(() => selectionGroupPanelOpen.value || isSelectionGroupScenario.value)
-function resetForm(){ selectionGroupPanelOpen.value = false; Object.assign(form,{ id:undefined,classId:undefined,courseId:undefined,teacherId:undefined,termId:undefined,businessType:'专科',teachingClassCode:'',credits:0,courseCategory:'理论',openDeptId:undefined,major:undefined,campusName:'本部',assessmentType:'考查',teachingLanguage:'中文授课',prerequisiteCourse:'无',taskType:'正常',requiredFlag:'N',selectionOptionName:'',selectionGroupCode:'',selectionGroupName:'',selectionGroupLimit:1,courseLevelRequirement:'无',totalHours:0,requiredWeeks:15,weeklyHours:0,arrangedHours:0,studentLimit:0,status:'0',remark:'' }) }
+function resetForm(){ selectionGroupPanelOpen.value = false; Object.assign(form,{ id:undefined,classId:undefined,courseId:undefined,teacherId:undefined,termId:undefined,businessType:'专科',teachingClassCode:'',credits:0,courseCategory:'理论',openDeptId:undefined,major:undefined,campusName:'本部',assessmentType:'考查',teachingLanguage:'中文授课',prerequisiteCourse:'无',taskType:'正常',requiredFlag:'N',selectionOptionName:'',selectionGroupCode:'',selectionGroupName:'',selectionGroupLimit:1,combinedClassCode:'',courseLevelRequirement:'无',totalHours:0,requiredWeeks:15,weeklyHours:0,arrangedHours:0,studentLimit:0,status:'0',remark:'' }) }
 function applyAiDraft(draft: Record<string, any>) { Object.assign(form, draft) }
 async function getList(){ loading.value=true; const res=await listClassCourse(queryParams); dataList.value=res.rows||[]; total.value=res.total||0; loading.value=false }
 function resetQuery(){ queryParams.pageNum=1; queryParams.classId=undefined; queryParams.courseId=undefined; queryParams.termId=undefined; queryParams.openDeptId=undefined; queryParams.major=undefined; getList() }

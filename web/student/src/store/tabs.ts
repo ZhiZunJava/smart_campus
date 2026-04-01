@@ -62,6 +62,28 @@ export const useTabsStore = defineStore('portal-tabs', {
     closeAll() {
       this.visitedTabs = this.visitedTabs.filter(t => !t.closable)
       this.activeTabPath = ''
+    },
+    closeOthers(keepPath: string) {
+      this.visitedTabs = this.visitedTabs.filter(t => !t.closable || t.path === keepPath)
+      if (!this.visitedTabs.find(t => t.path === this.activeTabPath)) {
+        this.activeTabPath = keepPath
+      }
+    },
+    closeRight(anchorPath: string) {
+      const idx = this.visitedTabs.findIndex(t => t.path === anchorPath)
+      if (idx < 0) return
+      this.visitedTabs = this.visitedTabs.filter((t, i) => i <= idx || !t.closable)
+      if (!this.visitedTabs.find(t => t.path === this.activeTabPath)) {
+        this.activeTabPath = anchorPath
+      }
+    },
+    closeLeft(anchorPath: string) {
+      const idx = this.visitedTabs.findIndex(t => t.path === anchorPath)
+      if (idx < 0) return
+      this.visitedTabs = this.visitedTabs.filter((t, i) => i >= idx || !t.closable)
+      if (!this.visitedTabs.find(t => t.path === this.activeTabPath)) {
+        this.activeTabPath = anchorPath
+      }
     }
   },
   getters: {

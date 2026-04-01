@@ -10,7 +10,16 @@
             </div>
 
             <div class="catalog-course-card">
-              <div class="catalog-course-card__meta">
+              <div v-if="courseLoading" class="catalog-course-card__skeleton">
+                <div class="catalog-course-card__skeleton-line is-badge"></div>
+                <div class="catalog-course-card__skeleton-line is-title"></div>
+                <div class="catalog-course-card__skeleton-line"></div>
+                <div class="catalog-course-card__skeleton-stats">
+                  <span></span>
+                  <span></span>
+                </div>
+              </div>
+              <div v-else class="catalog-course-card__meta">
                 <div class="catalog-course-card__status">
                   <span class="course-status-badge">
                     <i class="ri-stack-line"></i>
@@ -40,13 +49,17 @@
               <div class="catalog-tree-panel__title">
                 <div class="catalog-tree-panel__title-main">
                   <strong>课程目录</strong>
+                  <p>按课程目录逐层浏览，右侧会自动聚合当前节点下的资源。</p>
                 </div>
                 <span>{{ treeFlatCount }} 项</span>
               </div>
+              <div v-if="treeLoading" class="catalog-tree-skeleton">
+                <div v-for="index in 6" :key="`tree-skeleton-${index}`" class="catalog-tree-skeleton__row"></div>
+              </div>
               <el-empty v-if="!courseId" description="请选择课程" :image-size="72" />
-              <el-empty v-else-if="!treeData.length" description="当前课程还没有目录内容" :image-size="72" />
+              <el-empty v-else-if="!treeLoading && !treeData.length" description="当前课程还没有目录内容" :image-size="72" />
               <el-tree
-                v-else
+                v-else-if="!treeLoading"
                 node-key="nodeId"
                 :data="treeData"
                 :props="{ label: 'nodeName', children: 'children' }"
@@ -81,6 +94,28 @@
         <el-scrollbar>
           <div class="main-inner">
             <div class="catalog-main-toolbar">
+              <div class="catalog-main-toolbar__head">
+                <div class="catalog-main-toolbar__title">
+                  <span class="catalog-main-toolbar__eyebrow">资源浏览</span>
+                  <h2>{{ selectedNode ? selectedNodeLabel : (currentCourseLabel || '资源中心') }}</h2>
+                  <p>{{ selectedNode ? '已按当前目录聚合课时资源，可继续按类型、制作单位和关键词细化。' : '先从左侧选择课程和目录节点，再查看具体资源内容。' }}</p>
+                </div>
+                <div class="catalog-main-toolbar__stats">
+                  <div class="catalog-main-toolbar__stat">
+                    <span>当前课程</span>
+                    <strong>{{ currentCourseLabel || '未选择' }}</strong>
+                  </div>
+                  <div class="catalog-main-toolbar__stat">
+                    <span>目录节点</span>
+                    <strong>{{ treeFlatCount }}</strong>
+                  </div>
+                  <div class="catalog-main-toolbar__stat">
+                    <span>筛选结果</span>
+                    <strong>{{ resultCount }}</strong>
+                  </div>
+                </div>
+              </div>
+
               <div class="catalog-main-tabs">
                 <button
                   v-for="item in assetTypeOptions"
@@ -113,6 +148,16 @@
               </div>
             </div>
 
+            <div v-if="activeFilterTags.length" class="catalog-active-filters">
+              <span class="catalog-active-filters__label">
+                <i class="ri-equalizer-line"></i>
+                当前筛选
+              </span>
+              <span v-for="item in activeFilterTags" :key="item.label" class="catalog-active-filters__chip">
+                {{ item.label }}
+              </span>
+            </div>
+
             <div v-if="selectedNode" class="catalog-results-bar">
               <div class="catalog-results-bar__info">
                 <i class="ri-node-tree"></i>
@@ -126,19 +171,42 @@
             </div>
 
             <div class="catalog-main-list">
-              <el-empty v-if="!selectedNode" description="请先从左侧选择目录节点" />
+              <div v-if="articlesLoading" class="catalog-main-skeleton">
+                <article v-for="index in 4" :key="`article-skeleton-${index}`" class="catalog-main-skeleton__card">
+                  <div class="catalog-main-skeleton__cover"></div>
+                  <div class="catalog-main-skeleton__content">
+                    <div class="catalog-main-skeleton__line is-short"></div>
+                    <div class="catalog-main-skeleton__line is-title"></div>
+                    <div class="catalog-main-skeleton__line"></div>
+                    <div class="catalog-main-skeleton__line"></div>
+                    <div class="catalog-main-skeleton__chips">
+                      <span></span>
+                      <span></span>
+                    </div>
+                  </div>
+                </article>
+              </div>
+              <el-empty v-else-if="!selectedNode" description="请先从左侧选择目录节点" />
               <template v-else>
                 <article
                   v-for="item in filteredArticles"
                   :key="item.resourceId"
                   class="catalog-lesson-card"
+                  role="button"
+                  tabindex="0"
                   @click="openDetail(item)"
+                  @keyup.enter="openDetail(item)"
+                  @keyup.space.prevent="openDetail(item)"
                 >
                   <div class="catalog-lesson-card__cover">
                     <img v-if="item.coverUrl" :src="resolveResourceUrl(item.coverUrl)" :alt="item.resourceName">
                     <div v-else class="catalog-lesson-card__cover-fallback">
                       <i :class="getAssetTypeIcon(getArticleAssetType(item))"></i>
                       <span>{{ getAssetTypeLabel(getArticleAssetType(item)) }}</span>
+                    </div>
+                    <div class="catalog-lesson-card__cover-meta">
+                      <span>{{ displayDate(item.createTime) }}</span>
+                      <span>{{ item._assetTypes?.length || 0 }} 类附件</span>
                     </div>
                   </div>
 
@@ -155,7 +223,7 @@
                             <span>{{ formatRating(item.avgRating) }} 分</span>
                           </div>
                         </div>
-                        <h3>{{ item.resourceName }}</h3>
+                        <h3 :title="item.resourceName">{{ item.resourceName }}</h3>
                         <p class="catalog-lesson-card__summary">{{ getArticleSummary(item) }}</p>
                       </div>
                       <div class="catalog-lesson-card__cta">
@@ -211,6 +279,9 @@ const treeData = ref<any[]>([])
 const selectedNode = ref<any>(null)
 const articleList = ref<any[]>([])
 const filteredArticles = ref<any[]>([])
+const courseLoading = ref(false)
+const treeLoading = ref(false)
+const articlesLoading = ref(false)
 const keyword = ref('')
 const publisherFilter = ref('')
 const sortMode = ref('smart')
@@ -240,6 +311,19 @@ const currentAssetTypeLabel = computed(() => assetTypeOptions.find((item) => ite
 const selectedNodeLabel = computed(() => selectedNode.value?.nodeName || '请选择左侧目录节点')
 const resultCount = computed(() => filteredArticles.value.length)
 const hasActiveFilters = computed(() => Boolean(keyword.value.trim() || publisherFilter.value || sortMode.value !== 'smart'))
+const activeFilterTags = computed(() => {
+  const tags: Array<{ label: string }> = []
+  if (keyword.value.trim()) tags.push({ label: `关键词：${keyword.value.trim()}` })
+  if (publisherFilter.value) tags.push({ label: `制作单位：${publisherFilter.value}` })
+  if (sortMode.value !== 'smart') {
+    const label = sortOptions.find((item) => item.value === sortMode.value)?.label || sortMode.value
+    tags.push({ label: `排序：${label}` })
+  }
+  if (catalogAssetType.value) {
+    tags.push({ label: `资源类型：${currentAssetTypeLabel.value}` })
+  }
+  return tags
+})
 const treeFlatCount = computed(() => {
   const walk = (items: any[]): number => items.reduce((sum, item) => sum + 1 + walk(item.children || []), 0)
   return walk(treeData.value)
@@ -297,22 +381,27 @@ function toggleTreeNode(node: any) {
 
 async function loadCourses() {
   restoringState.value = true
-  const storedState = readStoredState()
-  courseOptions.value = await fetchPortalCourseOptions(userStore.user?.userId)
-  const queryCourseId = Number(storedState.courseId || route.query.courseId || 0)
-  if (queryCourseId) {
-    courseId.value = queryCourseId
-  } else if (!courseId.value && courseOptions.value.length) {
-    courseId.value = courseOptions.value[0].value
+  courseLoading.value = true
+  try {
+    const storedState = readStoredState()
+    courseOptions.value = await fetchPortalCourseOptions(userStore.user?.userId)
+    const queryCourseId = Number(storedState.courseId || route.query.courseId || 0)
+    if (queryCourseId) {
+      courseId.value = queryCourseId
+    } else if (!courseId.value && courseOptions.value.length) {
+      courseId.value = courseOptions.value[0].value
+    }
+    keyword.value = String(storedState.keyword || route.query.keyword || '')
+    publisherFilter.value = String(storedState.publisher || route.query.publisher || '')
+    sortMode.value = String(storedState.sort || route.query.sort || 'smart')
+    catalogAssetType.value = String(storedState.assetType || route.query.assetType || 'video_course')
+    if (courseId.value) {
+      await handleCourseChange()
+    }
+  } finally {
+    courseLoading.value = false
+    restoringState.value = false
   }
-  keyword.value = String(storedState.keyword || route.query.keyword || '')
-  publisherFilter.value = String(storedState.publisher || route.query.publisher || '')
-  sortMode.value = String(storedState.sort || route.query.sort || 'smart')
-  catalogAssetType.value = String(storedState.assetType || route.query.assetType || 'video_course')
-  if (courseId.value) {
-    await handleCourseChange()
-  }
-  restoringState.value = false
 }
 
 async function loadTree() {
@@ -320,8 +409,13 @@ async function loadTree() {
     treeData.value = []
     return
   }
-  const res = await getResourceTree(courseId.value)
-  treeData.value = res.data || []
+  treeLoading.value = true
+  try {
+    const res = await getResourceTree(courseId.value)
+    treeData.value = res.data || []
+  } finally {
+    treeLoading.value = false
+  }
 }
 
 async function handleCourseChange() {
@@ -370,18 +464,23 @@ async function loadArticles() {
     filteredArticles.value = []
     return
   }
-  const res = await listResource({
-    pageNum: 1,
-    pageSize: 200,
-    courseId: courseId.value,
-    nodeId: selectedNode.value.nodeId,
-    auditStatus: '1',
-    status: '0',
-    targetUserType: 'student',
-  })
-  articleList.value = (res.rows || []).map((item: any) => ({ ...item, _assetTypes: [] }))
-  await enrichArticleAssets()
-  filterArticles()
+  articlesLoading.value = true
+  try {
+    const res = await listResource({
+      pageNum: 1,
+      pageSize: 200,
+      courseId: courseId.value,
+      nodeId: selectedNode.value.nodeId,
+      auditStatus: '1',
+      status: '0',
+      targetUserType: 'student',
+    })
+    articleList.value = (res.rows || []).map((item: any) => ({ ...item, _assetTypes: [] }))
+    await enrichArticleAssets()
+    filterArticles()
+  } finally {
+    articlesLoading.value = false
+  }
 }
 
 async function enrichArticleAssets() {
@@ -557,6 +656,51 @@ onMounted(loadCourses)
   min-width: 0;
 }
 
+.catalog-course-card__skeleton {
+  display: grid;
+  gap: 10px;
+}
+
+.catalog-course-card__skeleton-line,
+.catalog-course-card__skeleton-stats span,
+.catalog-tree-skeleton__row,
+.catalog-main-skeleton__cover,
+.catalog-main-skeleton__line,
+.catalog-main-skeleton__chips span {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, #eef4f8 0%, #f8fbfd 50%, #eef4f8 100%);
+  background-size: 200% 100%;
+  animation: resource-skeleton 1.4s ease-in-out infinite;
+}
+
+.catalog-course-card__skeleton-line {
+  height: 14px;
+  border-radius: 999px;
+}
+
+.catalog-course-card__skeleton-line.is-badge {
+  width: 92px;
+  height: 28px;
+}
+
+.catalog-course-card__skeleton-line.is-title {
+  width: 68%;
+  height: 20px;
+}
+
+.catalog-course-card__skeleton-stats {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.catalog-course-card__skeleton-stats span {
+  width: 88px;
+  height: 12px;
+  border-radius: 999px;
+}
+
 .catalog-course-card__status {
   margin-bottom: 8px;
 }
@@ -654,6 +798,16 @@ onMounted(loadCourses)
   display: inline-flex;
   align-items: center;
   font-weight: 600;
+}
+
+.catalog-tree-skeleton {
+  display: grid;
+  gap: 8px;
+}
+
+.catalog-tree-skeleton__row {
+  height: 42px;
+  border-radius: 12px;
 }
 
 :deep(.el-tree) {
@@ -780,6 +934,80 @@ onMounted(loadCourses)
   border-bottom: 1px solid #f1f5f9;
 }
 
+.catalog-main-toolbar__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.catalog-main-toolbar__title {
+  min-width: 0;
+  flex: 1;
+}
+
+.catalog-main-toolbar__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #effbff;
+  color: var(--rc-primary-deep);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.catalog-main-toolbar__title h2 {
+  margin: 10px 0 6px;
+  color: var(--rc-ink);
+  font-size: 26px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.catalog-main-toolbar__title p {
+  margin: 0;
+  color: var(--rc-muted);
+  font-size: 14px;
+  line-height: 1.7;
+  max-width: 58ch;
+}
+
+.catalog-main-toolbar__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.catalog-main-toolbar__stat {
+  min-height: 72px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fcff 100%);
+  border: 1px solid #e2edf5;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.04);
+}
+
+.catalog-main-toolbar__stat span {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.catalog-main-toolbar__stat strong {
+  display: block;
+  color: var(--rc-ink);
+  font-size: 17px;
+  line-height: 1.3;
+  font-weight: 700;
+}
+
 .catalog-main-tabs {
   display: flex;
   gap: 10px;
@@ -865,6 +1093,36 @@ onMounted(loadCourses)
   color: var(--rc-primary-deep);
 }
 
+.catalog-active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.catalog-active-filters__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.catalog-active-filters__chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .catalog-results-bar {
   margin-top: 18px;
   padding: 14px 16px;
@@ -905,6 +1163,57 @@ onMounted(loadCourses)
   gap: 14px;
 }
 
+.catalog-main-skeleton {
+  display: grid;
+  gap: 14px;
+}
+
+.catalog-main-skeleton__card {
+  display: grid;
+  grid-template-columns: 216px minmax(0, 1fr);
+  gap: 18px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.catalog-main-skeleton__cover {
+  height: 132px;
+  border-radius: 14px;
+}
+
+.catalog-main-skeleton__content {
+  display: grid;
+  gap: 12px;
+}
+
+.catalog-main-skeleton__line {
+  height: 13px;
+  border-radius: 999px;
+}
+
+.catalog-main-skeleton__line.is-short {
+  width: 112px;
+}
+
+.catalog-main-skeleton__line.is-title {
+  width: 56%;
+  height: 18px;
+}
+
+.catalog-main-skeleton__chips {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.catalog-main-skeleton__chips span {
+  width: 100px;
+  height: 34px;
+  border-radius: 999px;
+}
+
 .catalog-lesson-card {
   display: grid;
   grid-template-columns: 216px minmax(0, 1fr);
@@ -915,12 +1224,18 @@ onMounted(loadCourses)
   background: #fff;
   cursor: pointer;
   transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  outline: none;
 }
 
 .catalog-lesson-card:hover {
   border-color: rgba(8, 145, 178, 0.18);
   box-shadow: 0 18px 34px rgba(15, 23, 42, 0.08);
   transform: translateY(-2px);
+}
+
+.catalog-lesson-card:focus-visible {
+  border-color: rgba(8, 145, 178, 0.42);
+  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.14);
 }
 
 .catalog-lesson-card__cover {
@@ -931,12 +1246,18 @@ onMounted(loadCourses)
   overflow: hidden;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
+  position: relative;
 }
 
 .catalog-lesson-card__cover img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.24s ease;
+}
+
+.catalog-lesson-card:hover .catalog-lesson-card__cover img {
+  transform: scale(1.03);
 }
 
 .catalog-lesson-card__cover-fallback {
@@ -959,6 +1280,30 @@ onMounted(loadCourses)
   font-size: 14px;
   font-weight: 500;
   letter-spacing: 0.08em;
+}
+
+.catalog-lesson-card__cover-meta {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.catalog-lesson-card__cover-meta span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.64);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  backdrop-filter: blur(6px);
 }
 
 .catalog-lesson-card__content {
@@ -1049,6 +1394,11 @@ onMounted(loadCourses)
   font-weight: 700;
   flex-shrink: 0;
   padding-top: 2px;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.catalog-lesson-card:hover .catalog-lesson-card__cta {
+  transform: translateX(2px);
 }
 
 .catalog-lesson-card__meta-row {
@@ -1115,12 +1465,22 @@ onMounted(loadCourses)
   .resource-catalog-shell {
     grid-template-columns: 1fr;
   }
+
+  .catalog-main-toolbar__stats {
+    width: 100%;
+  }
 }
 
 @media (max-width: 960px) {
+  .catalog-main-toolbar__head,
   .catalog-main-filters {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .catalog-main-toolbar__stats,
+  .catalog-main-skeleton__card {
+    grid-template-columns: 1fr;
   }
 
   .catalog-main-tabs {
@@ -1146,9 +1506,21 @@ onMounted(loadCourses)
   .catalog-tree-node,
   .catalog-main-tab,
   .catalog-reset-btn,
-  .catalog-lesson-card {
+  .catalog-lesson-card,
+  .catalog-lesson-card__cover img,
+  .catalog-lesson-card__cta {
     transition: none !important;
     transform: none !important;
+  }
+}
+
+@keyframes resource-skeleton {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
   }
 }
 </style>

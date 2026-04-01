@@ -184,6 +184,61 @@ public class CampusPortalController extends BaseController {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private com.smart.system.service.IScTextbookPlanService scTextbookPlanService;
+
+    @Autowired
+    private com.smart.system.service.IScTextbookService scTextbookService;
+
+    /**
+     * 学生端 - 获取本学期教材计划列表
+     * 根据学生所在年级/班级 + 当前学期匹配教材计划，附带教材详情
+     */
+    @PreAuthorize("@ss.hasAnyRoles('student,admin')")
+    @GetMapping("/student/textbook-plans")
+    public AjaxResult studentTextbookPlans(@RequestParam Long userId) {
+        ScUserProfile profile = scUserProfileService.selectScUserProfileByUserId(userId);
+        if (profile == null) {
+            return success(Collections.emptyList());
+        }
+        Long termId = resolveCurrentPortalTermId();
+        com.smart.system.domain.ScTextbookPlan query = new com.smart.system.domain.ScTextbookPlan();
+        query.setTermId(termId);
+        query.setPlanStatus("PUBLISHED");
+        List<com.smart.system.domain.ScTextbookPlan> allPlans = scTextbookPlanService.selectScTextbookPlanList(query);
+        // 过滤：匹配学生年级/班级 或 全校级计划
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (com.smart.system.domain.ScTextbookPlan plan : allPlans) {
+            boolean gradeMatch = plan.getGradeId() == null || Objects.equals(plan.getGradeId(), profile.getGradeId());
+            boolean classMatch = plan.getClassId() == null || Objects.equals(plan.getClassId(), profile.getClassId());
+            if (gradeMatch && classMatch) {
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("planId", plan.getPlanId());
+                item.put("termId", plan.getTermId());
+                item.put("termName", plan.getTermName());
+                item.put("textbookId", plan.getTextbookId());
+                item.put("textbookName", plan.getTextbookName());
+                item.put("courseName", plan.getCourseName());
+                item.put("gradeName", plan.getGradeName());
+                item.put("className", plan.getClassName());
+                item.put("planQuantity", plan.getPlanQuantity());
+                item.put("distributedQuantity", plan.getDistributedQuantity());
+                // 附带教材详细信息
+                com.smart.system.domain.ScTextbook tb = scTextbookService.selectScTextbookByTextbookId(plan.getTextbookId());
+                if (tb != null) {
+                    item.put("isbn", tb.getIsbn());
+                    item.put("author", tb.getAuthor());
+                    item.put("publisher", tb.getPublisher());
+                    item.put("edition", tb.getEdition());
+                    item.put("price", tb.getPrice());
+                    item.put("textbookCode", tb.getTextbookCode());
+                }
+                result.add(item);
+            }
+        }
+        return success(result);
+    }
+
     @PreAuthorize("@ss.hasAnyRoles('student,admin')")
     @GetMapping("/student/dashboard")
     public AjaxResult studentDashboard(@RequestParam Long userId,
@@ -1457,9 +1512,10 @@ public class CampusPortalController extends BaseController {
             return error("无权查看其他辅导员的数据");
         }
         Long effectiveTermId = termId == null ? resolveCurrentPortalTermId() : termId;
-        List<ScClass> advisorClasses = loadAdvisorClasses(advisorUserId);
-        List<Map<String, Object>> advisorStudents = buildAdvisorStudentRows(advisorClasses, null, null);
-        List<ScStudentScore> advisorScores = loadAdvisorScores(advisorClasses, effectiveTermId, null, null);
+        List<ScUserProfile> advisorProfiles = loadAdvisorStudentProfiles(advisorUserId);
+        List<ScClass> advisorClasses = loadAdvisorClasses(advisorUserId, advisorProfiles);
+        List<Map<String, Object>> advisorStudents = buildAdvisorStudentRows(advisorProfiles, advisorClasses, null, null);
+        List<ScStudentScore> advisorScores = loadAdvisorScores(advisorProfiles, effectiveTermId, null, null);
         List<ScClassCourse> advisorClassCourses = loadAdvisorClassCourses(advisorClasses, effectiveTermId);
 
         long passCount = advisorScores.stream().filter(item -> "1".equals(item.getPassFlag())).count();
@@ -1494,10 +1550,11 @@ public class CampusPortalController extends BaseController {
         if (!canOperateAdvisorPortal(advisorUserId)) {
             return error("无权查看其他辅导员的数据");
         }
-        List<ScClass> advisorClasses = loadAdvisorClasses(advisorUserId);
+        List<ScUserProfile> advisorProfiles = loadAdvisorStudentProfiles(advisorUserId);
+        List<ScClass> advisorClasses = loadAdvisorClasses(advisorUserId, advisorProfiles);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("classOptions", buildAdvisorClassOptions(advisorClasses));
-        result.put("items", buildAdvisorStudentRows(advisorClasses, classId, keyword));
+        result.put("items", buildAdvisorStudentRows(advisorProfiles, advisorClasses, classId, keyword));
         return success(result);
     }
 
@@ -1511,8 +1568,9 @@ public class CampusPortalController extends BaseController {
             return error("无权查看其他辅导员的数据");
         }
         Long effectiveTermId = termId == null ? resolveCurrentPortalTermId() : termId;
-        List<ScClass> advisorClasses = loadAdvisorClasses(advisorUserId);
-        List<ScStudentScore> rows = loadAdvisorScores(advisorClasses, effectiveTermId, classId, keyword);
+        List<ScUserProfile> advisorProfiles = loadAdvisorStudentProfiles(advisorUserId);
+        List<ScClass> advisorClasses = loadAdvisorClasses(advisorUserId, advisorProfiles);
+        List<ScStudentScore> rows = loadAdvisorScores(advisorProfiles, effectiveTermId, classId, keyword);
         long passCount = rows.stream().filter(item -> "1".equals(item.getPassFlag())).count();
         long publishedCount = rows.stream().filter(item -> "1".equals(item.getPublishStatus())).count();
         BigDecimal avgScore = averageScoreValue(rows.stream()
@@ -1648,7 +1706,11 @@ public class CampusPortalController extends BaseController {
         data.put("user", user);
         data.put("roleGroup", userService.selectUserRoleGroup(loginUser.getUsername()));
         data.put("postGroup", userService.selectUserPostGroup(loginUser.getUsername()));
-        data.put("profile", scUserProfileService.selectScUserProfileByUserId(loginUser.getUserId()));
+        ScUserProfile scProfile = scUserProfileService.selectScUserProfileByUserId(loginUser.getUserId());
+        if (scProfile != null) {
+            scProfile.setClassName(resolveClassName(scProfile.getClassId()));
+        }
+        data.put("profile", scProfile);
         return success(data);
     }
 
@@ -1805,7 +1867,7 @@ public class CampusPortalController extends BaseController {
         return SecurityUtils.isAdmin() || Objects.equals(currentUserId, parentUserId);
     }
 
-    private List<ScClass> loadAdvisorClasses(Long advisorUserId) {
+    private List<ScClass> loadAdvisorHeadTeacherClasses(Long advisorUserId) {
         if (advisorUserId == null) {
             return Collections.emptyList();
         }
@@ -1813,6 +1875,67 @@ public class CampusPortalController extends BaseController {
         query.setHeadTeacherId(advisorUserId);
         query.setStatus("0");
         List<ScClass> classList = scClassService.selectScClassList(query);
+        classList.sort(Comparator.comparing(item -> StringUtils.defaultString(item.getClassName())));
+        return classList;
+    }
+
+    private List<ScUserProfile> loadAdvisorStudentProfiles(Long advisorUserId) {
+        if (advisorUserId == null) {
+            return Collections.emptyList();
+        }
+        Map<Long, ScUserProfile> profileMap = new LinkedHashMap<>();
+
+        ScUserProfile directQuery = new ScUserProfile();
+        directQuery.setUserType("student");
+        directQuery.setStatus("0");
+        directQuery.setAdvisorUserId(advisorUserId);
+        for (ScUserProfile profile : scUserProfileService.selectScUserProfileList(directQuery)) {
+            if (profile == null || profile.getUserId() == null) {
+                continue;
+            }
+            profileMap.put(profile.getUserId(), profile);
+        }
+
+        for (ScClass scClass : loadAdvisorHeadTeacherClasses(advisorUserId)) {
+            if (scClass == null || scClass.getClassId() == null) {
+                continue;
+            }
+            ScUserProfile fallbackQuery = new ScUserProfile();
+            fallbackQuery.setUserType("student");
+            fallbackQuery.setClassId(scClass.getClassId());
+            fallbackQuery.setStatus("0");
+            for (ScUserProfile profile : scUserProfileService.selectScUserProfileList(fallbackQuery)) {
+                if (profile == null || profile.getUserId() == null) {
+                    continue;
+                }
+                if (profile.getAdvisorUserId() != null && !Objects.equals(profile.getAdvisorUserId(), advisorUserId)) {
+                    continue;
+                }
+                profileMap.putIfAbsent(profile.getUserId(), profile);
+            }
+        }
+
+        List<ScUserProfile> profiles = new ArrayList<>(profileMap.values());
+        profiles.sort(Comparator.comparing(item -> StringUtils.defaultString(item.getRealName())));
+        return profiles;
+    }
+
+    private List<ScClass> loadAdvisorClasses(Long advisorUserId, List<ScUserProfile> advisorProfiles) {
+        Map<Long, ScClass> classMap = new LinkedHashMap<>();
+        for (ScClass scClass : loadAdvisorHeadTeacherClasses(advisorUserId)) {
+            if (scClass != null && scClass.getClassId() != null) {
+                classMap.put(scClass.getClassId(), scClass);
+            }
+        }
+        if (advisorProfiles != null) {
+            for (ScUserProfile profile : advisorProfiles) {
+                if (profile == null || profile.getClassId() == null) {
+                    continue;
+                }
+                classMap.computeIfAbsent(profile.getClassId(), classId -> scClassService.selectScClassByClassId(classId));
+            }
+        }
+        List<ScClass> classList = classMap.values().stream().filter(Objects::nonNull).collect(Collectors.toList());
         classList.sort(Comparator.comparing(item -> StringUtils.defaultString(item.getClassName())));
         return classList;
     }
@@ -1851,8 +1974,8 @@ public class CampusPortalController extends BaseController {
         }).collect(Collectors.toList());
     }
 
-    private List<Map<String, Object>> buildAdvisorStudentRows(List<ScClass> advisorClasses, Long classId, String keyword) {
-        if (advisorClasses == null || advisorClasses.isEmpty()) {
+    private List<Map<String, Object>> buildAdvisorStudentRows(List<ScUserProfile> advisorProfiles, List<ScClass> advisorClasses, Long classId, String keyword) {
+        if (advisorProfiles == null || advisorProfiles.isEmpty()) {
             return Collections.emptyList();
         }
         Map<Long, ScClass> classMap = advisorClasses.stream()
@@ -1860,73 +1983,75 @@ public class CampusPortalController extends BaseController {
                 .collect(Collectors.toMap(ScClass::getClassId, item -> item, (left, right) -> left, LinkedHashMap::new));
         List<Map<String, Object>> result = new ArrayList<>();
         String keywordText = StringUtils.trimToEmpty(keyword).toLowerCase();
-        for (ScClass scClass : advisorClasses) {
-            if (scClass == null || scClass.getClassId() == null) {
+        for (ScUserProfile profile : advisorProfiles) {
+            if (profile == null || profile.getUserId() == null) {
                 continue;
             }
-            if (classId != null && !Objects.equals(scClass.getClassId(), classId)) {
+            if (classId != null && !Objects.equals(profile.getClassId(), classId)) {
                 continue;
             }
-            ScUserProfile query = new ScUserProfile();
-            query.setUserType("student");
-            query.setClassId(scClass.getClassId());
-            query.setStatus("0");
-            for (ScUserProfile profile : scUserProfileService.selectScUserProfileList(query)) {
-                String studentName = resolveProfileName(profile.getUserId(), profile);
-                String studentNo = resolveProfileStudentNo(profile.getUserId(), profile);
-                String searchable = String.join(" ",
-                        StringUtils.defaultString(studentName),
-                        StringUtils.defaultString(studentNo),
-                        StringUtils.defaultString(profile.getMajor()),
-                        StringUtils.defaultString(scClass.getClassName())).toLowerCase();
-                if (StringUtils.isNotEmpty(keywordText) && !searchable.contains(keywordText)) {
-                    continue;
-                }
-                Map<String, Object> row = new LinkedHashMap<>();
-                row.put("studentUserId", profile.getUserId());
-                row.put("studentName", studentName);
-                row.put("studentNo", studentNo);
-                row.put("gender", profile.getGender());
-                row.put("major", profile.getMajor());
-                row.put("admissionYear", profile.getAdmissionYear());
-                row.put("classId", profile.getClassId());
-                row.put("className", scClass.getClassName());
-                row.put("deptName", scClass.getDeptName());
-                row.put("status", profile.getStatus());
-                row.put("avatarUrl", profile.getAvatarUrl());
-                result.add(row);
+            ScClass scClass = profile.getClassId() == null ? null : classMap.get(profile.getClassId());
+            String studentName = resolveProfileName(profile.getUserId(), profile);
+            String studentNo = resolveProfileStudentNo(profile.getUserId(), profile);
+            String searchable = String.join(" ",
+                    StringUtils.defaultString(studentName),
+                    StringUtils.defaultString(studentNo),
+                    StringUtils.defaultString(profile.getMajor()),
+                    StringUtils.defaultString(scClass == null ? null : scClass.getClassName())).toLowerCase();
+            if (StringUtils.isNotEmpty(keywordText) && !searchable.contains(keywordText)) {
+                continue;
             }
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("studentUserId", profile.getUserId());
+            row.put("studentName", studentName);
+            row.put("studentNo", studentNo);
+            row.put("gender", profile.getGender());
+            row.put("major", profile.getMajor());
+            row.put("admissionYear", profile.getAdmissionYear());
+            row.put("classId", profile.getClassId());
+            row.put("className", scClass == null ? null : scClass.getClassName());
+            row.put("deptName", scClass == null ? null : scClass.getDeptName());
+            row.put("status", profile.getStatus());
+            row.put("avatarUrl", profile.getAvatarUrl());
+            row.put("advisorUserId", profile.getAdvisorUserId());
+            row.put("bindingMode", profile.getAdvisorUserId() == null ? "CLASS_HEAD_TEACHER" : "DIRECT");
+            result.add(row);
         }
         result.sort(Comparator.comparing((Map<String, Object> item) -> String.valueOf(item.get("className")))
                 .thenComparing((Map<String, Object> item) -> String.valueOf(item.get("studentName"))));
         return result;
     }
 
-    private List<ScStudentScore> loadAdvisorScores(List<ScClass> advisorClasses, Long termId, Long classId, String keyword) {
-        if (advisorClasses == null || advisorClasses.isEmpty()) {
+    private List<ScStudentScore> loadAdvisorScores(List<ScUserProfile> advisorProfiles, Long termId, Long classId, String keyword) {
+        if (advisorProfiles == null || advisorProfiles.isEmpty()) {
             return Collections.emptyList();
         }
-        Set<Long> allowedClassIds = advisorClasses.stream()
-                .map(ScClass::getClassId)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toCollection(LinkedHashSet::new));
-        if (classId != null) {
-            if (!allowedClassIds.contains(classId)) {
-                return Collections.emptyList();
-            }
-            allowedClassIds = new LinkedHashSet<>(Collections.singleton(classId));
+        List<ScUserProfile> filteredProfiles = advisorProfiles.stream()
+                .filter(item -> classId == null || Objects.equals(item.getClassId(), classId))
+                .collect(Collectors.toList());
+        if (filteredProfiles.isEmpty()) {
+            return Collections.emptyList();
         }
         List<ScStudentScore> result = new ArrayList<>();
-        String keywordText = StringUtils.trimToEmpty(keyword);
-        for (Long allowedClassId : allowedClassIds) {
+        for (ScUserProfile profile : filteredProfiles) {
+            if (profile == null || profile.getUserId() == null) {
+                continue;
+            }
             ScStudentScore query = new ScStudentScore();
-            query.setClassId(allowedClassId);
+            query.setStudentUserId(profile.getUserId());
             query.setTermId(termId);
             query.setStatus("0");
-            if (StringUtils.isNotEmpty(keywordText)) {
-                query.setStudentName(keywordText);
-            }
             result.addAll(scStudentScoreService.selectScStudentScoreList(query));
+        }
+        String keywordText = StringUtils.trimToEmpty(keyword).toLowerCase();
+        if (StringUtils.isNotEmpty(keywordText)) {
+            result = result.stream().filter(item -> String.join(" ",
+                    StringUtils.defaultString(item.getStudentName()),
+                    StringUtils.defaultString(item.getStudentNo()),
+                    StringUtils.defaultString(item.getCourseName()),
+                    StringUtils.defaultString(item.getClassName()),
+                    StringUtils.defaultString(item.getTeachingClassCode())).toLowerCase().contains(keywordText))
+                    .collect(Collectors.toList());
         }
         result.sort(Comparator.comparing(ScStudentScore::getClassName, Comparator.nullsLast(String::compareTo))
                 .thenComparing(ScStudentScore::getStudentName, Comparator.nullsLast(String::compareTo))
@@ -2248,6 +2373,11 @@ public class CampusPortalController extends BaseController {
         result.put("credits", estimateCredits(course, classCourse));
         result.put("studentLimit", classCourse.getStudentLimit());
         result.put("studentCount", resolveSelectedStudentCount(classCourse));
+        // Fields needed by frontend for specialty / combined-class merging
+        result.put("baseCourseName", classCourse.getCourseName());
+        result.put("selectionOptionName", classCourse.getSelectionOptionName());
+        result.put("selectionGroupCode", classCourse.getSelectionGroupCode());
+        result.put("combinedClassCode", classCourse.getCombinedClassCode());
         return result;
     }
 

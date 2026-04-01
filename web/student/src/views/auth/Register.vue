@@ -16,9 +16,6 @@
       <section class="register-card">
         <div class="register-card__top">
           <div>
-            <div class="register-card__brand">
-              <img class="register-card__brand-logo" :src="portalLogo" alt="教务管理信息系统">
-            </div>
             <div class="register-card__eyebrow">Account Register</div>
             <h1>统一身份注册</h1>
             <p>按角色完成账号创建，系统将根据身份类型识别对应门户与权限。</p>

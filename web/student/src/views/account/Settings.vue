@@ -28,7 +28,7 @@
           <div v-if="activeTab === 'profile'" key="profile" class="settings-panel">
             <div class="settings-panel-header">
               <h3>个人资料</h3>
-              <p>完善基础资料、联系信息与学习偏好，便于系统提供更贴合的服务。</p>
+              <p>管理您的基本账号信息与联系方式。</p>
             </div>
 
             <el-form ref="profileFormRef" :model="profileForm" :rules="profileRules" label-position="top" class="settings-form">
@@ -51,40 +51,6 @@
                 <el-col :span="12">
                   <el-form-item label="邮箱" prop="email">
                     <el-input v-model="profileForm.email" maxlength="50" placeholder="请输入邮箱" size="large" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="12">
-                  <el-form-item label="性别" prop="sex">
-                    <el-select v-model="profileForm.sex" placeholder="请选择性别" class="w-full" size="large">
-                      <el-option label="男" value="0" />
-                      <el-option label="女" value="1" />
-                      <el-option label="未知" value="2" />
-                    </el-select>
-                  </el-form-item>
-                </el-col>
-                <el-col :span="12">
-                  <el-form-item label="入学年份" prop="admissionYear">
-                    <el-input v-model="profileForm.admissionYear" maxlength="4" placeholder="例如: 2023" size="large" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="12">
-                  <el-form-item label="专业 / 学科" prop="major">
-                    <el-input v-model="profileForm.major" maxlength="50" placeholder="请输入专业或学科" size="large" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="12">
-                  <el-form-item label="学习风格" prop="learningStyle">
-                    <el-input v-model="profileForm.learningStyle" maxlength="100" placeholder="例如: 视觉型、听觉型" size="large" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="24">
-                  <el-form-item label="学习目标" prop="learningGoal">
-                    <el-input v-model="profileForm.learningGoal" type="textarea" :rows="4" maxlength="200" show-word-limit placeholder="简述您的学习目标" size="large" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="24">
-                  <el-form-item label="兴趣标签" prop="interestTags">
-                    <el-input v-model="profileForm.interestTags" maxlength="200" placeholder="多个标签请用逗号分隔，例如: 编程, 篮球, 阅读" size="large" />
                   </el-form-item>
                 </el-col>
               </el-row>
@@ -150,7 +116,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from '@/utils/feedback'
 import usePortalUserStore from '@/store/user'
 import { getPortalProfile, updatePortalPassword, updatePortalProfile } from '@/api/portal'
-import { User, Lock, CircleCheckFilled, WarningFilled } from '@element-plus/icons-vue'
+import { User, Lock, CircleCheckFilled, WarningFilled, Setting } from '@element-plus/icons-vue'
 
 const userStore = usePortalUserStore()
 const profileFormRef = ref()
@@ -169,12 +135,6 @@ const profileForm = reactive<any>({
   realName: '',
   phonenumber: '',
   email: '',
-  sex: '2',
-  major: '',
-  admissionYear: '',
-  learningGoal: '',
-  interestTags: '',
-  learningStyle: '',
 })
 
 const passwordForm = reactive({
@@ -217,21 +177,12 @@ async function loadProfile() {
     realName: user.realName || '',
     phonenumber: user.phonenumber || '',
     email: user.email || '',
-    sex: user.sex || '2',
-    major: user.major || '',
-    admissionYear: user.admissionYear || '',
-    learningGoal: user.learningGoal || '',
-    interestTags: user.interestTags || '',
-    learningStyle: user.learningStyle || '',
   })
 }
 
 async function submitProfile() {
   await profileFormRef.value?.validate()
-  await updatePortalProfile({
-    ...profileForm,
-    admissionYear: profileForm.admissionYear ? Number(profileForm.admissionYear) : undefined,
-  })
+  await updatePortalProfile({ ...profileForm })
   await userStore.refreshUserInfo()
   ElMessage.success('个人资料已更新')
 }

@@ -24,8 +24,17 @@ function resolveUserTypeLabel(userType?: string) {
   return labels[String(userType || '').trim()] || '未分类'
 }
 
-export async function fetchUserOptions(userType?: 'student' | 'teacher' | 'parent' | 'admin') {
-  const res = await listUser({ pageNum: 1, pageSize: 200, userType })
+export async function fetchUserOptions(
+  userType?: 'student' | 'teacher' | 'parent' | 'admin',
+  keyword?: string,
+  filters?: { classIds?: any[]; gradeIds?: any[]; userIds?: any[] },
+) {
+  const params: Record<string, any> = { pageNum: 1, pageSize: 200, userType }
+  if (keyword) params.keyword = keyword
+  if (filters?.classIds?.length) params.classIds = filters.classIds.join(',')
+  if (filters?.gradeIds?.length) params.gradeIds = filters.gradeIds.join(',')
+  if (filters?.userIds?.length) params.userIds = filters.userIds.join(',')
+  const res = await listUser(params)
   return (res.rows || []).map((item: any) => ({
     label: `${item.nickName || item.userName}（${item.userId}） · ${resolveUserTypeLabel(item.userType)}`,
     shortLabel: `${item.nickName || item.userName}（${item.userId}）`,
@@ -146,6 +155,9 @@ export async function fetchTermOptions() {
   return (res.rows || []).map((item: any) => ({
     label: `${item.termName}（${item.schoolYear}）`,
     value: item.termId,
+    termName: item.termName,
+    termCode: item.termCode,
+    schoolYear: item.schoolYear,
     startDate: item.startDate,
     endDate: item.endDate,
     totalWeeks: item.totalWeeks,

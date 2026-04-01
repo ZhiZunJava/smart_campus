@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import PortalLayout from '@/layouts/PortalLayout.vue'
 import usePortalUserStore from '@/store/user'
+import { resolveStudentAffairCode, studentAffairPageConfigs } from '@/utils/affairCatalog'
 
 function resolveHome(role: string) {
   return `/${role}/dashboard`
@@ -26,6 +27,15 @@ const routes = [
     meta: { title: '学生端', role: 'student' },
     children: [
       { path: 'dashboard', component: () => import('@/views/student/Dashboard.vue'), meta: { title: '学习首页' } },
+      { path: 'affairs', component: () => import('@/views/student/Affairs.vue'), props: { categoryCode: '' }, meta: { title: '事务总览' } },
+      { path: 'academic-profile', component: () => import('@/views/student/AcademicProfile.vue'), meta: { title: '学籍信息', hideShortcut: true } },
+      ...studentAffairPageConfigs.map((item) => ({
+        path: `affairs/${item.slug}`,
+        component: () => import('@/views/student/Affairs.vue'),
+        props: { categoryCode: item.categoryCode },
+        meta: { title: item.title, menuPath: `/student/affairs/${item.slug}` }
+      })),
+      { path: 'affairs/:categoryCode', component: () => import('@/views/student/Affairs.vue'), props: (route: any) => ({ categoryCode: resolveStudentAffairCode(String(route.params.categoryCode || '')) }), meta: { title: '事务分类', hideShortcut: true } },
       { path: 'courses', component: () => import('@/views/student/Courses.vue'), props: { mode: 'selected' }, meta: { title: '我的课程' } },
       { path: 'class-courses', component: () => import('@/views/student/Courses.vue'), props: { mode: 'class' }, meta: { title: '我的班级课程' } },
       { path: 'selection', name: 'CourseSelection', component: () => import('@/views/student/CourseSelection.vue'), meta: { title: '选课中心' } },
@@ -45,7 +55,9 @@ const routes = [
       { path: 'exams/preview/:paperId', component: () => import('@/views/student/ExamPreviewPage.vue'), meta: { title: '试卷预览' } },
       { path: 'exams/session/:recordId', component: () => import('@/views/student/ExamSession.vue'), meta: { title: '在线考试' } },
       { path: 'wrongbook', component: () => import('@/views/student/wrongbook/index.vue'), meta: { title: '我的错题本' } },
-      { path: 'course-offerings', component: () => import('@/views/student/CourseOfferings.vue'), meta: { title: '全校开课查询' } }
+      { path: 'course-offerings', component: () => import('@/views/student/CourseOfferings.vue'), meta: { title: '全校开课查询' } },
+      { path: 'verification', component: () => import('@/views/student/Verification/index.vue'), meta: { title: '学籍核对' } },
+      { path: 'verification/:batchId', component: () => import('@/views/student/Verification/VerificationDetail.vue'), meta: { title: '学籍核对详情', hideShortcut: true } }
     ]
   },
   {
@@ -54,6 +66,8 @@ const routes = [
     meta: { title: '教师端', role: 'teacher' },
     children: [
       { path: 'dashboard', component: () => import('@/views/teacher/Dashboard.vue'), meta: { title: '教学概览' } },
+      { path: 'affairs', component: () => import('@/views/teacher/Affairs.vue'), props: { categoryCode: '' }, meta: { title: '事务协同' } },
+      { path: 'affairs/:categoryCode', component: () => import('@/views/teacher/Affairs.vue'), props: (route: any) => ({ categoryCode: String(route.params.categoryCode || '') }), meta: { title: '事务分类', hideShortcut: true } },
       { path: 'courses', component: () => import('@/views/teacher/Courses.vue'), meta: { title: '课程管理' } },
       { path: 'schedule', component: () => import('@/views/teacher/Schedule.vue'), meta: { title: '我的课表' } },
       { path: 'resources', component: () => import('@/views/teacher/Resources.vue'), meta: { title: '教学资源' } },
@@ -68,6 +82,8 @@ const routes = [
     meta: { title: '辅导员端', role: 'advisor' },
     children: [
       { path: 'dashboard', component: () => import('@/views/advisor/Dashboard.vue'), meta: { title: '辅导员概览' } },
+      { path: 'affairs', component: () => import('@/views/advisor/Affairs.vue'), props: { categoryCode: '' }, meta: { title: '事务审核' } },
+      { path: 'affairs/:categoryCode', component: () => import('@/views/advisor/Affairs.vue'), props: (route: any) => ({ categoryCode: String(route.params.categoryCode || '') }), meta: { title: '事务分类', hideShortcut: true } },
       { path: 'students', component: () => import('@/views/advisor/Students.vue'), meta: { title: '学生管理' } },
       { path: 'scores', component: () => import('@/views/advisor/Scores.vue'), meta: { title: '成绩管理' } },
       { path: 'messages', component: () => import('@/views/student/Messages.vue'), meta: { title: '消息中心', hideShortcut: true } },

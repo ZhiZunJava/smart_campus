@@ -437,6 +437,7 @@ const dashboard = ref<any>({})
 const taskCenter = ref<any>({})
 const examRecords = ref<any[]>([])
 const schedulePayload = ref<any>({})
+const periodConfig = ref<any[]>([])
 const termOptions = ref<any[]>([])
 const shortcutDialogVisible = ref(false)
 const storedShortcutPaths = ref<string[]>([])
@@ -535,6 +536,24 @@ function formatWeeksBadgeText(value?: string) {
   return `${text}周`
 }
 
+const periodLabelMap = computed(() => {
+  const map: Record<number, string> = {}
+  for (const item of periodConfig.value) {
+    const unit = Number(item.indexNo || item.unit)
+    if (unit) map[unit] = item.nameZh || item.label || String(unit)
+  }
+  return map
+})
+
+function buildSectionText(start: any, end: any): string {
+  const s = Number(start), e = Number(end || start)
+  if (!s) return '--'
+  const startLabel = periodLabelMap.value[s] || String(s)
+  const endLabel = periodLabelMap.value[e] || String(e)
+  if (s === e) return `第${startLabel}节`
+  return `第${startLabel}-${endLabel}节`
+}
+
 function buildSchedulePreviewCourses(meta: { weekDay: number; targetWeek: number }, prefix: string) {
   const activities = Array.isArray(schedulePayload.value?.activities) ? schedulePayload.value.activities : []
   return activities
@@ -552,7 +571,7 @@ function buildSchedulePreviewCourses(meta: { weekDay: number; targetWeek: number
       teacherName: item.teacherName || '',
       timeText: `${formatWeekDayLabel(item.weekDay)} ${item.startTime || '--:--'} - ${item.endTime || '--:--'}`,
       locationText: [item.campus, item.buildingName, item.classroom].filter(Boolean).join(' / '),
-      sectionText: `${item.startSection || '-'}-${item.endSection || item.startSection || '-'} 节`,
+      sectionText: buildSectionText(item.startSection, item.endSection),
       weekDayLabel: formatWeekDayLabel(item.weekDay),
       weeksText: formatWeeksBadgeText(item.weeksStr || item.weeksText || ''),
     }))
@@ -1182,6 +1201,9 @@ async function loadScheduleData() {
     termId: current?.value,
   })
   schedulePayload.value = res.data || {}
+  const layout = schedulePayload.value?.timeTableLayout
+  const units = Array.isArray(layout?.courseUnitList) ? layout.courseUnitList : []
+  periodConfig.value = units
 }
 
 const loading = ref(true)

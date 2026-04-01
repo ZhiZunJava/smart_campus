@@ -436,7 +436,7 @@ async function loadOptions() {
   classOptions.value = classes
   studentOptions.value = students
   classCourseRows.value = classCourseRes.rows || []
-  deptOptions.value = deptRes.data || []
+  deptOptions.value = Array.isArray(deptRes.data) ? deptRes.data : []
   classCourseOptions.value = classCourseRows.value.map((item: any) => ({
     label: `${item.termName || '未配置学期'} / ${item.className || '未配置班级'} / ${item.courseName || '未命名课程'} / ${item.teachingClassCode || item.id}`,
     shortLabel: `${item.className || '未配置班级'} / ${item.courseName || '未命名课程'} / ${item.teachingClassCode || item.id}`,

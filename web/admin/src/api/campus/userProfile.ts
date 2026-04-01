@@ -31,6 +31,14 @@ export function updateUserProfile(data: any) {
   })
 }
 
+export function bindUserProfileAdvisor(data: any) {
+  return request({
+    url: '/campus/userProfile/bindAdvisor',
+    method: 'put',
+    data,
+  })
+}
+
 export function delUserProfile(profileIds: number | number[]) {
   return request({
     url: `/campus/userProfile/${profileIds}`,

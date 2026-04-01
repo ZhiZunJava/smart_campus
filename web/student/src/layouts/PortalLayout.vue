@@ -22,20 +22,42 @@
       :style="{ '--table-border-color': '#ebeef5', '--brand-primary': '#266fcb' }"
     >
       <div v-if="!isWorkspaceRoute" class="portal-tabs-wrapper">
-        <el-tabs
-          v-model="activeTab"
-          class="portal-tabs toolbar-tabs"
-          @tab-remove="handleTabRemove"
-          @tab-click="handleTabClick"
-        >
-          <el-tab-pane
+        <div class="portal-tab-bar">
+          <div
             v-for="tab in tabsStore.visitedTabs"
             :key="tab.path"
-            :label="tab.title"
-            :name="tab.path"
-            :closable="tab.closable"
-          />
-        </el-tabs>
+            class="portal-tab-item"
+            :class="{ 'is-active': activeTab === tab.path }"
+            @click="handleTabNav(tab.path)"
+            @contextmenu.prevent="openTabContextMenu($event, tab)"
+          >
+            <span class="portal-tab-item__label">{{ tab.title }}</span>
+            <button v-if="tab.closable" class="portal-tab-item__close" @click.stop="handleTabRemove(tab.path)">
+              <i class="ri-close-line" />
+            </button>
+          </div>
+        </div>
+
+        <!-- Tab Context Menu -->
+        <teleport to="body">
+          <transition name="ctx-fade">
+            <div
+              v-if="ctxMenu.visible"
+              class="tab-context-menu"
+              :style="{ left: ctxMenu.x + 'px', top: ctxMenu.y + 'px' }"
+              @contextmenu.prevent
+            >
+              <div class="ctx-item" @click="ctxRefreshTab"><i class="ri-refresh-line" /> 刷新当前页</div>
+              <div class="ctx-divider" />
+              <div class="ctx-item" @click="ctxCloseCurrent"><i class="ri-close-line" /> 关闭当前</div>
+              <div class="ctx-item" :class="{ 'is-disabled': !hasOtherTabs }" @click="ctxCloseOthers"><i class="ri-subtract-line" /> 关闭其他</div>
+              <div class="ctx-item" :class="{ 'is-disabled': !hasRightTabs }" @click="ctxCloseRight"><i class="ri-skip-right-line" /> 关闭右侧</div>
+              <div class="ctx-item" :class="{ 'is-disabled': !hasLeftTabs }" @click="ctxCloseLeft"><i class="ri-skip-left-line" /> 关闭左侧</div>
+              <div class="ctx-divider" />
+              <div class="ctx-item ctx-item--danger" @click="ctxCloseAll"><i class="ri-delete-bin-line" /> 关闭全部</div>
+            </div>
+          </transition>
+        </teleport>
       </div>
 
       <div v-if="!isDashboardRoute && !isWorkspaceRoute" class="portal-breadcrumb-wrapper breadcrumb-wrapper">
@@ -48,8 +70,10 @@
           </el-breadcrumb-item>
           <el-breadcrumb-item v-if="currentMenuGroup">
             <el-dropdown
-              trigger="click"
+              trigger="hover"
               placement="bottom-start"
+              :show-timeout="120"
+              :hide-timeout="200"
               popper-class="portal-breadcrumb-dropdown"
               @command="handleBreadcrumbGroupCommand"
             >
@@ -116,15 +140,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, nextTick } from 'vue'
+import { computed, ref, reactive, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { RouteLocationNormalizedLoaded } from 'vue-router'
-import type { TabPaneName, TabsPaneContext } from 'element-plus'
 import { ElMessageBox } from '@/utils/feedback'
+import type { TabItem } from '@/store/tabs'
 import PortalTopBar from '@/components/PortalTopBar.vue'
 import usePortalUserStore from '@/store/user'
 import { useTabsStore } from '@/store/tabs'
 import { ArrowRight } from '@element-plus/icons-vue'
+import { buildStudentAffairPathByCode, studentAffairPageConfigs } from '@/utils/affairCatalog'
 
 interface MenuItem {
   title: string
@@ -137,6 +162,30 @@ interface MenuGroup {
   label: string
   items: MenuItem[]
 }
+
+const studentAffairOverviewMenu: MenuItem = {
+  title: '事务总览',
+  path: '/student/affairs',
+  desc: '查看事务总览、最近申请和常用服务'
+}
+
+const studentAffairMenuItems: MenuItem[] = studentAffairPageConfigs.map((item) => ({
+  title: item.title,
+  path: buildStudentAffairPathByCode(item.categoryCode),
+  desc: item.desc,
+}))
+
+const studentAffairGroupedMenus: MenuGroup[] = ['attendance', 'funding', 'growth', 'academic'].map((groupKey) => ({
+  key: `student-affair-${groupKey}`,
+  label: studentAffairPageConfigs.find((item) => item.groupKey === groupKey)?.groupLabel || groupKey,
+  items: studentAffairPageConfigs
+    .filter((item) => item.groupKey === groupKey)
+    .map((item) => ({
+      title: item.title,
+      path: buildStudentAffairPathByCode(item.categoryCode),
+      desc: item.desc,
+    })),
+}))
 
 const route = useRoute()
 const router = useRouter()
@@ -180,26 +229,81 @@ async function handleRefresh() {
   }
 }
 
-function handleTabClick(pane: TabsPaneContext) {
-  const path = pane.props.name
-  if (typeof path === 'string' && path !== route.path) {
-    router.push(path)
+function handleTabNav(path: string) {
+  if (path !== route.path) router.push(path)
+}
+
+function handleTabRemove(targetPath: string) {
+  tabsStore.removeTab(targetPath)
+  if (activeTab.value !== route.path) {
+    router.push(activeTab.value || `/${activeRole.value}/dashboard`)
   }
 }
 
-function handleTabRemove(targetName: TabPaneName) {
-  if (typeof targetName !== 'string') {
-    return
-  }
-  tabsStore.removeTab(targetName)
-  if (activeTab.value !== route.path) {
-    if (activeTab.value) {
-      router.push(activeTab.value)
-    } else {
-      router.push(`/${activeRole.value}/dashboard`)
-    }
+// ---- Tab Context Menu ----
+const ctxMenu = reactive({ visible: false, x: 0, y: 0, tab: null as TabItem | null })
+
+function openTabContextMenu(e: MouseEvent, tab: TabItem) {
+  ctxMenu.x = e.clientX
+  ctxMenu.y = e.clientY
+  ctxMenu.tab = tab
+  ctxMenu.visible = true
+}
+
+function closeCtxMenu() { ctxMenu.visible = false }
+
+const ctxTabIndex = computed(() => {
+  if (!ctxMenu.tab) return -1
+  return tabsStore.visitedTabs.findIndex(t => t.path === ctxMenu.tab!.path)
+})
+const hasOtherTabs = computed(() => tabsStore.visitedTabs.filter(t => t.closable).length > 1)
+const hasRightTabs = computed(() => {
+  const idx = ctxTabIndex.value
+  return idx >= 0 && tabsStore.visitedTabs.slice(idx + 1).some(t => t.closable)
+})
+const hasLeftTabs = computed(() => {
+  const idx = ctxTabIndex.value
+  return idx > 0 && tabsStore.visitedTabs.slice(0, idx).some(t => t.closable)
+})
+
+function navigateAfterCtx() {
+  if (!tabsStore.visitedTabs.find(t => t.path === route.path)) {
+    router.push(activeTab.value || `/${activeRole.value}/dashboard`)
   }
 }
+
+function ctxRefreshTab() {
+  closeCtxMenu()
+  if (ctxMenu.tab) {
+    if (ctxMenu.tab.path !== route.path) router.push(ctxMenu.tab.path)
+    nextTick(() => handleRefresh())
+  }
+}
+function ctxCloseCurrent() {
+  closeCtxMenu()
+  if (ctxMenu.tab?.closable) { tabsStore.removeTab(ctxMenu.tab.path); navigateAfterCtx() }
+}
+function ctxCloseOthers() {
+  closeCtxMenu()
+  if (ctxMenu.tab) { tabsStore.closeOthers(ctxMenu.tab.path); navigateAfterCtx() }
+}
+function ctxCloseRight() {
+  closeCtxMenu()
+  if (ctxMenu.tab) { tabsStore.closeRight(ctxMenu.tab.path); navigateAfterCtx() }
+}
+function ctxCloseLeft() {
+  closeCtxMenu()
+  if (ctxMenu.tab) { tabsStore.closeLeft(ctxMenu.tab.path); navigateAfterCtx() }
+}
+function ctxCloseAll() {
+  closeCtxMenu()
+  tabsStore.closeAll()
+  router.push(`/${activeRole.value}/dashboard`)
+}
+
+function onDocClick() { ctxMenu.visible = false }
+onMounted(() => document.addEventListener('click', onDocClick))
+onUnmounted(() => document.removeEventListener('click', onDocClick))
 
 watch(
   () => route.path,
@@ -218,6 +322,9 @@ watch(
 const menus: Record<string, MenuItem[]> = {
   student: [
     { title: '学习首页', path: '/student/dashboard', desc: '诊断、工作台与关键指标' },
+    studentAffairOverviewMenu,
+    { title: '学籍信息', path: '/student/academic-profile', desc: '查看个人学籍档案与当前学籍状态' },
+    ...studentAffairMenuItems,
     { title: '我的课程', path: '/student/courses', desc: '查看当前已选教学班课程' },
     { title: '我的班级课程', path: '/student/class-courses', desc: '查看班级默认开设课程' },
     { title: '选课中心', path: '/student/selection', desc: '办理标准选课与退课' },
@@ -232,9 +339,11 @@ const menus: Record<string, MenuItem[]> = {
     { title: '我的成绩', path: '/student/scores', desc: '查看课程总评、构成与排名' },
     { title: '我的错题本', path: '/student/wrongbook', desc: '错题回顾、练习与复盘' },
     { title: '全校开课查询', path: '/student/course-offerings', desc: '查询全校各学期课程开设情况' },
+    { title: '学籍核对', path: '/student/verification', desc: '核对并确认个人学籍信息' },
   ],
   teacher: [
     { title: '教学概览', path: '/teacher/dashboard', desc: '课程与教学资源概览' },
+    { title: '事务协同', path: '/teacher/affairs', desc: '处理教师发起事项与指导审核事务' },
     { title: '我的课程', path: '/teacher/courses', desc: '查看本学期授课安排' },
     { title: '我的课表', path: '/teacher/schedule', desc: '按周查看教学安排' },
     { title: '教学资源', path: '/teacher/resources', desc: '资源查看与更新' },
@@ -243,6 +352,7 @@ const menus: Record<string, MenuItem[]> = {
   ],
   advisor: [
     { title: '辅导员概览', path: '/advisor/dashboard', desc: '查看负责班级、学生与成绩概况' },
+    { title: '事务审核', path: '/advisor/affairs', desc: '集中处理学生事务审核与学籍跟踪' },
     { title: '学生管理', path: '/advisor/students', desc: '查看负责班级的学生名册与基本信息' },
     { title: '成绩管理', path: '/advisor/scores', desc: '查看行政班成绩、发布状态与分布概况' },
     { title: '消息中心', path: '/advisor/messages', desc: '查看系统消息与通知公告' },
@@ -262,44 +372,48 @@ const groupedMenus: Record<string, MenuGroup[]> = {
       label: '综合服务',
       items: [
         menus.student[0],
-        menus.student[7],
-        menus.student[8],
+        menus.student[1],
+        menus.student[2],
+        menus.student[30],
+        menus.student[22],
+        menus.student[23],
       ],
     },
+    ...studentAffairGroupedMenus,
     {
       key: 'student-course',
       label: '课程与学习',
       items: [
-        menus.student[1],
-        menus.student[2],
-        menus.student[5],
-        menus.student[6],
-        menus.student[9],
+        menus.student[16],
+        menus.student[17],
+        menus.student[20],
+        menus.student[21],
+        menus.student[24],
       ],
     },
     {
       key: 'student-selection',
       label: '选课服务',
       items: [
-        menus.student[3],
-        menus.student[4],
-        menus.student[14],
+        menus.student[18],
+        menus.student[19],
+        menus.student[29],
       ],
     },
     {
       key: 'student-plaza',
       label: '任务与练习',
       items: [
-        menus.student[10],
+        menus.student[25],
       ],
     },
     {
       key: 'student-growth',
       label: '考试与成长',
       items: [
-        menus.student[11],
-        menus.student[12],
-        menus.student[13],
+        menus.student[26],
+        menus.student[27],
+        menus.student[28],
       ],
     },
   ],
@@ -310,8 +424,8 @@ const groupedMenus: Record<string, MenuGroup[]> = {
       items: [
         menus.teacher[0],
         menus.teacher[1],
-        menus.teacher[4],
         menus.teacher[5],
+        menus.teacher[6],
       ],
     },
     {
@@ -320,6 +434,7 @@ const groupedMenus: Record<string, MenuGroup[]> = {
       items: [
         menus.teacher[2],
         menus.teacher[3],
+        menus.teacher[4],
       ],
     },
   ],
@@ -329,15 +444,16 @@ const groupedMenus: Record<string, MenuGroup[]> = {
       label: '综合服务',
       items: [
         menus.advisor[0],
-        menus.advisor[3],
+        menus.advisor[1],
+        menus.advisor[4],
       ],
     },
     {
       key: 'advisor-student',
       label: '学生与成绩',
       items: [
-        menus.advisor[1],
         menus.advisor[2],
+        menus.advisor[3],
       ],
     },
   ],
@@ -514,60 +630,110 @@ async function handleLogout() {
   width: 100%;
   margin-top: 5px;
 }
-.toolbar-tabs {
-  --el-font-size-base: 1.3rem;
-  --el-tabs-header-height: 4.5rem;
-  --el-text-color-primary: rgba(255, 255, 255, 0.7);
-  --el-color-primary: #ffffff;
+/* ---- Custom Tab Bar ---- */
+.portal-tab-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 0 4px;
 }
-:deep(.toolbar-tabs .el-tabs__header) {
-  margin-bottom: 0;
-  border-bottom: none;
+.portal-tab-bar::-webkit-scrollbar { display: none; }
+
+.portal-tab-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #475569;
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+  user-select: none;
 }
-:deep(.toolbar-tabs .el-tabs__nav-wrap::after) {
-  display: none;
+.portal-tab-item:hover {
+  background: rgba(255, 255, 255, 0.85);
+  color: #1e40af;
+  border-color: rgba(59, 130, 246, 0.25);
 }
-:deep(.toolbar-tabs .el-tabs__nav) {
-  border: none !important;
-}
-:deep(.toolbar-tabs .el-tabs__item) {
-  color: var(--el-text-color-primary) !important;
-  font-size: var(--el-font-size-base);
-  height: 32px;
-  line-height: 32px;
-  padding: 0 16px !important;
-  margin: calc((var(--el-tabs-header-height) - 32px) / 2) 4px;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  border: none !important;
-  border-radius: 16px; /* 胶囊圆角 */
-}
-:deep(.toolbar-tabs .el-tabs__item:hover) {
-  color: var(--el-color-primary) !important;
-  background-color: rgba(255, 255, 255, 0.15);
-}
-:deep(.toolbar-tabs .el-tabs__item.is-active) {
-  color: var(--el-color-primary) !important;
+.portal-tab-item.is-active {
+  background: rgba(255, 255, 255, 0.92);
+  color: #2563eb;
   font-weight: 600;
-  background-color: rgba(255, 255, 255, 0.25);
+  border-color: rgba(37, 99, 235, 0.3);
+  box-shadow: 0 1px 6px rgba(37, 99, 235, 0.12);
 }
-:deep(.toolbar-tabs .el-tabs__active-bar) {
-  display: none !important; /* 隐藏底部的选中横线 */
+.portal-tab-item__label {
+  line-height: 1;
 }
-:deep(.toolbar-tabs .el-tabs__item .is-icon-close) {
-  color: rgba(255, 255, 255, 0.7);
-  transition: all 0.2s;
-  width: 14px;
-  height: 14px;
-  margin-left: 6px;
+.portal-tab-item__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  background: transparent;
   border-radius: 50%;
+  color: #94a3b8;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 2px;
+  transition: background 0.15s, color 0.15s;
 }
-:deep(.toolbar-tabs .el-tabs__item:hover .is-icon-close) {
-  color: rgba(255, 255, 255, 0.9);
+.portal-tab-item__close:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
 }
-:deep(.toolbar-tabs .el-tabs__item .is-icon-close:hover) {
-  background-color: rgba(255, 255, 255, 0.3);
-  color: #fff;
+.portal-tab-item__close i { font-size: 12px; line-height: 1; }
+
+/* ---- Tab Context Menu (teleported to body) ---- */
+:global(.tab-context-menu) {
+  position: fixed;
+  z-index: 9999;
+  min-width: 160px;
+  padding: 6px;
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
+:global(.ctx-item) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #334155;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  user-select: none;
+}
+:global(.ctx-item i) { font-size: 15px; opacity: 0.7; }
+:global(.ctx-item:hover) { background: #f1f5f9; color: #2563eb; }
+:global(.ctx-item.is-disabled) { color: #cbd5e1; cursor: not-allowed; pointer-events: none; }
+:global(.ctx-item--danger:hover) { background: #fef2f2; color: #dc2626; }
+:global(.ctx-divider) { height: 1px; background: #f1f5f9; margin: 4px 8px; }
+
+/* ctx-fade transition */
+:global(.ctx-fade-enter-active) { transition: opacity 0.15s ease, transform 0.15s ease; }
+:global(.ctx-fade-leave-active) { transition: opacity 0.1s ease, transform 0.1s ease; }
+:global(.ctx-fade-enter-from) { opacity: 0; transform: scale(0.95) translateY(-4px); }
+:global(.ctx-fade-leave-to) { opacity: 0; transform: scale(0.95) translateY(-4px); }
 
 .portal-breadcrumb-wrapper {
   --el-font-size-base: 1.3rem;
@@ -603,6 +769,7 @@ async function handleLogout() {
   font-size: 1.3rem;
   cursor: pointer;
   transition: color 0.2s ease;
+  outline: none;
 }
 .breadcrumb-link:hover {
   color: #2563eb;
@@ -612,10 +779,21 @@ async function handleLogout() {
   width: 0;
   height: 0;
   margin-top: 2px;
-  margin-left: 2px;
+  margin-left: 4px;
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
   border-top: 5px solid currentColor;
+  transition: transform 0.2s ease;
+}
+.breadcrumb-link--dropdown:hover::after {
+  transform: rotate(180deg);
+}
+.breadcrumb-link--dropdown:hover {
+  color: #2563eb;
+  text-decoration: underline;
+  text-decoration-style: dashed;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 1px;
 }
 .refresh-btn {
   margin-left: 16px;

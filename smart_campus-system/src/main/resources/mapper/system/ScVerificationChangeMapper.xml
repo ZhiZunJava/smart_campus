@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScVerificationChangeMapper">
+
+    <resultMap type="ScVerificationChange" id="ScVerificationChangeResult">
+        <id property="changeId" column="change_id" />
+        <result property="recordId" column="record_id" />
+        <result property="batchId" column="batch_id" />
+        <result property="studentUserId" column="student_user_id" />
+        <result property="fieldName" column="field_name" />
+        <result property="fieldLabel" column="field_label" />
+        <result property="oldValue" column="old_value" />
+        <result property="newValue" column="new_value" />
+        <result property="changeStatus" column="change_status" />
+        <result property="reviewComment" column="review_comment" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+    </resultMap>
+
+    <sql id="selectScVerificationChangeVo">
+        select change_id, record_id, batch_id, student_user_id, field_name, field_label,
+               old_value, new_value, change_status, review_comment, create_time, update_time
+        from sc_verification_change
+    </sql>
+
+    <select id="selectScVerificationChangeByChangeId" parameterType="Long" resultMap="ScVerificationChangeResult">
+        <include refid="selectScVerificationChangeVo" /> where change_id = #{changeId}
+    </select>
+
+    <select id="selectByRecordId" parameterType="Long" resultMap="ScVerificationChangeResult">
+        <include refid="selectScVerificationChangeVo" /> where record_id = #{recordId}
+        order by change_id asc
+    </select>
+
+    <select id="selectByBatchAndStudent" resultMap="ScVerificationChangeResult">
+        <include refid="selectScVerificationChangeVo" />
+        where batch_id = #{batchId} and student_user_id = #{studentUserId}
+        order by change_id asc
+    </select>
+
+    <insert id="insertScVerificationChange" parameterType="ScVerificationChange" useGeneratedKeys="true" keyProperty="changeId">
+        insert into sc_verification_change
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="recordId != null">record_id,</if>
+            <if test="batchId != null">batch_id,</if>
+            <if test="studentUserId != null">student_user_id,</if>
+            <if test="fieldName != null and fieldName != ''">field_name,</if>
+            <if test="fieldLabel != null">field_label,</if>
+            <if test="oldValue != null">old_value,</if>
+            <if test="newValue != null">new_value,</if>
+            <if test="changeStatus != null and changeStatus != ''">change_status,</if>
+            <if test="reviewComment != null">review_comment,</if>
+            create_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="recordId != null">#{recordId},</if>
+            <if test="batchId != null">#{batchId},</if>
+            <if test="studentUserId != null">#{studentUserId},</if>
+            <if test="fieldName != null and fieldName != ''">#{fieldName},</if>
+            <if test="fieldLabel != null">#{fieldLabel},</if>
+            <if test="oldValue != null">#{oldValue},</if>
+            <if test="newValue != null">#{newValue},</if>
+            <if test="changeStatus != null and changeStatus != ''">#{changeStatus},</if>
+            <if test="reviewComment != null">#{reviewComment},</if>
+            sysdate()
+        </trim>
+    </insert>
+
+    <insert id="batchInsertChanges" parameterType="java.util.List">
+        insert into sc_verification_change (record_id, batch_id, student_user_id, field_name,
+            field_label, old_value, new_value, change_status, create_time)
+        values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.recordId}, #{item.batchId}, #{item.studentUserId}, #{item.fieldName},
+             #{item.fieldLabel}, #{item.oldValue}, #{item.newValue}, #{item.changeStatus}, sysdate())
+        </foreach>
+    </insert>
+
+    <update id="updateScVerificationChange" parameterType="ScVerificationChange">
+        update sc_verification_change
+        <set>
+            <if test="changeStatus != null and changeStatus != ''">change_status = #{changeStatus},</if>
+            <if test="reviewComment != null">review_comment = #{reviewComment},</if>
+            update_time = sysdate()
+        </set>
+        where change_id = #{changeId}
+    </update>
+
+    <update id="batchUpdateChangeStatus">
+        update sc_verification_change
+        set change_status = #{changeStatus},
+            review_comment = #{reviewComment},
+            update_time = sysdate()
+        where record_id = #{recordId}
+    </update>
+
+    <delete id="deleteScVerificationChangeByRecordId" parameterType="Long">
+        delete from sc_verification_change where record_id = #{recordId}
+    </delete>
+</mapper>

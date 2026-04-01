@@ -80,7 +80,7 @@
           />
         </el-form-item>
         <el-form-item label="班级名称"><el-input v-model="form.className" /></el-form-item>
-        <el-form-item label="班主任"><el-select v-model="form.headTeacherId" filterable clearable style="width:100%"><el-option v-for="item in teacherOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
+        <el-form-item label="辅导员"><el-select v-model="form.headTeacherId" filterable clearable style="width:100%"><el-option v-for="item in teacherOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
         <el-form-item label="状态"><el-select v-model="form.status" style="width:100%"><el-option label="正常" value="0" /><el-option label="停用" value="1" /></el-select></el-form-item>
         <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" rows="3" /></el-form-item>
       </el-form>

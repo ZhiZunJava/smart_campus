@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScVerificationBatchMapper">
+
+    <resultMap type="ScVerificationBatch" id="ScVerificationBatchResult">
+        <id property="batchId" column="batch_id" />
+        <result property="batchName" column="batch_name" />
+        <result property="batchNo" column="batch_no" />
+        <result property="description" column="description" />
+        <result property="editableFields" column="editable_fields" />
+        <result property="scopeType" column="scope_type" />
+        <result property="scopeGradeId" column="scope_grade_id" />
+        <result property="scopeClassId" column="scope_class_id" />
+        <result property="batchStatus" column="batch_status" />
+        <result property="startTime" column="start_time" />
+        <result property="endTime" column="end_time" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+        <result property="remark" column="remark" />
+    </resultMap>
+
+    <sql id="selectScVerificationBatchVo">
+        select batch_id, batch_name, batch_no, description, editable_fields, scope_type,
+               scope_grade_id, scope_class_id, batch_status, start_time, end_time,
+               create_by, create_time, update_by, update_time, remark
+        from sc_verification_batch
+    </sql>
+
+    <select id="selectScVerificationBatchByBatchId" parameterType="Long" resultMap="ScVerificationBatchResult">
+        <include refid="selectScVerificationBatchVo" /> where batch_id = #{batchId}
+    </select>
+
+    <select id="selectScVerificationBatchList" parameterType="ScVerificationBatch" resultMap="ScVerificationBatchResult">
+        <include refid="selectScVerificationBatchVo" />
+        <where>
+            <if test="batchName != null and batchName != ''">and batch_name like concat('%', #{batchName}, '%')</if>
+            <if test="batchNo != null and batchNo != ''">and batch_no = #{batchNo}</if>
+            <if test="batchStatus != null and batchStatus != ''">and batch_status = #{batchStatus}</if>
+            <if test="scopeType != null and scopeType != ''">and scope_type = #{scopeType}</if>
+            <if test="scopeGradeId != null">and scope_grade_id = #{scopeGradeId}</if>
+            <if test="scopeClassId != null">and scope_class_id = #{scopeClassId}</if>
+        </where>
+        order by batch_id desc
+    </select>
+
+    <select id="selectActiveBatchesForStudent" resultMap="ScVerificationBatchResult">
+        <include refid="selectScVerificationBatchVo" />
+        where batch_status = 'ACTIVE'
+          and (start_time is null or start_time &lt;= sysdate())
+          and (end_time is null or end_time &gt;= sysdate())
+          and (
+              scope_type = 'ALL'
+              <if test="gradeId != null">or (scope_type = 'GRADE' and scope_grade_id = #{gradeId})</if>
+              <if test="classId != null">or (scope_type = 'CLASS' and scope_class_id = #{classId})</if>
+          )
+        order by batch_id desc
+    </select>
+
+    <select id="selectMaxBatchNoSeq" resultType="Integer">
+        select max(cast(substring(batch_no, length(#{prefix}) + 1) as unsigned))
+        from sc_verification_batch
+        where batch_no like concat(#{prefix}, '%')
+    </select>
+
+    <insert id="insertScVerificationBatch" parameterType="ScVerificationBatch" useGeneratedKeys="true" keyProperty="batchId">
+        insert into sc_verification_batch
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="batchName != null and batchName != ''">batch_name,</if>
+            <if test="batchNo != null and batchNo != ''">batch_no,</if>
+            <if test="description != null">description,</if>
+            <if test="editableFields != null and editableFields != ''">editable_fields,</if>
+            <if test="scopeType != null and scopeType != ''">scope_type,</if>
+            <if test="scopeGradeId != null">scope_grade_id,</if>
+            <if test="scopeClassId != null">scope_class_id,</if>
+            <if test="batchStatus != null and batchStatus != ''">batch_status,</if>
+            <if test="startTime != null">start_time,</if>
+            <if test="endTime != null">end_time,</if>
+            <if test="createBy != null and createBy != ''">create_by,</if>
+            <if test="remark != null">remark,</if>
+            create_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="batchName != null and batchName != ''">#{batchName},</if>
+            <if test="batchNo != null and batchNo != ''">#{batchNo},</if>
+            <if test="description != null">#{description},</if>
+            <if test="editableFields != null and editableFields != ''">#{editableFields},</if>
+            <if test="scopeType != null and scopeType != ''">#{scopeType},</if>
+            <if test="scopeGradeId != null">#{scopeGradeId},</if>
+            <if test="scopeClassId != null">#{scopeClassId},</if>
+            <if test="batchStatus != null and batchStatus != ''">#{batchStatus},</if>
+            <if test="startTime != null">#{startTime},</if>
+            <if test="endTime != null">#{endTime},</if>
+            <if test="createBy != null and createBy != ''">#{createBy},</if>
+            <if test="remark != null">#{remark},</if>
+            sysdate()
+        </trim>
+    </insert>
+
+    <update id="updateScVerificationBatch" parameterType="ScVerificationBatch">
+        update sc_verification_batch
+        <set>
+            <if test="batchName != null and batchName != ''">batch_name = #{batchName},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="editableFields != null and editableFields != ''">editable_fields = #{editableFields},</if>
+            <if test="scopeType != null and scopeType != ''">scope_type = #{scopeType},</if>
+            <if test="scopeGradeId != null">scope_grade_id = #{scopeGradeId},</if>
+            <if test="scopeClassId != null">scope_class_id = #{scopeClassId},</if>
+            <if test="batchStatus != null and batchStatus != ''">batch_status = #{batchStatus},</if>
+            <if test="startTime != null">start_time = #{startTime},</if>
+            <if test="endTime != null">end_time = #{endTime},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            update_time = sysdate()
+        </set>
+        where batch_id = #{batchId}
+    </update>
+
+    <delete id="deleteScVerificationBatchByBatchId" parameterType="Long">
+        delete from sc_verification_batch where batch_id = #{batchId}
+    </delete>
+
+    <delete id="deleteScVerificationBatchByBatchIds" parameterType="Long">
+        delete from sc_verification_batch where batch_id in
+        <foreach item="batchId" collection="array" open="(" separator="," close=")">
+            #{batchId}
+        </foreach>
+    </delete>
+</mapper>

@@ -78,7 +78,42 @@ public class ScCourseScheduleController extends BaseController {
     @PostMapping
     public AjaxResult add(@Validated @RequestBody ScCourseSchedule scCourseSchedule) {
         scCourseSchedule.setCreateBy(getUsername());
-        return toAjax(scCourseScheduleService.insertScCourseSchedule(scCourseSchedule));
+        int rows = scCourseScheduleService.insertScCourseSchedule(scCourseSchedule);
+        // Auto-copy schedule to combined class members
+        if (rows > 0 && scCourseSchedule.getClassCourseId() != null) {
+            ScClassCourse currentCc = scClassCourseMapper.selectScClassCourseById(scCourseSchedule.getClassCourseId());
+            if (currentCc != null && StringUtils.isNotEmpty(currentCc.getCombinedClassCode())) {
+                ScClassCourse query = new ScClassCourse();
+                query.setTermId(currentCc.getTermId());
+                query.setCourseId(currentCc.getCourseId());
+                query.setStatus("0");
+                List<ScClassCourse> allCombined = scClassCourseMapper.selectScClassCourseList(query).stream()
+                        .filter(cc -> cc.getId() != null && !cc.getId().equals(currentCc.getId())
+                                && StringUtils.equals(currentCc.getCombinedClassCode(),
+                                        StringUtils.trimToEmpty(cc.getCombinedClassCode())))
+                        .collect(Collectors.toList());
+                for (ScClassCourse cc : allCombined) {
+                    ScCourseSchedule copy = new ScCourseSchedule();
+                    copy.setTermId(scCourseSchedule.getTermId());
+                    copy.setClassCourseId(cc.getId());
+                    copy.setClassroomId(scCourseSchedule.getClassroomId());
+                    copy.setWeekDay(scCourseSchedule.getWeekDay());
+                    copy.setStartSection(scCourseSchedule.getStartSection());
+                    copy.setEndSection(scCourseSchedule.getEndSection());
+                    copy.setClassroom(scCourseSchedule.getClassroom());
+                    copy.setClassroomName(scCourseSchedule.getClassroomName());
+                    copy.setBuildingName(scCourseSchedule.getBuildingName());
+                    copy.setCampusName(scCourseSchedule.getCampusName());
+                    copy.setWeeksText(scCourseSchedule.getWeeksText());
+                    copy.setWeeksJson(scCourseSchedule.getWeeksJson());
+                    copy.setStatus(scCourseSchedule.getStatus());
+                    copy.setCreateBy(getUsername());
+                    copy.setRemark("合班自动生成");
+                    scCourseScheduleService.insertScCourseSchedule(copy);
+                }
+            }
+        }
+        return toAjax(rows);
     }
 
     @PreAuthorize("@ss.hasPermi('campus:course:edit')")

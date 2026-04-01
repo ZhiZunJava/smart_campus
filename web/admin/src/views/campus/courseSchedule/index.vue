@@ -37,8 +37,8 @@
     <!-- 列表视图 -->
     <el-table v-if="viewMode === 'table'" v-loading="loading" :data="dataList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" />
-      <el-table-column label="班级" min-width="140"><template #default="{ row }">{{ getMergedSchedule(row)?.className || '-' }}</template></el-table-column>
-      <el-table-column label="课程" min-width="180"><template #default="{ row }">{{ displayClassCourseName(getMergedSchedule(row)) }}</template></el-table-column>
+      <el-table-column label="班级" min-width="140"><template #default="{ row }">{{ getMergedSchedule(row)?.className || '-' }} <el-tag v-if="getMergedSchedule(row)?.combinedClassCode" size="small" type="success" style="margin-left:4px">合班</el-tag></template></el-table-column>
+      <el-table-column label="课程" min-width="180"><template #default="{ row }">{{ displayClassCourseName(getMergedSchedule(row)) }} <el-tag v-if="getMergedSchedule(row)?.selectionGroupCode" size="small" type="warning" style="margin-left:4px">专项</el-tag></template></el-table-column>
       <el-table-column label="教师" min-width="100"><template #default="{ row }">{{ getMergedSchedule(row)?.teacherName || '-' }}</template></el-table-column>
       <el-table-column label="星期" width="90"><template #default="{ row }">{{ weekLabel(row.weekDay) }}</template></el-table-column>
       <el-table-column label="节次" width="120"><template #default="{ row }">{{ getSectionText(row) }}</template></el-table-column>
@@ -70,18 +70,50 @@
               <td class="dayPartUnit" :style="{ background: row.sideColor }">{{ row.label }}</td>
               <template v-for="day in weekOptions" :key="`${day.value}-${row.key}`">
                 <td v-if="shouldRenderCell(row.key, day.value)" class="schedule-board__cell" :rowspan="getRowSpan(row.key, day.value)">
-                  <div v-if="getSchedule(row.key, day.value)" class="schedule-card" :style="getCardStyle(getSchedule(row.key, day.value))">
-                    <div class="course-name">{{ displayClassCourseName(getSchedule(row.key, day.value)) }}</div>
+                  <el-tooltip v-if="getSchedule(row.key, day.value)" placement="right" :show-after="300">
+
+                    <template #content>
+
+                      <div class="schedule-tooltip">
+
+                        <div><b>{{ displayClassCourseName(getSchedule(row.key, day.value)) }}</b></div>
+
+                        <div v-if="getSchedule(row.key, day.value)?._parallelCount">专项课程: {{ (getSchedule(row.key, day.value)?._parallelOptionNames || []).join(', ') }}</div>
+
+                        <div v-if="getSchedule(row.key, day.value)?._combinedCount">合班: {{ getSchedule(row.key, day.value)?._combinedClassNames }}</div>
+
+                        <div>周次: {{ getSchedule(row.key, day.value)?.weeksText || '全周' }}</div>
+
+                        <div>节次: {{ getSectionText(getSchedule(row.key, day.value)) }}</div>
+
+                        <div v-if="getScheduleRoom(getSchedule(row.key, day.value))">教室: {{ getScheduleRoom(getSchedule(row.key, day.value)) }}</div>
+
+                        <div>教师: {{ getSchedule(row.key, day.value)?._parallelTeachers?.length > 1 ? getSchedule(row.key, day.value)._parallelTeachers.join(', ') : (getSchedule(row.key, day.value)?.teacherName || '未配置') }}</div>
+
+                        <div>班级: {{ getSchedule(row.key, day.value)?._combinedClassNames || getSchedule(row.key, day.value)?.className || '-' }}</div>
+
+                        <div>人数: {{ getStudentCount(getSchedule(row.key, day.value)) }}</div>
+
+                      </div>
+
+                    </template>
+<div class="schedule-card" :style="getCardStyle(getSchedule(row.key, day.value))">
+                    <div class="course-name">
+                      <span>{{ displayClassCourseName(getSchedule(row.key, day.value)) }}</span>
+                      <span v-if="getSchedule(row.key, day.value)?._parallelCount" class="schedule-badge schedule-badge--parallel" :title="(getSchedule(row.key, day.value)?._parallelOptionNames || []).join(', ')">{{ getSchedule(row.key, day.value)._parallelCount }}专项</span>
+                      <span v-if="getSchedule(row.key, day.value)?._combinedCount" class="schedule-badge schedule-badge--combined">合班</span>
+                    </div>
                     <div class="course-meta-list">
                       <div class="course-meta-item course-meta-item--wide"><i class="ri-calendar-event-line"></i><span>{{ getSchedule(row.key, day.value)?.weeksText || '全周' }} · {{ getSectionText(getSchedule(row.key, day.value)) }}</span></div>
-                      <div class="course-meta-item course-meta-item--wide"><i class="ri-map-pin-2-line"></i><span>{{ getScheduleRoom(getSchedule(row.key, day.value)) }}</span></div>
-                      <div class="course-meta-item"><i class="ri-user-star-line"></i><span>{{ getSchedule(row.key, day.value)?.teacherName || '未配置' }}</span></div>
+                      <div v-if="getScheduleRoom(getSchedule(row.key, day.value))" class="course-meta-item course-meta-item--wide"><i class="ri-map-pin-2-line"></i><span>{{ getScheduleRoom(getSchedule(row.key, day.value)) }}</span></div>
+                      <div class="course-meta-item"><i class="ri-user-star-line"></i><span>{{ getSchedule(row.key, day.value)?._parallelTeachers?.length > 1 ? getSchedule(row.key, day.value)._parallelTeachers.join(', ') : (getSchedule(row.key, day.value)?.teacherName || '') }}</span></div>
                     </div>
                     <div class="course-footer">
-                      <div class="lesson-name">{{ getSchedule(row.key, day.value)?.className || '-' }}</div>
+                      <div class="lesson-name">{{ getSchedule(row.key, day.value)?._combinedClassNames || getSchedule(row.key, day.value)?.className || '-' }}</div>
                       <div class="course-population"><i class="ri-group-line"></i><span>{{ getStudentCount(getSchedule(row.key, day.value)) }}</span></div>
                     </div>
                   </div>
+                  </el-tooltip>
                 </td>
               </template>
             </tr>
@@ -191,36 +223,47 @@
       <el-table :data="autoArrangeItems" max-height="420">
         <el-table-column label="参与" width="70"><template #default="{ row }"><el-switch v-model="row.selected" /></template></el-table-column>
         <el-table-column label="班级" min-width="120"><template #default="{ row }">{{ row.className || '-' }}</template></el-table-column>
-        <el-table-column label="课程" min-width="180"><template #default="{ row }">{{ displayClassCourseName(row) }}</template></el-table-column>
+        <el-table-column label="课程" min-width="200">
+          <template #default="{ row }">
+            <span>{{ displayClassCourseName(row) }}</span>
+            <el-tooltip v-if="row._isGroupLeader" :content="row._groupOptionNames" placement="top">
+              <el-tag size="small" type="warning" style="margin-left:6px">{{ row._groupSize }}个专项</el-tag>
+            </el-tooltip>
+            <el-tooltip v-if="row._isCombinedLeader" :content="row._combinedClassNames" placement="top">
+              <el-tag size="small" type="success" style="margin-left:6px">{ { `合班${row._combinedSize}个班` } }</el-tag>
+            </el-tooltip>
+          </template>
+        </el-table-column>
         <el-table-column label="教师" min-width="100"><template #default="{ row }">{{ row.teacherName || '-' }}</template></el-table-column>
         <el-table-column label="指定教室" min-width="200">
           <template #default="{ row }">
-            <el-select v-model="row.assignedClassroomId" filterable clearable placeholder="自动分配" style="width:100%"><el-option v-for="item in autoArrangeClassroomOptions" :key="`a-cr-${row.id}-${item.value}`" :label="item.label" :value="item.value" /></el-select>
+            <el-select v-if="activeEditRow === row.id && activeEditCol === 'classroom'" v-model="row.assignedClassroomId" filterable clearable placeholder="自动分配" style="width:100%" @visible-change="(v:boolean) => { if (!v) deactivateEdit() }"><el-option v-for="item in autoArrangeClassroomOptions" :key="`a-cr-${item.value}`" :label="item.label" :value="item.value" /></el-select>
+            <span v-else class="cell-click-trigger" @click="activateEdit(row.id, 'classroom')">{{ resolveClassroomLabel(row.assignedClassroomId) || '自动分配' }}</span>
           </template>
         </el-table-column>
         <el-table-column label="排课周次" min-width="200">
           <template #default="{ row }">
-            <el-select v-model="row.selectedWeeks" multiple collapse-tags collapse-tags-tooltip style="width:100%"><el-option v-for="item in autoArrangeWeekOptions" :key="`a-wk-${row.id}-${item}`" :label="`第${item}周`" :value="item" /></el-select>
-            <div class="auto-arrange-week-preview">{{ row.weeksText || '未选择周次' }}</div>
+            <el-select v-if="activeEditRow === row.id && activeEditCol === 'weeks'" v-model="row.selectedWeeks" multiple collapse-tags collapse-tags-tooltip style="width:100%" @change="onAutoArrangeWeekChange(row)" @visible-change="(v:boolean) => { if (!v) deactivateEdit() }"><el-option v-for="item in autoArrangeWeekOptions" :key="`a-wk-${item}`" :label="`第${item}周`" :value="item" /></el-select>
+            <span v-else class="cell-click-trigger" @click="activateEdit(row.id, 'weeks')">{{ row.weeksText || '未选择周次' }}</span>
           </template>
         </el-table-column>
         <el-table-column label="禁排星期" min-width="170">
           <template #default="{ row }">
-            <el-select v-model="row.excludedWeekDays" multiple collapse-tags collapse-tags-tooltip clearable style="width:100%">
-              <el-option v-for="item in weekOptions" :key="`a-ewd-${row.id}-${item.value}`" :label="item.label" :value="item.value" />
+            <el-select v-if="activeEditRow === row.id && activeEditCol === 'weekdays'" v-model="row.excludedWeekDays" multiple collapse-tags collapse-tags-tooltip clearable style="width:100%" @visible-change="(v:boolean) => { if (!v) deactivateEdit() }">
+              <el-option v-for="item in weekOptions" :key="`a-ewd-${item.value}`" :label="item.label" :value="item.value" />
             </el-select>
-            <div class="auto-arrange-week-preview">{{ formatExcludedWeekDays(row.excludedWeekDays) }}</div>
+            <span v-else class="cell-click-trigger" @click="activateEdit(row.id, 'weekdays')">{{ formatExcludedWeekDays(row.excludedWeekDays) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="禁排时段" min-width="170">
           <template #default="{ row }">
-            <el-select v-model="row.excludedDayParts" multiple collapse-tags collapse-tags-tooltip clearable style="width:100%">
+            <el-select v-if="activeEditRow === row.id && activeEditCol === 'dayparts'" v-model="row.excludedDayParts" multiple collapse-tags collapse-tags-tooltip clearable style="width:100%" @visible-change="(v:boolean) => { if (!v) deactivateEdit() }">
               <el-option label="上午" value="MORNING" />
               <el-option label="中午" value="NOON" />
               <el-option label="下午" value="AFTERNOON" />
               <el-option label="晚上" value="EVENING" />
             </el-select>
-            <div class="auto-arrange-week-preview">{{ formatExcludedDayParts(row.excludedDayParts) }}</div>
+            <span v-else class="cell-click-trigger" @click="activateEdit(row.id, 'dayparts')">{{ formatExcludedDayParts(row.excludedDayParts) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="最多节/周" width="120"><template #default="{ row }"><el-input-number v-model="row.maxWeeklySections" :min="1" :max="12" style="width:100%" /></template></el-table-column>
@@ -322,6 +365,8 @@ const AUTO_ARRANGE_EMPTY_CLASSROOM_ID = -1
 const loading = ref(false), showSearch = ref(true), total = ref(0), open = ref(false), title = ref('')
 const ids = ref<any[]>([]), single = ref(true), multiple = ref(true), dataList = ref<any[]>([]), selectedRows = ref<any[]>([])
 const autoArrangeLoading = ref(false), autoArrangeOpen = ref(false), autoArrangeResultOpen = ref(false)
+const activeEditRow = ref<number | null>(null), activeEditCol = ref<string | null>(null)
+let checkConflictTimer: any = null
 const importOpen = ref(false), importLoading = ref(false), importUploadRef = ref<any>(null), importFileList = ref<any[]>([])
 const termOptions = ref<any[]>([]), deptOptions = ref<any[]>([]), classOptions = ref<any[]>([])
 const classCourseOptions = ref<any[]>([]), classroomOptions = ref<any[]>([])
@@ -421,12 +466,48 @@ const allowedCCIds = computed(() => {
 
 const visibleSchedules = computed(() => dataList.value.filter((item: any) => matchesWeek(item.weeksText, currentWeek.value)))
 const activityMap = computed(() => {
-  const map = new Map<string, any>()
+  const map = new Map<string, any[]>()
   visibleSchedules.value.forEach((item: any) => {
     const s = Number(item.startSection || 0), d = Number(item.weekDay || 0)
-    if (s && d) map.set(`${s}-${d}`, item)
+    if (s && d) {
+      const key = `${s}-${d}`
+      if (!map.has(key)) map.set(key, [])
+      map.get(key)!.push(item)
+    }
   })
   return map
+})
+// Build a merged view for board: group selection-group and combined-class schedules into one display object
+const mergedActivityMap = computed(() => {
+  const result = new Map<string, any>()
+  for (const [key, items] of activityMap.value) {
+    if (items.length === 1) {
+      result.set(key, getMergedSchedule(items[0]))
+      continue
+    }
+    // Merge items: enrich first item with info about parallel courses
+    const enriched = items.map((i: any) => getMergedSchedule(i))
+    const primary = { ...enriched[0] }
+    // Detect selection group (same classId + courseId + selectionGroupCode)
+    const selGroupItems = enriched.filter((e: any) => e.selectionGroupCode && e.selectionGroupCode === primary.selectionGroupCode && e.classId === primary.classId)
+    if (selGroupItems.length > 1) {
+      primary._parallelOptionNames = selGroupItems.map((e: any) => e.selectionOptionName || e.teacherName || '').filter(Boolean)
+      primary._parallelTeachers = [...new Set(selGroupItems.map((e: any) => e.teacherName).filter(Boolean))]
+      primary._parallelCount = selGroupItems.length
+    }
+    // Detect combined class (same combinedClassCode)
+    const combinedItems = enriched.filter((e: any) => e.combinedClassCode && e.combinedClassCode === primary.combinedClassCode)
+    if (combinedItems.length > 1) {
+      primary._combinedClassNames = [...new Set(combinedItems.map((e: any) => e.className).filter(Boolean))].join('+')
+      primary._combinedCount = combinedItems.length
+    }
+    // Fallback: if unrelated courses overlap (different courses), stack count
+    if (!primary._parallelCount && !primary._combinedCount && items.length > 1) {
+      primary._stackedCount = items.length
+    }
+    result.set(key, primary)
+  }
+  return result
 })
 const occupiedMap = computed(() => {
   const map = new Map<string, { startKey: string; span: number }>()
@@ -524,7 +605,7 @@ function getRowSpan(rowKey: string, day: number) {
 }
 function getSchedule(rowKey: string, day: number) {
   const row = tableRows.value.find((r: any) => r.key === rowKey); if (!row?.unit) return null
-  const item = activityMap.value.get(`${row.unit}-${day}`); return item ? getMergedSchedule(item) : null
+  return mergedActivityMap.value.get(`${row.unit}-${day}`) || null
 }
 function getSectionText(item: any) {
   const s = Number(item?.startSection || 0), e = Number(item?.endSection || s); if (!s) return '-'
@@ -703,6 +784,11 @@ async function handleDelete(row?: any) {
 
 function handleAutoArrangeScopeChange() { autoArrangeForm.deptId = undefined; autoArrangeForm.classId = undefined; autoArrangeForm.courseId = undefined; refreshAutoArrangeItems() }
 function toggleAllAutoArrangeItems(selected: boolean) { autoArrangeItems.value.forEach((i: any) => { i.selected = selected }) }
+function activateEdit(rowId: number, col: string) { activeEditRow.value = rowId; activeEditCol.value = col }
+function deactivateEdit() { activeEditRow.value = null; activeEditCol.value = null }
+function resolveClassroomLabel(id: any) { if (!id || id === AUTO_ARRANGE_EMPTY_CLASSROOM_ID) return null; return classroomOptions.value.find((o: any) => o.value === id)?.label || `教室${id}` }
+// formatExcludedWeekDays / formatExcludedDayParts defined earlier (around line 580)
+function onAutoArrangeWeekChange(row: any) { row.weeksText = buildWeeksText(row.selectedWeeks || []) }
 function resolveAutoArrangeWeeklyCap(item: any) {
   const total = Number(item?.totalHours || 0)
   const weeks = Number(item?.requiredWeeks || 0)
@@ -717,7 +803,57 @@ function refreshAutoArrangeItems() {
   if (autoArrangeForm.scopeType === 'dept' && autoArrangeForm.deptId) items = items.filter((c: any) => c.openDeptId === autoArrangeForm.deptId || c.deptId === autoArrangeForm.deptId)
   else if (autoArrangeForm.scopeType === 'class' && autoArrangeForm.classId) items = items.filter((c: any) => c.classId === autoArrangeForm.classId)
   else if (autoArrangeForm.scopeType === 'course' && autoArrangeForm.courseId) items = items.filter((c: any) => c.courseId === autoArrangeForm.courseId)
-  autoArrangeItems.value = items.map((c: any) => ({
+
+  // 合并同选课组（体育专项等）：同 classId + courseId + selectionGroupCode 且 selectionGroupLimit=1 的课程合并为一行
+  const groupMap = new Map<string, any[]>()
+  const standalone: any[] = []
+  for (const item of items) {
+    const groupKey = item.selectionGroupCode && Number(item.selectionGroupLimit || 1) === 1
+      ? `${item.classId}:${item.courseId}:${item.selectionGroupCode}`
+      : null
+    if (groupKey) {
+      if (!groupMap.has(groupKey)) groupMap.set(groupKey, [])
+      groupMap.get(groupKey)!.push(item)
+    } else {
+      standalone.push(item)
+    }
+  }
+  const merged: any[] = [...standalone]
+  for (const [, group] of groupMap) {
+    if (group.length <= 1) { merged.push(group[0]); continue }
+    const leader = { ...group[0] }
+    leader._isGroupLeader = true
+    leader._groupSize = group.length
+    leader._groupMemberIds = group.map((g: any) => g.id)
+    leader._groupOptionNames = group.map((g: any) => g.selectionOptionName || g.teacherName || '').filter(Boolean).join('、')
+    merged.push(leader)
+  }
+
+  // 合并合班课程：同 combinedClassCode + courseId 的不同班级合并为一行
+  const combinedMap = new Map<string, any[]>()
+  const finalItems: any[] = []
+  for (const item of merged) {
+    const cc = item.combinedClassCode
+    const combKey = cc ? `${cc}:${item.courseId}:${item.termId}` : null
+    if (combKey) {
+      if (!combinedMap.has(combKey)) combinedMap.set(combKey, [])
+      combinedMap.get(combKey)!.push(item)
+    } else {
+      finalItems.push(item)
+    }
+  }
+  for (const [, group] of combinedMap) {
+    if (group.length <= 1) { finalItems.push(group[0]); continue }
+    const leader = { ...group[0] }
+    leader._isCombinedLeader = true
+    leader._combinedSize = group.length
+    leader._combinedMemberIds = group.map((g: any) => g._isGroupLeader ? g._groupMemberIds : [g.id]).flat()
+    leader._combinedClassNames = group.map((g: any) => g.className).join('+')
+    leader.studentCount = group.reduce((sum: number, g: any) => sum + (g.actualStudentCount || g.studentLimit || 0), 0)
+    finalItems.push(leader)
+  }
+
+  autoArrangeItems.value = finalItems.map((c: any) => ({
     ...c, weeksText: c.requiredWeeks ? `1-${c.requiredWeeks}周` : '',
     selectedWeeks: c.requiredWeeks ? Array.from({ length: c.requiredWeeks }, (_, i) => i + 1) : [...autoArrangeWeekOptions.value],
     maxWeeklySections: resolveAutoArrangeWeeklyCap(c), selected: true, assignedClassroomId: undefined, excludedWeekDays: [...(autoArrangeForm.excludedWeekDays || [])], excludedDayParts: [...(autoArrangeForm.excludedDayParts || [])],
@@ -735,10 +871,23 @@ async function handleAutoArrange() {
   const tid = autoArrangeForm.termId ?? getDefaultTermId(); if (!tid) { ElMessage.warning('请先选择学期'); return }
   const selected = autoArrangeItems.value.filter((i: any) => i.selected); if (!selected.length) { ElMessage.warning('请至少保留一个课程'); return }
   autoArrangeLoading.value = true
+  // 展开选课组：group leader 的配置复制给所有成员
+  const expandedIds: number[] = []
+  const expandedItems: any[] = []
+  for (const item of selected) {
+    // Expand: selection group leader → _groupMemberIds, combined class leader → _combinedMemberIds, else → [item.id]
+    let memberIds: number[] = [item.id]
+    if (item._isGroupLeader && Array.isArray(item._groupMemberIds)) memberIds = item._groupMemberIds
+    if (item._isCombinedLeader && Array.isArray(item._combinedMemberIds)) memberIds = item._combinedMemberIds
+    for (const mid of memberIds) {
+      expandedIds.push(mid)
+      expandedItems.push({ classCourseId: mid, weeksText: item.weeksText, weeksJson: JSON.stringify(item.selectedWeeks || []), maxWeeklySections: item.maxWeeklySections, classroomId: item.assignedClassroomId || undefined, excludedWeekDays: item.excludedWeekDays || [], excludedDayParts: item.excludedDayParts || [] })
+    }
+  }
   try {
     const res = await autoArrangeCourseSchedule({
-      termId: tid, classCourseIds: selected.map((i: any) => i.id),
-      items: selected.map((i: any) => ({ classCourseId: i.id, weeksText: i.weeksText, weeksJson: JSON.stringify(i.selectedWeeks || []), maxWeeklySections: i.maxWeeklySections, classroomId: i.assignedClassroomId || undefined, excludedWeekDays: i.excludedWeekDays || [], excludedDayParts: i.excludedDayParts || [] })),
+      termId: tid, classCourseIds: expandedIds,
+      items: expandedItems,
       clearExistingSchedules: !autoArrangeForm.keepExisting, populationSize: 60, generationCount: 120, mutationRate: 0.12,
       preferredSessionDurations: autoArrangeForm.preferredSessionDurations, excludedDayParts: autoArrangeForm.excludedDayParts, excludedWeekDays: autoArrangeForm.excludedWeekDays,
     })
@@ -791,15 +940,16 @@ async function loadOptions() {
 }
 
 watch(() => form.selectedWeeks, (v: any) => { form.weeksText = buildWeeksText(v || []) }, { deep: true })
-watch(() => autoArrangeItems.value.map((i: any) => i.selectedWeeks), (v: any) => { autoArrangeItems.value.forEach((i: any, idx: number) => { i.weeksText = buildWeeksText(v[idx] || []) }) }, { deep: true })
+// autoArrangeItems weeksText now updated via @change handler (onAutoArrangeWeekChange), no deep watcher needed
 watch(() => form.termId, () => {
   const lim = currentFormTotalWeeks.value
   const cur = Array.isArray(form.selectedWeeks) ? form.selectedWeeks.map(Number).filter((n: number) => Number.isFinite(n) && n >= 1 && n <= lim) : []
   form.selectedWeeks = cur.length ? cur : [...currentWeekOptions.value]
 })
 watch(() => autoArrangeForm.termId, () => {
-  const lim = autoArrangeWeekOptions.value
-  autoArrangeItems.value.forEach((i: any) => { const c = Array.isArray(i.selectedWeeks) ? i.selectedWeeks.map(Number).filter((n: number) => lim.includes(n)) : []; i.selectedWeeks = c.length ? c : [...lim]; i.weeksText = buildWeeksText(i.selectedWeeks) })
+  const limArr = autoArrangeWeekOptions.value
+  const limSet = new Set(limArr)
+  autoArrangeItems.value.forEach((i: any) => { const c = Array.isArray(i.selectedWeeks) ? i.selectedWeeks.map(Number).filter((n: number) => limSet.has(n)) : []; i.selectedWeeks = c.length ? c : [...limArr]; i.weeksText = buildWeeksText(i.selectedWeeks) })
 })
 watch(sectionUnitOptions, () => { normalizeFormSections() })
 watch(() => form.startSection, () => { normalizeFormSections() })
@@ -826,7 +976,7 @@ watch(() => queryParams.termId, async (value) => {
 watch(() => [autoArrangeForm.scopeType, autoArrangeForm.deptId, autoArrangeForm.classId, autoArrangeForm.courseId], () => { if (autoArrangeOpen.value) refreshAutoArrangeItems() })
 watch(viewMode, () => { getList() })
 watch(() => queryParams.weekNo, (v: any) => { queryParams.pageNum = 1; if (viewMode.value === 'board' && v != null) currentWeek.value = Number(v) })
-watch(() => [open.value, form.classroomId, form.termId, form.weekDay, form.startSection, form.endSection, form.weeksText, form.status], () => { checkConflict() })
+watch(() => [open.value, form.classroomId, form.termId, form.weekDay, form.startSection, form.endSection, form.weeksText, form.status], () => { clearTimeout(checkConflictTimer); checkConflictTimer = setTimeout(checkConflict, 300) })
 onMounted(async () => { await loadOptions(); resetForm(); getList() })
 </script>
 
@@ -858,7 +1008,10 @@ onMounted(async () => { await loadOptions(); resetForm(); getList() })
 .dayPartUnit{width:4.8%;text-align:center !important;vertical-align:middle !important;color:#172033;font-size:12px;font-weight:700;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.28)}
 .schedule-board__cell{position:relative;height:52px;background:linear-gradient(180deg,rgba(255,255,255,0.88) 0%,rgba(247,250,253,0.96) 100%)}
 .schedule-card{display:flex;flex-direction:column;gap:4px;padding:5px 8px 6px;min-height:46px;height:calc(100% - 4px);box-sizing:border-box;margin:2px;box-shadow:0 6px 16px rgba(15,23,42,0.05)}
-.course-name{color:#122033;font-size:15px;font-weight:800;line-height:1.18;margin-bottom:3px;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:2px;text-decoration-color:rgba(18,32,51,0.24)}
+.course-name{color:#122033;font-size:15px;font-weight:800;line-height:1.18;margin-bottom:3px;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:2px;text-decoration-color:rgba(18,32,51,0.24);display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.schedule-badge{display:inline-block;padding:1px 5px;border-radius:6px;font-size:10px;font-weight:600;line-height:1.4;white-space:nowrap;text-decoration:none}
+.schedule-badge--parallel{background:#fff3e0;color:#e65100;border:1px solid #ffcc80}
+.schedule-badge--combined{background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7}
 .course-meta-list{display:flex;flex-direction:column;gap:2px;min-width:0}
 .course-meta-item{display:inline-flex;align-items:center;gap:4px;min-width:0;color:#405068;font-size:12px;line-height:1.3}
 .course-meta-item i,.course-population i{flex:0 0 auto;font-size:13px;color:#245a97}
@@ -872,6 +1025,8 @@ onMounted(async () => { await loadOptions(); resetForm(); getList() })
 .auto-arrange-summary{margin-bottom:12px;padding:10px 14px;border-radius:12px;background:#f0f5ff;color:#2d4a7a;font-size:13px;display:flex;align-items:center;gap:4px}
 .auto-arrange-summary strong{color:#1d3557;font-size:16px}
 .auto-arrange-week-preview{margin-top:6px;color:#667085;font-size:12px;line-height:1.5}
+.cell-click-trigger{cursor:pointer;display:inline-block;padding:4px 8px;border-radius:6px;color:#4b5565;font-size:13px;min-height:24px;line-height:24px;transition:background 0.15s;width:100%;box-sizing:border-box}
+.cell-click-trigger:hover{background:#f0f5ff;color:#1d4f91}
 .auto-arrange-result-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px;padding:12px 14px;border-radius:14px;background:linear-gradient(180deg,#f6fbff 0%,#eef5ff 100%);border:1px solid #dbe6f5}
 .auto-arrange-result-head__summary{color:#172033;font-size:14px}
 .auto-arrange-result-head__summary strong{font-size:22px;color:#1d4f91}
@@ -884,4 +1039,12 @@ onMounted(async () => { await loadOptions(); resetForm(); getList() })
 :deep(.el-input-number__decrease),:deep(.el-input-number__increase){border-radius:0}
 :deep(.el-input-number__decrease){border-left:1px solid var(--el-border-color);border-radius:4px 0 0 4px}
 :deep(.el-input-number__increase){border-right:1px solid var(--el-border-color);border-radius:0 4px 4px 0}
+.schedule-tooltip {
+  font-size: 12px;
+  line-height: 1.6;
+  max-width: 300px;
+}
+.schedule-tooltip b {
+  font-size: 13px;
+}
 </style>

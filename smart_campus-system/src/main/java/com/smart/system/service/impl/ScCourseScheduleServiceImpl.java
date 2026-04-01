@@ -342,6 +342,14 @@ public class ScCourseScheduleServiceImpl implements IScCourseScheduleService {
             if (!currentClassCourse.getClassId().equals(existingClassCourse.getClassId())) {
                 continue;
             }
+            // 合班豁免：同 combinedClassCode + 同 courseId + 同 termId 的不同班级不视为班级冲突
+            if (isSameCombinedClassGroup(currentClassCourse, existingClassCourse)) {
+                continue;
+            }
+            // 选课组/专项豁免：同 selectionGroupCode + selectionGroupLimit=1 的课程可并行
+            if (canParallelSelectionGroup(currentClassCourse, existingClassCourse)) {
+                continue;
+            }
             result.put("hasConflict", true);
             result.put("conflictType", "class");
             result.put("conflictScheduleId", existing.getScheduleId());
@@ -362,6 +370,38 @@ public class ScCourseScheduleServiceImpl implements IScCourseScheduleService {
             break;
         }
         return result;
+    }
+
+    private boolean canParallelSelectionGroup(ScClassCourse a, ScClassCourse b) {
+        if (a == null || b == null) {
+            return false;
+        }
+        if (!java.util.Objects.equals(a.getClassId(), b.getClassId())
+                || !java.util.Objects.equals(a.getCourseId(), b.getCourseId())) {
+            return false;
+        }
+        String codeA = StringUtils.trimToEmpty(a.getSelectionGroupCode());
+        String codeB = StringUtils.trimToEmpty(b.getSelectionGroupCode());
+        if (StringUtils.isEmpty(codeA) || !codeA.equals(codeB)) {
+            return false;
+        }
+        int limitA = a.getSelectionGroupLimit() == null || a.getSelectionGroupLimit() <= 0 ? 1 : a.getSelectionGroupLimit();
+        int limitB = b.getSelectionGroupLimit() == null || b.getSelectionGroupLimit() <= 0 ? 1 : b.getSelectionGroupLimit();
+        return limitA == 1 && limitB == 1;
+    }
+
+    private boolean isSameCombinedClassGroup(ScClassCourse a, ScClassCourse b) {
+        if (a == null || b == null) {
+            return false;
+        }
+        String codeA = StringUtils.trimToEmpty(a.getCombinedClassCode());
+        String codeB = StringUtils.trimToEmpty(b.getCombinedClassCode());
+        if (StringUtils.isEmpty(codeA) || StringUtils.isEmpty(codeB)) {
+            return false;
+        }
+        return codeA.equals(codeB)
+                && java.util.Objects.equals(a.getCourseId(), b.getCourseId())
+                && java.util.Objects.equals(a.getTermId(), b.getTermId());
     }
 
     private boolean isSectionOverlap(ScCourseSchedule left, ScCourseSchedule right) {

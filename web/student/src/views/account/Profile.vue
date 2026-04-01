@@ -69,33 +69,6 @@
           </el-descriptions>
         </el-card>
 
-        <el-card shadow="never" class="profile-card mb-4" :body-style="{ padding: '0px' }">
-          <template #header>
-            <div class="card-header">
-              <div class="card-title">
-                <el-icon><DataBoard /></el-icon>
-                <span>学习偏好</span>
-              </div>
-            </div>
-          </template>
-          <div class="learning-profile">
-            <div class="lp-item">
-              <div class="lp-label">学习风格</div>
-              <div class="lp-value">{{ profile.learningStyle || '--' }}</div>
-            </div>
-            <div class="lp-item">
-              <div class="lp-label">学习目标</div>
-              <div class="lp-value">{{ profile.learningGoal || '--' }}</div>
-            </div>
-            <div class="lp-item">
-              <div class="lp-label">兴趣标签</div>
-              <div class="lp-tags">
-                <el-tag v-for="tag in parsedTags" :key="tag" class="mr-2" effect="light" round>{{ tag }}</el-tag>
-                <span v-if="!parsedTags.length" class="text-muted">暂无标签</span>
-              </div>
-            </div>
-          </div>
-        </el-card>
       </el-col>
 
       <el-col :span="8">
@@ -221,7 +194,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { getPortalGrowthSummary, getPortalProfile } from '@/api/portal'
 import usePortalUserStore from '@/store/user'
-import { User, Postcard, DataBoard, Coin, Trophy, Medal } from '@element-plus/icons-vue'
+import { User, Postcard, Coin, Trophy, Medal } from '@element-plus/icons-vue'
 
 const profile = ref<any>({})
 const roleGroup = ref('')
@@ -259,9 +232,6 @@ const completionFields = computed(() => [
   profile.value.teacherNo,
   profile.value.major,
   profile.value.admissionYear,
-  profile.value.learningGoal,
-  profile.value.interestTags,
-  profile.value.learningStyle,
 ])
 
 const profileCompleteness = computed(() => {
@@ -272,14 +242,6 @@ const profileCompleteness = computed(() => {
 
 const contactCount = computed(() => [profile.value.phonenumber, profile.value.email].filter((item) => item && String(item).trim()).length)
 const identityCount = computed(() => [profile.value.studentNo, profile.value.teacherNo, profile.value.major, profile.value.admissionYear].filter((item) => item && String(item).trim()).length)
-const portraitCount = computed(() => [profile.value.learningGoal, profile.value.interestTags, profile.value.learningStyle].filter((item) => item && String(item).trim()).length)
-
-const parsedTags = computed(() =>
-  String(profile.value.interestTags || '')
-    .split(/[，,]/)
-    .map((item) => item.trim())
-    .filter(Boolean)
-)
 
 function openGrowthDialog(tab: 'ledger' | 'achievement') {
   growthDialogTab.value = tab

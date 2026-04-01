@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScTextbookPlanMapper">
+    <resultMap id="ScTextbookPlanResult" type="ScTextbookPlan">
+        <id property="planId" column="plan_id" />
+        <result property="termId" column="term_id" />
+        <result property="textbookId" column="textbook_id" />
+        <result property="courseId" column="course_id" />
+        <result property="gradeId" column="grade_id" />
+        <result property="classId" column="class_id" />
+        <result property="planQuantity" column="plan_quantity" />
+        <result property="distributedQuantity" column="distributed_quantity" />
+        <result property="planStatus" column="plan_status" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+        <result property="remark" column="remark" />
+        <!-- 联查字段 -->
+        <result property="termName" column="term_name" />
+        <result property="textbookName" column="textbook_name" />
+        <result property="courseName" column="course_name" />
+        <result property="gradeName" column="grade_name" />
+        <result property="className" column="class_name" />
+    </resultMap>
+
+    <sql id="selectScTextbookPlanVo">
+        select p.plan_id, p.term_id, p.textbook_id, p.course_id, p.grade_id, p.class_id,
+               p.plan_quantity, p.distributed_quantity, p.plan_status,
+               p.create_by, p.create_time, p.update_by, p.update_time, p.remark,
+               t.term_name,
+               tb.textbook_name,
+               c.course_name,
+               g.grade_name,
+               cl.class_name
+        from sc_textbook_plan p
+        left join sc_school_term t on p.term_id = t.term_id
+        left join sc_textbook tb on p.textbook_id = tb.textbook_id
+        left join sc_course c on p.course_id = c.course_id
+        left join sc_grade g on p.grade_id = g.grade_id
+        left join sc_class cl on p.class_id = cl.class_id
+    </sql>
+
+    <select id="selectScTextbookPlanByPlanId" parameterType="Long" resultMap="ScTextbookPlanResult">
+        <include refid="selectScTextbookPlanVo" />
+        where p.plan_id = #{planId}
+    </select>
+
+    <select id="selectScTextbookPlanList" parameterType="ScTextbookPlan" resultMap="ScTextbookPlanResult">
+        <include refid="selectScTextbookPlanVo" />
+        <where>
+            <if test="termId != null">and p.term_id = #{termId}</if>
+            <if test="textbookId != null">and p.textbook_id = #{textbookId}</if>
+            <if test="courseId != null">and p.course_id = #{courseId}</if>
+            <if test="gradeId != null">and p.grade_id = #{gradeId}</if>
+            <if test="classId != null">and p.class_id = #{classId}</if>
+            <if test="planStatus != null and planStatus != ''">and p.plan_status = #{planStatus}</if>
+            <if test="textbookName != null and textbookName != ''">and tb.textbook_name like concat('%', #{textbookName}, '%')</if>
+        </where>
+        order by p.create_time desc, p.plan_id desc
+    </select>
+
+    <insert id="insertScTextbookPlan" parameterType="ScTextbookPlan" useGeneratedKeys="true" keyProperty="planId">
+        insert into sc_textbook_plan
+        (term_id, textbook_id, course_id, grade_id, class_id, plan_quantity, distributed_quantity,
+         plan_status, create_by, create_time, remark)
+        values
+        (#{termId}, #{textbookId}, #{courseId}, #{gradeId}, #{classId}, #{planQuantity}, #{distributedQuantity},
+         #{planStatus}, #{createBy}, sysdate(), #{remark})
+    </insert>
+
+    <update id="updateScTextbookPlan" parameterType="ScTextbookPlan">
+        update sc_textbook_plan
+        <set>
+            <if test="termId != null">term_id = #{termId},</if>
+            <if test="textbookId != null">textbook_id = #{textbookId},</if>
+            <if test="courseId != null">course_id = #{courseId},</if>
+            <if test="gradeId != null">grade_id = #{gradeId},</if>
+            <if test="classId != null">class_id = #{classId},</if>
+            <if test="planQuantity != null">plan_quantity = #{planQuantity},</if>
+            <if test="distributedQuantity != null">distributed_quantity = #{distributedQuantity},</if>
+            <if test="planStatus != null">plan_status = #{planStatus},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            update_time = sysdate()
+        </set>
+        where plan_id = #{planId}
+    </update>
+
+    <delete id="deleteScTextbookPlanByPlanId" parameterType="Long">
+        delete from sc_textbook_plan where plan_id = #{planId}
+    </delete>
+
+    <delete id="deleteScTextbookPlanByPlanIds" parameterType="Long">
+        delete from sc_textbook_plan where plan_id in
+        <foreach collection="array" item="planId" open="(" separator="," close=")">
+            #{planId}
+        </foreach>
+    </delete>
+
+    <update id="incrementDistributedQuantity">
+        update sc_textbook_plan
+        set distributed_quantity = distributed_quantity + #{quantity},
+            update_time = sysdate()
+        where textbook_id = #{textbookId}
+          and term_id = #{termId}
+          and plan_status = 'PUBLISHED'
+    </update>
+</mapper>

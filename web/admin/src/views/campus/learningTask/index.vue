@@ -696,10 +696,13 @@ async function handleViewDispatch(row: any) {
     ])
     const submissions = submissionRes.rows || []
     const submissionMap = new Map(submissions.map((item: any) => [item.dispatchId, item]))
-    dispatchList.value = (dispatchRes.rows || []).map((item: any) => ({
-      ...item,
-      ...(submissionMap.get(item.dispatchId) || {})
-    }))
+    dispatchList.value = (dispatchRes.rows || []).map((item: any) => {
+      const submission = submissionMap.get(item.dispatchId) as Record<string, any> | undefined
+      return {
+        ...item,
+        ...(submission || {})
+      }
+    })
   } finally {
     dispatchLoading.value = false
   }

@@ -16,9 +16,6 @@
       <section class="auth-card">
         <div class="auth-card__top">
           <div>
-            <div class="auth-card__brand">
-              <img class="auth-card__brand-logo" :src="portalLogo" alt="教务管理信息系统">
-            </div>
             <div class="auth-card__eyebrow">Campus Access</div>
             <h1>账号登录</h1>
             <p>统一登录入口，登录后将根据当前角色设置进入对应工作台。</p>

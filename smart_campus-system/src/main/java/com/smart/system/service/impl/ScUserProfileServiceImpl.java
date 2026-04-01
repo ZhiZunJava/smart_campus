@@ -5,8 +5,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.smart.common.core.domain.entity.SysUser;
+import com.smart.common.exception.ServiceException;
 import com.smart.common.utils.StringUtils;
 import com.smart.system.domain.ScUserProfile;
+import com.smart.system.domain.dto.UserProfileAdvisorBindDto;
 import com.smart.system.mapper.ScUserProfileMapper;
 import com.smart.system.mapper.SysUserMapper;
 import com.smart.system.service.IScUserProfileService;
@@ -151,6 +153,35 @@ public class ScUserProfileServiceImpl implements IScUserProfileService {
         if (StringUtils.isEmpty(user.getRemark())) {
             user.setRemark(profile.getRemark());
         }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int batchBindAdvisor(UserProfileAdvisorBindDto dto, String operator) {
+        if (dto == null || dto.getProfileIds() == null || dto.getProfileIds().isEmpty()) {
+            throw new ServiceException("档案列表不能为空");
+        }
+        int rows = 0;
+        Long advisorUserId = dto.getAdvisorUserId() != null && dto.getAdvisorUserId() > 0 ? dto.getAdvisorUserId() : 0L;
+        for (Long profileId : dto.getProfileIds()) {
+            if (profileId == null) {
+                continue;
+            }
+            ScUserProfile current = scUserProfileMapper.selectScUserProfileByProfileId(profileId);
+            if (current == null) {
+                continue;
+            }
+            if (!"student".equalsIgnoreCase(StringUtils.defaultString(current.getUserType()))) {
+                continue;
+            }
+            ScUserProfile update = new ScUserProfile();
+            update.setProfileId(current.getProfileId());
+            update.setUserId(current.getUserId());
+            update.setAdvisorUserId(advisorUserId);
+            update.setUpdateBy(operator);
+            rows += updateScUserProfile(update);
+        }
+        return rows;
     }
 
     private void syncSystemUserBase(ScUserProfile profile) {

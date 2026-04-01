@@ -13,8 +13,8 @@
             @mouseenter="openMenu"
             @click.stop="toggleMenu"
           >
-            <el-icon><Menu /></el-icon>
-            <span>菜单</span>
+            <i class="ri-apps-line" />
+            <span>服务</span>
           </button>
         </div>
 
@@ -81,8 +81,8 @@
           @command="handleRoleChange"
         >
           <button type="button" class="portal-topbar__role-pill portal-topbar__role-pill--switchable">
+            <i class="ri-swap-line portal-topbar__role-icon" />
             <span>{{ currentRoleLabel }}</span>
-            <el-icon class="portal-topbar__role-icon"><Grid /></el-icon>
           </button>
           <template #dropdown>
             <el-dropdown-menu>
@@ -101,30 +101,33 @@
 
         <el-dropdown v-if="showUserPanel" trigger="click" placement="bottom-end" popper-class="portal-topbar-user-dropdown">
           <button type="button" class="portal-topbar__avatar">
-            <span>{{ avatarText }}</span>
+            <i class="ri-user-3-line" />
           </button>
           <template #dropdown>
             <el-dropdown-menu>
               <div class="portal-topbar__dropdown-header">
-                <strong>{{ userDisplayName }}</strong>
-                <span>{{ currentRoleLabel }}</span>
+                <div class="portal-topbar__dropdown-avatar"><i class="ri-user-3-line" /></div>
+                <div class="portal-topbar__dropdown-info">
+                  <strong>{{ userDisplayName }}</strong>
+                  <span>{{ currentRoleLabel }}</span>
+                </div>
               </div>
 
               <el-dropdown-item @click="goProfilePage">
-                <el-icon><Files /></el-icon>
+                <i class="ri-id-card-line" />
                 <span>我的档案</span>
               </el-dropdown-item>
               <el-dropdown-item v-if="userStore.availablePortalRoles.includes('student')" @click="goFavoritesPage">
-                <el-icon><Grid /></el-icon>
+                <i class="ri-star-line" />
                 <span>我的收藏</span>
               </el-dropdown-item>
               <el-dropdown-item @click="goAccountSettingsPage">
-                <el-icon><Setting /></el-icon>
+                <i class="ri-settings-3-line" />
                 <span>账号设置</span>
               </el-dropdown-item>
               <el-dropdown-item divided @click="emit('logout')">
-                <el-icon><SwitchButton /></el-icon>
-                <span>退出</span>
+                <i class="ri-logout-box-r-line" />
+                <span>退出登录</span>
               </el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -784,32 +787,42 @@ onBeforeUnmount(() => {
 .portal-topbar__menu-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  height: 32px;
-  padding: 0 12px;
-  border: none;
-  border-radius: 4px;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid rgba(150, 183, 219, 0.42);
+  border-radius: 8px;
   color: inherit;
-  background: rgba(255, 255, 255, 0.46);
-  border: 1px solid rgba(150, 183, 219, 0.52);
+  background: rgba(255, 255, 255, 0.40);
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
-  transition: background-color .2s ease, border-color .2s ease;
+  transition: background-color .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+
+.portal-topbar__menu-trigger i {
+  font-size: 16px;
 }
 
 .portal-topbar__menu-trigger:hover,
 .portal-topbar.is-menu-open .portal-topbar__menu-trigger {
-  background: rgba(255, 255, 255, 0.68);
+  background: rgba(255, 255, 255, 0.72);
   border-color: rgba(125, 163, 205, 0.76);
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.08);
 }
 
 .portal-topbar__brand {
   display: flex;
   align-items: center;
-  padding: 4px 2px 4px 0;
+  padding: 4px 4px 4px 0;
   min-width: 0;
   cursor: pointer;
+  border-radius: 6px;
+  transition: opacity .15s ease;
+}
+
+.portal-topbar__brand:hover {
+  opacity: 0.82;
 }
 
 .portal-topbar__logo {
@@ -823,12 +836,17 @@ onBeforeUnmount(() => {
 .portal-topbar__logo-image {
   display: block;
   object-fit: contain;
-  filter: drop-shadow(0 4px 8px rgba(17, 49, 93, 0.08));
+  filter: drop-shadow(0 2px 6px rgba(17, 49, 93, 0.06));
+  transition: filter .2s ease;
+}
+
+.portal-topbar__brand:hover .portal-topbar__logo-image {
+  filter: drop-shadow(0 2px 8px rgba(17, 49, 93, 0.12));
 }
 
 .portal-topbar__logo-image--full {
-  width: 176px;
-  height: 38px;
+  width: 160px;
+  height: 36px;
 }
 
 .portal-topbar__logo-image--compact {
@@ -844,12 +862,12 @@ onBeforeUnmount(() => {
 }
 
 .portal-topbar__search :deep(.el-input__wrapper) {
-  height: 32px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.48);
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.40);
   box-shadow: none;
-  border: 1px solid rgba(150, 183, 219, 0.58);
-  transition: border-color .2s ease, background-color .2s ease;
+  border: 1px solid rgba(150, 183, 219, 0.42);
+  transition: border-color .2s ease, background-color .2s ease, box-shadow .2s ease;
 }
 
 .portal-topbar__search :deep(.el-input__inner),
@@ -868,9 +886,9 @@ onBeforeUnmount(() => {
 
 .portal-topbar__search :deep(.el-input__wrapper.is-focus),
 .portal-topbar__search :deep(.el-input__wrapper:hover) {
-  background: rgba(255, 255, 255, 0.74);
-  border-color: rgba(125, 163, 205, 0.76);
-  box-shadow: none;
+  background: rgba(255, 255, 255, 0.78);
+  border-color: rgba(125, 163, 205, 0.68);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.06);
 }
 
 .portal-topbar__search-panel {
@@ -879,11 +897,11 @@ onBeforeUnmount(() => {
   right: 0;
   width: 100%;
   min-width: 320px;
-  padding: 4px;
-  border-radius: 4px;
+  padding: 6px;
+  border-radius: 10px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.10), 0 2px 6px rgba(0, 0, 0, 0.04);
   z-index: 160;
 }
 
@@ -892,18 +910,18 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding: 10px 16px;
+  padding: 10px 14px;
   text-align: left;
   border: none;
-  border-radius: 2px;
+  border-radius: 6px;
   color: #334155;
   background: transparent;
   cursor: pointer;
-  transition: background-color .18s ease;
+  transition: background-color .15s ease;
 }
 
 .portal-topbar__search-item:hover {
-  background: #f8fafc;
+  background: #f1f5f9;
   transform: none;
 }
 
@@ -938,17 +956,17 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 6px;
   min-width: 72px;
-  height: 32px;
-  padding: 0 12px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.46);
-  border: 1px solid rgba(150, 183, 219, 0.58);
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.40);
+  border: 1px solid rgba(150, 183, 219, 0.42);
   color: var(--auth-topbar-text);
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
   justify-content: center;
-  transition: background-color .2s ease, border-color .2s ease;
+  transition: background-color .2s ease, border-color .2s ease, box-shadow .2s ease;
   outline: none;
 }
 
@@ -956,8 +974,9 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1;
+  opacity: 0.7;
 }
 
 .portal-topbar__role-pill--switchable {
@@ -966,8 +985,9 @@ onBeforeUnmount(() => {
 
 .portal-topbar__role-pill:hover,
 .portal-topbar__role-pill--switchable:focus-visible {
-  background: rgba(255, 255, 255, 0.7);
-  border-color: rgba(125, 163, 205, 0.76);
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(125, 163, 205, 0.68);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.06);
 }
 
 .portal-topbar__role-pill:focus,
@@ -982,34 +1002,35 @@ onBeforeUnmount(() => {
 }
 
 .portal-topbar__avatar {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(150, 183, 219, 0.58);
+  border: 1px solid rgba(150, 183, 219, 0.32);
   border-radius: 50%;
-  color: var(--auth-topbar-text);
-  background: rgba(255, 255, 255, 0.46);
+  color: #64748b;
+  background: #e2e8f0;
   cursor: pointer;
-  font-weight: 600;
-  font-size: 14px;
-  transition: background-color .2s ease, border-color .2s ease;
+  font-size: 17px;
+  line-height: 1;
+  transition: background-color .2s ease, border-color .2s ease, color .2s ease;
 }
 
 .portal-topbar__avatar:hover {
-  background: rgba(255, 255, 255, 0.7);
-  border-color: rgba(125, 163, 205, 0.76);
+  background: #cbd5e1;
+  border-color: rgba(125, 163, 205, 0.56);
+  color: #334155;
 }
 
 .portal-topbar__guest-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   padding: 3px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.5);
-  border: 1px solid rgba(138, 172, 220, 0.2);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(138, 172, 220, 0.22);
 }
 
 .portal-topbar__guest-btn {
@@ -1040,16 +1061,16 @@ onBeforeUnmount(() => {
 }
 
 .portal-topbar__guest-btn--primary {
-  color: #234b74;
-  border: 1px solid rgba(118, 160, 213, 0.22);
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 6px 16px rgba(93, 130, 177, 0.08);
+  color: #fff;
+  border: 1px solid transparent;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.22);
 }
 
 .portal-topbar__guest-btn--primary.is-active {
-  border-color: rgba(118, 160, 213, 0.24);
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 6px 16px rgba(93, 130, 177, 0.08);
+  border-color: transparent;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.28);
 }
 
 .portal-topbar__menu-overlay {
@@ -1059,7 +1080,9 @@ onBeforeUnmount(() => {
   top: 100%;
   height: calc(100vh - var(--topbar-height));
   height: calc(100dvh - var(--topbar-height));
-  background: rgba(15, 23, 42, 0.28);
+  background: rgba(15, 23, 42, 0.32);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   z-index: 5400;
 }
 
@@ -1080,14 +1103,14 @@ onBeforeUnmount(() => {
   position: relative;
   z-index: 5402;
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns: 220px minmax(0, 1fr);
   width: 100%;
   height: 100%;
   margin: 0;
   border-radius: 0;
   overflow: hidden;
   isolation: isolate;
-  box-shadow: 14px 0 40px rgba(15, 23, 42, 0.22);
+  box-shadow: 14px 0 48px rgba(15, 23, 42, 0.18);
 }
 
 .portal-topbar__menu-filter {
@@ -1143,11 +1166,13 @@ onBeforeUnmount(() => {
 }
 
 .portal-topbar__menu-group h3 {
-  margin: 0 0 12px;
-  padding: 0 10px;
-  font-size: 15px;
-  font-weight: 600;
-  color: #64748b;
+  margin: 0 0 10px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .portal-topbar__menu-link {
@@ -1156,34 +1181,34 @@ onBeforeUnmount(() => {
   align-items: flex-start;
   gap: 4px;
   width: 100%;
-  padding: 10px;
-  margin-bottom: 2px;
-  border-radius: 6px;
+  padding: 9px 12px;
+  margin-bottom: 1px;
+  border-radius: 8px;
   text-align: left;
   border: none;
   background: transparent;
   color: #475569;
   font-size: 14px;
   cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .portal-topbar__menu-link strong {
-  font-size: 14px;
-  line-height: 1.35;
+  font-size: 13.5px;
+  line-height: 1.4;
   color: #334155;
   font-weight: 500;
-  transition: color 0.2s ease;
+  transition: color 0.15s ease;
 }
 
 .portal-topbar__menu-link span {
-  display: none; /* Hide description to match Image 5 */
+  display: none;
 }
 
 .portal-topbar__menu-link:hover,
 .portal-topbar__menu-link.is-active {
   color: #2563eb;
-  background: #f1f5f9;
+  background: #eef4ff;
   border-color: transparent;
   box-shadow: none;
   transform: none;
@@ -1283,9 +1308,9 @@ onBeforeUnmount(() => {
 
 :global(.portal-topbar-user-dropdown.el-popper),
 :global(.portal-topbar-role-dropdown.el-popper) {
-  border-radius: 4px;
+  border-radius: 10px;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.10), 0 2px 6px rgba(0, 0, 0, 0.04);
   background: #ffffff;
   overflow: hidden;
 }
@@ -1321,21 +1346,29 @@ onBeforeUnmount(() => {
 }
 
 :global(.portal-topbar-user-dropdown .el-dropdown-menu) {
-  padding: 0;
-  min-width: 140px;
+  padding: 4px 0;
+  min-width: 170px;
   background: #ffffff;
 }
 
 :global(.portal-topbar-user-dropdown .el-dropdown-menu__item) {
-  min-height: 40px;
+  min-height: 38px;
   padding: 0 16px;
-  gap: 8px;
+  gap: 10px;
   color: #334155;
   font-size: 13px;
   font-weight: 500;
+  border-radius: 0;
+  transition: background-color .15s ease;
 }
 
-:global(.portal-topbar-user-dropdown .el-dropdown-menu__item i),
+:global(.portal-topbar-user-dropdown .el-dropdown-menu__item i) {
+  color: #64748b;
+  font-size: 16px;
+  width: 18px;
+  text-align: center;
+}
+
 :global(.portal-topbar-user-dropdown .el-dropdown-menu__item .el-icon) {
   color: #64748b;
   font-size: 14px;
@@ -1353,7 +1386,7 @@ onBeforeUnmount(() => {
 
 :global(.portal-topbar-user-dropdown .el-dropdown-menu__item--divided) {
   margin-top: 4px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid #f1f5f9;
 }
 
 :global(.portal-topbar-user-dropdown .el-dropdown-menu__item--divided::before) {
@@ -1362,22 +1395,43 @@ onBeforeUnmount(() => {
 
 .portal-topbar__dropdown-header {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 12px 16px;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
   background: #ffffff;
   border-bottom: 1px solid #e2e8f0;
   margin-bottom: 4px;
 }
 
-.portal-topbar__dropdown-header strong {
+.portal-topbar__dropdown-avatar {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #64748b;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.portal-topbar__dropdown-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.portal-topbar__dropdown-info strong {
   font-size: 14px;
   color: #0f172a;
   font-weight: 600;
   line-height: 1.2;
 }
 
-.portal-topbar__dropdown-header span {
+.portal-topbar__dropdown-info span {
   font-size: 12px;
   color: #64748b;
   line-height: 1.2;

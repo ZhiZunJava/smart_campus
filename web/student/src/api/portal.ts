@@ -96,6 +96,83 @@ export function getPortalParentSchedule(params: any) {
   return request({ url: '/campus/portal/parent/child-schedule', method: 'get', params })
 }
 
+function buildAffairBase(role: string) {
+  return `/campus/portal/${role}/affair`
+}
+
+export function getPortalAffairOptions() {
+  return request({ url: '/campus/portal/affair/options', method: 'get' })
+}
+
+export function getPortalAffairServices(role: 'student' | 'teacher') {
+  return request({ url: `${buildAffairBase(role)}/services`, method: 'get' })
+}
+
+export function getPortalAffairDashboard(role: 'student' | 'teacher' | 'advisor') {
+  return request({ url: `${buildAffairBase(role)}/dashboard`, method: 'get' })
+}
+
+export function listPortalAffairRequests(role: 'student' | 'teacher') {
+  return request({ url: `${buildAffairBase(role)}/request/list`, method: 'get' })
+}
+
+export function getPortalAffairRequestDetail(role: 'student' | 'teacher' | 'advisor', requestId: number) {
+  return request({ url: `${buildAffairBase(role)}/request/${requestId}`, method: 'get' })
+}
+
+export function submitPortalAffairRequest(role: 'student' | 'teacher', data: any) {
+  return request({ url: `${buildAffairBase(role)}/request`, method: 'post', data })
+}
+
+export function cancelPortalAffairRequest(role: 'student' | 'teacher', requestId: number) {
+  return request({ url: `${buildAffairBase(role)}/request/${requestId}/cancel`, method: 'put' })
+}
+
+export function listPortalAffairReviewList(role: 'teacher' | 'advisor') {
+  return request({ url: `${buildAffairBase(role)}/review/list`, method: 'get' })
+}
+
+export function reviewPortalAffairRequest(role: 'teacher' | 'advisor', data: any) {
+  return request({ url: `${buildAffairBase(role)}/review`, method: 'put', data })
+}
+
+export function batchReviewPortalAffairRequests(role: 'teacher' | 'advisor', data: any) {
+  return request({ url: `${buildAffairBase(role)}/review/batch`, method: 'put', data })
+}
+
+export function getPortalAffairStatistics(role: string) {
+  return request({ url: `/campus/portal/${role}/affair/statistics`, method: 'get' })
+}
+
+export function getPortalAffairCategoryDetail(role: string, categoryCode: string) {
+  return request({ url: `/campus/portal/${role}/affair/category/${categoryCode}`, method: 'get' })
+}
+
+export function getPortalAffairRecentActivity(role: string) {
+  return request({ url: `/campus/portal/${role}/affair/recent-activity`, method: 'get' })
+}
+
+export function getPortalAffairFrequentTemplates(role: string) {
+  return request({ url: `/campus/portal/${role}/affair/frequent-templates`, method: 'get' })
+}
+
+export function listPortalWorkStudyJobs() {
+  return request({ url: '/campus/portal/student/affair/work-study/jobs', method: 'get' })
+}
+
+export function uploadPortalAffairAttachment(file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request({
+    url: '/common/upload',
+    method: 'post',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
+
 export function listResource(query: any) {
   return request({ url: '/campus/portal/learning/resource/list', method: 'get', params: query })
 }
@@ -341,6 +418,22 @@ export function getPortalTaskCenter(params: any) {
   return request({ url: '/campus/portal/student/tasks', method: 'get', params })
 }
 
+export function buildStaticTaskCards(items: any[]) {
+  return (items || []).map((item: any, index: number) => ({
+    key: item.key || `task-card-${index}`,
+    title: item.title || '未命名待办',
+    statusText: item.desc || item.statusText || item.tag || '待处理',
+    raw: {
+      ...item,
+      action: item.action || {
+        type: 'route',
+        path: item.path,
+        targetId: item.targetId,
+      },
+    },
+  }))
+}
+
 export function markPortalTaskRead(dispatchId: number) {
   return request({ url: `/campus/portal/student/task-dispatch/${dispatchId}/read`, method: 'put' })
 }
@@ -384,6 +477,10 @@ export function getPortalMyClassSchedule(params: any) {
 
 export function listPortalTermOptions() {
   return request({ url: '/campus/portal/term/options', method: 'get' })
+}
+
+export function listStudentTextbookPlans(userId: number) {
+  return request({ url: '/campus/portal/student/textbook-plans', method: 'get', params: { userId } })
 }
 
 export function listPortalScore(query: any) {
@@ -473,4 +570,29 @@ export async function fetchPortalStudentKnowledgePointOptions(userId?: number, c
   } catch {
     return []
   }
+}
+
+// ---- 学籍核对 ----
+export function getVerificationActiveBatches() {
+  return request({ url: '/campus/portal/student/verification/batches', method: 'get' })
+}
+
+export function getVerificationInfo(batchId: number) {
+  return request({ url: `/campus/portal/student/verification/info/${batchId}`, method: 'get' })
+}
+
+export function confirmVerificationNoChange(recordId: number) {
+  return request({ url: `/campus/portal/student/verification/confirm/${recordId}`, method: 'put' })
+}
+
+export function submitVerificationChanges(data: any) {
+  return request({ url: '/campus/portal/student/verification/submit', method: 'post', data })
+}
+
+export function getVerificationMyRecords() {
+  return request({ url: '/campus/portal/student/verification/my-records', method: 'get' })
+}
+
+export function getVerificationRecordDetail(recordId: number) {
+  return request({ url: `/campus/portal/student/verification/record/${recordId}`, method: 'get' })
 }

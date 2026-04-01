@@ -3,6 +3,7 @@ package com.smart.system.service;
 import java.util.List;
 import com.smart.common.core.domain.entity.SysUser;
 import com.smart.system.domain.ScUserProfile;
+import com.smart.system.domain.dto.UserProfileAdvisorBindDto;
 
 /**
  * 智慧校园用户扩展档案 Service 接口
@@ -31,4 +32,6 @@ public interface IScUserProfileService {
     ScUserProfile syncUserProfile(SysUser user);
 
     void fillUserProfile(SysUser user);
+
+    int batchBindAdvisor(UserProfileAdvisorBindDto dto, String operator);
 }

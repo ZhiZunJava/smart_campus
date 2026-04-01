@@ -9,16 +9,54 @@
         <result property="studentNo" column="student_no" />
         <result property="teacherNo" column="teacher_no" />
         <result property="realName" column="real_name" />
+        <result property="formerName" column="former_name" />
         <result property="gender" column="gender" />
+        <result property="nation" column="nation" />
+        <result property="birthDate" column="birth_date" />
+        <result property="politicalStatus" column="political_status" />
+        <result property="nativePlace" column="native_place" />
+        <result property="idType" column="id_type" />
+        <result property="idNumber" column="id_number" />
         <result property="gradeId" column="grade_id" />
         <result property="classId" column="class_id" />
+        <result property="advisorUserId" column="advisor_user_id" />
         <result property="major" column="major" />
+        <result property="cultivationType" column="cultivation_type" />
+        <result property="educationLevel" column="education_level" />
+        <result property="schoolingLength" column="schooling_length" />
         <result property="admissionYear" column="admission_year" />
+        <result property="admissionType" column="admission_type" />
+        <result property="examNumber" column="exam_number" />
+        <result property="admissionTicketNo" column="admission_ticket_no" />
+        <result property="admissionScore" column="admission_score" />
+        <result property="admissionBatch" column="admission_batch" />
+        <result property="sourceRegion" column="source_region" />
+        <result property="graduateSchool" column="graduate_school" />
         <result property="learningGoal" column="learning_goal" />
         <result property="interestTags" column="interest_tags" />
         <result property="learningStyle" column="learning_style" />
         <result property="avatarUrl" column="avatar_url" />
+        <result property="expectedGraduationDate" column="expected_graduation_date" />
+        <result property="actualGraduationDate" column="actual_graduation_date" />
+        <result property="diplomaNo" column="diploma_no" />
+        <result property="completionType" column="completion_type" />
+        <result property="graduationDestination" column="graduation_destination" />
+        <result property="graduationRemark" column="graduation_remark" />
+        <result property="degreeType" column="degree_type" />
+        <result property="degreeAwardDate" column="degree_award_date" />
+        <result property="degreeCertNo" column="degree_cert_no" />
+        <result property="thesisTitle" column="thesis_title" />
+        <result property="degreeRemark" column="degree_remark" />
+        <result property="contactAddress" column="contact_address" />
+        <result property="homeAddress" column="home_address" />
+        <result property="emergencyContact" column="emergency_contact" />
+        <result property="emergencyPhone" column="emergency_phone" />
+        <result property="householdAddress" column="household_address" />
+        <result property="bankCardNo" column="bank_card_no" />
         <result property="status" column="status" />
+        <result property="studentStatusCode" column="student_status_code" />
+        <result property="studentStatusName" column="student_status_name" />
+        <result property="studentStatusUpdateTime" column="student_status_update_time" />
         <result property="createBy" column="create_by" />
         <result property="createTime" column="create_time" />
         <result property="updateBy" column="update_by" />
@@ -26,142 +64,250 @@
         <result property="remark" column="remark" />
     </resultMap>
 
-    <sql id="selectScUserProfileVo"> select profile_id, user_id, user_type, student_no, teacher_no,
-        real_name, gender, grade_id, class_id, major, admission_year, learning_goal, interest_tags,
-        learning_style, avatar_url, status, create_by, create_time, update_by, update_time, remark
-        from sc_user_profile </sql>
+    <sql id="selectScUserProfileVo">
+        select profile_id, user_id, user_type, student_no, teacher_no,
+        real_name, former_name, gender, nation, birth_date, political_status, native_place, id_type, id_number,
+        grade_id, class_id, advisor_user_id,
+        major, cultivation_type, education_level, schooling_length,
+        admission_year, admission_type, exam_number, admission_ticket_no, admission_score,
+        admission_batch, source_region, graduate_school,
+        learning_goal, interest_tags, learning_style, avatar_url,
+        expected_graduation_date, actual_graduation_date, diploma_no, completion_type, graduation_destination, graduation_remark,
+        degree_type, degree_award_date, degree_cert_no, thesis_title, degree_remark,
+        contact_address, home_address, emergency_contact, emergency_phone, household_address, bank_card_no,
+        status, student_status_code, student_status_name, student_status_update_time,
+        create_by, create_time, update_by, update_time, remark
+        from sc_user_profile
+    </sql>
 
     <select id="selectScUserProfileByProfileId" parameterType="Long" resultMap="ScUserProfileResult">
-        <include refid="selectScUserProfileVo" /> where profile_id = #{profileId} </select>
+        <include refid="selectScUserProfileVo" /> where profile_id = #{profileId}
+    </select>
 
     <select id="selectScUserProfileByUserId" parameterType="Long" resultMap="ScUserProfileResult">
-        <include refid="selectScUserProfileVo" /> where user_id = #{userId} limit 1 </select>
+        <include refid="selectScUserProfileVo" /> where user_id = #{userId} limit 1
+    </select>
 
-    <select id="selectScUserProfileList" parameterType="ScUserProfile"
-        resultMap="ScUserProfileResult">
+    <select id="selectScUserProfileList" parameterType="ScUserProfile" resultMap="ScUserProfileResult">
         <include refid="selectScUserProfileVo" />
         <where>
             <if test="userId != null">and user_id = #{userId}</if>
-            <if
-                test="userType != null and userType != ''">and user_type = #{userType}</if>
-            <if
-                test="studentNo != null and studentNo != ''">and student_no like concat('%',
-        #{studentNo}, '%')</if>
-            <if test="teacherNo != null and teacherNo != ''">and teacher_no like
-        concat('%', #{teacherNo}, '%')</if>
-            <if test="realName != null and realName != ''">and
-        real_name like concat('%', #{realName}, '%')</if>
-            <if test="gradeId != null">and grade_id =
-        #{gradeId}</if>
+            <if test="userType != null and userType != ''">and user_type = #{userType}</if>
+            <if test="studentNo != null and studentNo != ''">and student_no like concat('%', #{studentNo}, '%')</if>
+            <if test="teacherNo != null and teacherNo != ''">and teacher_no like concat('%', #{teacherNo}, '%')</if>
+            <if test="realName != null and realName != ''">and real_name like concat('%', #{realName}, '%')</if>
+            <if test="gradeId != null">and grade_id = #{gradeId}</if>
             <if test="classId != null">and class_id = #{classId}</if>
-            <if
-                test="status != null and status != ''">and status = #{status}</if>
+            <if test="advisorUserId != null">and advisor_user_id = #{advisorUserId}</if>
+            <if test="nation != null and nation != ''">and nation = #{nation}</if>
+            <if test="politicalStatus != null and politicalStatus != ''">and political_status = #{politicalStatus}</if>
+            <if test="major != null and major != ''">and major like concat('%', #{major}, '%')</if>
+            <if test="educationLevel != null and educationLevel != ''">and education_level = #{educationLevel}</if>
+            <if test="admissionYear != null">and admission_year = #{admissionYear}</if>
+            <if test="sourceRegion != null and sourceRegion != ''">and source_region like concat('%', #{sourceRegion}, '%')</if>
+            <if test="status != null and status != ''">and status = #{status}</if>
         </where>
-        order by profile_id desc </select>
+        order by profile_id desc
+    </select>
 
-    <insert id="insertScUserProfile" parameterType="ScUserProfile" useGeneratedKeys="true"
-        keyProperty="profileId"> insert into sc_user_profile <trim prefix="(" suffix=")"
-            suffixOverrides=",">
+    <insert id="insertScUserProfile" parameterType="ScUserProfile" useGeneratedKeys="true" keyProperty="profileId">
+        insert into sc_user_profile
+        <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="userId != null">user_id,</if>
-            <if test="userType != null and userType != ''">
-        user_type,</if>
+            <if test="userType != null and userType != ''">user_type,</if>
             <if test="studentNo != null">student_no,</if>
-            <if test="teacherNo != null">
-        teacher_no,</if>
+            <if test="teacherNo != null">teacher_no,</if>
             <if test="realName != null">real_name,</if>
+            <if test="formerName != null">former_name,</if>
             <if test="gender != null">gender,</if>
-            <if
-                test="gradeId != null">grade_id,</if>
+            <if test="nation != null">nation,</if>
+            <if test="birthDate != null">birth_date,</if>
+            <if test="politicalStatus != null">political_status,</if>
+            <if test="nativePlace != null">native_place,</if>
+            <if test="idType != null">id_type,</if>
+            <if test="idNumber != null">id_number,</if>
+            <if test="gradeId != null">grade_id,</if>
             <if test="classId != null">class_id,</if>
-            <if
-                test="major != null">major,</if>
+            <if test="advisorUserId != null">advisor_user_id,</if>
+            <if test="major != null">major,</if>
+            <if test="cultivationType != null">cultivation_type,</if>
+            <if test="educationLevel != null">education_level,</if>
+            <if test="schoolingLength != null">schooling_length,</if>
             <if test="admissionYear != null">admission_year,</if>
-            <if
-                test="learningGoal != null">learning_goal,</if>
-            <if test="interestTags != null">
-        interest_tags,</if>
+            <if test="admissionType != null">admission_type,</if>
+            <if test="examNumber != null">exam_number,</if>
+            <if test="admissionTicketNo != null">admission_ticket_no,</if>
+            <if test="admissionScore != null">admission_score,</if>
+            <if test="admissionBatch != null">admission_batch,</if>
+            <if test="sourceRegion != null">source_region,</if>
+            <if test="graduateSchool != null">graduate_school,</if>
+            <if test="learningGoal != null">learning_goal,</if>
+            <if test="interestTags != null">interest_tags,</if>
             <if test="learningStyle != null">learning_style,</if>
-            <if
-                test="avatarUrl != null">avatar_url,</if>
+            <if test="avatarUrl != null">avatar_url,</if>
+            <if test="expectedGraduationDate != null">expected_graduation_date,</if>
+            <if test="actualGraduationDate != null">actual_graduation_date,</if>
+            <if test="diplomaNo != null">diploma_no,</if>
+            <if test="completionType != null">completion_type,</if>
+            <if test="graduationDestination != null">graduation_destination,</if>
+            <if test="graduationRemark != null">graduation_remark,</if>
+            <if test="degreeType != null">degree_type,</if>
+            <if test="degreeAwardDate != null">degree_award_date,</if>
+            <if test="degreeCertNo != null">degree_cert_no,</if>
+            <if test="thesisTitle != null">thesis_title,</if>
+            <if test="degreeRemark != null">degree_remark,</if>
+            <if test="contactAddress != null">contact_address,</if>
+            <if test="homeAddress != null">home_address,</if>
+            <if test="emergencyContact != null">emergency_contact,</if>
+            <if test="emergencyPhone != null">emergency_phone,</if>
+            <if test="householdAddress != null">household_address,</if>
+            <if test="bankCardNo != null">bank_card_no,</if>
             <if test="status != null">status,</if>
-            <if
-                test="createBy != null and createBy != ''">create_by,</if>
-            <if test="remark != null">
-        remark,</if> create_time </trim>
+            <if test="studentStatusCode != null">student_status_code,</if>
+            <if test="studentStatusName != null">student_status_name,</if>
+            <if test="studentStatusUpdateTime != null">student_status_update_time,</if>
+            <if test="createBy != null and createBy != ''">create_by,</if>
+            <if test="remark != null">remark,</if>
+            create_time
+        </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="userId != null">#{userId},</if>
-            <if test="userType != null and userType != ''">
-        #{userType},</if>
+            <if test="userType != null and userType != ''">#{userType},</if>
             <if test="studentNo != null">#{studentNo},</if>
-            <if test="teacherNo != null">
-        #{teacherNo},</if>
+            <if test="teacherNo != null">#{teacherNo},</if>
             <if test="realName != null">#{realName},</if>
-            <if test="gender != null">
-        #{gender},</if>
+            <if test="formerName != null">#{formerName},</if>
+            <if test="gender != null">#{gender},</if>
+            <if test="nation != null">#{nation},</if>
+            <if test="birthDate != null">#{birthDate},</if>
+            <if test="politicalStatus != null">#{politicalStatus},</if>
+            <if test="nativePlace != null">#{nativePlace},</if>
+            <if test="idType != null">#{idType},</if>
+            <if test="idNumber != null">#{idNumber},</if>
             <if test="gradeId != null">#{gradeId},</if>
-            <if test="classId != null">
-        #{classId},</if>
+            <if test="classId != null">#{classId},</if>
+            <if test="advisorUserId != null">nullif(#{advisorUserId}, 0),</if>
             <if test="major != null">#{major},</if>
-            <if test="admissionYear != null">
-        #{admissionYear},</if>
+            <if test="cultivationType != null">#{cultivationType},</if>
+            <if test="educationLevel != null">#{educationLevel},</if>
+            <if test="schoolingLength != null">#{schoolingLength},</if>
+            <if test="admissionYear != null">#{admissionYear},</if>
+            <if test="admissionType != null">#{admissionType},</if>
+            <if test="examNumber != null">#{examNumber},</if>
+            <if test="admissionTicketNo != null">#{admissionTicketNo},</if>
+            <if test="admissionScore != null">#{admissionScore},</if>
+            <if test="admissionBatch != null">#{admissionBatch},</if>
+            <if test="sourceRegion != null">#{sourceRegion},</if>
+            <if test="graduateSchool != null">#{graduateSchool},</if>
             <if test="learningGoal != null">#{learningGoal},</if>
-            <if
-                test="interestTags != null">#{interestTags},</if>
-            <if test="learningStyle != null">
-        #{learningStyle},</if>
+            <if test="interestTags != null">#{interestTags},</if>
+            <if test="learningStyle != null">#{learningStyle},</if>
             <if test="avatarUrl != null">#{avatarUrl},</if>
-            <if
-                test="status != null">#{status},</if>
-            <if test="createBy != null and createBy != ''">
-        #{createBy},</if>
-            <if test="remark != null">#{remark},</if> sysdate() </trim>
+            <if test="expectedGraduationDate != null">#{expectedGraduationDate},</if>
+            <if test="actualGraduationDate != null">#{actualGraduationDate},</if>
+            <if test="diplomaNo != null">#{diplomaNo},</if>
+            <if test="completionType != null">#{completionType},</if>
+            <if test="graduationDestination != null">#{graduationDestination},</if>
+            <if test="graduationRemark != null">#{graduationRemark},</if>
+            <if test="degreeType != null">#{degreeType},</if>
+            <if test="degreeAwardDate != null">#{degreeAwardDate},</if>
+            <if test="degreeCertNo != null">#{degreeCertNo},</if>
+            <if test="thesisTitle != null">#{thesisTitle},</if>
+            <if test="degreeRemark != null">#{degreeRemark},</if>
+            <if test="contactAddress != null">#{contactAddress},</if>
+            <if test="homeAddress != null">#{homeAddress},</if>
+            <if test="emergencyContact != null">#{emergencyContact},</if>
+            <if test="emergencyPhone != null">#{emergencyPhone},</if>
+            <if test="householdAddress != null">#{householdAddress},</if>
+            <if test="bankCardNo != null">#{bankCardNo},</if>
+            <if test="status != null">#{status},</if>
+            <if test="studentStatusCode != null">#{studentStatusCode},</if>
+            <if test="studentStatusName != null">#{studentStatusName},</if>
+            <if test="studentStatusUpdateTime != null">#{studentStatusUpdateTime},</if>
+            <if test="createBy != null and createBy != ''">#{createBy},</if>
+            <if test="remark != null">#{remark},</if>
+            sysdate()
+        </trim>
     </insert>
 
-    <update id="updateScUserProfile" parameterType="ScUserProfile"> update sc_user_profile <set>
+    <update id="updateScUserProfile" parameterType="ScUserProfile">
+        update sc_user_profile
+        <set>
             <if test="userId != null">user_id = #{userId},</if>
-            <if
-                test="userType != null and userType != ''">user_type = #{userType},</if>
-            <if
-                test="studentNo != null">student_no = #{studentNo},</if>
-            <if test="teacherNo != null">teacher_no
-        = #{teacherNo},</if>
+            <if test="userType != null and userType != ''">user_type = #{userType},</if>
+            <if test="studentNo != null">student_no = #{studentNo},</if>
+            <if test="teacherNo != null">teacher_no = #{teacherNo},</if>
             <if test="realName != null">real_name = #{realName},</if>
-            <if
-                test="gender != null">gender = #{gender},</if>
-            <if test="gradeId != null">grade_id =
-        #{gradeId},</if>
+            <if test="formerName != null">former_name = #{formerName},</if>
+            <if test="gender != null">gender = #{gender},</if>
+            <if test="nation != null">nation = #{nation},</if>
+            <if test="birthDate != null">birth_date = #{birthDate},</if>
+            <if test="politicalStatus != null">political_status = #{politicalStatus},</if>
+            <if test="nativePlace != null">native_place = #{nativePlace},</if>
+            <if test="idType != null">id_type = #{idType},</if>
+            <if test="idNumber != null">id_number = #{idNumber},</if>
+            <if test="gradeId != null">grade_id = #{gradeId},</if>
             <if test="classId != null">class_id = #{classId},</if>
-            <if
-                test="major != null">major = #{major},</if>
-            <if test="admissionYear != null">admission_year
-        = #{admissionYear},</if>
+            <if test="advisorUserId != null">advisor_user_id = nullif(#{advisorUserId}, 0),</if>
+            <if test="major != null">major = #{major},</if>
+            <if test="cultivationType != null">cultivation_type = #{cultivationType},</if>
+            <if test="educationLevel != null">education_level = #{educationLevel},</if>
+            <if test="schoolingLength != null">schooling_length = #{schoolingLength},</if>
+            <if test="admissionYear != null">admission_year = #{admissionYear},</if>
+            <if test="admissionType != null">admission_type = #{admissionType},</if>
+            <if test="examNumber != null">exam_number = #{examNumber},</if>
+            <if test="admissionTicketNo != null">admission_ticket_no = #{admissionTicketNo},</if>
+            <if test="admissionScore != null">admission_score = #{admissionScore},</if>
+            <if test="admissionBatch != null">admission_batch = #{admissionBatch},</if>
+            <if test="sourceRegion != null">source_region = #{sourceRegion},</if>
+            <if test="graduateSchool != null">graduate_school = #{graduateSchool},</if>
             <if test="learningGoal != null">learning_goal = #{learningGoal},</if>
-            <if
-                test="interestTags != null">interest_tags = #{interestTags},</if>
-            <if
-                test="learningStyle != null">learning_style = #{learningStyle},</if>
-            <if
-                test="avatarUrl != null">avatar_url = #{avatarUrl},</if>
-            <if test="status != null">status
-        = #{status},</if>
+            <if test="interestTags != null">interest_tags = #{interestTags},</if>
+            <if test="learningStyle != null">learning_style = #{learningStyle},</if>
+            <if test="avatarUrl != null">avatar_url = #{avatarUrl},</if>
+            <if test="expectedGraduationDate != null">expected_graduation_date = #{expectedGraduationDate},</if>
+            <if test="actualGraduationDate != null">actual_graduation_date = #{actualGraduationDate},</if>
+            <if test="diplomaNo != null">diploma_no = #{diplomaNo},</if>
+            <if test="completionType != null">completion_type = #{completionType},</if>
+            <if test="graduationDestination != null">graduation_destination = #{graduationDestination},</if>
+            <if test="graduationRemark != null">graduation_remark = #{graduationRemark},</if>
+            <if test="degreeType != null">degree_type = #{degreeType},</if>
+            <if test="degreeAwardDate != null">degree_award_date = #{degreeAwardDate},</if>
+            <if test="degreeCertNo != null">degree_cert_no = #{degreeCertNo},</if>
+            <if test="thesisTitle != null">thesis_title = #{thesisTitle},</if>
+            <if test="degreeRemark != null">degree_remark = #{degreeRemark},</if>
+            <if test="contactAddress != null">contact_address = #{contactAddress},</if>
+            <if test="homeAddress != null">home_address = #{homeAddress},</if>
+            <if test="emergencyContact != null">emergency_contact = #{emergencyContact},</if>
+            <if test="emergencyPhone != null">emergency_phone = #{emergencyPhone},</if>
+            <if test="householdAddress != null">household_address = #{householdAddress},</if>
+            <if test="bankCardNo != null">bank_card_no = #{bankCardNo},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="studentStatusCode != null">student_status_code = #{studentStatusCode},</if>
+            <if test="studentStatusName != null">student_status_name = #{studentStatusName},</if>
+            <if test="studentStatusUpdateTime != null">student_status_update_time = #{studentStatusUpdateTime},</if>
             <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
-            <if
-                test="remark != null">remark = #{remark},</if> update_time = sysdate() </set> where
-        profile_id = #{profileId} </update>
+            <if test="remark != null">remark = #{remark},</if>
+            update_time = sysdate()
+        </set>
+        where profile_id = #{profileId}
+    </update>
 
-    <delete id="deleteScUserProfileByProfileId" parameterType="Long"> delete from sc_user_profile
-        where profile_id = #{profileId} </delete>
-
-    <delete id="deleteScUserProfileByProfileIds" parameterType="Long"> delete from sc_user_profile
-        where profile_id in <foreach item="profileId" collection="array" open="(" separator=","
-            close=")"> #{profileId} </foreach>
+    <delete id="deleteScUserProfileByProfileId" parameterType="Long">
+        delete from sc_user_profile where profile_id = #{profileId}
     </delete>
 
-    <delete id="deleteScUserProfileByUserId" parameterType="Long"> delete from sc_user_profile where
-        user_id = #{userId} </delete>
+    <delete id="deleteScUserProfileByProfileIds" parameterType="Long">
+        delete from sc_user_profile where profile_id in
+        <foreach item="profileId" collection="array" open="(" separator="," close=")">#{profileId}</foreach>
+    </delete>
 
-    <delete id="deleteScUserProfileByUserIds" parameterType="Long"> delete from sc_user_profile
-        where user_id in <foreach item="userId" collection="array" open="(" separator="," close=")">
-        #{userId} </foreach>
+    <delete id="deleteScUserProfileByUserId" parameterType="Long">
+        delete from sc_user_profile where user_id = #{userId}
+    </delete>
+
+    <delete id="deleteScUserProfileByUserIds" parameterType="Long">
+        delete from sc_user_profile where user_id in
+        <foreach item="userId" collection="array" open="(" separator="," close=")">#{userId}</foreach>
     </delete>
 </mapper>

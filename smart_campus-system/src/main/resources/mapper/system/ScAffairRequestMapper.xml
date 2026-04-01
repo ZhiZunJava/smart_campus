@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScAffairRequestMapper">
+    <resultMap id="ScAffairRequestResult" type="ScAffairRequest">
+        <id property="requestId" column="request_id" />
+        <result property="requestNo" column="request_no" />
+        <result property="categoryId" column="category_id" />
+        <result property="categoryCode" column="category_code" />
+        <result property="categoryName" column="category_name" />
+        <result property="templateId" column="template_id" />
+        <result property="templateCode" column="template_code" />
+        <result property="templateName" column="template_name" />
+        <result property="businessCode" column="business_code" />
+        <result property="businessName" column="business_name" />
+        <result property="applicantUserId" column="applicant_user_id" />
+        <result property="applicantName" column="applicant_name" />
+        <result property="applicantNo" column="applicant_no" />
+        <result property="applicantUserType" column="applicant_user_type" />
+        <result property="applicantDeptId" column="applicant_dept_id" />
+        <result property="applicantDeptName" column="applicant_dept_name" />
+        <result property="gradeId" column="grade_id" />
+        <result property="gradeName" column="grade_name" />
+        <result property="classId" column="class_id" />
+        <result property="className" column="class_name" />
+        <result property="major" column="major" />
+        <result property="currentStudentStatusCode" column="current_student_status_code" />
+        <result property="currentStudentStatusName" column="current_student_status_name" />
+        <result property="targetStudentStatusCode" column="target_student_status_code" />
+        <result property="targetStudentStatusName" column="target_student_status_name" />
+        <result property="title" column="title" />
+        <result property="summaryText" column="summary_text" />
+        <result property="requestStatus" column="request_status" />
+        <result property="currentStepIndex" column="current_step_index" />
+        <result property="currentStepCode" column="current_step_code" />
+        <result property="currentStepName" column="current_step_name" />
+        <result property="currentAssignmentType" column="current_assignment_type" />
+        <result property="currentReviewerRole" column="current_reviewer_role" />
+        <result property="currentReviewerUserId" column="current_reviewer_user_id" />
+        <result property="currentReviewerName" column="current_reviewer_name" />
+        <result property="submittedTime" column="submitted_time" />
+        <result property="finishTime" column="finish_time" />
+        <result property="lastAction" column="last_action" />
+        <result property="formDataJson" column="form_data_json" />
+        <result property="attachmentJson" column="attachment_json" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+        <result property="remark" column="remark" />
+    </resultMap>
+
+    <sql id="selectScAffairRequestVo">
+        select request_id, request_no, category_id, category_code, category_name, template_id, template_code,
+               template_name, business_code, business_name, applicant_user_id, applicant_name, applicant_no,
+               applicant_user_type, applicant_dept_id, applicant_dept_name, grade_id, grade_name, class_id,
+               class_name, major, current_student_status_code, current_student_status_name,
+               target_student_status_code, target_student_status_name, title, summary_text, request_status,
+               current_step_index, current_step_code, current_step_name, current_assignment_type,
+               current_reviewer_role, current_reviewer_user_id, current_reviewer_name, submitted_time, finish_time,
+               last_action, form_data_json, attachment_json, create_by, create_time, update_by, update_time, remark
+        from sc_affair_request
+    </sql>
+
+    <select id="selectScAffairRequestByRequestId" parameterType="Long" resultMap="ScAffairRequestResult">
+        <include refid="selectScAffairRequestVo" />
+        where request_id = #{requestId}
+    </select>
+
+    <select id="selectScAffairRequestList" parameterType="ScAffairRequest" resultMap="ScAffairRequestResult">
+        <include refid="selectScAffairRequestVo" />
+        <where>
+            <if test="requestNo != null and requestNo != ''">and request_no like concat('%', #{requestNo}, '%')</if>
+            <if test="categoryId != null">and category_id = #{categoryId}</if>
+            <if test="categoryCode != null and categoryCode != ''">and category_code = #{categoryCode}</if>
+            <if test="templateId != null">and template_id = #{templateId}</if>
+            <if test="templateCode != null and templateCode != ''">and template_code = #{templateCode}</if>
+            <if test="businessCode != null and businessCode != ''">and business_code = #{businessCode}</if>
+            <if test="applicantUserId != null">and applicant_user_id = #{applicantUserId}</if>
+            <if test="applicantUserType != null and applicantUserType != ''">and applicant_user_type = #{applicantUserType}</if>
+            <if test="applicantName != null and applicantName != ''">and applicant_name like concat('%', #{applicantName}, '%')</if>
+            <if test="currentReviewerRole != null and currentReviewerRole != ''">and current_reviewer_role = #{currentReviewerRole}</if>
+            <if test="currentReviewerUserId != null">and current_reviewer_user_id = #{currentReviewerUserId}</if>
+            <if test="requestStatus != null and requestStatus != ''">and request_status = #{requestStatus}</if>
+            <if test="title != null and title != ''">and title like concat('%', #{title}, '%')</if>
+        </where>
+        order by submitted_time desc, request_id desc
+    </select>
+
+    <insert id="insertScAffairRequest" parameterType="ScAffairRequest" useGeneratedKeys="true" keyProperty="requestId">
+        insert into sc_affair_request
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="requestNo != null">request_no,</if>
+            <if test="categoryId != null">category_id,</if>
+            <if test="categoryCode != null">category_code,</if>
+            <if test="categoryName != null">category_name,</if>
+            <if test="templateId != null">template_id,</if>
+            <if test="templateCode != null">template_code,</if>
+            <if test="templateName != null">template_name,</if>
+            <if test="businessCode != null">business_code,</if>
+            <if test="businessName != null">business_name,</if>
+            <if test="applicantUserId != null">applicant_user_id,</if>
+            <if test="applicantName != null">applicant_name,</if>
+            <if test="applicantNo != null">applicant_no,</if>
+            <if test="applicantUserType != null">applicant_user_type,</if>
+            <if test="applicantDeptId != null">applicant_dept_id,</if>
+            <if test="applicantDeptName != null">applicant_dept_name,</if>
+            <if test="gradeId != null">grade_id,</if>
+            <if test="gradeName != null">grade_name,</if>
+            <if test="classId != null">class_id,</if>
+            <if test="className != null">class_name,</if>
+            <if test="major != null">major,</if>
+            <if test="currentStudentStatusCode != null">current_student_status_code,</if>
+            <if test="currentStudentStatusName != null">current_student_status_name,</if>
+            <if test="targetStudentStatusCode != null">target_student_status_code,</if>
+            <if test="targetStudentStatusName != null">target_student_status_name,</if>
+            <if test="title != null">title,</if>
+            <if test="summaryText != null">summary_text,</if>
+            <if test="requestStatus != null">request_status,</if>
+            <if test="currentStepIndex != null">current_step_index,</if>
+            <if test="currentStepCode != null">current_step_code,</if>
+            <if test="currentStepName != null">current_step_name,</if>
+            <if test="currentAssignmentType != null">current_assignment_type,</if>
+            <if test="currentReviewerRole != null">current_reviewer_role,</if>
+            <if test="currentReviewerUserId != null">current_reviewer_user_id,</if>
+            <if test="currentReviewerName != null">current_reviewer_name,</if>
+            <if test="submittedTime != null">submitted_time,</if>
+            <if test="finishTime != null">finish_time,</if>
+            <if test="lastAction != null">last_action,</if>
+            <if test="formDataJson != null">form_data_json,</if>
+            <if test="attachmentJson != null">attachment_json,</if>
+            <if test="createBy != null and createBy != ''">create_by,</if>
+            create_time,
+            <if test="remark != null">remark,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="requestNo != null">#{requestNo},</if>
+            <if test="categoryId != null">#{categoryId},</if>
+            <if test="categoryCode != null">#{categoryCode},</if>
+            <if test="categoryName != null">#{categoryName},</if>
+            <if test="templateId != null">#{templateId},</if>
+            <if test="templateCode != null">#{templateCode},</if>
+            <if test="templateName != null">#{templateName},</if>
+            <if test="businessCode != null">#{businessCode},</if>
+            <if test="businessName != null">#{businessName},</if>
+            <if test="applicantUserId != null">#{applicantUserId},</if>
+            <if test="applicantName != null">#{applicantName},</if>
+            <if test="applicantNo != null">#{applicantNo},</if>
+            <if test="applicantUserType != null">#{applicantUserType},</if>
+            <if test="applicantDeptId != null">#{applicantDeptId},</if>
+            <if test="applicantDeptName != null">#{applicantDeptName},</if>
+            <if test="gradeId != null">#{gradeId},</if>
+            <if test="gradeName != null">#{gradeName},</if>
+            <if test="classId != null">#{classId},</if>
+            <if test="className != null">#{className},</if>
+            <if test="major != null">#{major},</if>
+            <if test="currentStudentStatusCode != null">#{currentStudentStatusCode},</if>
+            <if test="currentStudentStatusName != null">#{currentStudentStatusName},</if>
+            <if test="targetStudentStatusCode != null">#{targetStudentStatusCode},</if>
+            <if test="targetStudentStatusName != null">#{targetStudentStatusName},</if>
+            <if test="title != null">#{title},</if>
+            <if test="summaryText != null">#{summaryText},</if>
+            <if test="requestStatus != null">#{requestStatus},</if>
+            <if test="currentStepIndex != null">#{currentStepIndex},</if>
+            <if test="currentStepCode != null">#{currentStepCode},</if>
+            <if test="currentStepName != null">#{currentStepName},</if>
+            <if test="currentAssignmentType != null">#{currentAssignmentType},</if>
+            <if test="currentReviewerRole != null">#{currentReviewerRole},</if>
+            <if test="currentReviewerUserId != null">#{currentReviewerUserId},</if>
+            <if test="currentReviewerName != null">#{currentReviewerName},</if>
+            <if test="submittedTime != null">#{submittedTime},</if>
+            <if test="finishTime != null">#{finishTime},</if>
+            <if test="lastAction != null">#{lastAction},</if>
+            <if test="formDataJson != null">#{formDataJson},</if>
+            <if test="attachmentJson != null">#{attachmentJson},</if>
+            <if test="createBy != null and createBy != ''">#{createBy},</if>
+            sysdate(),
+            <if test="remark != null">#{remark},</if>
+        </trim>
+    </insert>
+
+    <select id="selectPendingReviewsByReviewer" resultMap="ScAffairRequestResult">
+        <include refid="selectScAffairRequestVo" />
+        where request_status = 'PENDING'
+        and (
+            (current_reviewer_user_id = #{reviewerUserId})
+            <if test="reviewerRoles != null and reviewerRoles.size() > 0">
+                or current_reviewer_role in
+                <foreach collection="reviewerRoles" item="role" open="(" separator="," close=")">
+                    #{role}
+                </foreach>
+            </if>
+        )
+        order by submitted_time desc
+    </select>
+
+    <select id="selectRecentActivityByUser" resultMap="ScAffairRequestResult">
+        <include refid="selectScAffairRequestVo" />
+        where applicant_user_id = #{applicantUserId}
+        order by update_time desc, submitted_time desc
+        limit #{limit}
+    </select>
+
+    <select id="selectStatisticsByCategory" resultType="java.util.LinkedHashMap">
+        select category_code as categoryCode,
+               category_name as categoryName,
+               count(*) as totalCount,
+               sum(case when request_status = 'APPROVED' then 1 else 0 end) as approvedCount,
+               sum(case when request_status = 'REJECTED' then 1 else 0 end) as rejectedCount,
+               sum(case when request_status = 'PENDING' then 1 else 0 end) as pendingCount,
+               sum(case when request_status = 'CANCELLED' then 1 else 0 end) as cancelledCount
+        from sc_affair_request
+        <where>
+            <if test="applicantUserId != null">and applicant_user_id = #{applicantUserId}</if>
+        </where>
+        group by category_code, category_name
+        order by totalCount desc
+    </select>
+
+    <select id="selectStatisticsByStatus" resultType="java.util.LinkedHashMap">
+        select request_status as status,
+               count(*) as count
+        from sc_affair_request
+        <where>
+            <if test="applicantUserId != null">and applicant_user_id = #{applicantUserId}</if>
+        </where>
+        group by request_status
+    </select>
+
+    <select id="selectDailyTrend" resultType="java.util.LinkedHashMap">
+        select date(submitted_time) as submitDate,
+               count(*) as count
+        from sc_affair_request
+        where submitted_time >= date_sub(curdate(), interval #{days} day)
+        <if test="applicantUserId != null">and applicant_user_id = #{applicantUserId}</if>
+        group by date(submitted_time)
+        order by submitDate asc
+    </select>
+
+    <select id="selectFrequentTemplates" resultType="java.util.LinkedHashMap">
+        select stat.template_id as templateId,
+               t.template_code as templateCode,
+               t.template_name as templateName,
+               c.category_code as categoryCode,
+               c.category_name as categoryName,
+               t.business_code as businessCode,
+               t.business_name as businessName,
+               t.audience_roles as audienceRoles,
+               t.form_schema_json as formSchemaJson,
+               t.workflow_schema_json as workflowSchemaJson,
+               t.allow_attachment as allowAttachment,
+               t.allow_revoke as allowRevoke,
+               t.apply_scope_json as applyScopeJson,
+               t.business_rules_json as businessRulesJson,
+               t.target_status_code as targetStatusCode,
+               t.target_status_name as targetStatusName,
+               stat.useCount as useCount
+        from (
+            select template_id, count(*) as useCount
+            from sc_affair_request
+            where applicant_user_id = #{applicantUserId}
+            group by template_id
+            order by useCount desc
+            limit #{limit}
+        ) stat
+        left join sc_affair_template t on t.template_id = stat.template_id
+        left join sc_affair_category c on c.category_id = t.category_id
+        order by stat.useCount desc
+    </select>
+
+    <select id="selectRequestsByCategoryCode" resultMap="ScAffairRequestResult">
+        <include refid="selectScAffairRequestVo" />
+        where applicant_user_id = #{applicantUserId}
+        and category_code = #{categoryCode}
+        order by submitted_time desc
+    </select>
+
+    <update id="updateScAffairRequest" parameterType="ScAffairRequest">
+        update sc_affair_request
+        <set>
+            <if test="categoryId != null">category_id = #{categoryId},</if>
+            <if test="categoryCode != null">category_code = #{categoryCode},</if>
+            <if test="categoryName != null">category_name = #{categoryName},</if>
+            <if test="templateId != null">template_id = #{templateId},</if>
+            <if test="templateCode != null">template_code = #{templateCode},</if>
+            <if test="templateName != null">template_name = #{templateName},</if>
+            <if test="businessCode != null">business_code = #{businessCode},</if>
+            <if test="businessName != null">business_name = #{businessName},</if>
+            <if test="applicantName != null">applicant_name = #{applicantName},</if>
+            <if test="applicantNo != null">applicant_no = #{applicantNo},</if>
+            <if test="applicantUserType != null">applicant_user_type = #{applicantUserType},</if>
+            <if test="applicantDeptId != null">applicant_dept_id = #{applicantDeptId},</if>
+            <if test="applicantDeptName != null">applicant_dept_name = #{applicantDeptName},</if>
+            <if test="gradeId != null">grade_id = #{gradeId},</if>
+            <if test="gradeName != null">grade_name = #{gradeName},</if>
+            <if test="classId != null">class_id = #{classId},</if>
+            <if test="className != null">class_name = #{className},</if>
+            <if test="major != null">major = #{major},</if>
+            <if test="currentStudentStatusCode != null">current_student_status_code = #{currentStudentStatusCode},</if>
+            <if test="currentStudentStatusName != null">current_student_status_name = #{currentStudentStatusName},</if>
+            <if test="targetStudentStatusCode != null">target_student_status_code = #{targetStudentStatusCode},</if>
+            <if test="targetStudentStatusName != null">target_student_status_name = #{targetStudentStatusName},</if>
+            <if test="title != null">title = #{title},</if>
+            <if test="summaryText != null">summary_text = #{summaryText},</if>
+            <if test="requestStatus != null">request_status = #{requestStatus},</if>
+            <if test="currentStepIndex != null">current_step_index = #{currentStepIndex},</if>
+            <if test="currentStepCode != null">current_step_code = #{currentStepCode},</if>
+            <if test="currentStepName != null">current_step_name = #{currentStepName},</if>
+            <if test="currentAssignmentType != null">current_assignment_type = #{currentAssignmentType},</if>
+            <if test="currentReviewerRole != null">current_reviewer_role = #{currentReviewerRole},</if>
+            <if test="currentReviewerUserId != null">current_reviewer_user_id = #{currentReviewerUserId},</if>
+            <if test="currentReviewerName != null">current_reviewer_name = #{currentReviewerName},</if>
+            <if test="submittedTime != null">submitted_time = #{submittedTime},</if>
+            <if test="finishTime != null">finish_time = #{finishTime},</if>
+            <if test="lastAction != null">last_action = #{lastAction},</if>
+            <if test="formDataJson != null">form_data_json = #{formDataJson},</if>
+            <if test="attachmentJson != null">attachment_json = #{attachmentJson},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            update_time = sysdate()
+        </set>
+        where request_id = #{requestId}
+    </update>
+</mapper>

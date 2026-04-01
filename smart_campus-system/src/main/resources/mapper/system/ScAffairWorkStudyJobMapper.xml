@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScAffairWorkStudyJobMapper">
+    <resultMap id="ScAffairWorkStudyJobResult" type="ScAffairWorkStudyJob">
+        <id property="jobId" column="job_id" />
+        <result property="jobCode" column="job_code" />
+        <result property="jobName" column="job_name" />
+        <result property="deptId" column="dept_id" />
+        <result property="deptName" column="dept_name" />
+        <result property="termId" column="term_id" />
+        <result property="termName" column="term_name" />
+        <result property="salaryAmount" column="salary_amount" />
+        <result property="salaryUnit" column="salary_unit" />
+        <result property="workPlace" column="work_place" />
+        <result property="weeklyHours" column="weekly_hours" />
+        <result property="headcount" column="headcount" />
+        <result property="appliedCount" column="applied_count" />
+        <result property="contactPerson" column="contact_person" />
+        <result property="contactPhone" column="contact_phone" />
+        <result property="openStartTime" column="open_start_time" />
+        <result property="openEndTime" column="open_end_time" />
+        <result property="publishStatus" column="publish_status" />
+        <result property="jobDesc" column="job_desc" />
+        <result property="jobRequirements" column="job_requirements" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+        <result property="remark" column="remark" />
+    </resultMap>
+
+    <sql id="selectScAffairWorkStudyJobVo">
+        select job_id, job_code, job_name, dept_id, dept_name, term_id, term_name, salary_amount, salary_unit,
+               work_place, weekly_hours, headcount, applied_count, contact_person, contact_phone, open_start_time,
+               open_end_time, publish_status, job_desc, job_requirements, create_by, create_time, update_by,
+               update_time, remark
+        from sc_affair_work_study_job
+    </sql>
+
+    <select id="selectScAffairWorkStudyJobByJobId" parameterType="Long" resultMap="ScAffairWorkStudyJobResult">
+        <include refid="selectScAffairWorkStudyJobVo" />
+        where job_id = #{jobId}
+    </select>
+
+    <select id="selectScAffairWorkStudyJobList" parameterType="ScAffairWorkStudyJob" resultMap="ScAffairWorkStudyJobResult">
+        <include refid="selectScAffairWorkStudyJobVo" />
+        <where>
+            <if test="jobCode != null and jobCode != ''">and job_code like concat('%', #{jobCode}, '%')</if>
+            <if test="jobName != null and jobName != ''">and job_name like concat('%', #{jobName}, '%')</if>
+            <if test="deptId != null">and dept_id = #{deptId}</if>
+            <if test="termId != null">and term_id = #{termId}</if>
+            <if test="publishStatus != null and publishStatus != ''">and publish_status = #{publishStatus}</if>
+        </where>
+        order by create_time desc, job_id desc
+    </select>
+
+    <insert id="insertScAffairWorkStudyJob" parameterType="ScAffairWorkStudyJob" useGeneratedKeys="true" keyProperty="jobId">
+        insert into sc_affair_work_study_job
+        (job_code, job_name, dept_id, dept_name, term_id, term_name, salary_amount, salary_unit, work_place,
+         weekly_hours, headcount, applied_count, contact_person, contact_phone, open_start_time, open_end_time,
+         publish_status, job_desc, job_requirements, create_by, create_time, remark)
+        values
+        (#{jobCode}, #{jobName}, #{deptId}, #{deptName}, #{termId}, #{termName}, #{salaryAmount}, #{salaryUnit}, #{workPlace},
+         #{weeklyHours}, #{headcount}, #{appliedCount}, #{contactPerson}, #{contactPhone}, #{openStartTime}, #{openEndTime},
+         #{publishStatus}, #{jobDesc}, #{jobRequirements}, #{createBy}, sysdate(), #{remark})
+    </insert>
+
+    <update id="updateScAffairWorkStudyJob" parameterType="ScAffairWorkStudyJob">
+        update sc_affair_work_study_job
+        <set>
+            <if test="jobCode != null">job_code = #{jobCode},</if>
+            <if test="jobName != null">job_name = #{jobName},</if>
+            <if test="deptId != null">dept_id = #{deptId},</if>
+            <if test="deptName != null">dept_name = #{deptName},</if>
+            <if test="termId != null">term_id = #{termId},</if>
+            <if test="termName != null">term_name = #{termName},</if>
+            <if test="salaryAmount != null">salary_amount = #{salaryAmount},</if>
+            <if test="salaryUnit != null">salary_unit = #{salaryUnit},</if>
+            <if test="workPlace != null">work_place = #{workPlace},</if>
+            <if test="weeklyHours != null">weekly_hours = #{weeklyHours},</if>
+            <if test="headcount != null">headcount = #{headcount},</if>
+            <if test="appliedCount != null">applied_count = #{appliedCount},</if>
+            <if test="contactPerson != null">contact_person = #{contactPerson},</if>
+            <if test="contactPhone != null">contact_phone = #{contactPhone},</if>
+            <if test="openStartTime != null">open_start_time = #{openStartTime},</if>
+            <if test="openEndTime != null">open_end_time = #{openEndTime},</if>
+            <if test="publishStatus != null">publish_status = #{publishStatus},</if>
+            <if test="jobDesc != null">job_desc = #{jobDesc},</if>
+            <if test="jobRequirements != null">job_requirements = #{jobRequirements},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            update_time = sysdate()
+        </set>
+        where job_id = #{jobId}
+    </update>
+
+    <delete id="deleteScAffairWorkStudyJobByJobId" parameterType="Long">
+        delete from sc_affair_work_study_job where job_id = #{jobId}
+    </delete>
+
+    <delete id="deleteScAffairWorkStudyJobByJobIds" parameterType="Long">
+        delete from sc_affair_work_study_job where job_id in
+        <foreach collection="array" item="jobId" open="(" separator="," close=")">
+            #{jobId}
+        </foreach>
+    </delete>
+</mapper>

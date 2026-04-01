@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smart.system.mapper.ScTextbookMapper">
+    <resultMap id="ScTextbookResult" type="ScTextbook">
+        <id property="textbookId" column="textbook_id" />
+        <result property="textbookCode" column="textbook_code" />
+        <result property="textbookName" column="textbook_name" />
+        <result property="isbn" column="isbn" />
+        <result property="author" column="author" />
+        <result property="publisher" column="publisher" />
+        <result property="edition" column="edition" />
+        <result property="publishDate" column="publish_date" />
+        <result property="price" column="price" />
+        <result property="coverUrl" column="cover_url" />
+        <result property="category" column="category" />
+        <result property="subjectType" column="subject_type" />
+        <result property="status" column="status" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+        <result property="remark" column="remark" />
+    </resultMap>
+
+    <sql id="selectScTextbookVo">
+        select textbook_id, textbook_code, textbook_name, isbn, author, publisher, edition, publish_date,
+               price, cover_url, category, subject_type, status, create_by, create_time, update_by, update_time, remark
+        from sc_textbook
+    </sql>
+
+    <select id="selectScTextbookByTextbookId" parameterType="Long" resultMap="ScTextbookResult">
+        <include refid="selectScTextbookVo" />
+        where textbook_id = #{textbookId}
+    </select>
+
+    <select id="selectScTextbookList" parameterType="ScTextbook" resultMap="ScTextbookResult">
+        <include refid="selectScTextbookVo" />
+        <where>
+            <if test="textbookCode != null and textbookCode != ''">and textbook_code like concat('%', #{textbookCode}, '%')</if>
+            <if test="textbookName != null and textbookName != ''">and textbook_name like concat('%', #{textbookName}, '%')</if>
+            <if test="isbn != null and isbn != ''">and isbn like concat('%', #{isbn}, '%')</if>
+            <if test="author != null and author != ''">and author like concat('%', #{author}, '%')</if>
+            <if test="publisher != null and publisher != ''">and publisher like concat('%', #{publisher}, '%')</if>
+            <if test="category != null and category != ''">and category = #{category}</if>
+            <if test="subjectType != null and subjectType != ''">and subject_type = #{subjectType}</if>
+            <if test="status != null and status != ''">and status = #{status}</if>
+        </where>
+        order by create_time desc, textbook_id desc
+    </select>
+
+    <insert id="insertScTextbook" parameterType="ScTextbook" useGeneratedKeys="true" keyProperty="textbookId">
+        insert into sc_textbook
+        (textbook_code, textbook_name, isbn, author, publisher, edition, publish_date, price, cover_url,
+         category, subject_type, status, create_by, create_time, remark)
+        values
+        (#{textbookCode}, #{textbookName}, #{isbn}, #{author}, #{publisher}, #{edition}, #{publishDate}, #{price}, #{coverUrl},
+         #{category}, #{subjectType}, #{status}, #{createBy}, sysdate(), #{remark})
+    </insert>
+
+    <update id="updateScTextbook" parameterType="ScTextbook">
+        update sc_textbook
+        <set>
+            <if test="textbookCode != null">textbook_code = #{textbookCode},</if>
+            <if test="textbookName != null">textbook_name = #{textbookName},</if>
+            <if test="isbn != null">isbn = #{isbn},</if>
+            <if test="author != null">author = #{author},</if>
+            <if test="publisher != null">publisher = #{publisher},</if>
+            <if test="edition != null">edition = #{edition},</if>
+            <if test="publishDate != null">publish_date = #{publishDate},</if>
+            <if test="price != null">price = #{price},</if>
+            <if test="coverUrl != null">cover_url = #{coverUrl},</if>
+            <if test="category != null">category = #{category},</if>
+            <if test="subjectType != null">subject_type = #{subjectType},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            update_time = sysdate()
+        </set>
+        where textbook_id = #{textbookId}
+    </update>
+
+    <delete id="deleteScTextbookByTextbookId" parameterType="Long">
+        delete from sc_textbook where textbook_id = #{textbookId}
+    </delete>
+
+    <delete id="deleteScTextbookByTextbookIds" parameterType="Long">
+        delete from sc_textbook where textbook_id in
+        <foreach collection="array" item="textbookId" open="(" separator="," close=")">
+            #{textbookId}
+        </foreach>
+    </delete>
+</mapper>

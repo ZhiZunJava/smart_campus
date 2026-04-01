@@ -51,18 +51,48 @@
                   class="schedule-board__cell"
                   :rowspan="getRowSpan(row.key, day.value)"
                 >
-                  <div
-                    v-if="getSchedule(row.key, day.value)"
+                  <el-tooltip v-if="getSchedule(row.key, day.value)" placement="right" :show-after="300">
+
+                    <template #content>
+
+                      <div class="schedule-tooltip">
+
+                        <div><b>{{ getScheduleTitle(getSchedule(row.key, day.value)) }}</b></div>
+
+                        <div v-if="getSchedule(row.key, day.value)?._parallelCount">专项课程: {{ (getSchedule(row.key, day.value)?._parallelOptionNames || []).join(', ') }}</div>
+
+                        <div v-if="getSchedule(row.key, day.value)?._combinedCount">合班: {{ getSchedule(row.key, day.value)._combinedClassNames }}</div>
+
+                        <div>周次: {{ getScheduleWeeks(getSchedule(row.key, day.value)) }}</div>
+
+                        <div>节次: {{ getSectionText(getSchedule(row.key, day.value)) }}</div>
+
+                        <div v-if="getScheduleRoom(getSchedule(row.key, day.value))">教室: {{ getScheduleRoom(getSchedule(row.key, day.value)) }}</div>
+
+                        <div>教师: {{ getScheduleTeacher(getSchedule(row.key, day.value)) }}</div>
+
+                        <div>班级: {{ getSchedule(row.key, day.value)?._combinedClassNames || getSchedule(row.key, day.value)?.className || currentClassLabel }}</div>
+
+                        <div>人数: {{ getScheduleStudentCount(getSchedule(row.key, day.value)) }}</div>
+
+                      </div>
+
+                    </template>
+<div
                     class="schedule-card"
                     :style="getCardStyle(getSchedule(row.key, day.value))"
                   >
-                    <div class="course-name">{{ getScheduleTitle(getSchedule(row.key, day.value)) }}</div>
+                    <div class="course-name">
+                        <span>{{ getScheduleTitle(getSchedule(row.key, day.value)) }}</span>
+                        <span v-if="getSchedule(row.key, day.value)?._parallelCount" class="schedule-badge schedule-badge--parallel">{{ getSchedule(row.key, day.value)._parallelCount }}专项</span>
+                        <span v-if="getSchedule(row.key, day.value)?._combinedCount" class="schedule-badge schedule-badge--combined">合班</span>
+                      </div>
                     <div class="course-meta-list">
                       <div class="course-meta-item course-meta-item--wide">
                         <i class="ri-calendar-event-line"></i>
                         <span>{{ getScheduleWeeks(getSchedule(row.key, day.value)) }} · {{ getSectionText(getSchedule(row.key, day.value)) }}</span>
                       </div>
-                      <div class="course-meta-item course-meta-item--wide">
+                      <div v-if="getScheduleRoom(getSchedule(row.key, day.value))" class="course-meta-item course-meta-item--wide">
                         <i class="ri-map-pin-2-line"></i>
                         <span>{{ getScheduleRoom(getSchedule(row.key, day.value)) }}</span>
                       </div>
@@ -72,13 +102,14 @@
                       </div>
                     </div>
                     <div class="course-footer">
-                      <div class="lesson-name">{{ getSchedule(row.key, day.value)?.className || currentClassLabel }}</div>
+                      <div class="lesson-name">{{ getSchedule(row.key, day.value)?._combinedClassNames || getSchedule(row.key, day.value)?.className || currentClassLabel }}</div>
                       <div class="course-population">
                         <i class="ri-group-line"></i>
                         <span>{{ getScheduleStudentCount(getSchedule(row.key, day.value)) }}</span>
                       </div>
                     </div>
                   </div>
+                  </el-tooltip>
                 </td>
               </template>
             </tr>
@@ -137,14 +168,38 @@ const weekNumberOptions = computed(() => {
   return Array.from({ length: currentTermTotalWeeks.value }).map((_, index) => index + 1)
 })
 const activityMap = computed(() => {
-  const map = new Map<string, any>()
+  const map = new Map<string, any[]>()
   visibleSchedules.value.forEach((item: any) => {
     const startUnit = Number(item.startSection || 0)
     const weekDay = Number(item.weekDay || 0)
     if (!startUnit || !weekDay) return
-    map.set(`${startUnit}-${weekDay}`, item)
+    const key = `${startUnit}-${weekDay}`
+    if (!map.has(key)) map.set(key, [])
+    map.get(key)!.push(item)
   })
   return map
+})
+// Merged view: group parallel selection-group and combined-class schedules
+const mergedActivityMap = computed(() => {
+  const result = new Map<string, any>()
+  for (const [key, items] of activityMap.value) {
+    const enriched = items.map((i: any) => getMergedSchedule(i))
+    if (enriched.length === 1) { result.set(key, enriched[0]); continue }
+    const primary = { ...enriched[0] }
+    const selGroupItems = enriched.filter((e: any) => e.selectionGroupCode && e.selectionGroupCode === primary.selectionGroupCode && e.classId === primary.classId)
+    if (selGroupItems.length > 1) {
+      primary._parallelOptionNames = selGroupItems.map((e: any) => e.selectionOptionName || e.teacherName || '').filter(Boolean)
+      primary._parallelTeachers = [...new Set(selGroupItems.map((e: any) => e.teacherName).filter(Boolean))]
+      primary._parallelCount = selGroupItems.length
+    }
+    const combinedItems = enriched.filter((e: any) => e.combinedClassCode && e.combinedClassCode === primary.combinedClassCode)
+    if (combinedItems.length > 1) {
+      primary._combinedClassNames = [...new Set(combinedItems.map((e: any) => e.className).filter(Boolean))].join('+')
+      primary._combinedCount = combinedItems.length
+    }
+    result.set(key, primary)
+  }
+  return result
 })
 const occupiedMap = computed(() => {
   const map = new Map<string, { startKey: string; span: number }>()
@@ -275,11 +330,18 @@ function getRowSpan(rowKey: string, day: number) {
 function getSchedule(rowKey: string, day: number) {
   const row = tableRows.value.find((item) => item.key === rowKey)
   if (!row?.unit) return null
-  const item = activityMap.value.get(`${row.unit}-${day}`)
-  return item ? getMergedSchedule(item) : null
+  return mergedActivityMap.value.get(`${row.unit}-${day}`) || null
+}
+function displayClassCourseName(item: any) {
+  if (!item) return '-'
+  const displayName = String(item?.courseName || '').trim()
+  const baseCourseName = String(item?.baseCourseName || '').trim()
+  const selectionOptionName = String(item?.selectionOptionName || '').trim()
+  if (baseCourseName && selectionOptionName && baseCourseName !== selectionOptionName) return `${baseCourseName} / ${selectionOptionName}`
+  return displayName || baseCourseName || selectionOptionName || '-'
 }
 function getScheduleTitle(item: any) {
-  return item?.courseName || getOptionLabel(classCourseOptions.value, item?.classCourseId, '班级课程')
+  return displayClassCourseName(item)
 }
 function getScheduleWeeks(item: any) {
   return item?.weeksText || '全周'
@@ -311,6 +373,7 @@ function getScheduleRoom(item: any) {
   return result.join(' / ')
 }
 function getScheduleTeacher(item: any) {
+  if (item?._parallelTeachers?.length > 1) return item._parallelTeachers.join(', ')
   return item?.teacherName || '未配置'
 }
 function getScheduleStudentCount(item: any) {
@@ -536,5 +599,31 @@ onMounted(async()=>{ await loadOptions(); await loadData() })
   color:#23476d;
   font-size:12px;
   font-weight:600;
+}
+.schedule-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 3px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.schedule-badge--parallel {
+  background: rgba(230, 162, 60, 0.18);
+  color: #b88230;
+}
+.schedule-badge--combined {
+  background: rgba(64, 158, 255, 0.16);
+  color: #2b7fd4;
+}
+.schedule-tooltip {
+  font-size: 12px;
+  line-height: 1.6;
+  max-width: 280px;
+}
+.schedule-tooltip b {
+  font-size: 13px;
 }
 </style>

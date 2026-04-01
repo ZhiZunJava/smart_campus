@@ -101,13 +101,79 @@ public class CourseScheduleAutoArrangeService {
         List<LessonTask> lessonTasks = buildLessonTasks(classCourses, requestedCourseIds, existingArrangedHours, term,
                 activeClassrooms, itemConfigMap, preferredDurations, excludedWeekDays, excludedDayParts);
 
+        // --- Parallel selection group merging ---
+        // Same selectionGroupCode + limit=1 sub-courses (e.g. PE specialties) share one time slot.
+        // Only the "leader" task participates in the GA; followers copy the leader's time slot.
+        Map<String, List<LessonTask>> parallelGroupsBySlot = new LinkedHashMap<>();
+        for (LessonTask task : lessonTasks) {
+            if (StringUtils.isEmpty(task.selectionGroupCode) || task.selectionGroupLimit != 1) {
+                continue;
+            }
+            String[] idParts = task.taskId.split("-");
+            int seq = idParts.length > 1 ? Integer.parseInt(idParts[1]) : 1;
+            String parallelKey = task.classId + ":" + task.courseId + ":" + task.selectionGroupCode + ":" + seq;
+            parallelGroupsBySlot.computeIfAbsent(parallelKey, k -> new ArrayList<>()).add(task);
+        }
+        List<LessonTask> followerTasks = new ArrayList<>();
+        Map<String, List<LessonTask>> leaderFollowersMap = new LinkedHashMap<>();
+        for (List<LessonTask> group : parallelGroupsBySlot.values()) {
+            if (group.size() <= 1) {
+                continue;
+            }
+            LessonTask leader = group.get(0);
+            List<LessonTask> followers = new ArrayList<>(group.subList(1, group.size()));
+            followerTasks.addAll(followers);
+            leaderFollowersMap.put(leader.taskId, followers);
+        }
+        int totalTasksIncludingFollowers = lessonTasks.size();
+        if (!followerTasks.isEmpty()) {
+            Set<String> followerTaskIds = followerTasks.stream().map(t -> t.taskId).collect(Collectors.toSet());
+            lessonTasks = lessonTasks.stream().filter(t -> !followerTaskIds.contains(t.taskId))
+                    .collect(Collectors.toList());
+        }
+        // --- End parallel selection group merging ---
+
+        // --- Combined class merging ---
+        // Same combinedClassCode + courseId courses from different classes share one time slot & classroom.
+        // Only the leader is scheduled; followers copy the leader's exact assignment (including classroom).
+        Map<String, List<LessonTask>> combinedGroups = new LinkedHashMap<>();
+        for (LessonTask task : lessonTasks) {
+            if (StringUtils.isEmpty(task.combinedClassCode)) {
+                continue;
+            }
+            String[] idParts = task.taskId.split("-");
+            int seq = idParts.length > 1 ? Integer.parseInt(idParts[1]) : 1;
+            String combinedKey = task.combinedClassCode + ":" + task.courseId + ":" + seq;
+            combinedGroups.computeIfAbsent(combinedKey, k -> new ArrayList<>()).add(task);
+        }
+        for (List<LessonTask> group : combinedGroups.values()) {
+            if (group.size() <= 1) {
+                continue;
+            }
+            LessonTask leader = group.get(0);
+            // Sum student counts for classroom capacity estimation
+            int totalStudents = group.stream().mapToInt(t -> t.studentCount).sum();
+            leader.studentCount = totalStudents;
+            List<LessonTask> followers = new ArrayList<>(group.subList(1, group.size()));
+            followerTasks.addAll(followers);
+            leaderFollowersMap.put(leader.taskId, followers);
+        }
+        // Re-filter followers from lessonTasks (covers both selection group and combined class followers)
+        if (!followerTasks.isEmpty()) {
+            Set<String> allFollowerTaskIds = followerTasks.stream().map(t -> t.taskId).collect(Collectors.toSet());
+            lessonTasks = lessonTasks.stream().filter(t -> !allFollowerTaskIds.contains(t.taskId))
+                    .collect(Collectors.toList());
+        }
+        totalTasksIncludingFollowers = lessonTasks.size() + followerTasks.size();
+        // --- End combined class merging ---
+
         CourseScheduleAutoArrangeVo result = new CourseScheduleAutoArrangeVo();
         result.setTermId(term.getTermId());
         result.setTermName(term.getTermName());
         result.setPopulationSize(populationSize);
         result.setGenerationCount(generationCount);
         result.setMutationRate(mutationRate);
-        result.setTotalLessonTasks(lessonTasks.size());
+        result.setTotalLessonTasks(totalTasksIncludingFollowers);
         result.setClearedSchedules(0);
 
         if (lessonTasks.isEmpty()) {
@@ -127,6 +193,30 @@ public class CourseScheduleAutoArrangeService {
                 classCourseMap, sectionDayPartMap, populationSize, generationCount, mutationRate);
         List<LessonAssignment> validAssignments = collectValidAssignments(best, lessonTasks, activeClassrooms,
                 lockedSchedules, classCourseMap, sectionDayPartMap);
+
+        // --- Expand follower tasks: copy leader's time slot to each follower ---
+        if (!leaderFollowersMap.isEmpty()) {
+            List<LessonAssignment> followerAssignments = new ArrayList<>();
+            for (LessonAssignment leaderAssignment : validAssignments) {
+                List<LessonTask> followers = leaderFollowersMap.get(leaderAssignment.taskId);
+                if (followers == null || followers.isEmpty()) {
+                    continue;
+                }
+                for (LessonTask follower : followers) {
+                    LessonAssignment fa = leaderAssignment.copy();
+                    fa.taskId = follower.taskId;
+                    // Try to assign a different classroom from the follower's preferred list
+                    if (follower.preferredClassroomIds != null && !follower.preferredClassroomIds.isEmpty()) {
+                        fa.classroomId = follower.preferredClassroomIds.get(0);
+                    }
+                    followerAssignments.add(fa);
+                }
+            }
+            validAssignments.addAll(followerAssignments);
+            // Re-add followers to the task list for taskMap building
+            lessonTasks.addAll(followerTasks);
+        }
+        // --- End expand follower tasks ---
 
         result.setBestFitnessScore(best.fitnessScore);
         result.setArrangedLessonTasks(validAssignments.size());
@@ -394,6 +484,7 @@ public class CourseScheduleAutoArrangeService {
                 task.excludedDayParts = excludedDayParts;
                 task.selectionGroupCode = normalizeSelectionGroupCode(item.getSelectionGroupCode());
                 task.selectionGroupLimit = normalizeSelectionGroupLimit(item.getSelectionGroupLimit());
+                task.combinedClassCode = StringUtils.trimToEmpty(item.getCombinedClassCode());
                 task.priorityScore = (item.getRequiredFlag() != null && "Y".equalsIgnoreCase(item.getRequiredFlag())
                         ? 10
                         : 0)
@@ -1086,15 +1177,17 @@ public class CourseScheduleAutoArrangeService {
                         score -= 260D;
                     }
                     if (leftTask != null && rightTask != null) {
-                        if (leftTask.teacherId != null && leftTask.teacherId.equals(rightTask.teacherId)) {
+                        boolean allowCombinedClass = isSameCombinedClassGroup(leftTask, rightTask);
+                        if (leftTask.teacherId != null && leftTask.teacherId.equals(rightTask.teacherId)
+                                && !allowCombinedClass) {
                             score -= 250D;
                         }
                         boolean allowParallelSelectionGroup = canParallelSelectionGroup(leftTask, rightTask);
                         if (leftTask.classId != null && leftTask.classId.equals(rightTask.classId)
-                                && !allowParallelSelectionGroup) {
+                                && !allowParallelSelectionGroup && !allowCombinedClass) {
                             score -= 280D;
                         }
-                        if (allowParallelSelectionGroup) {
+                        if (allowParallelSelectionGroup || allowCombinedClass) {
                             score += 36D;
                         }
                         if (leftTask.classCourseId != null && leftTask.classCourseId.equals(rightTask.classCourseId)) {
@@ -1144,11 +1237,13 @@ public class CourseScheduleAutoArrangeService {
                 }
                 ScClassCourse lockedClassCourse = classCourseMap.get(locked.getClassCourseId());
                 if (lockedClassCourse != null) {
-                    if (task.teacherId != null && task.teacherId.equals(lockedClassCourse.getTeacherId())) {
+                    boolean combinedLocked = isSameCombinedClassGroup(task, lockedClassCourse);
+                    if (task.teacherId != null && task.teacherId.equals(lockedClassCourse.getTeacherId())
+                            && !combinedLocked) {
                         score -= 250D;
                     }
                     if (task.classId != null && task.classId.equals(lockedClassCourse.getClassId())
-                            && !canParallelSelectionGroup(task, lockedClassCourse)) {
+                            && !canParallelSelectionGroup(task, lockedClassCourse) && !combinedLocked) {
                         score -= 280D;
                     }
                 }
@@ -1304,11 +1399,13 @@ public class CourseScheduleAutoArrangeService {
                     && !isVirtualOpenSpaceClassroomId(assignment.classroomId)) {
                 return false;
             }
-            if (task.teacherId != null && task.teacherId.equals(current.teacherId)) {
+            boolean combinedAccepted = isSameCombinedClassGroup(task, current);
+            if (task.teacherId != null && task.teacherId.equals(current.teacherId)
+                    && !combinedAccepted) {
                 return false;
             }
             if (task.classId != null && task.classId.equals(current.classId)
-                    && !canParallelSelectionGroup(task, current)) {
+                    && !canParallelSelectionGroup(task, current) && !combinedAccepted) {
                 return false;
             }
         }
@@ -1333,11 +1430,13 @@ public class CourseScheduleAutoArrangeService {
             }
             ScClassCourse lockedClassCourse = classCourseMap.get(locked.getClassCourseId());
             if (lockedClassCourse != null) {
-                if (task.teacherId != null && task.teacherId.equals(lockedClassCourse.getTeacherId())) {
+                boolean combinedLocked = isSameCombinedClassGroup(task, lockedClassCourse);
+                if (task.teacherId != null && task.teacherId.equals(lockedClassCourse.getTeacherId())
+                        && !combinedLocked) {
                     return false;
                 }
                 if (task.classId != null && task.classId.equals(lockedClassCourse.getClassId())
-                        && !canParallelSelectionGroup(task, lockedClassCourse)) {
+                        && !canParallelSelectionGroup(task, lockedClassCourse) && !combinedLocked) {
                     return false;
                 }
             }
@@ -1398,6 +1497,30 @@ public class CourseScheduleAutoArrangeService {
         }
         return normalizeSelectionGroupLimit(task.selectionGroupLimit) == 1
                 && normalizeSelectionGroupLimit(classCourse.getSelectionGroupLimit()) == 1;
+    }
+
+    private boolean isSameCombinedClassGroup(LessonTask leftTask, LessonTask rightTask) {
+        if (leftTask == null || rightTask == null) {
+            return false;
+        }
+        String codeA = StringUtils.trimToEmpty(leftTask.combinedClassCode);
+        String codeB = StringUtils.trimToEmpty(rightTask.combinedClassCode);
+        if (StringUtils.isEmpty(codeA) || !codeA.equals(codeB)) {
+            return false;
+        }
+        return Objects.equals(leftTask.courseId, rightTask.courseId);
+    }
+
+    private boolean isSameCombinedClassGroup(LessonTask task, ScClassCourse classCourse) {
+        if (task == null || classCourse == null) {
+            return false;
+        }
+        String codeA = StringUtils.trimToEmpty(task.combinedClassCode);
+        String codeB = StringUtils.trimToEmpty(classCourse.getCombinedClassCode());
+        if (StringUtils.isEmpty(codeA) || !codeA.equals(codeB)) {
+            return false;
+        }
+        return Objects.equals(task.courseId, classCourse.getCourseId());
     }
 
     private Map<String, Object> buildArrangedLessonMap(LessonAssignment assignment, ScSchoolTerm term,
@@ -1660,6 +1783,7 @@ public class CourseScheduleAutoArrangeService {
         private String weeksText;
         private String selectionGroupCode;
         private int selectionGroupLimit;
+        private String combinedClassCode;
         private List<Long> preferredClassroomIds = new ArrayList<>();
         private Set<Integer> excludedWeekDays = new LinkedHashSet<>();
         private Set<String> excludedDayParts = new LinkedHashSet<>();

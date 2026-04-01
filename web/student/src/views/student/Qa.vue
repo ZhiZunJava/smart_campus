@@ -119,10 +119,7 @@
                 </details>
 
                 <div v-if="item.role === 'assistant'" class="qa-message__content markdown-body">
-                  <div v-if="isStreamingAssistantMessage(item)"
-                    class="qa-message__content--plain qa-message__content--streaming">
-                    {{ getStreamingAssistantPreview(item.content) }}
-                  </div>
+                  <div v-if="isStreamingAssistantMessage(item)" class="qa-message__content--plain qa-message__content--streaming" v-html="getStreamingAssistantPreview(item.content)" />
                   <QaMarkdownRenderer v-else :source="item.content || ''" />
                 </div>
                 <div v-else class="qa-message__content qa-message__content--plain">{{ item.content }}</div>
@@ -197,64 +194,29 @@
                 />
               </el-select>
             </div>
+
           </div>
 
-          <div class="qa-context-bar__right">
-            <button type="button" class="qa-context-chip" @click="applyCoursePlanPrompt">
-              <i class="ri-road-map-line"></i>
-              <span>生成学习规划</span>
+          <div ref="contextActionsRef" class="qa-context-bar__right">
+            <button v-for="chip in visibleContextActions" :key="chip.id" type="button" class="qa-context-chip" :disabled="chip.disabled" @click="chip.action">
+              <i :class="chip.icon"></i>
+              <span>{{ chip.label }}</span>
             </button>
-            <button type="button" class="qa-context-chip" :disabled="!selectedExamRecord" @click="applyExamAnalysisPrompt">
-              <i class="ri-bar-chart-box-line"></i>
-              <span>分析考试记录</span>
-            </button>
-            <button type="button" class="qa-context-chip" :disabled="!selectedCourseId" @click="applyWrongbookPlanPrompt">
-              <i class="ri-booklet-line"></i>
-              <span>错题复习规划</span>
-            </button>
-          </div>
-        </div>
-
-        <div v-if="selectedCourseId" class="qa-context-insights">
-          <section v-if="recentExamCards.length" class="qa-context-panel">
-            <div class="qa-context-panel__head">
-              <strong>最近考试记录</strong>
-              <span>点击可切换分析对象</span>
-            </div>
-            <div class="qa-context-records">
-              <button
-                v-for="item in recentExamCards"
-                :key="item.value"
-                type="button"
-                class="qa-context-record"
-                :class="{ 'is-active': item.value === selectedExamRecordId }"
-                @click="selectedExamRecordId = item.value"
-              >
-                <div class="qa-context-record__title">{{ item.raw.paperName || `考试 ${item.value}` }}</div>
-                <div class="qa-context-record__meta">
-                  <span>得分 {{ item.raw.score ?? 0 }}</span>
-                  <span>正确率 {{ formatCorrectRate(item.raw.correctRate) }}</span>
-                </div>
+            <el-dropdown v-if="hiddenContextActions.length" trigger="click">
+              <button type="button" class="qa-context-chip">
+                <i class="ri-function-line"></i>
+                <span>更多操作</span>
               </button>
-            </div>
-          </section>
-
-          <section v-if="hasWrongbookOverview" class="qa-context-panel qa-context-panel--summary">
-            <div class="qa-context-panel__head">
-              <strong>错题概览</strong>
-              <span>{{ courseContextLabel(selectedCourseId) }}</span>
-            </div>
-            <div class="qa-context-summary">
-              <div class="qa-context-summary__item">
-                <span>总错题</span>
-                <strong>{{ wrongOverview.totalCount || 0 }}</strong>
-              </div>
-              <div class="qa-context-summary__item">
-                <span>未掌握</span>
-                <strong>{{ wrongOverview.unmasteredCount || 0 }}</strong>
-              </div>
-            </div>
-          </section>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item v-for="chip in hiddenContextActions" :key="chip.id" :disabled="chip.disabled" @click="chip.action">
+                    <i :class="chip.icon"></i>
+                    {{ chip.label }}
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </div>
         </div>
 
         <div v-if="images.length" class="qa-composer__attachments">
@@ -341,7 +303,7 @@ import { ElMessage, ElMessageBox } from '@/utils/feedback'
 import { getToken } from '@/utils/auth'
 import { normalizeQaErrorMessage, parseAssistantReferenceSource, parseQaAttachments } from '@/utils/qaMessage'
 import usePortalUserStore from '@/store/user'
-import { addQaFeedback, addQaSession, deletePortalQaAttachment, deleteQaSession, fetchPortalCourseOptions, getWrongBookOverview, listExamRecord, listQaMessage, listQaModelOptions, listQaSession, updateQaSession, uploadPortalQaAttachment } from '@/api/portal'
+import { addQaFeedback, addQaSession, deletePortalQaAttachment, deleteQaSession, fetchPortalCourseOptions, listExamRecord, listQaMessage, listQaModelOptions, listQaSession, updateQaSession, uploadPortalQaAttachment } from '@/api/portal'
 import QaMarkdownRenderer from '@/components/qa/QaMarkdownRenderer.vue'
 import portalLogo from '@/assets/img/logo.png'
 
@@ -360,7 +322,6 @@ const courseOptions = ref<Array<{ label: string; value: number }>>([])
 const selectedCourseId = ref<number | undefined>()
 const examRecordOptions = ref<Array<{ label: string; value: number; raw: any }>>([])
 const selectedExamRecordId = ref<number | undefined>()
-const wrongOverview = ref<Record<string, any>>({})
 const images = ref<Array<{ attachmentId?: number; name: string; imageUrl: string; fileName?: string; originalName?: string; mimeType: string; size?: number }>>([])
 const sessions = ref<any[]>([])
 const sessionKeyword = ref('')
@@ -378,6 +339,18 @@ const activeAnchorId = ref('')
 const feedbackDialogOpen = ref(false)
 const feedbackTargetMessageId = ref<number | undefined>()
 const feedbackForm = ref<{ feedbackType: 'helpful' | 'unhelpful'; feedbackContent: string }>({ feedbackType: 'helpful', feedbackContent: '' })
+const contextActionsRef = ref<HTMLElement | null>(null)
+const visibleActionCount = ref(3)
+
+const contextActions = computed(() => [
+  { id: 'plan', label: '生成学习规划', icon: 'ri-road-map-line', action: applyCoursePlanPrompt, disabled: false },
+  { id: 'analysis', label: '分析考试记录', icon: 'ri-bar-chart-box-line', action: applyExamAnalysisPrompt, disabled: !selectedExamRecord.value },
+  { id: 'wrongbook', label: '错题复习规划', icon: 'ri-booklet-line', action: applyWrongbookPlanPrompt, disabled: !selectedCourseId.value },
+])
+
+const visibleContextActions = computed(() => contextActions.value.slice(0, visibleActionCount.value))
+
+const hiddenContextActions = computed(() => contextActions.value.slice(visibleActionCount.value))
 
 const suggestionList = [
   '帮我总结这一章的知识点',
@@ -408,8 +381,6 @@ const currentSessionTitle = computed(() => {
 })
 const selectedCourse = computed(() => courseOptions.value.find((item) => item.value === selectedCourseId.value))
 const selectedExamRecord = computed(() => examRecordOptions.value.find((item) => item.value === selectedExamRecordId.value)?.raw)
-const recentExamCards = computed(() => examRecordOptions.value.slice(0, 3))
-const hasWrongbookOverview = computed(() => Number(wrongOverview.value.totalCount || 0) > 0 || Number(wrongOverview.value.unmasteredCount || 0) > 0)
 const userQuestionAnchors = computed(() => chatMessages.value
   .filter((item) => item.role === 'user')
   .map((item, index) => ({ id: item.id, order: index + 1, title: item.content.slice(0, 18) })))
@@ -497,18 +468,6 @@ async function loadExamRecordOptions() {
   }
 }
 
-async function loadWrongOverview() {
-  if (!userStore.user?.userId || !selectedCourseId.value) {
-    wrongOverview.value = {}
-    return
-  }
-  const res = await getWrongBookOverview({
-    userId: userStore.user.userId,
-    courseId: selectedCourseId.value,
-  })
-  wrongOverview.value = res.data || {}
-}
-
 async function loadSessions() {
   if (!userStore.user?.userId) return
   const res = await listQaSession({ pageNum: 1, pageSize: 100, userId: userStore.user.userId })
@@ -520,7 +479,6 @@ async function openSession(item: any) {
   saveActiveSessionId(item.sessionId)
   selectedCourseId.value = Number(item.courseId || 0) || undefined
   await loadExamRecordOptions()
-  await loadWrongOverview()
   const res = await listQaMessage({ pageNum: 1, pageSize: 200, sessionId: item.sessionId })
   chatMessages.value = (res.rows || []).map((message: any) => {
     const role = message.roleType === 'assistant' ? 'assistant' : 'user'
@@ -602,7 +560,6 @@ function handleModelChange() {
 async function handleCourseContextChange() {
   selectedExamRecordId.value = undefined
   await loadExamRecordOptions()
-  await loadWrongOverview()
   if (activeSessionId.value) {
     await updateQaSession({ sessionId: activeSessionId.value, courseId: selectedCourseId.value || null })
     await loadSessions()
@@ -681,9 +638,6 @@ function buildContextPrompt() {
   if (selectedCourse.value) {
     contexts.push(`当前课程上下文：${selectedCourse.value.label}`)
   }
-  if (hasWrongbookOverview.value) {
-    contexts.push(`错题概览：总错题 ${wrongOverview.value.totalCount || 0}，未掌握 ${wrongOverview.value.unmasteredCount || 0}。`)
-  }
   if (selectedExamRecord.value) {
     contexts.push(`考试记录摘要：\n${buildExamRecordContext(selectedExamRecord.value)}`)
   }
@@ -718,6 +672,15 @@ function formatCorrectRate(value: any) {
 
 function applySuggestion(text: string) {
   inputText.value = text
+}
+
+function escapeHtml(unsafe: string) {
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
 }
 
 function isImageAttachment(attachment: any) {
@@ -932,17 +895,18 @@ function isStreamingAssistantMessage(item: { role: string; id: string }) {
 }
 
 function getStreamingAssistantPreview(content?: string) {
-  const text = String(content || '').trim()
+  const text = String(content || '')
+  const cursor = '<span class="blinking-cursor">▋</span>'
   if (!text) {
-    return '正在生成回答...'
+    return `正在生成回答...${cursor}`
   }
   if (/:::\s*echarts|```(?:json|yaml)|"series"\s*:|"xAxis"\s*:|"yAxis"\s*:/.test(text)) {
-    return '正在整理图表内容...'
+    return `正在整理图表内容...${cursor}`
   }
   if (/\|/.test(text) && /(?:---|:\s*-|项目|数值|说明)/.test(text)) {
-    return '正在整理表格内容...'
+    return `正在整理表格内容...${cursor}`
   }
-  return text
+  return escapeHtml(text) + cursor
 }
 
 async function copyText(text: string) {
@@ -1001,7 +965,6 @@ onMounted(async () => {
   await loadModels()
   await loadCourseOptions()
   await loadExamRecordOptions()
-  await loadWrongOverview()
   await loadSessions()
   if (activeSessionId.value) {
     const current = sessions.value.find((item) => item.sessionId === activeSessionId.value)
@@ -1011,6 +974,22 @@ onMounted(async () => {
     }
     saveActiveSessionId()
   }
+
+  const observer = new ResizeObserver((entries) => {
+    const entry = entries[0]
+    if (!entry) return
+    const { width } = entry.contentRect
+    const totalActions = contextActions.value.length
+    const maxFit = Math.floor(width / 150) // Estimate 150px per chip
+    if (maxFit >= totalActions) {
+      visibleActionCount.value = totalActions
+    }
+    else {
+      // Leave space for the 'More' button
+      visibleActionCount.value = Math.max(0, maxFit > 1 ? maxFit - 1 : 0)
+    }
+  })
+  if (contextActionsRef.value) observer.observe(contextActionsRef.value)
 })
 
 watch(
@@ -1586,7 +1565,15 @@ function handleScrollSpy() {
 
 .qa-message__content--streaming {
   padding: 2px 0;
-  color: var(--portal-text-secondary)
+  color: var(--portal-text-secondary);
+  display: inline;
+}
+
+.qa-message__content--streaming:deep(span.blinking-cursor) {
+  animation: qa-blink-caret 1s step-end infinite;
+  font-weight: 500;
+  color: var(--portal-brand);
+  margin-left: 2px;
 }
 
 .qa-message__ops {
@@ -1773,6 +1760,10 @@ function handleScrollSpy() {
   flex-wrap: wrap
 }
 
+.qa-context-bar__right :deep(.el-dropdown-menu__item) {
+  gap: 6px;
+}
+
 .qa-context-field {
   display: grid;
   gap: 6px;
@@ -1818,101 +1809,6 @@ function handleScrollSpy() {
 .qa-context-chip:disabled {
   opacity: .45;
   cursor: not-allowed
-}
-
-.qa-context-insights {
-  display: grid;
-  gap: 10px;
-  margin-bottom: 10px
-}
-
-.qa-context-panel {
-  border: 1px solid var(--portal-border);
-  border-radius: 10px;
-  background: var(--portal-surface-bg);
-  padding: 10px 12px
-}
-
-.qa-context-panel__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px
-}
-
-.qa-context-panel__head strong {
-  font-size: 13px;
-  color: var(--portal-text)
-}
-
-.qa-context-panel__head span {
-  font-size: 11px;
-  color: var(--portal-text-secondary)
-}
-
-.qa-context-records {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px
-}
-
-.qa-context-record {
-  border: 1px solid var(--portal-border);
-  border-radius: 8px;
-  background: var(--portal-card-solid);
-  padding: 10px 12px;
-  text-align: left;
-  cursor: pointer;
-  transition: all .2s ease
-}
-
-.qa-context-record:hover,
-.qa-context-record.is-active {
-  border-color: var(--portal-border-strong);
-  background: var(--portal-brand-soft)
-}
-
-.qa-context-record__title {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--portal-text);
-  line-height: 1.5
-}
-
-.qa-context-record__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
-  font-size: 11px;
-  color: var(--portal-text-secondary)
-}
-
-.qa-context-summary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px
-}
-
-.qa-context-summary__item {
-  border: 1px solid var(--portal-border);
-  border-radius: 8px;
-  background: var(--portal-card-solid);
-  padding: 10px 12px
-}
-
-.qa-context-summary__item span {
-  display: block;
-  font-size: 11px;
-  color: var(--portal-text-secondary)
-}
-
-.qa-context-summary__item strong {
-  display: block;
-  margin-top: 6px;
-  font-size: 18px;
-  color: var(--portal-text)
 }
 
 .qa-composer__attachments {
@@ -2165,6 +2061,11 @@ function handleScrollSpy() {
   background: #90a4b4
 }
 
+@keyframes qa-blink-caret {
+  from, to { opacity: 1 }
+  50% { opacity: 0 }
+}
+
 .markdown-body :deep(p) {
   margin: 0 0 10px
 }
@@ -2363,11 +2264,6 @@ function handleScrollSpy() {
   .qa-context-field--exam,
   .qa-tool-select {
     width: 100%
-  }
-
-  .qa-context-records,
-  .qa-context-summary {
-    grid-template-columns: 1fr
   }
 
   .qa-context-field :deep(.el-select),

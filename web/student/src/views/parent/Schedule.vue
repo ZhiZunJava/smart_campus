@@ -102,7 +102,7 @@
                       v-if="getActivity(row.key, day.value)"
                       class="tdHtml tdHtml--print"
                     >
-                      <div class="course-name">{{ getActivity(row.key, day.value).courseName || '未命名课程' }}</div>
+                      <div class="course-name">{{ displayClassCourseName(getActivity(row.key, day.value)) }}</div>
                       <div>{{ formatWeeksAndUnits(getActivity(row.key, day.value)) }}</div>
                       <div>{{ formatLocation(getActivity(row.key, day.value)) }} {{ formatTeachers(getActivity(row.key, day.value)) }}</div>
                       <div>{{ getActivity(row.key, day.value).lessonName || getActivity(row.key, day.value).className || '' }}</div>
@@ -146,12 +146,29 @@
                   class="td-content"
                   :rowspan="getRowSpan(row.key, day.value)"
                 >
-                  <div
-                    v-if="getActivity(row.key, day.value)"
+                  <el-tooltip v-if="getActivity(row.key, day.value)" placement="right" :show-after="300" :popper-options="{ modifiers: [{ name: 'offset', options: { offset: [0, 8] } }] }">
+                    <template #content>
+                      <div class="schedule-tooltip">
+                        <div><b>{{ displayClassCourseName(getActivity(row.key, day.value)) }}</b></div>
+                        <div v-if="getActivity(row.key, day.value)?._parallelCount">专项课程: {{ (getActivity(row.key, day.value)?._parallelOptionNames || []).join(', ') }}</div>
+                        <div v-if="getActivity(row.key, day.value)?._combinedCount">合班: {{ getActivity(row.key, day.value)._combinedClassNames }}</div>
+                        <div>周次: {{ getActivity(row.key, day.value)?.weeksStr || getActivity(row.key, day.value)?.weeksText || '全周' }}</div>
+                        <div>节次: {{ getSectionText(getActivity(row.key, day.value)) }}</div>
+                        <div v-if="formatLocation(getActivity(row.key, day.value))">教室: {{ formatLocation(getActivity(row.key, day.value)) }}</div>
+                        <div>教师: {{ formatTeachers(getActivity(row.key, day.value)) || '未配置' }}</div>
+                        <div>班级: {{ getActivity(row.key, day.value)?._combinedClassNames || getActivity(row.key, day.value)?.className || '-' }}</div>
+                        <div>人数: {{ getStudentCount(getActivity(row.key, day.value)) }}</div>
+                      </div>
+                    </template>
+<div
                     class="tdHtml"
                     :style="getCardStyle(getActivity(row.key, day.value))"
                   >
-                    <div class="course-name">{{ getActivity(row.key, day.value).courseName || '未命名课程' }}</div>
+                    <div class="course-name">
+                      <span>{{ displayClassCourseName(getActivity(row.key, day.value)) }}</span>
+                      <span v-if="getActivity(row.key, day.value)?._parallelCount" class="schedule-badge schedule-badge--parallel">{{ getActivity(row.key, day.value)._parallelCount }}专项</span>
+                      <span v-if="getActivity(row.key, day.value)?._combinedCount" class="schedule-badge schedule-badge--combined">合班</span>
+                    </div>
                     <div class="course-meta-list">
                       <div class="course-meta-item course-meta-item--wide">
                         <i class="ri-calendar-event-line"></i>
@@ -174,13 +191,14 @@
                       </div>
                     </div>
                     <div class="course-footer">
-                      <div class="lesson-name">{{ getActivity(row.key, day.value).lessonName || getActivity(row.key, day.value).className || '' }}</div>
+                      <div class="lesson-name">{{ getActivity(row.key, day.value)?._combinedClassNames || getActivity(row.key, day.value)?.lessonName || getActivity(row.key, day.value)?.className || '' }}</div>
                       <div class="course-population">
                         <i class="ri-group-line"></i>
                         <span>{{ getStudentCount(getActivity(row.key, day.value)) }}</span>
                       </div>
                     </div>
                   </div>
+                    </el-tooltip>
                   <div v-else class="tdHtml tdHtml--empty"></div>
                 </td>
               </template>
@@ -293,13 +311,36 @@ const visibleActivities = computed(() => {
 })
 
 const activityMap = computed(() => {
-  const map = new Map<string, any>()
+  const map = new Map<string, any[]>()
   visibleActivities.value.forEach((item: any) => {
     const startKey = String(item.startSection || '')
     if (!startKey) return
-    map.set(`${startKey}-${item.weekDay}`, item)
+    const key = `${startKey}-${item.weekDay}`
+    if (!map.has(key)) map.set(key, [])
+    map.get(key)!.push(item)
   })
   return map
+})
+// Merged view: group parallel selection-group and combined-class schedules
+const mergedActivityMap = computed(() => {
+  const result = new Map<string, any>()
+  for (const [key, items] of activityMap.value) {
+    if (items.length === 1) { result.set(key, items[0]); continue }
+    const primary = { ...items[0] }
+    const selGroupItems = items.filter((e: any) => e.selectionGroupCode && e.selectionGroupCode === primary.selectionGroupCode && e.classId === primary.classId)
+    if (selGroupItems.length > 1) {
+      primary._parallelOptionNames = selGroupItems.map((e: any) => e.selectionOptionName || e.teacherName || '').filter(Boolean)
+      primary._parallelTeachers = [...new Set(selGroupItems.map((e: any) => e.teacherName).filter(Boolean))]
+      primary._parallelCount = selGroupItems.length
+    }
+    const combinedItems = items.filter((e: any) => e.combinedClassCode && e.combinedClassCode === primary.combinedClassCode)
+    if (combinedItems.length > 1) {
+      primary._combinedClassNames = [...new Set(combinedItems.map((e: any) => e.className).filter(Boolean))].join('+')
+      primary._combinedCount = combinedItems.length
+    }
+    result.set(key, primary)
+  }
+  return result
 })
 
 const occupiedMap = computed(() => {
@@ -428,7 +469,7 @@ function getRowSpan(rowKey: string, day: number) {
 function getActivity(rowKey: string, day: number) {
   const row = tableRows.value.find((item) => item.key === rowKey)
   if (!row?.unit) return null
-  return activityMap.value.get(`${row.unit}-${day}`) || null
+  return mergedActivityMap.value.get(`${row.unit}-${day}`) || null
 }
 
 function shouldRenderTimeArea(rowKey: string) {
@@ -497,7 +538,17 @@ function getStudentCount(item: any) {
 }
 
 function formatTeachers(item: any) {
-  return item.teacherName || ''
+  if (item?._parallelTeachers?.length > 1) return item._parallelTeachers.join(', ')
+  return item?.teacherName || ''
+}
+
+function displayClassCourseName(item: any) {
+  if (!item) return '-'
+  const displayName = String(item?.courseName || '').trim()
+  const baseCourseName = String(item?.baseCourseName || '').trim()
+  const selectionOptionName = String(item?.selectionOptionName || '').trim()
+  if (baseCourseName && selectionOptionName && baseCourseName !== selectionOptionName) return `${baseCourseName} / ${selectionOptionName}`
+  return displayName || baseCourseName || selectionOptionName || '-'
 }
 
 function formatLocation(item: any) {
@@ -522,7 +573,34 @@ function printSchedule() {
       <head>
         <meta charset="UTF-8" />
         <title>${printSchoolTitle.value}</title>
-        <style>${buildPrintStyles()}</style>
+        <style>${buildPrintStyles()}
+.schedule-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 3px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.schedule-badge--parallel {
+  background: rgba(230, 162, 60, 0.18);
+  color: #b88230;
+}
+.schedule-badge--combined {
+  background: rgba(64, 158, 255, 0.16);
+  color: #2b7fd4;
+}
+.schedule-tooltip {
+  font-size: 12px;
+  line-height: 1.6;
+  max-width: 280px;
+}
+.schedule-tooltip b {
+  font-size: 13px;
+}
+</style>
       </head>
       <body>
         <div class="print-page">${printNode.innerHTML}</div>

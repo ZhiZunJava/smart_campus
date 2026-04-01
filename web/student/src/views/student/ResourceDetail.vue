@@ -2,6 +2,19 @@
   <div class="portal-page resource-detail-page">
     <div class="resource-detail-shell">
       <div class="detail-inner">
+        <div v-if="detailLoading" class="resource-detail-loading">
+          <el-skeleton animated>
+            <template #template>
+              <div class="resource-detail-loading__header"></div>
+              <div class="resource-detail-loading__body">
+                <div class="resource-detail-loading__preview"></div>
+                <div class="resource-detail-loading__side"></div>
+              </div>
+              <div class="resource-detail-loading__extra"></div>
+            </template>
+          </el-skeleton>
+        </div>
+        <template v-else>
         <header class="resource-detail-header">
             <div class="resource-detail-header__main">
               <button type="button" class="resource-detail-back" @click="backToCatalog">
@@ -32,6 +45,10 @@
                 <span class="meta-pill">
                   <i class="ri-folders-line"></i>
                   {{ availableDetailTypes.length || 0 }} 类课时资源
+                </span>
+                <span class="meta-pill">
+                  <i class="ri-calendar-line"></i>
+                  发布时间：{{ displayDate(selectedArticle?.createTime) }}
                 </span>
                 <span class="meta-pill detail-rating">
                   <i class="ri-star-smile-line"></i>
@@ -98,7 +115,22 @@
 
           <div class="resource-detail-body">
             <div class="resource-preview-panel">
+              <div class="resource-preview-panel__head">
+                <div class="resource-preview-panel__title">
+                  <span class="resource-preview-panel__eyebrow">{{ currentAssetTypeLabel }}</span>
+                  <strong>{{ activeAssetName }}</strong>
+                </div>
+                <div class="resource-preview-panel__meta">
+                  <span><i class="ri-attachment-2"></i> {{ assetList.length || 0 }} 个文件</span>
+                  <span v-if="assetsLoading" class="is-loading"><i class="ri-loader-4-line preview-spin"></i> 资源同步中</span>
+                </div>
+              </div>
+
               <div class="resource-preview-panel__surface">
+                <div v-if="assetsLoading" class="preview-empty">
+                  <i class="ri-loader-4-line preview-spin"></i>
+                  <p>正在准备当前课时资源，请稍候...</p>
+                </div>
                 <template v-if="activeAsset">
                   <div class="preview-stage">
                     <template v-if="isVideoAsset(activeAsset)">
@@ -151,8 +183,13 @@
 
             <aside class="resource-asset-sidebar">
               <div class="resource-asset-sidebar__title">
-                <i class="ri-folder-open-line"></i> 课时资源
+                <div class="resource-asset-sidebar__title-main">
+                  <i class="ri-folder-open-line"></i>
+                  <span>课时资源</span>
+                </div>
+                <em>{{ assetList.length || 0 }} 个文件</em>
               </div>
+              <div class="resource-asset-sidebar__hint">按资源类型快速切换当前预览文件。</div>
 
               <div class="resource-asset-sidebar__list">
                 <button
@@ -165,9 +202,13 @@
                 >
                   <div class="resource-asset-type__left">
                     <i :class="getAssetIcon(type.value)"></i>
-                    <span class="resource-asset-type__label">{{ type.label }}</span>
+                    <div class="resource-asset-type__copy">
+                      <span class="resource-asset-type__label">{{ type.label }}</span>
+                      <small>{{ getAssetTypeAssetName(type.value) }}</small>
+                    </div>
                   </div>
                   <div class="resource-asset-type__right">
+                    <span class="resource-asset-type__file-count">{{ getAssetCountByType(type.value) }}</span>
                     <i v-if="activeAssetType === type.value" class="ri-bar-chart-2-fill active-icon"></i>
                     <span v-else class="resource-asset-type__count"><i class="ri-checkbox-blank-circle-line"></i></span>
                   </div>
@@ -259,7 +300,7 @@
                       <div class="comment-actions-left">
                         <el-rate v-model="ratingScore" />
                       </div>
-                      <el-button type="primary" class="submit-comment-btn" @click="submitComment">
+                      <el-button type="primary" class="submit-comment-btn" :loading="commentSubmitting" @click="submitComment">
                         {{ replyTarget ? '发布回复' : '发布评论' }}
                       </el-button>
                     </div>
@@ -269,18 +310,22 @@
                     <div class="comment-list-header">
                       <h3>全部评论 ({{ commentTotalCount }})</h3>
                     </div>
+                    <div v-if="commentsLoading" class="detail-comment-loading">
+                      <el-skeleton animated :rows="5" />
+                    </div>
                     <ResourceCommentThread
-                      v-if="comments.length"
+                      v-else-if="comments.length"
                       :comments="comments"
                       @reply="beginReply"
                       @like="toggleLike"
                     />
-                    <el-empty v-if="!comments.length" description="还没有评论，来写第一条吧" :image-size="72" />
+                    <el-empty v-else description="还没有评论，来写第一条吧" :image-size="72" />
                   </div>
                 </section>
               </el-tab-pane>
             </el-tabs>
           </div>
+        </template>
       </div>
     </div>
   </div>
@@ -340,6 +385,10 @@ const commentText = ref('')
 const commentInputRef = ref<any | null>(null)
 const ratingScore = ref(5)
 const favoriteLoading = ref(false)
+const detailLoading = ref(false)
+const assetsLoading = ref(false)
+const commentsLoading = ref(false)
+const commentSubmitting = ref(false)
 const isFavorited = ref(false)
 const shareLoading = ref(false)
 const emojiPickerVisible = ref(false)
@@ -384,6 +433,7 @@ const currentCourseSubtitle = computed(() => '课程资源目录与课时内容'
 const activeAssetUrl = computed(() => resolveResourceUrl(activeAsset.value?.fileUrl))
 const availableDetailTypes = computed(() => assetTypeOptions.filter((item) => assetList.value.some((asset: any) => asset.assetType === item.value)))
 const currentAssetTypeLabel = computed(() => assetTypeOptions.find((item) => item.value === activeAssetType.value)?.label || '资源预览')
+const activeAssetName = computed(() => String(activeAsset.value?.assetName || currentAssetTypeLabel.value || '请选择资源文件').trim())
 const commentTotalCount = computed(() => countComments(comments.value))
 const visibleEmojis = computed(() => {
   if (activeEmojiGroup.value === 'recent') {
@@ -408,6 +458,11 @@ function formatRating(value?: number) {
   return Number(value || 0).toFixed(1)
 }
 
+function displayDate(value?: string) {
+  if (!value) return '--'
+  return String(value).slice(0, 10)
+}
+
 function isVideoAsset(asset: any) {
   return asset?.assetType === 'video_course'
 }
@@ -418,6 +473,15 @@ function isPdfAsset(asset: any) {
 
 function isOfficeAsset(asset: any) {
   return isOfficeFile(asset?.fileUrl)
+}
+
+function getAssetCountByType(type: string) {
+  return assetList.value.filter((item: any) => item.assetType === type).length
+}
+
+function getAssetTypeAssetName(type: string) {
+  const asset = assetList.value.find((item: any) => item.assetType === type)
+  return asset?.assetName || '当前类型暂无文件标题'
 }
 
 function queueAssetPreviewWarmup() {
@@ -573,12 +637,21 @@ async function loadDetail() {
   if (!resourceId) return
   replyTarget.value = null
   commentText.value = ''
-  const res = await getResourceDetail(resourceId)
-  selectedArticle.value = res.data || {}
-  const favoriteRes = await getFavoriteResourceStatus(resourceId)
-  isFavorited.value = Boolean(favoriteRes.data === true || favoriteRes.favorited === true)
-  ratingScore.value = Math.max(1, Math.round(Number(selectedArticle.value?.avgRating || 5)))
-  await Promise.all([loadAssets(), loadComments()])
+  detailLoading.value = true
+  selectedArticle.value = null
+  assetList.value = []
+  activeAsset.value = null
+  comments.value = []
+  try {
+    const res = await getResourceDetail(resourceId)
+    selectedArticle.value = res.data || {}
+    const favoriteRes = await getFavoriteResourceStatus(resourceId)
+    isFavorited.value = Boolean(favoriteRes.data === true || favoriteRes.favorited === true)
+    ratingScore.value = Math.max(1, Math.round(Number(selectedArticle.value?.avgRating || 5)))
+    await Promise.all([loadAssets(), loadComments()])
+  } finally {
+    detailLoading.value = false
+  }
 }
 
 async function loadAssets() {
@@ -587,17 +660,24 @@ async function loadAssets() {
     activeAsset.value = null
     return
   }
-  const res = await listResourceAsset({ resourceId: selectedArticle.value.resourceId, status: '0' })
-  assetList.value = res.data || []
-  queueAssetPreviewWarmup()
-  const availableTypes = Array.from(new Set(assetList.value.map((item: any) => item.assetType)))
-  const preferredType = String(route.query.assetType || '')
-  if (preferredType && availableTypes.includes(preferredType)) {
-    activeAssetType.value = preferredType
-  } else {
-    activeAssetType.value = availableTypes.includes(activeAssetType.value) ? activeAssetType.value : (availableTypes[0] || 'video_course')
+  assetsLoading.value = true
+  assetList.value = []
+  activeAsset.value = null
+  try {
+    const res = await listResourceAsset({ resourceId: selectedArticle.value.resourceId, status: '0' })
+    assetList.value = res.data || []
+    queueAssetPreviewWarmup()
+    const availableTypes = Array.from(new Set(assetList.value.map((item: any) => item.assetType)))
+    const preferredType = String(route.query.assetType || '')
+    if (preferredType && availableTypes.includes(preferredType)) {
+      activeAssetType.value = preferredType
+    } else {
+      activeAssetType.value = availableTypes.includes(activeAssetType.value) ? activeAssetType.value : (availableTypes[0] || 'video_course')
+    }
+    switchAssetType(activeAssetType.value)
+  } finally {
+    assetsLoading.value = false
   }
-  switchAssetType(activeAssetType.value)
 }
 
 function switchAssetType(type: string) {
@@ -610,10 +690,16 @@ async function loadComments() {
     comments.value = []
     return
   }
-  const res = await listResourceComment(selectedArticle.value.resourceId)
-  comments.value = res.data || []
-  if (replyTarget.value && !containsComment(comments.value, replyTarget.value.commentId)) {
-    replyTarget.value = null
+  commentsLoading.value = true
+  comments.value = []
+  try {
+    const res = await listResourceComment(selectedArticle.value.resourceId)
+    comments.value = res.data || []
+    if (replyTarget.value && !containsComment(comments.value, replyTarget.value.commentId)) {
+      replyTarget.value = null
+    }
+  } finally {
+    commentsLoading.value = false
   }
 }
 
@@ -656,18 +742,23 @@ async function submitComment() {
     ElMessage.warning('请输入评论内容')
     return
   }
-  await addResourceComment({
-    resourceId: selectedArticle.value.resourceId,
-    courseId: selectedArticle.value.courseId,
-    nodeId: selectedArticle.value.nodeId,
-    content: commentText.value.trim(),
-    parentId: replyTarget.value?.commentId || 0,
-    rootId: replyTarget.value?.rootId || replyTarget.value?.commentId || 0,
-  })
-  commentText.value = ''
-  replyTarget.value = null
-  ElMessage.success('评论已发布')
-  await loadComments()
+  commentSubmitting.value = true
+  try {
+    await addResourceComment({
+      resourceId: selectedArticle.value.resourceId,
+      courseId: selectedArticle.value.courseId,
+      nodeId: selectedArticle.value.nodeId,
+      content: commentText.value.trim(),
+      parentId: replyTarget.value?.commentId || 0,
+      rootId: replyTarget.value?.rootId || replyTarget.value?.commentId || 0,
+    })
+    commentText.value = ''
+    replyTarget.value = null
+    ElMessage.success('评论已发布')
+    await loadComments()
+  } finally {
+    commentSubmitting.value = false
+  }
 }
 
 function appendEmoji(emoji: string) {
@@ -831,6 +922,43 @@ onMounted(loadDetail)
 .detail-inner {
   padding: 24px 0;
   width: 100%;
+}
+
+.resource-detail-loading {
+  display: grid;
+  gap: 24px;
+}
+
+.resource-detail-loading__header,
+.resource-detail-loading__preview,
+.resource-detail-loading__side,
+.resource-detail-loading__extra {
+  border-radius: 16px;
+  background: linear-gradient(90deg, #eef4f8 0%, #f8fbfd 50%, #eef4f8 100%);
+  background-size: 200% 100%;
+  animation: detail-skeleton 1.4s ease-in-out infinite;
+}
+
+.resource-detail-loading__header {
+  height: 220px;
+}
+
+.resource-detail-loading__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 24px;
+}
+
+.resource-detail-loading__preview {
+  min-height: 620px;
+}
+
+.resource-detail-loading__side {
+  min-height: 320px;
+}
+
+.resource-detail-loading__extra {
+  height: 260px;
 }
 
 .resource-detail-header {
@@ -1088,6 +1216,69 @@ onMounted(loadDetail)
   overflow: hidden;
 }
 
+.resource-preview-panel__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.92) 0%, rgba(255, 255, 255, 0.98) 100%);
+}
+
+.resource-preview-panel__title {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.resource-preview-panel__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.resource-preview-panel__title strong {
+  color: var(--resource-ink);
+  font-size: 16px;
+  line-height: 1.45;
+  font-weight: 700;
+  word-break: break-word;
+}
+
+.resource-preview-panel__meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.resource-preview-panel__meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+}
+
+.resource-preview-panel__meta .is-loading {
+  color: #1d4ed8;
+}
+
 .resource-preview-panel__surface {
   height: 65vh;
   min-height: 480px;
@@ -1163,17 +1354,46 @@ onMounted(loadDetail)
   border: 1px solid rgba(186, 230, 253, 0.86);
   box-shadow: 0 18px 38px rgba(14, 116, 144, 0.08);
   height: fit-content;
+  position: sticky;
+  top: 20px;
 }
 
 .resource-asset-sidebar__title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.resource-asset-sidebar__title-main {
   font-size: 18px;
   font-weight: 700;
   color: var(--resource-ink);
   display: flex;
   align-items: center;
   gap: 8px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.resource-asset-sidebar__title em {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.resource-asset-sidebar__hint {
+  margin-top: -8px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .resource-asset-sidebar__list {
@@ -1213,11 +1433,48 @@ onMounted(loadDetail)
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
+}
+
+.resource-asset-type__copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.resource-asset-type__label {
+  color: inherit;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.resource-asset-type__copy small {
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resource-asset-type__right {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
 .active-icon {
   color: #2563eb;
   font-size: 16px;
+}
+
+.resource-asset-type__file-count {
+  min-width: 24px;
+  text-align: center;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .resource-asset-type__count {
@@ -1520,6 +1777,10 @@ onMounted(loadDetail)
   gap: 0;
 }
 
+.detail-comment-loading {
+  padding: 6px 0 18px;
+}
+
 :deep(.comment-thread) {
   display: flex;
   flex-direction: column;
@@ -1663,9 +1924,25 @@ onMounted(loadDetail)
   to { transform: rotate(360deg); }
 }
 
+@keyframes detail-skeleton {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 @media (max-width: 1400px) {
+  .resource-detail-loading__body,
   .resource-detail-body {
     grid-template-columns: 1fr;
+  }
+
+  .resource-asset-sidebar {
+    position: static;
+    top: auto;
   }
 }
 
@@ -1680,6 +1957,7 @@ onMounted(loadDetail)
 }
 
 @media (max-width: 960px) {
+  .resource-preview-panel__head,
   .resource-preview-panel__footer,
   .detail-comment-actions {
     flex-direction: column;
@@ -1699,8 +1977,16 @@ onMounted(loadDetail)
     grid-template-columns: 1fr;
   }
 
+  .resource-asset-sidebar__title {
+    flex-direction: column;
+  }
+
   .resource-detail-extra {
     padding: 0 20px;
+  }
+
+  :deep(.comment-actions) {
+    opacity: 1;
   }
 }
 
