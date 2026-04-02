@@ -10,6 +10,8 @@ public interface IScQuestionItemService {
 
     ScQuestionItem selectScQuestionItemBySource(String sourceType, Long sourceRefId);
 
+    ScQuestionItem selectLatestScQuestionItemBySourceRefId(Long sourceRefId);
+
     List<ScQuestionItem> selectScQuestionItemList(ScQuestionItem scQuestionItem);
 
     List<ScQuestionItemVersion> selectScQuestionItemVersionByItemId(Long itemId);

@@ -32,7 +32,13 @@ public class ScQuestionCatalogServiceImpl implements IScQuestionCatalogService {
 
     @Override
     public List<ScQuestionCatalog> selectScQuestionCatalogList(ScQuestionCatalog scQuestionCatalog) {
-        return scQuestionCatalogMapper.selectScQuestionCatalogList(scQuestionCatalog);
+        List<ScQuestionCatalog> catalogs = scQuestionCatalogMapper.selectScQuestionCatalogList(scQuestionCatalog);
+        for (ScQuestionCatalog catalog : catalogs) {
+            if (catalog != null && catalog.getCatalogId() != null) {
+                catalog.setScopes(scQuestionCatalogScopeMapper.selectScQuestionCatalogScopeByCatalogId(catalog.getCatalogId()));
+            }
+        }
+        return catalogs;
     }
 
     @Override
@@ -95,4 +101,3 @@ public class ScQuestionCatalogServiceImpl implements IScQuestionCatalogService {
         }
     }
 }
-

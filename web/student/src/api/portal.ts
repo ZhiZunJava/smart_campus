@@ -385,6 +385,10 @@ export function getPortalCourseSelectionOptions(params: any) {
   return request({ url: '/campus/portal/student/course-selection/options', method: 'get', params })
 }
 
+export function getPortalCourseSelectionStudentCounts(data: any) {
+  return request({ url: '/campus/portal/student/course-selection/student-counts', method: 'post', data })
+}
+
 export function selectPortalCourse(data: any) {
   return request({ url: '/campus/portal/student/course-selection/select', method: 'post', data })
 }
@@ -489,6 +493,10 @@ export function listPortalScore(query: any) {
 
 export function getPortalScoreOverview(query: any) {
   return request({ url: '/campus/portal/score/overview', method: 'get', params: query })
+}
+
+export function getPortalScoreAnalysis(query: any) {
+  return request({ url: '/campus/portal/score/analysis', method: 'get', params: query })
 }
 
 export function getPortalScoreDetail(query: any) {

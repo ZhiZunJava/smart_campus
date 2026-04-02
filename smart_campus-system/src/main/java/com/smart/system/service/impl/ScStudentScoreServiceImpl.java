@@ -420,6 +420,43 @@ public class ScStudentScoreServiceImpl implements IScStudentScoreService {
     }
 
     @Override
+    public Map<String, Object> buildPortalScoreAnalytics(Long userId, Long termId, Long courseId) {
+        List<ScStudentScore> filteredList = selectPortalStudentScoreList(userId, termId, courseId);
+        List<ScStudentScore> trendSource = selectPortalStudentScoreList(userId, null, courseId);
+        String termName = filteredList.stream()
+                .map(ScStudentScore::getTermName)
+                .filter(StringUtils::isNotEmpty)
+                .findFirst()
+                .orElse(resolveTermName(termId));
+        String courseName = filteredList.stream()
+                .map(ScStudentScore::getCourseName)
+                .filter(StringUtils::isNotEmpty)
+                .findFirst()
+                .orElse("");
+
+        Map<String, Object> scope = new LinkedHashMap<>();
+        scope.put("userId", userId);
+        scope.put("termId", termId);
+        scope.put("termName", termName);
+        scope.put("courseId", courseId);
+        scope.put("courseName", courseName);
+        scope.put("courseCount", filteredList.size());
+        scope.put("scopeLabel", buildPortalScopeLabel(termName, courseName));
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("scope", scope);
+        result.put("termTrend", buildPortalTermTrend(trendSource));
+        result.put("courseSeries", buildPortalCourseSeries(filteredList));
+        result.put("componentSeries", buildPortalComponentSeries(filteredList));
+        result.put("scoreBands", buildScoreBands(filteredList));
+        result.put("gradeDistribution", buildGradeDistribution(filteredList));
+        result.put("passDistribution", buildPortalPassDistribution(filteredList));
+        result.put("insights", buildPortalInsights(filteredList, termName, courseName));
+        result.put("aiContextPrompt", buildPortalAiContext(filteredList, termName, courseName, trendSource));
+        return result;
+    }
+
+    @Override
     public Map<String, Object> buildPortalScoreDetail(Long userId, Long classCourseId) {
         if (userId == null || classCourseId == null) {
             return Collections.emptyMap();
@@ -868,6 +905,253 @@ public class ScStudentScoreServiceImpl implements IScStudentScoreService {
             result.add(item);
         }
         return result;
+    }
+
+    private List<Map<String, Object>> buildPortalTermTrend(List<ScStudentScore> list) {
+        if (list == null || list.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<ScStudentScore> sorted = list.stream()
+                .sorted(Comparator
+                        .comparing(ScStudentScore::getTermId, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(ScStudentScore::getTermName, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(ScStudentScore::getPublishTime, Comparator.nullsLast(Comparator.naturalOrder())))
+                .collect(Collectors.toList());
+        Map<String, List<ScStudentScore>> grouped = sorted.stream()
+                .collect(Collectors.groupingBy(
+                        item -> StringUtils.defaultIfEmpty(item.getTermName(), "未配置学期"),
+                        LinkedHashMap::new,
+                        Collectors.toList()));
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Map.Entry<String, List<ScStudentScore>> entry : grouped.entrySet()) {
+            List<ScStudentScore> scores = entry.getValue();
+            ScStudentScore first = scores.get(0);
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("termId", first.getTermId());
+            item.put("termName", entry.getKey());
+            item.put("courseCount", scores.size());
+            item.put("avgScore", average(scores.stream().map(ScStudentScore::getTotalScore).collect(Collectors.toList())));
+            item.put("avgGradePoint", average(scores.stream().map(ScStudentScore::getGradePoint).collect(Collectors.toList())));
+            item.put("passCount", scores.stream().filter(score -> "1".equals(score.getPassFlag())).count());
+            result.add(item);
+        }
+        return result;
+    }
+
+    private List<Map<String, Object>> buildPortalCourseSeries(List<ScStudentScore> list) {
+        if (list == null || list.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return list.stream()
+                .sorted(Comparator
+                        .comparing(ScStudentScore::getTotalScore, Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(ScStudentScore::getPublishTime, Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(ScStudentScore::getCourseName, Comparator.nullsLast(Comparator.naturalOrder())))
+                .map(score -> {
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("scoreId", score.getScoreId());
+                    item.put("classCourseId", score.getClassCourseId());
+                    item.put("termName", score.getTermName());
+                    item.put("courseId", score.getCourseId());
+                    item.put("courseName", score.getCourseName());
+                    item.put("className", score.getClassName());
+                    item.put("totalScore", safeScore(score.getTotalScore()));
+                    item.put("gradePoint", safeScore(score.getGradePoint()));
+                    item.put("rankNo", score.getRankNo());
+                    item.put("gradeLevel", score.getGradeLevel());
+                    item.put("publishTime", score.getPublishTime());
+                    return item;
+                })
+                .collect(Collectors.toList());
+    }
+
+    private List<Map<String, Object>> buildPortalComponentSeries(List<ScStudentScore> list) {
+        if (list == null || list.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<Map<String, Object>> result = new ArrayList<>();
+        result.add(componentSeriesItem("平时表现", average(list.stream().map(ScStudentScore::getUsualScore).collect(Collectors.toList())),
+                average(list.stream().map(ScStudentScore::getUsualWeight).collect(Collectors.toList()))));
+        result.add(componentSeriesItem("考勤参与", average(list.stream().map(ScStudentScore::getAttendanceScore).collect(Collectors.toList())),
+                average(list.stream().map(ScStudentScore::getAttendanceWeight).collect(Collectors.toList()))));
+        result.add(componentSeriesItem("作业训练", average(list.stream().map(ScStudentScore::getHomeworkScore).collect(Collectors.toList())),
+                average(list.stream().map(ScStudentScore::getHomeworkWeight).collect(Collectors.toList()))));
+        result.add(componentSeriesItem("实验实训", average(list.stream().map(ScStudentScore::getLabScore).collect(Collectors.toList())),
+                average(list.stream().map(ScStudentScore::getLabWeight).collect(Collectors.toList()))));
+        result.add(componentSeriesItem("考试表现", average(list.stream().map(ScStudentScore::getExamScore).collect(Collectors.toList())),
+                average(list.stream().map(ScStudentScore::getExamWeight).collect(Collectors.toList()))));
+        return result;
+    }
+
+    private Map<String, Object> componentSeriesItem(String label, BigDecimal avgScore, BigDecimal avgWeight) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("label", label);
+        item.put("avgScore", avgScore);
+        item.put("avgWeight", avgWeight);
+        return item;
+    }
+
+    private List<Map<String, Object>> buildPortalPassDistribution(List<ScStudentScore> list) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        result.add(distributionItem("已通过", list.stream().filter(item -> "1".equals(item.getPassFlag())).count()));
+        result.add(distributionItem("待提升", list.stream().filter(item -> !"1".equals(item.getPassFlag())).count()));
+        return result;
+    }
+
+    private Map<String, Object> distributionItem(String label, long count) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("label", label);
+        item.put("count", count);
+        return item;
+    }
+
+    private List<Map<String, Object>> buildPortalInsights(List<ScStudentScore> list, String termName, String courseName) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        if (list == null || list.isEmpty()) {
+            result.add(portalInsight("info", "暂无分析数据", "当前筛选范围内暂无已发布成绩，切换学期或课程后即可查看趋势和图表分析。"));
+            return result;
+        }
+        String scopeLabel = buildPortalScopeLabel(termName, courseName);
+        BigDecimal avgScore = average(list.stream().map(ScStudentScore::getTotalScore).collect(Collectors.toList()));
+        long passCount = list.stream().filter(item -> "1".equals(item.getPassFlag())).count();
+        long totalCount = list.size();
+        String overallTone = avgScore.compareTo(BigDecimal.valueOf(85)) >= 0 ? "success"
+                : avgScore.compareTo(BigDecimal.valueOf(70)) >= 0 ? "info" : "warning";
+        String overallTitle = avgScore.compareTo(BigDecimal.valueOf(85)) >= 0 ? "整体表现较稳"
+                : avgScore.compareTo(BigDecimal.valueOf(70)) >= 0 ? "整体表现中等" : "整体表现需要关注";
+        String overallContent = scopeLabel + "共 " + totalCount + " 门课程，平均分 " + formatPromptDecimal(avgScore)
+                + "，通过率 " + (totalCount == 0 ? "0" : String.valueOf((passCount * 100) / totalCount)) + "%。";
+        result.add(portalInsight(overallTone, overallTitle, overallContent));
+
+        List<Map<String, Object>> componentSeries = buildPortalComponentSeries(list);
+        Map<String, Object> strongest = componentSeries.stream()
+                .max(Comparator.comparing(item -> (BigDecimal) item.get("avgScore")))
+                .orElse(null);
+        Map<String, Object> weakest = componentSeries.stream()
+                .min(Comparator.comparing(item -> (BigDecimal) item.get("avgScore")))
+                .orElse(null);
+        if (strongest != null && weakest != null) {
+            result.add(portalInsight(
+                    "info",
+                    "成绩构成有明显差异",
+                    String.valueOf(strongest.get("label")) + "均分最高，为 " + formatPromptDecimal((BigDecimal) strongest.get("avgScore"))
+                            + "；" + String.valueOf(weakest.get("label")) + "相对偏弱，为 "
+                            + formatPromptDecimal((BigDecimal) weakest.get("avgScore")) + "。"));
+        }
+
+        ScStudentScore best = list.stream()
+                .filter(Objects::nonNull)
+                .max(Comparator.comparing(ScStudentScore::getTotalScore, Comparator.nullsLast(Comparator.naturalOrder())))
+                .orElse(null);
+        ScStudentScore risk = list.stream()
+                .filter(item -> item != null && !"1".equals(item.getPassFlag()))
+                .min(Comparator.comparing(ScStudentScore::getTotalScore, Comparator.nullsLast(Comparator.naturalOrder())))
+                .orElse(null);
+        if (risk != null) {
+            result.add(portalInsight(
+                    "warning",
+                    "存在待提升课程",
+                    StringUtils.defaultIfEmpty(risk.getCourseName(), "未命名课程") + "当前总评 "
+                            + formatPromptDecimal(safeScore(risk.getTotalScore())) + "，建议优先关注考试表现、作业补交和过程性得分。"));
+        } else if (best != null) {
+            result.add(portalInsight(
+                    "success",
+                    "当前暂无未通过课程",
+                    StringUtils.defaultIfEmpty(best.getCourseName(), "未命名课程") + "表现最好，总评 "
+                            + formatPromptDecimal(safeScore(best.getTotalScore())) + "，可以复盘其学习节奏并迁移到其他课程。"));
+        }
+        return result;
+    }
+
+    private Map<String, Object> portalInsight(String tone, String title, String content) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("tone", tone);
+        item.put("title", title);
+        item.put("content", content);
+        return item;
+    }
+
+    private String buildPortalAiContext(List<ScStudentScore> filteredList, String termName, String courseName, List<ScStudentScore> trendSource) {
+        if (filteredList == null || filteredList.isEmpty()) {
+            return "当前筛选范围内暂无已发布成绩，请提示学生先切换学期或课程，再进行成绩趋势与改进建议分析。";
+        }
+        BigDecimal avgScore = average(filteredList.stream().map(ScStudentScore::getTotalScore).collect(Collectors.toList()));
+        BigDecimal bestScore = filteredList.stream().map(ScStudentScore::getTotalScore).filter(Objects::nonNull)
+                .max(Comparator.naturalOrder()).orElse(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal lowestScore = filteredList.stream().map(ScStudentScore::getTotalScore).filter(Objects::nonNull)
+                .min(Comparator.naturalOrder()).orElse(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+        long passCount = filteredList.stream().filter(item -> "1".equals(item.getPassFlag())).count();
+        long totalCount = filteredList.size();
+        List<Map<String, Object>> scoreBands = buildScoreBands(filteredList);
+        List<Map<String, Object>> componentSeries = buildPortalComponentSeries(filteredList);
+        List<Map<String, Object>> termTrend = buildPortalTermTrend(trendSource);
+        ScStudentScore bestCourse = filteredList.stream()
+                .filter(Objects::nonNull)
+                .max(Comparator.comparing(ScStudentScore::getTotalScore, Comparator.nullsLast(Comparator.naturalOrder())))
+                .orElse(null);
+        ScStudentScore riskCourse = filteredList.stream()
+                .filter(item -> item != null && !"1".equals(item.getPassFlag()))
+                .min(Comparator.comparing(ScStudentScore::getTotalScore, Comparator.nullsLast(Comparator.naturalOrder())))
+                .orElse(null);
+
+        String scoreBandText = scoreBands.stream()
+                .map(item -> item.get("label") + " " + item.get("count") + "门")
+                .collect(Collectors.joining("，"));
+        String componentText = componentSeries.stream()
+                .map(item -> item.get("label") + " " + formatPromptDecimal((BigDecimal) item.get("avgScore"))
+                        + "（权重均值 " + formatPromptDecimal((BigDecimal) item.get("avgWeight")) + "%）")
+                .collect(Collectors.joining("，"));
+        String termTrendText = termTrend.stream()
+                .map(item -> item.get("termName") + " 平均分 " + formatPromptDecimal((BigDecimal) item.get("avgScore")))
+                .collect(Collectors.joining("；"));
+
+        StringBuilder builder = new StringBuilder();
+        builder.append("请基于以下学生成绩信息做一次学习诊断分析。\n");
+        builder.append("分析范围：").append(buildPortalScopeLabel(termName, courseName)).append("\n");
+        builder.append("课程数量：").append(totalCount).append(" 门\n");
+        builder.append("平均分：").append(formatPromptDecimal(avgScore)).append("\n");
+        builder.append("最高分：").append(formatPromptDecimal(bestScore)).append("，最低分：").append(formatPromptDecimal(lowestScore)).append("\n");
+        builder.append("通过率：").append(totalCount == 0 ? "0" : String.valueOf((passCount * 100) / totalCount)).append("%\n");
+        builder.append("分数段分布：").append(scoreBandText).append("\n");
+        builder.append("成绩构成均值：").append(componentText).append("\n");
+        if (StringUtils.isNotEmpty(termTrendText)) {
+            builder.append("学期趋势：").append(termTrendText).append("\n");
+        }
+        if (bestCourse != null) {
+            builder.append("优势课程：").append(StringUtils.defaultIfEmpty(bestCourse.getCourseName(), "未命名课程"))
+                    .append("，总评 ").append(formatPromptDecimal(safeScore(bestCourse.getTotalScore()))).append("\n");
+        }
+        if (riskCourse != null) {
+            builder.append("风险课程：").append(StringUtils.defaultIfEmpty(riskCourse.getCourseName(), "未命名课程"))
+                    .append("，总评 ").append(formatPromptDecimal(safeScore(riskCourse.getTotalScore()))).append("\n");
+        }
+        builder.append("请输出：1. 总体表现判断；2. 主要优势；3. 风险与可能原因；4. 接下来两周的具体改进建议。");
+        return builder.toString();
+    }
+
+    private String buildPortalScopeLabel(String termName, String courseName) {
+        if (StringUtils.isNotEmpty(termName) && StringUtils.isNotEmpty(courseName)) {
+            return termName + "｜" + courseName;
+        }
+        if (StringUtils.isNotEmpty(termName)) {
+            return termName;
+        }
+        if (StringUtils.isNotEmpty(courseName)) {
+            return courseName;
+        }
+        return "全部已发布成绩";
+    }
+
+    private String resolveTermName(Long termId) {
+        if (termId == null) {
+            return "";
+        }
+        ScSchoolTerm term = scSchoolTermService.selectScSchoolTermByTermId(termId);
+        return term == null ? "" : StringUtils.defaultIfEmpty(term.getTermName(), "");
+    }
+
+    private String formatPromptDecimal(BigDecimal value) {
+        return safeScore(value).stripTrailingZeros().toPlainString();
     }
 
     private Map<String, Object> buildExamSummary(List<ScExamRecord> records) {

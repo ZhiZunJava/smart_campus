@@ -28,7 +28,7 @@ const routes = [
     children: [
       { path: 'dashboard', component: () => import('@/views/student/Dashboard.vue'), meta: { title: '学习首页' } },
       { path: 'affairs', component: () => import('@/views/student/Affairs.vue'), props: { categoryCode: '' }, meta: { title: '事务总览' } },
-      { path: 'academic-profile', component: () => import('@/views/student/AcademicProfile.vue'), meta: { title: '学籍信息', hideShortcut: true } },
+      { path: 'academic-profile', component: () => import('@/views/student/AcademicProfile.vue'), meta: { title: '学籍信息' } },
       ...studentAffairPageConfigs.map((item) => ({
         path: `affairs/${item.slug}`,
         component: () => import('@/views/student/Affairs.vue'),
@@ -52,6 +52,7 @@ const routes = [
       { path: 'tasks/:dispatchId', component: () => import('@/views/student/TaskDetail.vue'), meta: { title: '任务详情', hideShortcut: true } },
       { path: 'exams', component: () => import('@/views/student/Exams.vue'), meta: { title: '我的考试' } },
       { path: 'scores', component: () => import('@/views/student/Scores.vue'), meta: { title: '我的成绩' } },
+      { path: 'scores/analysis', component: () => import('@/views/student/ScoreAnalysis.vue'), meta: { title: '成绩分析', hideShortcut: true } },
       { path: 'exams/preview/:paperId', component: () => import('@/views/student/ExamPreviewPage.vue'), meta: { title: '试卷预览' } },
       { path: 'exams/session/:recordId', component: () => import('@/views/student/ExamSession.vue'), meta: { title: '在线考试' } },
       { path: 'wrongbook', component: () => import('@/views/student/wrongbook/index.vue'), meta: { title: '我的错题本' } },

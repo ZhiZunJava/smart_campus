@@ -131,6 +131,23 @@ public class ScCourseStudentServiceImpl implements IScCourseStudentService {
     }
 
     @Override
+    public Map<Long, Map<String, Object>> getSelectionCountSnapshotMap(Long[] classCourseIds) {
+        if (classCourseIds == null || classCourseIds.length == 0) {
+            return Collections.emptyMap();
+        }
+        Map<Long, Map<String, Object>> result = new LinkedHashMap<>();
+        List<Map<String, Object>> snapshots = scCourseStudentMapper.selectSelectionCountSnapshots(classCourseIds);
+        for (Map<String, Object> item : snapshots) {
+            if (item == null || item.get("classCourseId") == null) {
+                continue;
+            }
+            Long classCourseId = Long.valueOf(String.valueOf(item.get("classCourseId")));
+            result.put(classCourseId, item);
+        }
+        return result;
+    }
+
+    @Override
     public ScCourseStudent findActiveSelection(Long studentUserId, Long classCourseId) {
         if (studentUserId == null || classCourseId == null) {
             return null;
@@ -180,6 +197,15 @@ public class ScCourseStudentServiceImpl implements IScCourseStudentService {
         if (existing != null) {
             return buildSelectionResult(existing, false, "已在选课名单中");
         }
+        ScCourseStudent historical = findSelectionRecord(studentUserId, classCourseId);
+        if (historical != null) {
+            ScCourseStudent reused = reactivateSelection(historical, classCourse, operator);
+            return buildSelectionResult(reused, true, "选课成功");
+        }
+        ScCourseStudent combinedExisting = findActiveCombinedSelection(studentUserId, classCourse, null);
+        if (combinedExisting != null) {
+            return buildSelectionResult(combinedExisting, false, "已在当前合班课程中");
+        }
         validateSelectionGroupLimit(studentUserId, classCourse, null);
         validateCapacity(classCourse, null);
         ScCourseStudent item = buildSelection(studentUserId, classCourse);
@@ -227,6 +253,15 @@ public class ScCourseStudentServiceImpl implements IScCourseStudentService {
         ScCourseStudent existing = findActiveSelection(studentUserId, classCourseId);
         if (existing != null) {
             return buildSelectionResult(existing, false, "已在选课名单中");
+        }
+        ScCourseStudent historical = findSelectionRecord(studentUserId, classCourseId);
+        if (historical != null) {
+            ScCourseStudent reused = reactivateSelection(historical, classCourse, operator);
+            return buildSelectionResult(reused, true, "审核通过，已加入教学班");
+        }
+        ScCourseStudent combinedExisting = findActiveCombinedSelection(studentUserId, classCourse, null);
+        if (combinedExisting != null) {
+            return buildSelectionResult(combinedExisting, false, "已在当前合班课程中");
         }
         validateSelectionGroupLimit(studentUserId, classCourse, null);
         validateCapacity(classCourse, null);
@@ -279,6 +314,7 @@ public class ScCourseStudentServiceImpl implements IScCourseStudentService {
         ScClassCourse classCourse = fillClassCourseSnapshot(scCourseStudent);
         fillDefaultClass(scCourseStudent);
         validateDuplicate(scCourseStudent);
+        validateCombinedSelection(scCourseStudent.getStudentUserId(), classCourse, null);
         validateSelectionGroupLimit(scCourseStudent.getStudentUserId(), classCourse, null);
         validateCapacity(classCourse, null);
         if (scCourseStudent.getJoinTime() == null) {
@@ -296,6 +332,7 @@ public class ScCourseStudentServiceImpl implements IScCourseStudentService {
         Long excludeClassCourseId = existing == null || !"0".equals(StringUtils.defaultIfEmpty(existing.getStatus(), "0"))
                 ? null
                 : existing.getClassCourseId();
+        validateCombinedSelection(scCourseStudent.getStudentUserId(), classCourse, excludeClassCourseId);
         validateSelectionGroupLimit(scCourseStudent.getStudentUserId(), classCourse, excludeClassCourseId);
         validateCapacity(classCourse, scCourseStudent.getId());
         return scCourseStudentMapper.updateScCourseStudent(scCourseStudent);
@@ -346,6 +383,20 @@ public class ScCourseStudentServiceImpl implements IScCourseStudentService {
         result.put("created", created);
         result.put("message", message);
         return result;
+    }
+
+    private ScCourseStudent reactivateSelection(ScCourseStudent existing, ScClassCourse classCourse, String operator) {
+        if (existing == null) {
+            return null;
+        }
+        existing.setCourseId(classCourse == null ? existing.getCourseId() : classCourse.getCourseId());
+        existing.setClassId(classCourse == null ? existing.getClassId() : classCourse.getClassId());
+        existing.setStatus("0");
+        existing.setJoinTime(DateUtils.getNowDate());
+        existing.setRemark("");
+        existing.setUpdateBy(operator);
+        scCourseStudentMapper.updateScCourseStudent(existing);
+        return existing;
     }
 
     private ScCourseStudent buildSelection(Long studentUserId, ScClassCourse classCourse) {
@@ -441,6 +492,25 @@ public class ScCourseStudentServiceImpl implements IScCourseStudentService {
         }
     }
 
+    private void validateCombinedSelection(Long studentUserId, ScClassCourse classCourse, Long excludeClassCourseId) {
+        if (studentUserId == null || classCourse == null || classCourse.getTermId() == null) {
+            return;
+        }
+        List<ScClassCourse> selectedCombinedCourses = listStudentSelectedCombinedCourses(studentUserId,
+                classCourse.getTermId(), classCourse.getCombinedClassCode(), excludeClassCourseId);
+        if (selectedCombinedCourses.isEmpty()) {
+            return;
+        }
+        String selectedNames = selectedCombinedCourses.stream()
+                .map(this::resolveClassCourseDisplayName)
+                .filter(StringUtils::isNotEmpty)
+                .distinct()
+                .collect(Collectors.joining("、"));
+        throw new ServiceException("当前合班课程已通过《"
+                + StringUtils.defaultIfEmpty(selectedNames, "同组教学班")
+                + "》选入，请勿重复选课");
+    }
+
     private void validateSelectionGroupLimit(Long studentUserId, ScClassCourse classCourse, Long excludeClassCourseId) {
         if (studentUserId == null || classCourse == null || classCourse.getTermId() == null) {
             return;
@@ -465,6 +535,61 @@ public class ScCourseStudentServiceImpl implements IScCourseStudentService {
         String groupName = StringUtils.defaultIfEmpty(StringUtils.trimToEmpty(classCourse.getSelectionGroupName()), groupCode);
         throw new ServiceException("专项分组【" + groupName + "】最多可选 " + limit + " 门，当前已选《"
                 + StringUtils.defaultIfEmpty(selectedNames, "同组课程") + "》");
+    }
+
+    private ScCourseStudent findActiveCombinedSelection(Long studentUserId, ScClassCourse classCourse,
+            Long excludeClassCourseId) {
+        if (studentUserId == null || classCourse == null || classCourse.getTermId() == null) {
+            return null;
+        }
+        String combinedClassCode = StringUtils.trimToEmpty(classCourse.getCombinedClassCode());
+        if (StringUtils.isEmpty(combinedClassCode)) {
+            return null;
+        }
+        List<ScClassCourse> selectedCombinedCourses = listStudentSelectedCombinedCourses(studentUserId,
+                classCourse.getTermId(), combinedClassCode, excludeClassCourseId);
+        if (selectedCombinedCourses.isEmpty()) {
+            return null;
+        }
+        Long selectedClassCourseId = selectedCombinedCourses.get(0).getId();
+        return findActiveSelection(studentUserId, selectedClassCourseId);
+    }
+
+    private ScCourseStudent findSelectionRecord(Long studentUserId, Long classCourseId) {
+        if (studentUserId == null || classCourseId == null) {
+            return null;
+        }
+        return scCourseStudentMapper.selectAnyByStudentAndClassCourse(studentUserId, classCourseId);
+    }
+
+    private List<ScClassCourse> listStudentSelectedCombinedCourses(Long studentUserId, Long termId, String combinedClassCode,
+            Long excludeClassCourseId) {
+        if (studentUserId == null || termId == null || StringUtils.isEmpty(StringUtils.trimToEmpty(combinedClassCode))) {
+            return Collections.emptyList();
+        }
+        ScCourseStudent query = new ScCourseStudent();
+        query.setStudentUserId(studentUserId);
+        query.setTermId(termId);
+        query.setStatus("0");
+        List<ScCourseStudent> selections = scCourseStudentMapper.selectScCourseStudentList(query);
+        List<Long> classCourseIds = selections.stream()
+                .filter(s -> s != null && s.getClassCourseId() != null
+                        && !Objects.equals(s.getClassCourseId(), excludeClassCourseId))
+                .map(ScCourseStudent::getClassCourseId)
+                .distinct()
+                .collect(Collectors.toList());
+        if (classCourseIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        ScClassCourse ccQuery = new ScClassCourse();
+        ccQuery.setTermId(termId);
+        ccQuery.setStatus("0");
+        List<ScClassCourse> allTermCourses = scClassCourseService.selectScClassCourseList(ccQuery);
+        return allTermCourses.stream()
+                .filter(cc -> cc != null && classCourseIds.contains(cc.getId())
+                        && StringUtils.equalsIgnoreCase(StringUtils.trimToEmpty(cc.getCombinedClassCode()),
+                                StringUtils.trimToEmpty(combinedClassCode)))
+                .collect(Collectors.toList());
     }
 
     private List<ScClassCourse> listStudentSelectedGroupCourses(Long studentUserId, Long termId, String groupCode,
@@ -505,7 +630,17 @@ public class ScCourseStudentServiceImpl implements IScCourseStudentService {
     }
 
     private void validateDuplicate(ScCourseStudent scCourseStudent) {
-        ScCourseStudent duplicate = scCourseStudentMapper.selectDuplicateScCourseStudent(scCourseStudent);
+        ScCourseStudent duplicate;
+        if (scCourseStudent != null && scCourseStudent.getClassCourseId() != null && scCourseStudent.getStudentUserId() != null) {
+            duplicate = scCourseStudentMapper.selectAnyByStudentAndClassCourse(
+                    scCourseStudent.getStudentUserId(),
+                    scCourseStudent.getClassCourseId());
+            if (duplicate != null && Objects.equals(duplicate.getId(), scCourseStudent.getId())) {
+                duplicate = null;
+            }
+        } else {
+            duplicate = scCourseStudentMapper.selectDuplicateScCourseStudent(scCourseStudent);
+        }
         if (duplicate == null) {
             return;
         }

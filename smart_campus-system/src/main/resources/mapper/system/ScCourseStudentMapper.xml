@@ -62,11 +62,41 @@
       <otherwise>and s.course_id = #{courseId}</otherwise>
     </choose>
     <if test="id != null"> and s.id != #{id} </if> limit 1 </select>
+  <select id="selectAnyByStudentAndClassCourse" resultMap="ScCourseStudentResult">
+    <include refid="selectScCourseStudentVo" />
+    where s.student_user_id = #{param1}
+      and s.class_course_id = #{param2}
+    order by s.id desc
+    limit 1
+  </select>
   <select id="countActiveByClassCourseId" parameterType="Long" resultType="int">
     select count(1) from sc_course_student where class_course_id = #{classCourseId} and status = '0'
   </select>
   <select id="countActiveByClassCourseIdForUpdate" parameterType="Long" resultType="int">
     select count(1) from sc_course_student where class_course_id = #{classCourseId} and status = '0' for update
+  </select>
+  <select id="selectSelectionCountSnapshots" resultType="map">
+    select
+      cc.id as classCourseId,
+      cc.id as lessonId,
+      cc.student_limit as studentLimit,
+      cc.required_flag as requiredFlag,
+      coalesce(cs.selected_count, 0) as activeSelectedCount
+    from sc_class_course cc
+    left join (
+      select class_course_id, count(1) as selected_count
+      from sc_course_student
+      where status = '0'
+        and class_course_id in
+        <foreach item="classCourseId" collection="classCourseIds" open="(" separator="," close=")">
+          #{classCourseId}
+        </foreach>
+      group by class_course_id
+    ) cs on cs.class_course_id = cc.id
+    where cc.id in
+    <foreach item="classCourseId" collection="classCourseIds" open="(" separator="," close=")">
+      #{classCourseId}
+    </foreach>
   </select>
   <insert id="insertScCourseStudent" parameterType="ScCourseStudent" useGeneratedKeys="true"
     keyProperty="id">insert into sc_course_student(class_course_id, course_id, student_user_id, class_id, join_time,

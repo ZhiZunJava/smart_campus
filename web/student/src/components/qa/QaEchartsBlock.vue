@@ -1,5 +1,5 @@
 <template>
-  <div class="qa-echarts-block">
+  <div class="qa-echarts-block" :class="{ 'is-embedded': embedded }">
     <div ref="chartRef" class="qa-echarts-block__canvas"></div>
     <div v-if="displayError" class="qa-echarts-block__error">
       <strong>图表渲染失败</strong>
@@ -12,11 +12,14 @@
 import { computed, nextTick, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import * as echarts from 'echarts'
 import { useJsonrepair } from '@vunk/markdown/composables/jsonrepair'
+import { extractQaChartOptionSource } from '@/utils/qaMarkdown'
 
 const props = withDefaults(defineProps<{
   source?: string
+  embedded?: boolean
 }>(), {
   source: '',
+  embedded: false,
 })
 
 const chartRef = shallowRef<HTMLElement | null>(null)
@@ -24,7 +27,10 @@ const chartInstance = shallowRef<echarts.ECharts | null>(null)
 const resizeObserver = shallowRef<ResizeObserver | null>(null)
 const renderError = shallowRef('')
 
-const jsonSource = computed(() => String(props.source || '').trim())
+const jsonSource = computed(() => {
+  const rawSource = String(props.source || '').trim()
+  return extractQaChartOptionSource(rawSource) || rawSource
+})
 const { json } = useJsonrepair(jsonSource, { repair: true })
 
 const displayError = computed(() => {
@@ -103,6 +109,13 @@ onUnmounted(() => {
   border-radius: 10px;
   background: var(--portal-card-solid);
   overflow: hidden;
+}
+
+.qa-echarts-block.is-embedded {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
 }
 
 .qa-echarts-block__canvas {

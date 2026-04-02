@@ -17,6 +17,11 @@
           </div>
           <div class="stat-divider"></div>
           <div class="stat-item">
+            <span class="stat-value">{{ growth.honorScore || 0 }}</span>
+            <span class="stat-label">荣誉成绩</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
             <span class="stat-value">{{ growth.account?.levelCode || 'L1' }}</span>
             <span class="stat-label">成长等级</span>
           </div>
@@ -81,6 +86,22 @@
               </div>
             </div>
           </template>
+          <div class="growth-level-panel">
+            <div class="growth-level-panel__head">
+              <div>
+                <div class="growth-level-panel__eyebrow">等级进度</div>
+                <div class="growth-level-panel__title">{{ levelInfo.currentLevelName || '启航新芽' }}</div>
+              </div>
+              <div class="growth-level-panel__meta">
+                <strong>{{ levelInfo.progressPercent || 0 }}%</strong>
+                <span v-if="levelInfo.nextLevelCode">距 {{ levelInfo.nextLevelCode }} 还差 {{ levelInfo.pointsToNextLevel || 0 }} 分</span>
+                <span v-else>已达到当前最高等级</span>
+              </div>
+            </div>
+            <div class="growth-level-panel__bar">
+              <i :style="{ width: `${levelInfo.progressPercent || 0}%` }"></i>
+            </div>
+          </div>
           <div class="points-summary">
             <button type="button" class="point-box point-box--button" @click="openGrowthDialog('ledger')">
               <div class="point-title">可用积分</div>
@@ -90,6 +111,34 @@
               <div class="point-title">已用积分</div>
               <div class="point-num text-warning">{{ growth.account?.usedPoints || 0 }}</div>
             </button>
+          </div>
+          <div class="growth-stat-grid">
+            <div class="growth-stat-card" @click="openGrowthDialog('honor')">
+              <span>提交考试</span>
+              <strong>{{ growthStats.submittedExamCount || 0 }}</strong>
+            </div>
+            <div class="growth-stat-card" @click="openGrowthDialog('honor')">
+              <span>平均成绩</span>
+              <strong>{{ formatNumber(growthStats.avgExamScore, '0') }}</strong>
+            </div>
+            <div class="growth-stat-card" @click="openGrowthDialog('honor')">
+              <span>高分场次</span>
+              <strong>{{ growthStats.excellentExamCount || 0 }}</strong>
+            </div>
+            <div class="growth-stat-card" @click="openGrowthDialog('honor')">
+              <span>满分场次</span>
+              <strong>{{ growthStats.perfectExamCount || 0 }}</strong>
+            </div>
+          </div>
+          <div v-if="monthlyPoints.length" class="growth-monthly">
+            <div class="sub-title">近 6 个月积分增长</div>
+            <div class="growth-monthly__bars">
+              <div v-for="item in monthlyPoints" :key="item.month" class="growth-monthly__item">
+                <span>{{ item.month }}</span>
+                <div class="growth-monthly__track"><i :style="{ height: `${monthlyPointPeak ? Math.max(12, (Number(item.points || 0) / monthlyPointPeak) * 100) : 12}%` }"></i></div>
+                <strong>{{ item.points || 0 }}</strong>
+              </div>
+            </div>
           </div>
           
           <div class="recent-ledgers mt-4">
@@ -122,10 +171,37 @@
             <div class="card-header">
               <div class="card-title">
                 <el-icon><Trophy /></el-icon>
-                <span>荣誉成就</span>
+                <span>荣誉成就与荣誉成绩</span>
               </div>
             </div>
           </template>
+          <div class="honor-summary">
+            <div class="honor-summary__score" @click="openGrowthDialog('honor')">
+              <span>荣誉成绩</span>
+              <strong>{{ growth.honorScore || 0 }}</strong>
+              <small>由考试表现、成长成就和规范作答共同计算</small>
+            </div>
+            <div class="honor-summary__records">
+              <div class="sub-title">代表性答卷</div>
+              <div v-if="honorRecords.length" class="honor-record-list">
+                <article v-for="item in honorRecords.slice(0, 3)" :key="item.recordId" class="honor-record-item" @click="openGrowthDialog('honor')">
+                  <div class="honor-record-item__main">
+                    <strong>{{ item.paperName }}</strong>
+                    <span>{{ formatDateTime(item.submitTime) }} · 用时 {{ item.elapsedMinutes || 0 }} 分钟</span>
+                  </div>
+                  <div class="honor-record-item__side">
+                    <div class="honor-record-item__score">{{ formatNumber(item.score, '0') }}</div>
+                    <div class="honor-record-item__badges">
+                      <el-tag v-for="badge in item.badges || []" :key="badge.label" size="small" effect="plain" :type="honorBadgeType(badge.tone)">
+                        {{ badge.label }}
+                      </el-tag>
+                    </div>
+                  </div>
+                </article>
+              </div>
+              <el-empty v-else description="还没有可展示的荣誉答卷" :image-size="60" />
+            </div>
+          </div>
           <div class="achievement-list">
             <div v-for="item in growth.achievements || []" :key="item.achievementId" class="achievement-item" @click="openGrowthDialog('achievement')">
               <div class="ach-icon"><el-icon><Medal /></el-icon></div>
@@ -169,6 +245,59 @@
             <el-table-column prop="balanceAfter" label="变化后余额" min-width="120" />
           </el-table>
         </el-tab-pane>
+        <el-tab-pane label="荣誉成绩" name="honor">
+          <div class="honor-dialog">
+            <div class="honor-dialog__summary">
+              <div class="honor-dialog__score">
+                <span>荣誉成绩</span>
+                <strong>{{ growth.honorScore || 0 }}</strong>
+              </div>
+              <div class="honor-dialog__stats">
+                <div class="honor-dialog__stat"><span>提交考试</span><strong>{{ growthStats.submittedExamCount || 0 }}</strong></div>
+                <div class="honor-dialog__stat"><span>高分场次</span><strong>{{ growthStats.excellentExamCount || 0 }}</strong></div>
+                <div class="honor-dialog__stat"><span>满分场次</span><strong>{{ growthStats.perfectExamCount || 0 }}</strong></div>
+                <div class="honor-dialog__stat"><span>平均用时</span><strong>{{ formatNumber(growthStats.avgElapsedMinutes, '0') }} 分钟</strong></div>
+              </div>
+            </div>
+            <el-table v-if="honorRecords.length" :data="honorRecords" border class="growth-detail-table">
+              <el-table-column label="答卷" min-width="220" show-overflow-tooltip>
+                <template #default="scope">{{ scope.row.paperName }}</template>
+              </el-table-column>
+              <el-table-column label="得分" min-width="100">
+                <template #default="scope">{{ formatNumber(scope.row.score, '0') }}</template>
+              </el-table-column>
+              <el-table-column label="正确率" min-width="100">
+                <template #default="scope">{{ formatNumber(scope.row.correctRate, '0') }}%</template>
+              </el-table-column>
+              <el-table-column label="用时" min-width="100">
+                <template #default="scope">{{ scope.row.elapsedMinutes || 0 }} 分钟</template>
+              </el-table-column>
+              <el-table-column label="成长积分" min-width="100">
+                <template #default="scope">+{{ scope.row.pointsAwarded || 0 }}</template>
+              </el-table-column>
+              <el-table-column label="荣誉标签" min-width="220">
+                <template #default="scope">
+                  <el-tag v-for="badge in scope.row.badges || []" :key="badge.label" size="small" effect="plain" :type="honorBadgeType(badge.tone)" class="mr-1">
+                    {{ badge.label }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="交卷时间" min-width="170">
+                <template #default="scope">{{ formatDateTime(scope.row.submitTime) }}</template>
+              </el-table-column>
+            </el-table>
+            <el-empty v-else description="暂无荣誉成绩数据" :image-size="80" />
+            <div v-if="rewardRules.length" class="honor-rule-list">
+              <article v-for="item in rewardRules" :key="item.code" class="honor-rule-item">
+                <div class="honor-rule-item__head">
+                  <strong>{{ item.title }}</strong>
+                  <span>+{{ item.points }}</span>
+                </div>
+                <p>{{ item.desc }}</p>
+              </article>
+            </div>
+          </div>
+        </el-tab-pane>
         <el-tab-pane label="荣誉成就" name="achievement">
           <div v-if="(growth.achievements || []).length" class="achievement-detail-list">
             <article v-for="item in growth.achievements || []" :key="item.achievementId" class="achievement-detail-item">
@@ -201,7 +330,15 @@ const roleGroup = ref('')
 const growth = ref<any>({ account: null, achievements: [], recentLedgers: [] })
 const userStore = usePortalUserStore()
 const growthDialogVisible = ref(false)
-const growthDialogTab = ref<'ledger' | 'achievement'>('ledger')
+const growthDialogTab = ref<'ledger' | 'honor' | 'achievement'>('ledger')
+const levelInfo = computed(() => growth.value.levelInfo || {})
+const growthStats = computed(() => growth.value.stats || {})
+const monthlyPoints = computed(() => growth.value.monthlyPoints || [])
+const honorRecords = computed(() => growth.value.honorRecords || [])
+const rewardRules = computed(() => growth.value.rewardRules || [])
+const monthlyPointPeak = computed(() => {
+  return Math.max(...monthlyPoints.value.map((item: any) => Number(item.points || 0)), 0)
+})
 
 const sexLabel = computed(() => {
   const value = String(profile.value.sex ?? '2')
@@ -243,7 +380,7 @@ const profileCompleteness = computed(() => {
 const contactCount = computed(() => [profile.value.phonenumber, profile.value.email].filter((item) => item && String(item).trim()).length)
 const identityCount = computed(() => [profile.value.studentNo, profile.value.teacherNo, profile.value.major, profile.value.admissionYear].filter((item) => item && String(item).trim()).length)
 
-function openGrowthDialog(tab: 'ledger' | 'achievement') {
+function openGrowthDialog(tab: 'ledger' | 'honor' | 'achievement') {
   growthDialogTab.value = tab
   growthDialogVisible.value = true
 }
@@ -273,6 +410,20 @@ function ledgerTypeLabel(value?: string) {
 
 function ledgerRemark(item: any) {
   return item?.remark || ledgerTypeLabel(item?.bizType) || '积分变动'
+}
+
+function formatNumber(value: any, fallback = '-') {
+  const numeric = Number(value)
+  if (Number.isNaN(numeric)) return fallback
+  return Number.isInteger(numeric) ? String(numeric) : numeric.toFixed(1)
+}
+
+function honorBadgeType(tone?: string) {
+  const value = String(tone || '').toLowerCase()
+  if (value === 'success') return 'success'
+  if (value === 'warning') return 'warning'
+  if (value === 'primary') return 'primary'
+  return 'info'
 }
 
 onMounted(async () => {
@@ -501,6 +652,66 @@ onMounted(async () => {
   padding: 20px 20px 0;
 }
 
+.growth-level-panel {
+  margin: 20px 20px 0;
+  padding: 18px 20px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+  border: 1px solid #dbeafe;
+}
+
+.growth-level-panel__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.growth-level-panel__eyebrow {
+  font-size: 12px;
+  color: #3b82f6;
+  font-weight: 700;
+}
+
+.growth-level-panel__title {
+  margin-top: 6px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--portal-text);
+}
+
+.growth-level-panel__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.growth-level-panel__meta strong {
+  font-size: 20px;
+  color: #2563eb;
+}
+
+.growth-level-panel__meta span {
+  font-size: 12px;
+  color: var(--portal-text-secondary);
+}
+
+.growth-level-panel__bar {
+  margin-top: 14px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+  overflow: hidden;
+}
+
+.growth-level-panel__bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2563eb 0%, #60a5fa 100%);
+}
+
 .point-box {
   flex: 1;
   padding: 16px;
@@ -530,6 +741,86 @@ onMounted(async () => {
 .point-num {
   font-size: 24px;
   font-weight: 500;
+}
+
+.growth-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 16px 20px 0;
+}
+
+.growth-stat-card {
+  border: 1px solid #e4e7ed;
+  border-radius: 10px;
+  background: #fff;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.growth-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+}
+
+.growth-stat-card span {
+  font-size: 12px;
+  color: var(--portal-text-secondary);
+}
+
+.growth-stat-card strong {
+  font-size: 22px;
+  color: var(--portal-text);
+}
+
+.growth-monthly {
+  padding: 18px 20px 0;
+}
+
+.growth-monthly__bars {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+
+.growth-monthly__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.growth-monthly__item span {
+  font-size: 11px;
+  color: var(--portal-text-secondary);
+}
+
+.growth-monthly__track {
+  width: 100%;
+  height: 92px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: flex-end;
+  padding: 8px;
+}
+
+.growth-monthly__track i {
+  display: block;
+  width: 100%;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #60a5fa 0%, #2563eb 100%);
+}
+
+.growth-monthly__item strong {
+  font-size: 13px;
+  color: #2563eb;
 }
 
 .text-primary { color: var(--portal-brand); }
@@ -587,6 +878,96 @@ onMounted(async () => {
   padding: 20px;
 }
 
+.honor-summary {
+  padding: 20px 20px 0;
+}
+
+.honor-summary__score {
+  padding: 18px 20px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%);
+  border: 1px solid #fed7aa;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.honor-summary__score span {
+  font-size: 13px;
+  color: #c2410c;
+  font-weight: 700;
+}
+
+.honor-summary__score strong {
+  font-size: 32px;
+  color: #9a3412;
+  line-height: 1;
+}
+
+.honor-summary__score small {
+  color: var(--portal-text-secondary);
+  line-height: 1.6;
+}
+
+.honor-summary__records {
+  margin-top: 18px;
+}
+
+.honor-record-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.honor-record-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid #e4e7ed;
+  border-radius: 12px;
+  background: #fff;
+  padding: 14px 16px;
+  cursor: pointer;
+}
+
+.honor-record-item__main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.honor-record-item__main strong {
+  color: var(--portal-text);
+  font-size: 14px;
+}
+
+.honor-record-item__main span {
+  color: var(--portal-text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.honor-record-item__side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.honor-record-item__score {
+  color: #2563eb;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.honor-record-item__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
 .achievement-item {
   display: flex;
   align-items: center;
@@ -636,6 +1017,100 @@ onMounted(async () => {
 .growth-detail-dialog :deep(.el-dialog__body) {
   max-height: calc(90vh - 120px);
   overflow: auto;
+}
+
+.honor-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.honor-dialog__summary {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.2fr);
+  gap: 16px;
+}
+
+.honor-dialog__score,
+.honor-dialog__stat {
+  padding: 18px 20px;
+  border-radius: 14px;
+  border: 1px solid #e4e7ed;
+  background: #fff;
+}
+
+.honor-dialog__score {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%);
+  border-color: #fed7aa;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.honor-dialog__score span,
+.honor-dialog__stat span {
+  color: var(--portal-text-secondary);
+  font-size: 12px;
+}
+
+.honor-dialog__score strong {
+  color: #9a3412;
+  font-size: 34px;
+  line-height: 1;
+}
+
+.honor-dialog__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.honor-dialog__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.honor-dialog__stat strong {
+  color: var(--portal-text);
+  font-size: 20px;
+}
+
+.honor-rule-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.honor-rule-item {
+  padding: 16px 18px;
+  border-radius: 12px;
+  border: 1px solid #e4e7ed;
+  background: #fff;
+}
+
+.honor-rule-item__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.honor-rule-item__head strong {
+  color: var(--portal-text);
+  font-size: 15px;
+}
+
+.honor-rule-item__head span {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.honor-rule-item p {
+  margin: 10px 0 0;
+  color: var(--portal-text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .achievement-detail-list {
@@ -698,6 +1173,19 @@ onMounted(async () => {
 .mt-4 { margin-top: 16px; }
 .mb-4 { margin-bottom: 20px; }
 .ml-2 { margin-left: 8px; }
+.mr-1 { margin-right: 4px; }
+
+@media (max-width: 1200px) {
+  .honor-dialog__summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 992px) {
+  .growth-monthly__bars {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
 .mr-2 { margin-right: 8px; }
 
 @media (max-width: 992px) {

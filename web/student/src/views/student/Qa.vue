@@ -1,31 +1,18 @@
 <template>
   <div class="qa-workbench">
     <aside class="qa-sidebar">
-      <div class="qa-sidebar__brand">
-        <div class="qa-sidebar__brand-top">
-          <div class="qa-sidebar__logo">
-            <img class="qa-sidebar__logo-image" :src="portalLogo" alt="校园智学助手">
-          </div>
-          <div class="qa-sidebar__badge">校园专属</div>
-        </div>
-        <div class="qa-sidebar__brand-text">
-          <div class="qa-sidebar__title">校园智学助手</div>
-          <div class="qa-sidebar__subtitle">课程问答、复盘答疑与图像理解</div>
-        </div>
-      </div>
 
-      <button type="button" class="qa-sidebar__new" @click="createNewChat">
+      <t-button theme="primary" class="qa-sidebar__new" @click="createNewChat">
         <i class="ri-add-line"></i>
         <span>新对话</span>
-      </button>
+      </t-button>
 
-      <div class="qa-sidebar__search">
-        <i class="ri-search-line"></i>
-        <input v-model="sessionKeyword" placeholder="搜索历史对话" />
-      </div>
+      <t-input v-model="sessionKeyword" class="qa-sidebar__search" placeholder="搜索历史对话" clearable>
+        <template #prefix-icon><i class="ri-search-line"></i></template>
+      </t-input>
 
       <div class="qa-sidebar__section">历史对话</div>
-      <el-scrollbar class="qa-sidebar__history">
+      <div class="qa-sidebar__history">
         <div class="qa-sidebar__history-list">
           <div v-for="item in filteredSessions" :key="item.sessionId" class="qa-session"
             :class="{ active: item.sessionId === activeSessionId }" @click="openSession(item)">
@@ -36,285 +23,150 @@
               </div>
               <div class="qa-session__meta">{{ item.createTime || `ID: ${item.sessionId}` }}</div>
             </div>
-            <el-dropdown trigger="click" @command="(command) => handleSessionCommand(command, item)">
-              <button type="button" class="qa-session__more" @click.stop>
+            <t-dropdown
+              trigger="click"
+              :options="buildSessionActionOptions(item)"
+              @click="(data: any) => handleSessionCommand(String(data.value), item)"
+            >
+              <t-button theme="default" variant="text" shape="square" class="qa-session__more" @click.stop>
                 <i class="ri-more-2-fill"></i>
-              </button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="pin">
-                    <i class="ri-pushpin-line"></i>
-                    {{ isPinned(item.sessionId) ? '取消置顶' : '置顶会话' }}
-                  </el-dropdown-item>
-                  <el-dropdown-item command="rename"><i class="ri-edit-line"></i> 重命名</el-dropdown-item>
-                  <el-dropdown-item command="delete"><i class="ri-delete-bin-6-line"></i> 删除</el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
+              </t-button>
+            </t-dropdown>
           </div>
-          <el-empty v-if="!filteredSessions.length" :image-size="64" description="暂无历史对话" />
+          <t-empty v-if="!filteredSessions.length" :image-size="64" description="暂无历史对话" />
         </div>
-      </el-scrollbar>
+      </div>
     </aside>
 
     <section class="qa-main">
       <main class="qa-main__messages">
         <div class="qa-main__floating-header">
-          <el-input v-model="editingSessionTitle" class="qa-main__title-input"
-            :class="{ 'is-idle': !titleInputFocused }" maxlength="50" placeholder="给这次对话起个标题"
-            @focus="titleInputFocused = true" @blur="handleTitleBlur" @keyup.enter="commitSessionTitle" />
-          <div class="qa-main__actions">
-            <span class="qa-main__pill"><i class="ri-robot-2-line"></i>{{ selectedModel?.modelName || '未选择模型' }}</span>
-            <button v-if="streaming" type="button" class="qa-main__danger" @click="stopStreaming">
-              <i class="ri-stop-circle-line"></i>
-              <span>停止生成</span>
+          <div class="qa-main__title-anchor">
+            <t-input
+              v-if="titleInputFocused"
+              ref="titleInputRef"
+              v-model="editingSessionTitle"
+              class="qa-main__title-input"
+              maxlength="50"
+              placeholder="给这次对话起个标题"
+              @blur="handleTitleBlur"
+              @enter="handleTitleEnter"
+            />
+            <button
+              v-else
+              type="button"
+              class="qa-main__title-display"
+              :class="{ 'is-placeholder': !editingSessionTitle?.trim() }"
+              @click="activateTitleInput"
+            >
+              {{ editingSessionTitle?.trim() || '给这次对话起个标题' }}
             </button>
           </div>
-        </div>
-        <el-scrollbar ref="messageScrollbarRef" class="qa-main__scroll">
-          <div ref="messageContainerRef" class="qa-main__content" :class="{ 'is-empty': !chatMessages.length }">
-            <div v-if="!chatMessages.length" class="qa-empty">
-              <div class="qa-empty__title">有什么我能帮你的吗？</div>
-              <div class="qa-empty__subtitle">围绕课程学习、作业分析、复盘答疑与图像理解，给你连续、清晰、可追问的校园学习协作体验。</div>
-              <div class="qa-empty__suggestions">
-                <button v-for="item in suggestionList" :key="item" type="button" class="qa-suggestion"
-                  @click="applySuggestion(item)">{{ item }}</button>
-              </div>
-            </div>
-
-            <div v-for="(item, index) in chatMessages" :key="item.id" :ref="(el) => setMessageRef(item.id, el)"
-              class="qa-message" :class="item.role">
-              <div class="qa-message__avatar">
-                <i :class="item.role === 'user' ? 'ri-user-3-line' : 'ri-robot-2-line'"></i>
-              </div>
-              <div class="qa-message__bubble">
-                <div class="qa-message__meta">
-                  <strong>{{ item.role === 'user' ? '我' : 'AI 助手' }}</strong>
-                  <span v-if="item.modelName">{{ item.modelName }}</span>
-                </div>
-
-                <div v-if="item.role === 'user'" class="qa-message__index-label">问题 {{ getUserQuestionOrder(index) }}
-                </div>
-
-                <div v-if="item.attachments?.length" class="qa-message__attachments">
-                  <button v-for="attachment in item.attachments"
-                    :key="attachment.attachmentId || attachment.fileName || attachment.name" type="button"
-                    class="qa-message__attachment" @click="openAttachment(attachment)">
-                    <img v-if="isImageAttachment(attachment)" :src="attachment.imageUrl || attachment.fileUrl"
-                      :alt="attachment.originalName || attachment.name || '附件图片'" />
-                    <i v-else class="ri-attachment-2"></i>
-                    <span>{{ attachment.originalName || attachment.name || '附件' }}</span>
-                  </button>
-                </div>
-
-                <details v-if="item.role === 'assistant' && item.reasoningContent" class="qa-reasoning"
-                  :open="streaming && item.id === currentStreamingAssistantId">
-                  <summary class="qa-reasoning__summary">
-                    <i class="ri-brain-line"></i>
-                    <span>思考过程</span>
-                  </summary>
-                  <div class="qa-reasoning__content markdown-body">
-                    <QaMarkdownRenderer :source="item.reasoningContent" />
-                  </div>
-                </details>
-
-                <div v-if="item.role === 'assistant'" class="qa-message__content markdown-body">
-                  <div v-if="isStreamingAssistantMessage(item)" class="qa-message__content--plain qa-message__content--streaming" v-html="getStreamingAssistantPreview(item.content)" />
-                  <QaMarkdownRenderer v-else :source="item.content || ''" />
-                </div>
-                <div v-else class="qa-message__content qa-message__content--plain">{{ item.content }}</div>
-
-                <div class="qa-message__ops">
-                  <button v-if="item.role === 'assistant' && item.content" type="button"
-                    @click="copyText(item.content)">
-                    <i class="ri-file-copy-line"></i><span>复制内容</span>
-                  </button>
-                  <button v-if="item.role === 'assistant' && item.content && item.messageId" type="button"
-                    :class="{ 'is-active': item.feedbackType === 'helpful' }"
-                    @click="openFeedbackDialog(item, 'helpful')">
-                    <i class="ri-thumb-up-line"></i><span>有帮助</span>
-                  </button>
-                  <button v-if="item.role === 'assistant' && item.content && item.messageId" type="button"
-                    :class="{ 'is-active': item.feedbackType === 'unhelpful', 'is-danger': item.feedbackType === 'unhelpful' }"
-                    @click="openFeedbackDialog(item, 'unhelpful')">
-                    <i class="ri-thumb-down-line"></i><span>需改进</span>
-                  </button>
-                  <button v-if="item.role === 'assistant' && item.content" type="button"
-                    @click="continueFromAnswer(item.content)">
-                    <i class="ri-chat-forward-line"></i><span>引用后继续问</span>
-                  </button>
-                  <button v-if="item.role === 'user'" type="button" @click="reAskMessage(item.content)">
-                    <i class="ri-restart-line"></i><span>重新提问</span>
-                  </button>
-                </div>
-              </div>
-            </div>
+          <div class="qa-main__actions">
+            <t-tag class="qa-main__pill" theme="primary" variant="light">
+              <i class="ri-robot-2-line"></i>{{ selectedModel?.modelName || '未选择模型' }}
+            </t-tag>
+            <t-button v-if="streaming" theme="danger" variant="outline" size="small" class="qa-main__danger" @click="stopStreaming">
+              <i class="ri-stop-circle-line"></i>
+              <span>停止生成</span>
+            </t-button>
           </div>
-        </el-scrollbar>
-        <div v-if="userQuestionAnchors.length" class="qa-main__index">
-          <button v-for="anchor in userQuestionAnchors" :key="anchor.id" type="button" class="qa-main__index-item"
-            :class="{ 'is-active': anchor.id === activeAnchorId }" @click="scrollToMessage(anchor.id)">
-            <span class="qa-main__index-number">{{ anchor.order }}</span>
-            <span class="qa-main__index-preview">{{ anchor.title }}</span>
-            <span class="qa-main__index-line"></span>
-          </button>
         </div>
+        <QaTDesignMessagePane
+          :messages="chatMessages"
+          :streaming="streaming"
+          :current-streaming-assistant-id="currentStreamingAssistantId"
+          :suggestion-list="suggestionList"
+          @apply-suggestion="applySuggestion"
+          @open-attachment="openAttachment"
+          @copy="copyText"
+          @continue="continueFromAnswer"
+          @reask="reAskMessage"
+          @feedback="handlePocFeedback"
+        />
       </main>
 
       <footer class="qa-composer">
-        <div class="qa-context-bar">
-          <div class="qa-context-bar__left">
-            <div class="qa-context-field qa-context-field--course">
-              <span class="qa-context-field__label">关联课程</span>
-              <el-select
-                v-model="selectedCourseId"
-                clearable
-                filterable
-                placeholder="可选课程上下文"
-                @change="handleCourseContextChange"
-              >
-                <el-option v-for="item in courseOptions" :key="item.value" :label="item.label" :value="item.value" />
-              </el-select>
-            </div>
-
-            <div class="qa-context-field qa-context-field--exam">
-              <span class="qa-context-field__label">考试记录</span>
-              <el-select
-                v-model="selectedExamRecordId"
-                clearable
-                filterable
-                placeholder="可选考试记录分析"
-                :disabled="!examRecordOptions.length"
-              >
-                <el-option
-                  v-for="item in examRecordOptions"
-                  :key="item.value"
-                  :label="item.label"
-                  :value="item.value"
-                />
-              </el-select>
-            </div>
-
-          </div>
-
-          <div ref="contextActionsRef" class="qa-context-bar__right">
-            <button v-for="chip in visibleContextActions" :key="chip.id" type="button" class="qa-context-chip" :disabled="chip.disabled" @click="chip.action">
-              <i :class="chip.icon"></i>
-              <span>{{ chip.label }}</span>
-            </button>
-            <el-dropdown v-if="hiddenContextActions.length" trigger="click">
-              <button type="button" class="qa-context-chip">
-                <i class="ri-function-line"></i>
-                <span>更多操作</span>
-              </button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item v-for="chip in hiddenContextActions" :key="chip.id" :disabled="chip.disabled" @click="chip.action">
-                    <i :class="chip.icon"></i>
-                    {{ chip.label }}
-                  </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-          </div>
-        </div>
-
-        <div v-if="images.length" class="qa-composer__attachments">
-          <div v-for="item in images" :key="item.name" class="qa-attachment">
-            <i class="ri-image-line"></i>
-            <span>{{ item.name }}</span>
-            <button type="button" @click="removeImage(item.name)"><i class="ri-close-line"></i></button>
-          </div>
-        </div>
-
-        <el-input v-model="inputText" type="textarea" :rows="4" resize="none" placeholder="输入你的问题，支持课程问答、知识点解释、解题思路分析"
-          @keydown.enter.exact.prevent="handleSubmit" @paste="handleComposerPaste" />
-
-        <div class="qa-composer__toolbar">
-          <div class="qa-composer__left">
-            <el-upload action="#" :auto-upload="false" :show-file-list="false" :on-change="handleImageChange"
-              accept="image/*">
-              <button type="button" class="qa-tool-btn">
-                <i class="ri-image-add-line"></i>
-                <span>上传图片</span>
-              </button>
-            </el-upload>
-
-            <div class="qa-tool-select qa-tool-select--model">
-              <div class="qa-tool-select__icon"><i class="ri-robot-2-line"></i></div>
-              <div class="qa-tool-select__body">
-                <el-select v-model="selectedModelId" placeholder="选择模型" filterable @change="handleModelChange">
-                  <el-option v-for="item in modelOptions" :key="item.modelId"
-                    :label="`${item.modelName}（${item.provider}）`" :value="item.modelId" />
-                </el-select>
-              </div>
-            </div>
-
-            <label class="qa-tool-switch" :class="{ disabled: selectedModel?.supportStream !== '1' }">
-              <i class="ri-signal-wifi-line"></i>
-              <span>实时输出</span>
-              <el-switch v-model="streamEnabled" :disabled="selectedModel?.supportStream !== '1'" />
-            </label>
-
-            <label class="qa-tool-switch" :class="{ disabled: selectedModel?.supportReasoning !== '1' }">
-              <i class="ri-brain-line"></i>
-              <span>深度思考</span>
-              <el-switch v-model="deepThinking" :disabled="selectedModel?.supportReasoning !== '1'" />
-            </label>
-          </div>
-
-          <div class="qa-composer__right">
-            <span v-if="streaming" class="qa-composer__status">正在实时生成...</span>
-            <button type="button" class="qa-send-btn" :disabled="streaming" @click="handleSubmit">
-              <i class="ri-send-plane-2-fill"></i>
-              <span>{{ streaming ? '生成中' : '发送' }}</span>
-            </button>
-          </div>
-        </div>
+        <QaTDesignSenderPane
+          v-model="inputText"
+          v-model:selected-model-id="selectedModelId"
+          v-model:selected-course-id="selectedCourseId"
+          v-model:selected-exam-record-id="selectedExamRecordId"
+          v-model:deep-thinking="deepThinking"
+          :streaming="streaming"
+          :images="images"
+          :model-options="modelOptions"
+          :course-options="courseSelectOptions"
+          :exam-options="examSelectOptions"
+          :reasoning-supported="selectedModel?.supportReasoning === '1'"
+          :vision-supported="selectedModel?.supportVision === '1'"
+          :context-summary="currentSenderContextSummary"
+          :show-context-clear="showSenderContextClear"
+          @submit="handleSubmit"
+          @stop="stopStreaming"
+          @upload-images="handleTdesignFileSelect"
+          @remove-image="removeImage"
+          @open-attachment="openAttachment"
+          @clear-context="clearSenderContext"
+          @course-change="handleCourseContextChange"
+          @apply-course-plan="applyCoursePlanPrompt"
+          @apply-exam-analysis="applyExamAnalysisPrompt"
+          @apply-wrongbook-plan="applyWrongbookPlanPrompt"
+        />
       </footer>
     </section>
 
-    <el-dialog v-model="feedbackDialogOpen" title="问答反馈" width="560px" class="qa-feedback-dialog" align-center>
-      <el-form label-width="78px" class="qa-feedback-form">
-        <el-form-item label="反馈类型">
-          <el-radio-group v-model="feedbackForm.feedbackType" class="qa-feedback-form__type">
-            <el-radio-button label="helpful">有帮助</el-radio-button>
-            <el-radio-button label="unhelpful">需改进</el-radio-button>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="反馈内容">
-          <el-input v-model="feedbackForm.feedbackContent" type="textarea" :rows="5" maxlength="200" show-word-limit
-            placeholder="可以补充说明哪里回答得好，或哪里还需要改进" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="feedbackDialogOpen = false">取消</el-button>
-        <el-button type="primary" @click="submitQaFeedback">提交反馈</el-button>
-      </template>
-    </el-dialog>
+    <t-dialog
+      v-model:visible="renameDialogOpen"
+      attach="body"
+      placement="center"
+      :z-index="5600"
+      header="重命名会话"
+      width="480px"
+      class="qa-rename-dialog"
+      :confirm-btn="{ content: '确定', theme: 'primary' }"
+      :cancel-btn="{ content: '取消', theme: 'default', variant: 'outline' }"
+      @confirm="confirmRenameDialog"
+      @close="closeRenameDialog"
+    >
+      <t-input
+        v-model="renameSessionTitle"
+        autofocus
+        maxlength="50"
+        placeholder="请输入新的会话名称"
+      />
+    </t-dialog>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import type { ComponentPublicInstance } from 'vue'
-import type { ElMessageBoxOptions } from 'element-plus'
-import { ElMessage, ElMessageBox } from '@/utils/feedback'
+import { computed, defineAsyncComponent, nextTick, onMounted, ref, watch } from 'vue'
+import {
+  Button as TButton,
+  Dialog as TDialog,
+  DialogPlugin,
+  Dropdown as TDropdown,
+  Empty as TEmpty,
+  Input as TInput,
+  MessagePlugin,
+  Tag as TTag,
+} from 'tdesign-vue-next'
 import { getToken } from '@/utils/auth'
 import { normalizeQaErrorMessage, parseAssistantReferenceSource, parseQaAttachments } from '@/utils/qaMessage'
 import usePortalUserStore from '@/store/user'
+import { consumeScoreAnalysisQaPreset } from '@/utils/qaPreset'
 import { addQaFeedback, addQaSession, deletePortalQaAttachment, deleteQaSession, fetchPortalCourseOptions, listExamRecord, listQaMessage, listQaModelOptions, listQaSession, updateQaSession, uploadPortalQaAttachment } from '@/api/portal'
-import QaMarkdownRenderer from '@/components/qa/QaMarkdownRenderer.vue'
-import portalLogo from '@/assets/img/logo.png'
 
 const SESSION_PIN_KEY = 'qa-session-pins'
 const SESSION_ACTIVE_KEY = 'qa-active-session-id'
+const QaTDesignMessagePane = defineAsyncComponent(() => import('@/components/qa/QaTDesignMessagePane.vue'))
+const QaTDesignSenderPane = defineAsyncComponent(() => import('@/components/qa/QaTDesignSenderPane.vue'))
 
 const userStore = usePortalUserStore()
 
 const inputText = ref('')
 const streaming = ref(false)
-const streamEnabled = ref(true)
 const deepThinking = ref(false)
 const selectedModelId = ref<number | undefined>()
 const modelOptions = ref<any[]>([])
@@ -328,29 +180,17 @@ const sessionKeyword = ref('')
 const activeSessionId = ref<number | undefined>()
 const pinnedSessionIds = ref<number[]>([])
 const chatMessages = ref<Array<{ id: string; role: 'user' | 'assistant'; content: string; modelName?: string; reasoningContent?: string; attachments?: any[]; messageId?: number; feedbackType?: string; feedbackContent?: string }>>([])
-const messageContainerRef = ref<HTMLElement | null>(null)
-const messageScrollbarRef = ref<any>(null)
 const currentAbortController = ref<AbortController | null>(null)
 const currentStreamingAssistantId = ref('')
 const titleInputFocused = ref(false)
 const editingSessionTitle = ref('')
-const messageRefs = ref<Record<string, HTMLElement | null>>({})
-const activeAnchorId = ref('')
-const feedbackDialogOpen = ref(false)
-const feedbackTargetMessageId = ref<number | undefined>()
-const feedbackForm = ref<{ feedbackType: 'helpful' | 'unhelpful'; feedbackContent: string }>({ feedbackType: 'helpful', feedbackContent: '' })
-const contextActionsRef = ref<HTMLElement | null>(null)
-const visibleActionCount = ref(3)
-
-const contextActions = computed(() => [
-  { id: 'plan', label: '生成学习规划', icon: 'ri-road-map-line', action: applyCoursePlanPrompt, disabled: false },
-  { id: 'analysis', label: '分析考试记录', icon: 'ri-bar-chart-box-line', action: applyExamAnalysisPrompt, disabled: !selectedExamRecord.value },
-  { id: 'wrongbook', label: '错题复习规划', icon: 'ri-booklet-line', action: applyWrongbookPlanPrompt, disabled: !selectedCourseId.value },
-])
-
-const visibleContextActions = computed(() => contextActions.value.slice(0, visibleActionCount.value))
-
-const hiddenContextActions = computed(() => contextActions.value.slice(visibleActionCount.value))
+const titleInputRef = ref<any>(null)
+const renameDialogOpen = ref(false)
+const renamingSession = ref<any>(null)
+const renameSessionTitle = ref('')
+const feedbackSubmittingMessageIds = ref<number[]>([])
+const externalContextLabel = ref('')
+const externalContextPrompt = ref('')
 
 const suggestionList = [
   '帮我总结这一章的知识点',
@@ -361,6 +201,23 @@ const suggestionList = [
 ]
 
 const selectedModel = computed(() => modelOptions.value.find((item) => item.modelId === selectedModelId.value))
+const streamEnabled = computed(() => selectedModel.value?.supportStream === '1')
+const currentSenderContextSummary = computed(() => {
+  const parts: string[] = []
+  if (selectedExamRecord.value) {
+    const paperName = selectedExamRecord.value.paperName || `考试 ${selectedExamRecord.value.recordId}`
+    parts.push(`考试记录：${paperName}｜课程：${courseContextLabel(selectedExamRecord.value.courseId)}｜得分 ${selectedExamRecord.value.score ?? 0}`)
+  } else if (selectedCourse.value) {
+    parts.push(`课程上下文：${selectedCourse.value.label}`)
+  }
+  if (externalContextLabel.value) {
+    parts.push(externalContextLabel.value)
+  }
+  return parts.join(' ｜ ')
+})
+const showSenderContextClear = computed(() => Boolean(selectedExamRecord.value || selectedCourse.value || externalContextPrompt.value))
+const courseSelectOptions = computed(() => courseOptions.value.map((item) => ({ label: item.label, value: item.value })))
+const examSelectOptions = computed(() => examRecordOptions.value.map((item) => ({ label: item.label, value: item.value })))
 const filteredSessions = computed(() => {
   const keyword = sessionKeyword.value.trim().toLowerCase()
   let list = sessions.value
@@ -381,20 +238,14 @@ const currentSessionTitle = computed(() => {
 })
 const selectedCourse = computed(() => courseOptions.value.find((item) => item.value === selectedCourseId.value))
 const selectedExamRecord = computed(() => examRecordOptions.value.find((item) => item.value === selectedExamRecordId.value)?.raw)
-const userQuestionAnchors = computed(() => chatMessages.value
-  .filter((item) => item.role === 'user')
-  .map((item, index) => ({ id: item.id, order: index + 1, title: item.content.slice(0, 18) })))
 
 watch(currentSessionTitle, (value) => {
   editingSessionTitle.value = value
 }, { immediate: true })
 
-watch(chatMessages, async () => {
-  await nextTick()
-  if (messageContainerRef.value && messageScrollbarRef.value) {
-    messageScrollbarRef.value.setScrollTop(messageContainerRef.value.scrollHeight)
-  }
-}, { deep: true })
+watch(selectedModelId, () => {
+  syncModelCapabilities()
+})
 
 function loadPinnedSessions() {
   try {
@@ -419,6 +270,14 @@ function saveActiveSessionId(sessionId?: number) {
     return
   }
   localStorage.setItem(SESSION_ACTIVE_KEY, String(sessionId))
+}
+
+function buildSessionActionOptions(item: any) {
+  return [
+    { content: isPinned(item.sessionId) ? '取消置顶' : '置顶会话', value: 'pin', icon: 'ri-pushpin-line' },
+    { content: '重命名', value: 'rename', icon: 'ri-edit-line' },
+    { content: '删除', value: 'delete', icon: 'ri-delete-bin-6-line', theme: 'error' as const },
+  ]
 }
 
 function isPinned(sessionId: number) {
@@ -475,6 +334,8 @@ async function loadSessions() {
 }
 
 async function openSession(item: any) {
+  externalContextLabel.value = ''
+  externalContextPrompt.value = ''
   activeSessionId.value = item.sessionId
   saveActiveSessionId(item.sessionId)
   selectedCourseId.value = Number(item.courseId || 0) || undefined
@@ -492,6 +353,8 @@ async function openSession(item: any) {
       role,
       content: message.content,
       attachments: parseQaAttachments(message.attachmentJson),
+      feedbackType: message.feedbackType,
+      feedbackContent: message.feedbackContent,
     }
   })
 }
@@ -504,6 +367,9 @@ async function createNewChat() {
   images.value = []
   editingSessionTitle.value = '新对话'
   selectedExamRecordId.value = undefined
+  selectedCourseId.value = undefined
+  externalContextLabel.value = ''
+  externalContextPrompt.value = ''
 }
 
 async function handleSessionCommand(command: string, item: any) {
@@ -512,20 +378,14 @@ async function handleSessionCommand(command: string, item: any) {
     return
   }
   if (command === 'rename') {
-    const title = await promptSessionTitle(item.sessionTitle || '新对话')
-    if (!title) return
-    await updateQaSession({ sessionId: item.sessionId, sessionTitle: title })
-    ElMessage.success('重命名成功')
-    await loadSessions()
-    if (item.sessionId === activeSessionId.value) {
-      const current = sessions.value.find((session) => session.sessionId === item.sessionId)
-      if (current) await openSession(current)
-    }
+    openRenameDialog(item)
+    return
   }
   if (command === 'delete') {
-    await ElMessageBox.confirm('确认删除该历史会话吗？删除后不可恢复。', '提示', { type: 'warning' } as ElMessageBoxOptions)
+    const confirmed = await confirmWithTDesign('确认删除该历史会话吗？删除后不可恢复。')
+    if (!confirmed) return
     await deleteQaSession(item.sessionId)
-    ElMessage.success('删除成功')
+    MessagePlugin.success('删除成功')
     pinnedSessionIds.value = pinnedSessionIds.value.filter((id) => id !== item.sessionId)
     savePinnedSessions()
     if (item.sessionId === activeSessionId.value) await createNewChat()
@@ -533,28 +393,65 @@ async function handleSessionCommand(command: string, item: any) {
   }
 }
 
-function promptSessionTitle(defaultValue: string): Promise<string | null> {
-  return ElMessageBox.prompt('请输入新的会话名称', '重命名会话', {
-    inputValue: defaultValue,
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    inputPattern: /^.{1,50}$/,
-    inputErrorMessage: '会话名称长度需在 1 到 50 个字符之间',
-  }).then(({ value }) => value).catch(() => null)
+function openRenameDialog(session: any) {
+  renamingSession.value = session
+  renameSessionTitle.value = session?.sessionTitle || '新对话'
+  renameDialogOpen.value = true
+}
+
+async function confirmRenameDialog() {
+  const title = renameSessionTitle.value.trim()
+  if (!title || title.length > 50) {
+    MessagePlugin.warning('会话名称长度需在 1 到 50 个字符之间')
+    return
+  }
+  const session = renamingSession.value
+  if (!session?.sessionId) return
+  await updateQaSession({ sessionId: session.sessionId, sessionTitle: title })
+  renameDialogOpen.value = false
+  MessagePlugin.success('重命名成功')
+  await loadSessions()
+  if (session.sessionId === activeSessionId.value) {
+    const current = sessions.value.find((item) => item.sessionId === session.sessionId)
+    if (current) await openSession(current)
+  }
+}
+
+function closeRenameDialog() {
+  renameDialogOpen.value = false
+}
+
+function confirmWithTDesign(body: string, header = '提示') {
+  return new Promise<boolean>((resolve) => {
+    let settled = false
+    const done = (value: boolean) => {
+      if (settled) return
+      settled = true
+      resolve(value)
+    }
+    let instance: any
+    instance = DialogPlugin.confirm({
+      header,
+      body,
+      confirmBtn: '确定',
+      cancelBtn: '取消',
+      onConfirm: () => {
+        done(true)
+        instance?.hide?.()
+      },
+      onCancel: () => done(false),
+      onClose: () => done(false),
+    })
+  })
 }
 
 function syncModelCapabilities() {
   const current = selectedModel.value
   if (!current) return
-  if (current.supportStream !== '1') streamEnabled.value = false
   if (current.supportReasoning !== '1') deepThinking.value = false
   if (current.supportVision !== '1' && images.value.length) {
-    ElMessage.warning('当前模型不支持图片理解，建议切换支持视觉的模型')
+    MessagePlugin.warning('当前模型不支持图片理解，建议切换支持视觉的模型')
   }
-}
-
-function handleModelChange() {
-  syncModelCapabilities()
 }
 
 async function handleCourseContextChange() {
@@ -566,15 +463,31 @@ async function handleCourseContextChange() {
   }
 }
 
+async function clearSenderContext() {
+  if (selectedExamRecordId.value) {
+    selectedExamRecordId.value = undefined
+    return
+  }
+  if (externalContextPrompt.value) {
+    externalContextLabel.value = ''
+    externalContextPrompt.value = ''
+    return
+  }
+  if (selectedCourseId.value) {
+    selectedCourseId.value = undefined
+    await handleCourseContextChange()
+  }
+}
+
 async function handleImageChange(file: any) {
   const raw = file?.raw || file
   if (!raw) return
   if (raw.size && raw.size > 5 * 1024 * 1024) {
-    ElMessage.warning('单张图片大小不能超过 5MB')
+    MessagePlugin.warning('单张图片大小不能超过 5MB')
     return
   }
   if (images.value.length >= 4) {
-    ElMessage.warning('最多上传 4 张图片')
+    MessagePlugin.warning('最多上传 4 张图片')
     return
   }
   if (!images.value.some((item) => item.name === raw.name)) {
@@ -609,7 +522,7 @@ async function handleComposerPaste(event: ClipboardEvent) {
   await handleImageChange({
     raw: new File([file], `粘贴图片-${Date.now()}.${(file.type.split('/')[1] || 'png').replace('jpeg', 'jpg')}`, { type: file.type }),
   })
-  ElMessage.success('已上传剪贴板图片')
+  MessagePlugin.success('已上传剪贴板图片')
 }
 
 function courseContextLabel(courseId?: number) {
@@ -641,6 +554,9 @@ function buildContextPrompt() {
   if (selectedExamRecord.value) {
     contexts.push(`考试记录摘要：\n${buildExamRecordContext(selectedExamRecord.value)}`)
   }
+  if (externalContextPrompt.value) {
+    contexts.push(`补充分析上下文：\n${externalContextPrompt.value}`)
+  }
   return contexts.join('\n\n')
 }
 
@@ -651,7 +567,7 @@ function applyCoursePlanPrompt() {
 
 function applyExamAnalysisPrompt() {
   if (!selectedExamRecord.value) {
-    ElMessage.warning('请先选择一条考试记录')
+    MessagePlugin.warning('请先选择一条考试记录')
     return
   }
   inputText.value = '请结合这次考试记录做一次成绩与能力分析，指出优势、薄弱点、可能原因，并给出后续两周的改进建议。'
@@ -659,7 +575,7 @@ function applyExamAnalysisPrompt() {
 
 function applyWrongbookPlanPrompt() {
   if (!selectedCourseId.value) {
-    ElMessage.warning('请先选择课程')
+    MessagePlugin.warning('请先选择课程')
     return
   }
   inputText.value = `请结合当前课程的错题情况，生成一份查漏补缺复习计划，包含优先级、专题安排、每日训练建议和复盘节奏。`
@@ -674,13 +590,11 @@ function applySuggestion(text: string) {
   inputText.value = text
 }
 
-function escapeHtml(unsafe: string) {
-  return unsafe
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;')
+async function handleTdesignFileSelect(context: any) {
+  const files = Array.isArray(context) ? context : []
+  for (const file of files) {
+    await handleImageChange({ raw: file })
+  }
 }
 
 function isImageAttachment(attachment: any) {
@@ -700,33 +614,6 @@ function stopStreaming() {
   inputText.value = '请从刚才中断的位置继续回答。'
 }
 
-function resolveMessageElement(target: Element | ComponentPublicInstance | null) {
-  if (target instanceof HTMLElement) {
-    return target
-  }
-  if (target && '$el' in target && target.$el instanceof HTMLElement) {
-    return target.$el
-  }
-  return null
-}
-
-function setMessageRef(id: string, el: Element | ComponentPublicInstance | null) {
-  messageRefs.value[id] = resolveMessageElement(el)
-}
-
-function getUserQuestionOrder(index: number) {
-  return chatMessages.value.slice(0, index + 1).filter((item) => item.role === 'user').length
-}
-
-function scrollToMessage(messageId: string) {
-  const target = messageRefs.value[messageId]
-  const container = messageContainerRef.value
-  if (!target || !container || !messageScrollbarRef.value) return
-  const top = target.offsetTop - 16
-  messageScrollbarRef.value.setScrollTop(top)
-  activeAnchorId.value = messageId
-}
-
 async function commitSessionTitle() {
   const title = editingSessionTitle.value.trim() || '新对话'
   editingSessionTitle.value = title
@@ -735,6 +622,17 @@ async function commitSessionTitle() {
   if (current?.sessionTitle === title) return
   await updateQaSession({ sessionId: activeSessionId.value, sessionTitle: title })
   await loadSessions()
+}
+
+async function activateTitleInput() {
+  titleInputFocused.value = true
+  await nextTick()
+  titleInputRef.value?.focus?.()
+}
+
+async function handleTitleEnter() {
+  titleInputFocused.value = false
+  await commitSessionTitle()
 }
 
 async function handleTitleBlur() {
@@ -762,15 +660,15 @@ async function ensureSession(question: string) {
 
 async function handleSubmit() {
   if (!inputText.value.trim()) {
-    ElMessage.warning('请输入问题')
+    MessagePlugin.warning('请输入问题')
     return
   }
   if (!userStore.user?.userId) {
-    ElMessage.warning('当前未获取到登录用户')
+    MessagePlugin.warning('当前未获取到登录用户')
     return
   }
   if (images.value.length && selectedModel.value?.supportVision !== '1') {
-    ElMessage.warning('当前模型不支持图片理解，请切换支持视觉的模型')
+    MessagePlugin.warning('当前模型不支持图片理解，请切换支持视觉的模型')
     return
   }
 
@@ -890,28 +788,9 @@ function parseSseBlock(block: string, assistantId: string) {
   if (eventName === 'error') target.content = payload.message || '生成失败'
 }
 
-function isStreamingAssistantMessage(item: { role: string; id: string }) {
-  return item.role === 'assistant' && streaming.value && item.id === currentStreamingAssistantId.value
-}
-
-function getStreamingAssistantPreview(content?: string) {
-  const text = String(content || '')
-  const cursor = '<span class="blinking-cursor">▋</span>'
-  if (!text) {
-    return `正在生成回答...${cursor}`
-  }
-  if (/:::\s*echarts|```(?:json|yaml)|"series"\s*:|"xAxis"\s*:|"yAxis"\s*:/.test(text)) {
-    return `正在整理图表内容...${cursor}`
-  }
-  if (/\|/.test(text) && /(?:---|:\s*-|项目|数值|说明)/.test(text)) {
-    return `正在整理表格内容...${cursor}`
-  }
-  return escapeHtml(text) + cursor
-}
-
 async function copyText(text: string) {
   await navigator.clipboard.writeText(text)
-  ElMessage.success('已复制')
+  MessagePlugin.success('已复制')
 }
 
 function continueFromAnswer(text: string) {
@@ -922,41 +801,44 @@ function reAskMessage(text: string) {
   inputText.value = text
 }
 
-function openFeedbackDialog(item: any, type: 'helpful' | 'unhelpful') {
-  if (!item.messageId) {
-    ElMessage.warning('当前消息还未完成入库，请稍后再反馈')
-    return
-  }
-  feedbackTargetMessageId.value = item.messageId
-  feedbackForm.value = {
-    feedbackType: type,
-    feedbackContent: item.feedbackContent || '',
-  }
-  feedbackDialogOpen.value = true
-}
-
-async function submitQaFeedback() {
-  if (!feedbackTargetMessageId.value) {
-    ElMessage.warning('未找到可反馈的消息')
+async function handlePocFeedback(payload: { item: any; type: 'helpful' | 'unhelpful' }) {
+  const { item, type } = payload || {}
+  if (!item?.messageId) {
+    MessagePlugin.warning('当前消息还未完成入库，请稍后再反馈')
     return
   }
   if (!userStore.user?.userId) {
-    ElMessage.warning('当前未获取到登录用户')
+    MessagePlugin.warning('当前未获取到登录用户')
     return
   }
-  await addQaFeedback({
-    messageId: feedbackTargetMessageId.value,
-    userId: userStore.user.userId,
-    feedbackType: feedbackForm.value.feedbackType,
-    feedbackContent: feedbackForm.value.feedbackContent,
-  })
-  const target = chatMessages.value.find((item) => item.messageId === feedbackTargetMessageId.value)
-  if (target) {
-    target.feedbackType = feedbackForm.value.feedbackType
-    target.feedbackContent = feedbackForm.value.feedbackContent
+  const messageId = Number(item.messageId)
+  if (!messageId) {
+    MessagePlugin.warning('未找到可反馈的消息')
+    return
   }
-  feedbackDialogOpen.value = false
-  ElMessage.success('反馈已提交')
+  if (feedbackSubmittingMessageIds.value.includes(messageId)) {
+    return
+  }
+  if (item.feedbackType === type) {
+    MessagePlugin.success(type === 'helpful' ? '这条回答已点赞' : '这条回答已点踩')
+    return
+  }
+  feedbackSubmittingMessageIds.value = [...feedbackSubmittingMessageIds.value, messageId]
+  try {
+    await addQaFeedback({
+      messageId,
+      feedbackType: type,
+      feedbackContent: '',
+    })
+    const target = chatMessages.value.find((chatItem) => chatItem.messageId === messageId)
+    if (target) {
+      target.feedbackType = type
+      target.feedbackContent = ''
+    }
+    MessagePlugin.success(type === 'helpful' ? '已点赞并反馈到后台' : '已点踩并反馈到后台')
+  } finally {
+    feedbackSubmittingMessageIds.value = feedbackSubmittingMessageIds.value.filter((id) => id !== messageId)
+  }
 }
 
 onMounted(async () => {
@@ -964,8 +846,19 @@ onMounted(async () => {
   loadActiveSessionId()
   await loadModels()
   await loadCourseOptions()
+  const scoreAnalysisPreset = consumeScoreAnalysisQaPreset()
+  if (scoreAnalysisPreset) {
+    await createNewChat()
+    selectedCourseId.value = Number(scoreAnalysisPreset.courseId || 0) || undefined
+    externalContextLabel.value = scoreAnalysisPreset.contextLabel || '成绩分析上下文'
+    externalContextPrompt.value = scoreAnalysisPreset.contextPrompt || ''
+    inputText.value = scoreAnalysisPreset.prompt || inputText.value
+  }
   await loadExamRecordOptions()
   await loadSessions()
+  if (scoreAnalysisPreset) {
+    return
+  }
   if (activeSessionId.value) {
     const current = sessions.value.find((item) => item.sessionId === activeSessionId.value)
     if (current) {
@@ -974,49 +867,7 @@ onMounted(async () => {
     }
     saveActiveSessionId()
   }
-
-  const observer = new ResizeObserver((entries) => {
-    const entry = entries[0]
-    if (!entry) return
-    const { width } = entry.contentRect
-    const totalActions = contextActions.value.length
-    const maxFit = Math.floor(width / 150) // Estimate 150px per chip
-    if (maxFit >= totalActions) {
-      visibleActionCount.value = totalActions
-    }
-    else {
-      // Leave space for the 'More' button
-      visibleActionCount.value = Math.max(0, maxFit > 1 ? maxFit - 1 : 0)
-    }
-  })
-  if (contextActionsRef.value) observer.observe(contextActionsRef.value)
 })
-
-watch(
-  () => messageScrollbarRef.value,
-  async (scrollbar) => {
-    await nextTick()
-    const wrap = scrollbar?.wrapRef
-    if (!wrap) return
-    wrap.addEventListener('scroll', handleScrollSpy, { passive: true })
-  },
-  { flush: 'post' }
-)
-
-function handleScrollSpy() {
-  const container = messageContainerRef.value
-  const wrap = messageScrollbarRef.value?.wrapRef
-  if (!container || !wrap) return
-  const threshold = wrap.scrollTop + 120
-  let currentId = userQuestionAnchors.value[0]?.id || ''
-  for (const anchor of userQuestionAnchors.value) {
-    const el = messageRefs.value[anchor.id]
-    if (el && el.offsetTop <= threshold) {
-      currentId = anchor.id
-    }
-  }
-  activeAnchorId.value = currentId
-}
 </script>
 
 <style scoped>
@@ -1043,68 +894,6 @@ function handleScrollSpy() {
   flex-direction: column
 }
 
-.qa-sidebar__brand {
-  margin-bottom: 12px;
-  padding: 12px;
-  border-radius: 6px;
-  background: var(--portal-card-solid);
-  border: 1px solid var(--portal-border)
-}
-
-.qa-sidebar__brand-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px
-}
-
-.qa-sidebar__brand-text {
-  margin-top: 8px
-}
-
-.qa-sidebar__logo {
-  width: 128px;
-  height: 34px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 10px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 8px 18px rgba(17, 38, 68, 0.08)
-}
-
-.qa-sidebar__logo-image {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain
-}
-
-.qa-sidebar__badge {
-  display: inline-flex;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--portal-brand-light);
-  color: var(--portal-brand);
-  font-size: 11px;
-  font-weight: 700
-}
-
-.qa-sidebar__title {
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--portal-text);
-  line-height: 1.3
-}
-
-.qa-sidebar__subtitle {
-  font-size: 12px;
-  color: var(--portal-text-secondary);
-  margin-top: 4px;
-  line-height: 1.6
-}
-
 .qa-sidebar__new {
   display: flex;
   align-items: center;
@@ -1127,28 +916,24 @@ function handleScrollSpy() {
 }
 
 .qa-sidebar__search {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 34px;
-  padding: 0 10px;
-  border-radius: 4px;
-  background: var(--portal-card-solid);
-  border: 1px solid var(--portal-border);
   margin-bottom: 12px
 }
 
-.qa-sidebar__search i {
-  color: var(--portal-text-secondary)
+.qa-sidebar__search :deep(.t-input__wrap) {
+  border-radius: 10px;
+  background: var(--portal-card-solid);
+  border-color: var(--portal-border);
+  box-shadow: none;
+  min-height: 36px;
 }
 
-.qa-sidebar__search input {
-  border: none;
-  outline: none;
-  background: transparent;
-  flex: 1;
+.qa-sidebar__search :deep(.t-input__inner) {
   font-size: 12px;
-  color: var(--portal-text)
+  color: var(--portal-text);
+}
+
+.qa-sidebar__search :deep(.t-input__prefix) {
+  color: var(--portal-text-secondary);
 }
 
 .qa-sidebar__section {
@@ -1159,7 +944,10 @@ function handleScrollSpy() {
 
 .qa-sidebar__history {
   flex: 1;
-  min-height: 0
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
 }
 
 .qa-sidebar__history-list {
@@ -1223,16 +1011,10 @@ function handleScrollSpy() {
 }
 
 .qa-session__more {
-  width: 24px;
-  height: 24px;
-  border: none;
-  border-radius: 4px;
-  background: var(--portal-surface-bg);
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   color: var(--portal-text-secondary);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center
 }
 
 .qa-main {
@@ -1254,45 +1036,66 @@ function handleScrollSpy() {
   z-index: 5
 }
 
-.qa-main__title-input {
+.qa-main__title-anchor {
   width: min(420px, 42vw);
   pointer-events: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.qa-main__title-input {
+  width: 100%;
   transition: all .2s ease
 }
 
-.qa-main__title-input :deep(.el-input__wrapper) {
-  border-radius: 4px;
+.qa-main__title-input :deep(.t-input__wrap) {
+  border-radius: 999px;
   box-shadow: none;
-  border: 1px solid var(--portal-border);
-  padding: 0 10px;
-  height: 32px;
-  background: var(--portal-card-solid)
+  border-color: var(--portal-border);
+  padding: 0 12px;
+  min-height: 34px;
+  background: var(--portal-card-solid);
 }
 
-.qa-main__title-input :deep(.el-input__inner) {
+.qa-main__title-input :deep(.t-input__inner) {
   text-align: center;
   font-size: 14px;
   font-weight: 700;
   color: var(--portal-text)
 }
 
-.qa-main__title-input :deep(.el-input__inner::placeholder) {
+.qa-main__title-input :deep(.t-input__inner::placeholder) {
   font-weight: 500;
   color: var(--portal-text-secondary)
 }
 
-.qa-main__title-input.is-idle :deep(.el-input__wrapper) {
+.qa-main__title-display {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 999px;
   background: transparent;
-  border-color: transparent
+  color: var(--portal-text);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 34px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis
 }
 
-.qa-main__title-input.is-idle:hover :deep(.el-input__wrapper) {
+.qa-main__title-display:hover {
   background: var(--portal-card-solid);
   border-color: var(--portal-border)
 }
 
-.qa-main__title-input.is-idle :deep(.el-input__inner) {
-  cursor: text
+.qa-main__title-display.is-placeholder {
+  color: var(--portal-text-secondary);
+  font-weight: 500
 }
 
 .qa-main__actions {
@@ -1334,397 +1137,6 @@ function handleScrollSpy() {
   background: linear-gradient(180deg, var(--portal-card-solid) 0%, var(--portal-surface-bg) 100%)
 }
 
-.qa-main__scroll {
-  height: 100%
-}
-
-.qa-main__content {
-  padding: 52px 16px 14px
-}
-
-.qa-main__content.is-empty {
-  min-height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 72px 16px 14px
-}
-
-.qa-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  max-width: 980px
-}
-
-.qa-empty__title {
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--portal-text);
-  text-align: center
-}
-
-.qa-empty__subtitle {
-  margin-top: 10px;
-  max-width: 760px;
-  font-size: 13px;
-  line-height: 1.85;
-  color: var(--portal-text-secondary);
-  text-align: center
-}
-
-.qa-empty__suggestions {
-  margin-top: 16px;
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: center;
-  max-width: 980px
-}
-
-.qa-suggestion {
-  border: 1px solid var(--portal-border);
-  background: var(--portal-card-solid);
-  padding: 8px 12px;
-  border-radius: 999px;
-  color: var(--portal-text);
-  cursor: pointer;
-  transition: .2s
-}
-
-.qa-suggestion:hover {
-  background: var(--portal-brand-light);
-  border-color: var(--portal-border-strong);
-  color: var(--portal-brand)
-}
-
-.qa-message {
-  display: flex;
-  gap: 10px;
-  width: 100%;
-  max-width: 100%;
-  margin: 0 0 14px
-}
-
-.qa-message.assistant {
-  justify-content: flex-start;
-  padding-right: 2%
-}
-
-.qa-message.user {
-  justify-content: flex-start;
-  flex-direction: row-reverse;
-  padding-left: 18%
-}
-
-.qa-message__avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 4px;
-  background: var(--portal-surface-bg);
-  color: var(--portal-brand);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 15px;
-  flex-shrink: 0
-}
-
-.qa-message.user .qa-message__avatar {
-  background: var(--portal-brand-light);
-  color: var(--portal-accent)
-}
-
-.qa-message__bubble {
-  padding: 12px 14px;
-  border-radius: 8px;
-  background: var(--portal-card-solid);
-  border: 1px solid var(--portal-border);
-  box-shadow: none;
-  min-width: 0
-}
-
-.qa-message.assistant .qa-message__bubble {
-  width: min(1120px, calc(100% - 40px))
-}
-
-.qa-message.user .qa-message__bubble {
-  width: auto;
-  max-width: min(520px, calc(100% - 40px));
-  background: var(--portal-brand-light);
-  border-color: var(--portal-border-strong)
-}
-
-.qa-message__meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 8px;
-  color: var(--portal-text-secondary);
-  font-size: 11px
-}
-
-.qa-message__meta strong {
-  color: var(--portal-text);
-  font-size: 12px
-}
-
-.qa-message__index-label {
-  margin-bottom: 8px;
-  color: var(--portal-brand);
-  font-size: 11px;
-  font-weight: 700
-}
-
-.qa-message__attachments {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 10px
-}
-
-.qa-message__attachment {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  max-width: 220px;
-  padding: 6px 8px;
-  border: 1px solid var(--portal-border);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, .72);
-  color: var(--portal-text);
-  cursor: pointer
-}
-
-.qa-message__attachment img {
-  width: 36px;
-  height: 36px;
-  border-radius: 4px;
-  object-fit: cover;
-  display: block;
-  flex-shrink: 0
-}
-
-.qa-message__attachment i {
-  font-size: 18px;
-  color: var(--portal-brand);
-  flex-shrink: 0
-}
-
-.qa-message__attachment span {
-  font-size: 12px;
-  line-height: 1.4;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis
-}
-
-.qa-reasoning {
-  margin: 0 0 10px;
-  border: 1px solid var(--portal-border);
-  border-radius: 4px;
-  background: var(--portal-surface-bg);
-  overflow: hidden
-}
-
-.qa-reasoning__summary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  cursor: pointer;
-  color: var(--portal-brand);
-  font-size: 12px;
-  font-weight: 700;
-  list-style: none
-}
-
-.qa-reasoning__summary::-webkit-details-marker {
-  display: none
-}
-
-.qa-reasoning__content {
-  padding: 0 10px 10px;
-  color: var(--portal-text-secondary)
-}
-
-.qa-message__content {
-  line-height: 1.75;
-  color: var(--portal-text);
-  min-width: 0;
-  overflow: visible
-}
-
-.qa-message__content--plain {
-  white-space: pre-wrap;
-  word-break: break-word
-}
-
-.qa-message__content--streaming {
-  padding: 2px 0;
-  color: var(--portal-text-secondary);
-  display: inline;
-}
-
-.qa-message__content--streaming:deep(span.blinking-cursor) {
-  animation: qa-blink-caret 1s step-end infinite;
-  font-weight: 500;
-  color: var(--portal-brand);
-  margin-left: 2px;
-}
-
-.qa-message__ops {
-  margin-top: 10px;
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap
-}
-
-.qa-message__ops button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--portal-border);
-  border-radius: 999px;
-  background: var(--portal-card-solid);
-  color: var(--portal-text-secondary);
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1;
-  transition: all .2s ease
-}
-
-.qa-message__ops button i {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  line-height: 1;
-  flex-shrink: 0
-}
-
-.qa-message__ops button span {
-  display: inline-flex;
-  align-items: center;
-  line-height: 1
-}
-
-.qa-message__ops button:hover {
-  border-color: var(--portal-border-strong);
-  background: var(--portal-brand-soft);
-  color: var(--portal-brand)
-}
-
-.qa-message__ops button.is-active {
-  border-color: #8cc8a2;
-  background: #e9f7ef;
-  color: #14804a
-}
-
-.qa-message__ops button.is-active.is-danger {
-  border-color: #efb0a6;
-  background: #fff1ee;
-  color: #c2412d
-}
-
-.qa-main__index {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 0;
-  z-index: 6;
-  transition: all .22s ease
-}
-
-.qa-main__index-item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  width: 18px;
-  height: 16px;
-  border: none;
-  background: transparent;
-  color: #a4b1bc;
-  cursor: pointer;
-  transition: all .2s ease
-}
-
-.qa-main__index-number {
-  display: none;
-  position: absolute;
-  right: 18px;
-  font-size: 11px;
-  font-weight: 700;
-  color: inherit;
-  white-space: nowrap
-}
-
-.qa-main__index-preview {
-  display: none;
-  position: absolute;
-  right: 34px;
-  max-width: 140px;
-  padding: 0;
-  font-size: 11px;
-  font-weight: 600;
-  color: inherit;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis
-}
-
-.qa-main__index-line {
-  display: block;
-  width: 12px;
-  height: 2px;
-  border-radius: 999px;
-  background: currentColor;
-  opacity: .85;
-  transition: all .2s ease
-}
-
-.qa-main__index:hover {
-  padding: 10px;
-  border-radius: 4px;
-  background: var(--portal-card-solid);
-  border: 1px solid var(--portal-border);
-  box-shadow: var(--portal-shadow-soft)
-}
-
-.qa-main__index:hover .qa-main__index-item {
-  width: 176px
-}
-
-.qa-main__index:hover .qa-main__index-number,
-.qa-main__index:hover .qa-main__index-preview {
-  display: block
-}
-
-.qa-main__index-item:hover,
-.qa-main__index-item.is-active {
-  color: var(--portal-brand)
-}
-
-.qa-main__index-item.is-active .qa-main__index-number {
-  display: block
-}
-
-.qa-main__index-item.is-active .qa-main__index-line {
-  width: 16px
-}
-
 .qa-composer {
   position: sticky;
   bottom: 0;
@@ -1735,480 +1147,15 @@ function handleScrollSpy() {
   backdrop-filter: blur(8px)
 }
 
-.qa-context-bar {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 10px
-}
-
-.qa-context-bar__left {
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
-  flex-wrap: wrap;
-  min-width: 0;
-  flex: 1
-}
-
-.qa-context-bar__right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap
-}
-
-.qa-context-bar__right :deep(.el-dropdown-menu__item) {
-  gap: 6px;
-}
-
-.qa-context-field {
-  display: grid;
-  gap: 6px;
-  min-width: 0
-}
-
-.qa-context-field--course {
-  width: 240px
-}
-
-.qa-context-field--exam {
-  width: 360px
-}
-
-.qa-context-field__label {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--portal-text-secondary)
-}
-
-.qa-context-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 34px;
-  padding: 0 12px;
-  border: 1px solid var(--portal-border);
-  border-radius: 999px;
-  background: var(--portal-surface-bg);
-  color: var(--portal-text);
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-  transition: all .2s ease
-}
-
-.qa-context-chip:hover {
-  border-color: var(--portal-border-strong);
-  background: var(--portal-brand-soft);
-  color: var(--portal-brand)
-}
-
-.qa-context-chip:disabled {
-  opacity: .45;
-  cursor: not-allowed
-}
-
-.qa-composer__attachments {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 8px
-}
-
-.qa-attachment {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: 4px;
-  background: var(--portal-surface-bg);
-  border: 1px solid var(--portal-border);
-  font-size: 12px;
-  color: var(--portal-text-secondary)
-}
-
-.qa-attachment button {
-  border: none;
-  background: transparent;
-  color: var(--portal-text-secondary);
-  cursor: pointer
-}
-
-.qa-composer :deep(.el-textarea__inner) {
-  border-radius: 4px;
-  min-height: 92px;
-  background: var(--portal-card-solid);
-  color: var(--portal-text);
-  border-color: var(--portal-border);
-  padding: 12px 14px
-}
-
-.qa-composer__toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 10px;
-  flex-wrap: nowrap
-}
-
-.qa-composer__left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: nowrap;
-  min-width: 0;
-  flex: 1
-}
-
-.qa-composer__right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0
-}
-
-.qa-composer__status {
-  font-size: 12px;
-  color: var(--portal-brand);
-  white-space: nowrap
-}
-
-.qa-tool-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 36px;
-  padding: 0 12px;
-  border: 1px solid var(--portal-border);
-  border-radius: 4px;
-  background: var(--portal-card-solid);
-  color: var(--portal-text);
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-  transition: all .2s ease;
-  flex-shrink: 0
-}
-
-.qa-tool-btn i {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  line-height: 1
-}
-
-.qa-tool-btn:hover {
-  border-color: var(--portal-border-strong);
-  background: var(--portal-brand-soft);
-  color: var(--portal-brand)
-}
-
-.qa-tool-select {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 12px;
-  height: 36px;
-  border: 1px solid var(--portal-border);
-  border-radius: 4px;
-  background: var(--portal-card-solid);
-  flex-shrink: 0
-}
-
-.qa-tool-select--model {
-  min-width: 300px
-}
-
-.qa-tool-select__icon {
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
-  background: var(--portal-brand-light);
-  color: var(--portal-brand);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-size: 11px
-}
-
-.qa-tool-select__body {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  flex: 1
-}
-
-.qa-tool-select :deep(.el-select) {
-  width: 100%
-}
-
-.qa-tool-select :deep(.el-select__wrapper) {
-  box-shadow: none;
-  background: transparent;
-  padding: 0;
-  min-height: auto;
-  height: auto
-}
-
-.qa-tool-select :deep(.el-select__placeholder),
-.qa-tool-select :deep(.el-select__selected-item) {
-  font-size: 13px;
-  color: var(--portal-text);
-  font-weight: 700;
-  line-height: 1.2
-}
-
-.qa-tool-select :deep(.el-select__caret) {
-  color: var(--portal-text-secondary)
-}
-
-.qa-tool-switch {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 36px;
-  padding: 0 10px;
-  border: 1px solid var(--portal-border);
-  border-radius: 4px;
-  background: var(--portal-card-solid);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--portal-text);
-  line-height: 1;
-  white-space: nowrap;
-  transition: all .2s ease;
-  flex-shrink: 0
-}
-
-.qa-tool-switch i {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  line-height: 1;
-  flex-shrink: 0
-}
-
-.qa-tool-switch span {
-  display: inline-flex;
-  align-items: center;
-  line-height: 1
-}
-
-.qa-tool-switch:hover {
-  border-color: var(--portal-border-strong);
-  background: var(--portal-brand-soft)
-}
-
-.qa-tool-switch.disabled {
-  opacity: .55
-}
-
-.qa-tool-switch :deep(.el-switch) {
-  margin-left: 2px;
-  --el-switch-height: 18px;
-  --el-switch-width: 32px
-}
-
-.qa-send-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  height: 36px;
-  padding: 0 16px;
-  border: none;
-  border-radius: 4px;
-  background: var(--portal-accent);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 4px 10px rgba(0, 110, 255, .16);
-  flex-shrink: 0
-}
-
-.qa-send-btn i {
-  font-size: 14px
-}
-
-.qa-send-btn:disabled {
-  opacity: .6;
-  cursor: not-allowed
-}
-
-.qa-sidebar__history :deep(.el-scrollbar__wrap),
-.qa-main__scroll :deep(.el-scrollbar__wrap) {
-  scroll-behavior: smooth
-}
-
-.qa-sidebar__history :deep(.el-scrollbar__bar.is-vertical),
-.qa-main__scroll :deep(.el-scrollbar__bar.is-vertical) {
-  right: 2px
-}
-
-.qa-sidebar__history :deep(.el-scrollbar__thumb),
-.qa-main__scroll :deep(.el-scrollbar__thumb) {
-  background: #90a4b4
-}
-
-@keyframes qa-blink-caret {
-  from, to { opacity: 1 }
-  50% { opacity: 0 }
-}
-
-.markdown-body :deep(p) {
-  margin: 0 0 10px
-}
-
-.markdown-body :deep(pre) {
-  padding: 0;
-  border-radius: 4px;
-  overflow: auto
-}
-
-.markdown-body :deep(.hljs) {
-  margin: 10px 0;
-  background: #0f172a;
-  color: #e5e7eb;
-  padding: 12px 14px;
-  border-radius: 4px
-}
-
-.markdown-body :deep(code) {
-  font-family: Consolas, Monaco, 'Courier New', monospace
-}
-
-.markdown-body :deep(:not(pre) > code) {
-  background: var(--portal-brand-light);
-  color: var(--portal-brand);
-  padding: 2px 6px;
-  border-radius: 4px
-}
-
-.markdown-body :deep(ul),
-.markdown-body :deep(ol) {
-  padding-left: 18px;
-  list-style: auto;
-}
-
-.markdown-body :deep(blockquote) {
-  margin: 10px 0;
-  padding: 8px 10px;
-  border-left: 4px solid var(--portal-border-strong);
-  background: var(--portal-surface-bg);
-  color: var(--portal-text-secondary)
-}
-
-.markdown-body :deep(.qa-table-wrap) {
-  width: 100%;
-  overflow-x: auto;
-  margin: 12px 0
-}
-
-.markdown-body :deep(table) {
-  display: table;
-  max-width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  width: 100%;
-  margin: 0;
-  border: 1px solid var(--portal-border);
-  border-radius: 4px;
-  background: var(--portal-card-solid)
-}
-
-.markdown-body :deep(thead tr) {
-  background: var(--portal-surface-bg)
-}
-
-.markdown-body :deep(th),
-.markdown-body :deep(td) {
-  border-right: 1px solid var(--portal-border);
-  border-bottom: 1px solid var(--portal-border);
-  padding: 9px 10px;
-  text-align: left;
-  vertical-align: top;
-  min-width: 90px;
-  line-height: 1.7
-}
-
-.markdown-body :deep(th:last-child),
-.markdown-body :deep(td:last-child) {
-  border-right: none
-}
-
-.markdown-body :deep(tbody tr:last-child td) {
-  border-bottom: none
-}
-
-.markdown-body :deep(tbody tr:nth-child(even)) {
-  background: var(--portal-surface-bg)
-}
-
-.markdown-body :deep(a) {
-  color: var(--portal-accent);
-  text-decoration: none
-}
-
-.qa-feedback-dialog :deep(.el-dialog) {
-  border-radius: 8px;
-  overflow: hidden
-}
-
-.qa-feedback-dialog :deep(.el-dialog__header) {
-  padding: 18px 20px 10px;
-  margin-right: 0
-}
-
-.qa-feedback-dialog :deep(.el-dialog__title) {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--portal-text)
-}
-
-.qa-feedback-dialog :deep(.el-dialog__body) {
-  padding: 4px 20px 8px
-}
-
-.qa-feedback-dialog :deep(.el-dialog__footer) {
-  padding: 10px 20px 18px
-}
-
-.qa-feedback-form :deep(.el-form-item) {
-  align-items: flex-start;
-  margin-bottom: 18px
-}
-
-.qa-feedback-form :deep(.el-form-item__label) {
-  padding-top: 8px;
-  font-size: 13px;
-  color: var(--portal-text)
-}
-
-.qa-feedback-form__type :deep(.el-radio-button__inner) {
-  min-width: 92px;
-  border-radius: 6px;
-  padding: 10px 18px;
-  font-weight: 600;
-  box-shadow: none
-}
-
-.qa-feedback-form :deep(.el-textarea__inner) {
-  min-height: 150px;
-  border-radius: 6px;
-  padding: 12px 14px;
-  font-size: 13px;
-  line-height: 1.7
+:global(.t-image-viewer-preview-image),
+:global(.t-image-viewer__dialog.t-dialog__ctx--fixed),
+:global(.t-image-viewer-preview-image .t-image-viewer__modal-mask),
+:global(.t-image-viewer-preview-image .t-image-viewer__modal-pic),
+:global(.t-image-viewer-preview-image .t-image-viewer__modal-icon.t-image-viewer__modal-close-bt),
+:global(.t-image-viewer-preview-image .t-image-viewer__modal-icon.t-image-viewer__modal-prev-bt),
+:global(.t-image-viewer-preview-image .t-image-viewer__modal-icon.t-image-viewer__modal-next-bt),
+:global(.t-image-viewer__utils) {
+  z-index: 5600 !important;
 }
 
 @media (max-width: 1100px) {
@@ -2239,54 +1186,13 @@ function handleScrollSpy() {
     width: 100%
   }
 
-  .qa-main__title-input :deep(.el-input__inner) {
+  .qa-main__title-input :deep(.t-input__inner) {
     font-size: 14px
   }
 
-  .qa-empty__title {
-    font-size: 22px
-  }
-
-  .qa-context-bar,
-  .qa-composer__toolbar {
-    flex-direction: column;
-    align-items: flex-start
-  }
-
-  .qa-context-bar__left,
-  .qa-context-bar__right,
-  .qa-composer__left,
-  .qa-composer__right {
+  .qa-main__title-anchor {
     width: 100%
   }
 
-  .qa-context-field--course,
-  .qa-context-field--exam,
-  .qa-tool-select {
-    width: 100%
-  }
-
-  .qa-context-field :deep(.el-select),
-  .qa-tool-select :deep(.el-select) {
-    width: 100%
-  }
-
-  .qa-main__content {
-    padding: 50px 12px 12px
-  }
-
-  .qa-message.assistant,
-  .qa-message.user {
-    padding-left: 0;
-    padding-right: 0
-  }
-
-  .qa-message__bubble {
-    max-width: calc(100% - 40px)
-  }
-
-  .qa-main__index {
-    display: none
-  }
 }
 </style>

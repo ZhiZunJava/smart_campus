@@ -494,12 +494,19 @@ function resolveTextValue(value: any) {
   return String(value)
 }
 
+function isVirtualVenueText(value: any) {
+  const text = String(value || '').trim()
+  if (!text) return true
+  return ['空场地', '空教室', '不占用教室', '待定教室', '未安排教室'].some((keyword) => text.includes(keyword))
+}
+
 function resolveScheduleText(row: any) {
   return resolveTextValue(row.scheduleText || row.scheduleVm?.dateTimeText).replace(/;\s*\n/g, '\n').trim() || '待排课'
 }
 
 function resolveScheduleRoom(row: any) {
-  return resolveTextValue(row.classroom || row.scheduleVm?.roomSeatText).replace(/;\s*\n/g, ' / ').trim() || '未安排教室'
+  const text = resolveTextValue(row.classroom || row.scheduleVm?.roomSeatText).replace(/;\s*\n/g, ' / ').trim()
+  return isVirtualVenueText(text) ? '' : text
 }
 
 async function loadTerms() {

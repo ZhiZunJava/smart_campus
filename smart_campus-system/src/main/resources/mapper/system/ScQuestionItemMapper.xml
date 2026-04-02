@@ -34,6 +34,13 @@
     limit 1
   </select>
 
+  <select id="selectLatestScQuestionItemBySourceRefId" resultMap="ScQuestionItemResult">
+    <include refid="selectScQuestionItemVo" />
+    where source_ref_id = #{sourceRefId}
+    order by item_id desc
+    limit 1
+  </select>
+
   <select id="selectScQuestionItemList" parameterType="ScQuestionItem" resultMap="ScQuestionItemResult">
     <include refid="selectScQuestionItemVo" />
     <where>

@@ -51,6 +51,9 @@ public class ScQuestionItemController extends BaseController {
     @GetMapping("/legacy/{questionId}/versions")
     public AjaxResult legacyVersionList(@PathVariable Long questionId) {
         ScQuestionItem item = scQuestionItemService.selectScQuestionItemBySource("LEGACY", questionId);
+        if (item == null) {
+            item = scQuestionItemService.selectLatestScQuestionItemBySourceRefId(questionId);
+        }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("item", item);
         result.put("versions", item == null ? List.of() : scQuestionItemService.selectScQuestionItemVersionByItemId(item.getItemId()));

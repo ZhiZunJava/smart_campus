@@ -139,7 +139,7 @@ public class ScExamManageServiceImpl implements IScExamManageService {
         question.setCreateBy(operator);
         scQuestionBankMapper.insertScQuestionBank(question);
         saveQuestionOptions(question.getQuestionId(), dto.getOptions());
-        syncLegacyQuestionToItem(dto, question.getQuestionId(), operator, false);
+        syncLegacyQuestionToItem(dto, question.getQuestionId(), operator, false, null);
         return 1;
     }
 
@@ -151,16 +151,18 @@ public class ScExamManageServiceImpl implements IScExamManageService {
         }
         normalizeQuestionPayload(dto);
         validateQuestion(dto);
-        if (scQuestionBankMapper.selectScQuestionBankByQuestionId(dto.getQuestionId()) == null) {
+        ScQuestionBank existingQuestion = scQuestionBankMapper.selectScQuestionBankByQuestionId(dto.getQuestionId());
+        if (existingQuestion == null) {
             throw new ServiceException("题目不存在");
         }
+        QuestionUpsertDto originalSnapshot = buildLegacyQuestionSnapshot(existingQuestion);
         ScQuestionBank question = buildQuestionEntity(dto);
         question.setQuestionId(dto.getQuestionId());
         question.setUpdateBy(operator);
         scQuestionBankMapper.updateScQuestionBank(question);
         scQuestionOptionMapper.deleteScQuestionOptionByQuestionId(dto.getQuestionId());
         saveQuestionOptions(dto.getQuestionId(), dto.getOptions());
-        syncLegacyQuestionToItem(dto, dto.getQuestionId(), operator, true);
+        syncLegacyQuestionToItem(dto, dto.getQuestionId(), operator, true, originalSnapshot);
         return 1;
     }
 
@@ -731,18 +733,30 @@ public class ScExamManageServiceImpl implements IScExamManageService {
         return dto;
     }
 
-    private void syncLegacyQuestionToItem(QuestionUpsertDto dto, Long legacyQuestionId, String operator, boolean updating) {
+    private void syncLegacyQuestionToItem(QuestionUpsertDto dto, Long legacyQuestionId, String operator, boolean updating,
+            QuestionUpsertDto originalSnapshot) {
         if (dto == null || legacyQuestionId == null) {
             return;
         }
         QuestionItemUpsertDto itemDto = toQuestionItemUpsertDto(dto, legacyQuestionId);
         ScQuestionItem existing = scQuestionItemService.selectScQuestionItemBySource("LEGACY", legacyQuestionId);
         if (existing == null) {
+            existing = scQuestionItemService.selectLatestScQuestionItemBySourceRefId(legacyQuestionId);
+        }
+        if (existing == null) {
+            if (updating && originalSnapshot != null) {
+                QuestionItemUpsertDto initialItemDto = toQuestionItemUpsertDto(originalSnapshot, legacyQuestionId);
+                initialItemDto.setChangeType("MIGRATE");
+                Long itemId = scQuestionItemService.insertScQuestionItem(initialItemDto, operator);
+                itemDto.setItemId(itemId);
+                scQuestionItemService.updateScQuestionItem(itemDto, operator);
+                return;
+            }
             scQuestionItemService.insertScQuestionItem(itemDto, operator);
             return;
         }
         itemDto.setItemId(existing.getItemId());
-        if (updating || dto.getQuestionId() != null) {
+        if (updating || dto.getQuestionId() != null || itemDto.getItemId() != null) {
             scQuestionItemService.updateScQuestionItem(itemDto, operator);
             return;
         }
@@ -774,11 +788,11 @@ public class ScExamManageServiceImpl implements IScExamManageService {
     }
 
     private String resolveQuestionSourceType(QuestionUpsertDto dto, Long legacyQuestionId) {
-        if (StringUtils.isNotEmpty(dto.getSourceBatchNo()) && dto.getSourceBatchNo().startsWith("AI-")) {
-            return "AI";
-        }
         if (legacyQuestionId != null) {
             return "LEGACY";
+        }
+        if (StringUtils.isNotEmpty(dto.getSourceBatchNo()) && dto.getSourceBatchNo().startsWith("AI-")) {
+            return "AI";
         }
         return "MANUAL";
     }
@@ -788,6 +802,31 @@ public class ScExamManageServiceImpl implements IScExamManageService {
             return "AI";
         }
         return dto.getQuestionId() == null ? "CREATE" : "EDIT";
+    }
+
+    private QuestionUpsertDto buildLegacyQuestionSnapshot(ScQuestionBank question) {
+        if (question == null) {
+            return null;
+        }
+        QuestionUpsertDto snapshot = new QuestionUpsertDto();
+        snapshot.setQuestionId(question.getQuestionId());
+        snapshot.setCatalogId(question.getCatalogId());
+        snapshot.setCourseId(question.getCourseId());
+        snapshot.setChapterId(question.getChapterId());
+        snapshot.setKnowledgePointId(question.getKnowledgePointId());
+        snapshot.setQuestionType(question.getQuestionType());
+        snapshot.setDifficultyLevel(question.getDifficultyLevel());
+        snapshot.setStem(question.getStem());
+        snapshot.setAnswer(question.getAnswer());
+        snapshot.setAnalysis(question.getAnalysis());
+        snapshot.setSource(question.getSource());
+        snapshot.setQuestionTags(question.getQuestionTags());
+        snapshot.setMaterialContent(question.getMaterialContent());
+        snapshot.setSourceBatchNo(question.getSourceBatchNo());
+        snapshot.setQualityScore(question.getQualityScore());
+        snapshot.setStatus(question.getStatus());
+        snapshot.setRemark(question.getRemark());
+        return snapshot;
     }
 
     private List<QuestionOptionEditDto> parseOptionsText(String optionsText) {

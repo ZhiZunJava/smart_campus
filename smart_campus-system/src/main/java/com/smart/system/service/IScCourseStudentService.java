@@ -2,6 +2,7 @@ package com.smart.system.service;
 
 import java.util.List;
 import java.util.Map;
+
 import com.smart.system.domain.ScClassCourse;
 import com.smart.system.domain.ScCourseStudent;
 import com.smart.system.domain.dto.CourseStudentBatchAddDto;
@@ -16,6 +17,8 @@ public interface IScCourseStudentService {
     Map<String, Object> batchAddCourseStudents(CourseStudentBatchAddDto batchDto);
 
     int countActiveByClassCourseId(Long classCourseId);
+
+    Map<Long, Map<String, Object>> getSelectionCountSnapshotMap(Long[] classCourseIds);
 
     ScCourseStudent findActiveSelection(Long studentUserId, Long classCourseId);
 

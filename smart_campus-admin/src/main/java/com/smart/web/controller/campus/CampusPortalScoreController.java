@@ -32,6 +32,14 @@ public class CampusPortalScoreController extends BaseController {
     }
 
     @PreAuthorize("@ss.hasAnyRoles('student,admin')")
+    @GetMapping("/analysis")
+    public AjaxResult analysis(@RequestParam Long userId,
+            @RequestParam(required = false) Long termId,
+            @RequestParam(required = false) Long courseId) {
+        return success(scStudentScoreService.buildPortalScoreAnalytics(userId, termId, courseId));
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('student,admin')")
     @GetMapping("/detail")
     public AjaxResult detail(@RequestParam Long userId, @RequestParam Long classCourseId) {
         return success(scStudentScoreService.buildPortalScoreDetail(userId, classCourseId));

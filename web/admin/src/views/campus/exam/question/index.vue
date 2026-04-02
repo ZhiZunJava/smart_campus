@@ -77,12 +77,14 @@
       </el-table-column>
       <el-table-column label="答案" prop="answer" min-width="180" show-overflow-tooltip />
       <el-table-column label="来源" prop="source" min-width="120" show-overflow-tooltip />
-      <el-table-column label="操作" width="280" fixed="right">
+      <el-table-column label="操作" width="340" fixed="right">
         <template #default="scope">
-          <el-button link type="primary" icon="View" @click="handleView(scope.row)">详情</el-button>
-          <el-button link type="primary" icon="Edit" @click="handleEdit(scope.row)">编辑</el-button>
-          <el-button link type="warning" icon="Clock" @click="handleVersionHistory(scope.row)">版本</el-button>
-          <el-button link type="danger" icon="Delete" @click="handleDelete(scope.row)">删除</el-button>
+          <div class="table-actions">
+            <el-button link type="primary" icon="View" @click="handleView(scope.row)">详情</el-button>
+            <el-button link type="primary" icon="Edit" @click="handleEdit(scope.row)">编辑</el-button>
+            <el-button link type="warning" icon="Clock" @click="handleVersionHistory(scope.row)">版本历史</el-button>
+            <el-button link type="danger" icon="Delete" @click="handleDelete(scope.row)">删除</el-button>
+          </div>
         </template>
       </el-table-column>
     </el-table>
@@ -273,13 +275,20 @@
         v-if="!versionDetail.item"
         type="warning"
         :closable="false"
-        title="当前题目尚未建立版本化映射，可能需要先通过新版录题或编辑后同步。"
+        title="当前题目尚未建立版本主线，旧题目通常会在首次编辑或新版录题后开始沉淀历史版本。"
       />
-      <el-descriptions v-else :column="2" border class="mb16">
-        <el-descriptions-item label="题目主键">{{ versionDetail.item?.itemId }}</el-descriptions-item>
+      <el-alert
+        v-if="versionDetail.item"
+        type="info"
+        :closable="false"
+        class="mb16"
+        title="版本用于追踪题干、答案、解析、标签等关键内容的变更，便于教研回看与质量追溯。"
+      />
+      <el-descriptions v-if="versionDetail.item" :column="2" border class="mb16">
+        <el-descriptions-item label="版本主线ID">{{ versionDetail.item?.itemId }}</el-descriptions-item>
         <el-descriptions-item label="默认题库">{{ versionDetail.item?.defaultCatalogId || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="当前版本">{{ versionDetail.item?.currentVersionNo || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="来源类型">{{ versionDetail.item?.sourceType || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="当前生效版本">V{{ versionDetail.item?.currentVersionNo || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="来源类型">{{ questionSourceTypeLabel(versionDetail.item?.sourceType) }}</el-descriptions-item>
       </el-descriptions>
       <el-timeline>
         <el-timeline-item
@@ -292,12 +301,13 @@
           <div class="version-card">
             <div class="version-card__head">
               <div class="version-card__title">
-                V{{ version.versionNo }} · {{ version.changeType || '-' }}
+                V{{ version.versionNo }} · {{ versionChangeTypeLabel(version.changeType) }}
                 <el-tag v-if="version.isCurrent === '1'" type="success" effect="plain">当前版本</el-tag>
               </div>
               <div class="version-card__meta">
                 <span>知识点 {{ knowledgePointLabel(version.knowledgePointId) }}</span>
                 <span>质量分 {{ version.qualityScore || 0 }}</span>
+                <span>来源 {{ questionSourceTypeLabel(versionDetail.item?.sourceType) }}</span>
               </div>
             </div>
             <div class="version-card__body">
@@ -607,6 +617,23 @@ function stripHtml(value: string) {
 
 function questionTypeLabel(type: string) {
   return questionTypeOptions.value.find((item: any) => item.code === type)?.label || type || '-'
+}
+
+function questionSourceTypeLabel(type?: string) {
+  return ({
+    LEGACY: '旧题同步',
+    MANUAL: '手工录入',
+    AI: 'AI 生成',
+  } as any)[String(type || '').toUpperCase()] || type || '-'
+}
+
+function versionChangeTypeLabel(type?: string) {
+  return ({
+    CREATE: '初始创建',
+    EDIT: '编辑更新',
+    AI: 'AI 生成',
+    MIGRATE: '旧版快照',
+  } as any)[String(type || '').toUpperCase()] || type || '-'
 }
 
 function courseLabel(courseId: number | string | undefined) {
@@ -1244,6 +1271,16 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+.table-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+.table-actions :deep(.el-button + .el-button) {
+  margin-left: 0;
 }
 .step-nav { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
 .step-nav__item { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--el-border-color); background: #fff; border-radius: 6px; padding: 8px 14px; cursor: pointer; transition: all .2s; font-size: 14px; }

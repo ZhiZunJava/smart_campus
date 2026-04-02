@@ -45,6 +45,182 @@ export interface StaticDashboardTaskInput {
 
 export type DashboardDrawerTab = 'todo' | 'message' | 'notice'
 
+export interface ShortcutVisualConfig {
+  icon: string
+  bg: string
+}
+
+const shortcutGradientPool = [
+  'linear-gradient(135deg, #5aa9ff, #2f6ee5)',
+  'linear-gradient(135deg, #70dbc9, #2fae95)',
+  'linear-gradient(135deg, #9ea2ff, #7168f1)',
+  'linear-gradient(135deg, #ffb86a, #ff8f3c)',
+  'linear-gradient(135deg, #f7a9c4, #ef668f)',
+  'linear-gradient(135deg, #77d3ef, #2f8de4)',
+  'linear-gradient(135deg, #8bd8af, #2ca675)',
+  'linear-gradient(135deg, #ffc46a, #ee8b1f)',
+  'linear-gradient(135deg, #7aa5ff, #4b68f3)',
+  'linear-gradient(135deg, #8f9fb8, #5e718d)',
+  'linear-gradient(135deg, #9dd6ff, #4f9aff)',
+  'linear-gradient(135deg, #85e0d1, #3db39a)',
+  'linear-gradient(135deg, #ffb0a8, #f06c5f)',
+  'linear-gradient(135deg, #c7a7ff, #8a68f1)',
+  'linear-gradient(135deg, #ffd36e, #f1a702)',
+  'linear-gradient(135deg, #92d0ff, #3f86d9)',
+] as const
+
+const shortcutIconPool = [
+  'ri-compass-3-line',
+  'ri-dashboard-line',
+  'ri-apps-2-line',
+  'ri-book-open-line',
+  'ri-calendar-check-line',
+  'ri-file-list-3-line',
+  'ri-chat-quote-line',
+  'ri-search-eye-line',
+  'ri-medal-line',
+  'ri-book-2-line',
+  'ri-team-line',
+  'ri-graduation-cap-line',
+  'ri-archive-drawer-line',
+  'ri-article-line',
+  'ri-slideshow-3-line',
+  'ri-briefcase-4-line',
+] as const
+
+const shortcutVisualByPath: Record<string, ShortcutVisualConfig> = {
+  '/student/dashboard': { icon: 'ri-home-5-line', bg: 'linear-gradient(135deg, #5aa9ff, #2f6ee5)' },
+  '/student/selection': { icon: 'ri-list-check-3', bg: 'linear-gradient(135deg, #6aa8ff, #326cf3)' },
+  '/student/personalized-selection': { icon: 'ri-git-branch-line', bg: 'linear-gradient(135deg, #ffb680, #eb7e45)' },
+  '/student/schedule': { icon: 'ri-calendar-schedule-line', bg: 'linear-gradient(135deg, #70dbc9, #2fae95)' },
+  '/student/class-schedule': { icon: 'ri-calendar-2-line', bg: 'linear-gradient(135deg, #79e0d4, #36b39f)' },
+  '/student/scores': { icon: 'ri-bar-chart-box-line', bg: 'linear-gradient(135deg, #8dc8ff, #468ce8)' },
+  '/student/academic-profile': { icon: 'ri-id-card-line', bg: 'linear-gradient(135deg, #8fa7ff, #5c71ef)' },
+  '/student/qa': { icon: 'ri-chat-quote-line', bg: 'linear-gradient(135deg, #79d8f3, #2f8de4)' },
+  '/student/plaza': { icon: 'ri-task-line', bg: 'linear-gradient(135deg, #ff9898, #f15f5f)' },
+  '/student/course-offerings': { icon: 'ri-search-eye-line', bg: 'linear-gradient(135deg, #ffbf75, #f08c33)' },
+  '/student/exams': { icon: 'ri-file-paper-2-line', bg: 'linear-gradient(135deg, #9ea2ff, #7168f1)' },
+  '/student/courses': { icon: 'ri-book-open-line', bg: 'linear-gradient(135deg, #edb580, #c97b4e)' },
+  '/student/class-courses': { icon: 'ri-book-2-line', bg: 'linear-gradient(135deg, #eab37a, #c97d46)' },
+  '/student/resources': { icon: 'ri-folder-chart-line', bg: 'linear-gradient(135deg, #ffb86a, #ff8f3c)' },
+  '/student/favorites': { icon: 'ri-bookmark-3-line', bg: 'linear-gradient(135deg, #f7a9c4, #ef668f)' },
+  '/student/wrongbook': { icon: 'ri-book-marked-line', bg: 'linear-gradient(135deg, #ffb0cf, #ef6d98)' },
+  '/student/verification': { icon: 'ri-shield-check-line', bg: 'linear-gradient(135deg, #7fd4bf, #2da987)' },
+  '/teacher/dashboard': { icon: 'ri-home-5-line', bg: 'linear-gradient(135deg, #5aa9ff, #2f6ee5)' },
+  '/teacher/courses': { icon: 'ri-book-open-line', bg: 'linear-gradient(135deg, #edb580, #c97b4e)' },
+  '/teacher/schedule': { icon: 'ri-calendar-schedule-line', bg: 'linear-gradient(135deg, #70dbc9, #2fae95)' },
+  '/teacher/resources': { icon: 'ri-folder-chart-line', bg: 'linear-gradient(135deg, #ffb86a, #ff8f3c)' },
+  '/teacher/course-offerings': { icon: 'ri-search-eye-line', bg: 'linear-gradient(135deg, #ffbf75, #f08c33)' },
+  '/advisor/dashboard': { icon: 'ri-home-5-line', bg: 'linear-gradient(135deg, #5aa9ff, #2f6ee5)' },
+  '/advisor/students': { icon: 'ri-team-line', bg: 'linear-gradient(135deg, #7aa5ff, #4b68f3)' },
+  '/advisor/scores': { icon: 'ri-bar-chart-box-line', bg: 'linear-gradient(135deg, #8dc8ff, #468ce8)' },
+  '/advisor/affairs': { icon: 'ri-briefcase-4-line', bg: 'linear-gradient(135deg, #8f9fb8, #5e718d)' },
+  '/parent/dashboard': { icon: 'ri-home-5-line', bg: 'linear-gradient(135deg, #5aa9ff, #2f6ee5)' },
+  '/parent/courses': { icon: 'ri-book-open-line', bg: 'linear-gradient(135deg, #edb580, #c97b4e)' },
+  '/parent/schedule': { icon: 'ri-calendar-schedule-line', bg: 'linear-gradient(135deg, #70dbc9, #2fae95)' },
+}
+
+const studentDefaultShortcutPaths = [
+  '/student/selection',
+  '/student/schedule',
+  '/student/scores',
+  '/student/academic-profile',
+  '/student/qa',
+  '/student/plaza',
+  '/student/class-schedule',
+  '/student/course-offerings',
+  '/student/exams',
+] as const
+
+function shortcutHash(input: string) {
+  let hash = 0
+  for (let index = 0; index < input.length; index += 1) {
+    hash = (hash * 31 + input.charCodeAt(index)) >>> 0
+  }
+  return hash
+}
+
+export function resolveShortcutVisual(path: string, title: string): ShortcutVisualConfig {
+  const directMatch = shortcutVisualByPath[path]
+  if (directMatch) {
+    return directMatch
+  }
+
+  const text = `${path} ${title}`.toLowerCase()
+  if (text.includes('dashboard') || text.includes('概览') || text.includes('首页')) {
+    return { icon: 'ri-home-5-line', bg: 'linear-gradient(135deg, #5aa9ff, #2f6ee5)' }
+  }
+  if (text.includes('selection') || text.includes('选课')) {
+    return { icon: 'ri-list-check-3', bg: 'linear-gradient(135deg, #6aa8ff, #326cf3)' }
+  }
+  if (text.includes('schedule') || text.includes('课表')) {
+    return { icon: 'ri-calendar-schedule-line', bg: 'linear-gradient(135deg, #70dbc9, #2fae95)' }
+  }
+  if (text.includes('score') || text.includes('成绩')) {
+    return { icon: 'ri-bar-chart-box-line', bg: 'linear-gradient(135deg, #8dc8ff, #468ce8)' }
+  }
+  if (text.includes('exam') || text.includes('考试')) {
+    return { icon: 'ri-file-paper-2-line', bg: 'linear-gradient(135deg, #9ea2ff, #7168f1)' }
+  }
+  if (text.includes('qa') || text.includes('问答')) {
+    return { icon: 'ri-chat-quote-line', bg: 'linear-gradient(135deg, #79d8f3, #2f8de4)' }
+  }
+  if (text.includes('resource') || text.includes('资源')) {
+    return { icon: 'ri-folder-chart-line', bg: 'linear-gradient(135deg, #ffb86a, #ff8f3c)' }
+  }
+  if (text.includes('task') || text.includes('plaza') || text.includes('任务')) {
+    return { icon: 'ri-task-line', bg: 'linear-gradient(135deg, #ff9898, #f15f5f)' }
+  }
+  if (text.includes('profile') || text.includes('verification') || text.includes('学籍')) {
+    return { icon: 'ri-id-card-line', bg: 'linear-gradient(135deg, #8fa7ff, #5c71ef)' }
+  }
+  if (text.includes('favorite') || text.includes('收藏')) {
+    return { icon: 'ri-bookmark-3-line', bg: 'linear-gradient(135deg, #f7a9c4, #ef668f)' }
+  }
+  if (text.includes('message') || text.includes('消息') || text.includes('notice') || text.includes('通知')) {
+    return { icon: 'ri-message-3-line', bg: 'linear-gradient(135deg, #ffbf75, #f08c33)' }
+  }
+  if (text.includes('student') || text.includes('班级')) {
+    return { icon: 'ri-team-line', bg: 'linear-gradient(135deg, #7aa5ff, #4b68f3)' }
+  }
+  if (text.includes('course') || text.includes('课程')) {
+    return { icon: 'ri-book-open-line', bg: 'linear-gradient(135deg, #edb580, #c97b4e)' }
+  }
+
+  const hash = shortcutHash(`${path}::${title}`)
+  return {
+    icon: shortcutIconPool[hash % shortcutIconPool.length],
+    bg: shortcutGradientPool[hash % shortcutGradientPool.length],
+  }
+}
+
+export function resolveDefaultShortcutPaths(
+  role: string,
+  items: Array<{ path: string }>,
+  limit = 9,
+) {
+  const availablePaths = items.map((item) => item.path)
+  const preferredPaths = role === 'student' ? Array.from(studentDefaultShortcutPaths) : []
+  const result: string[] = []
+  const seen = new Set<string>()
+
+  preferredPaths.forEach((path) => {
+    if (availablePaths.includes(path) && !seen.has(path)) {
+      seen.add(path)
+      result.push(path)
+    }
+  })
+
+  availablePaths.forEach((path) => {
+    if (!seen.has(path)) {
+      seen.add(path)
+      result.push(path)
+    }
+  })
+
+  return result.slice(0, limit)
+}
+
 export function formatDateTime(value?: string | number | Date | null) {
   if (!value) return ''
   const date = value instanceof Date ? value : new Date(value)

@@ -410,6 +410,7 @@ import { ElMessage } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import { useTabsStore } from '@/store/tabs'
+import { resolveDefaultShortcutPaths, resolveShortcutVisual } from '@/utils/portalDashboard'
 import type { DashboardDrawerTab, DashboardPreviewCard, DashboardTaskCard } from '@/utils/portalDashboard'
 
 interface ScheduleModeItem {
@@ -566,10 +567,12 @@ const availableShortcutItems = computed(() => {
     }))
 })
 
+const defaultShortcutPaths = computed(() => resolveDefaultShortcutPaths(props.role, availableShortcutItems.value))
+
 const displayShortcutItems = computed(() => {
   const selected = storedShortcutPaths.value.length
     ? storedShortcutPaths.value
-    : availableShortcutItems.value.slice(0, 9).map((item) => item.path)
+    : defaultShortcutPaths.value
   const itemMap = new Map(availableShortcutItems.value.map((item) => [item.path, item]))
   return selected
     .map((path) => itemMap.get(path))
@@ -622,32 +625,6 @@ function openQuickDrawer(tab: DashboardDrawerTab) {
   emit('open-drawer', tab)
 }
 
-function resolveShortcutVisual(path: string, title: string) {
-  const text = `${path} ${title}`
-  if (text.includes('dashboard') || text.includes('概览') || text.includes('首页')) {
-    return { icon: 'ri-home-5-line', bg: 'linear-gradient(135deg, #5aa9ff, #2f6ee5)' }
-  }
-  if (text.includes('course') || title.includes('课程')) {
-    return { icon: 'ri-book-open-line', bg: 'linear-gradient(135deg, #edb580, #c97b4e)' }
-  }
-  if (text.includes('schedule') || title.includes('课表')) {
-    return { icon: 'ri-calendar-schedule-line', bg: 'linear-gradient(135deg, #70dbc9, #2fae95)' }
-  }
-  if (text.includes('resource') || title.includes('资源')) {
-    return { icon: 'ri-folder-chart-line', bg: 'linear-gradient(135deg, #ffb86a, #ff8f3c)' }
-  }
-  if (text.includes('student') || title.includes('学生')) {
-    return { icon: 'ri-team-line', bg: 'linear-gradient(135deg, #7aa5ff, #4b68f3)' }
-  }
-  if (text.includes('score') || title.includes('成绩')) {
-    return { icon: 'ri-bar-chart-box-line', bg: 'linear-gradient(135deg, #89d5ff, #3c9fec)' }
-  }
-  if (text.includes('message') || title.includes('消息')) {
-    return { icon: 'ri-message-3-line', bg: 'linear-gradient(135deg, #ffc98d, #f59e0b)' }
-  }
-  return { icon: 'ri-grid-line', bg: 'linear-gradient(135deg, #a6b4c8, #6f8097)' }
-}
-
 function shortcutStorageKey() {
   return `portal-shortcuts:${props.role}${props.shortcutItemsOverride.length ? ':custom' : ''}`
 }
@@ -656,7 +633,7 @@ function restoreShortcutSelection() {
   const availablePaths = new Set(availableShortcutItems.value.map((item) => item.path))
   const raw = localStorage.getItem(shortcutStorageKey())
   if (!raw) {
-    storedShortcutPaths.value = availableShortcutItems.value.slice(0, 9).map((item) => item.path)
+    storedShortcutPaths.value = [...defaultShortcutPaths.value]
     return
   }
   try {
@@ -664,9 +641,10 @@ function restoreShortcutSelection() {
     if (!Array.isArray(parsed)) {
       throw new Error('invalid shortcuts')
     }
-    storedShortcutPaths.value = parsed.filter((path) => availablePaths.has(path)).slice(0, 9)
+    const safePaths = parsed.filter((path) => availablePaths.has(path)).slice(0, 9)
+    storedShortcutPaths.value = safePaths.length ? safePaths : [...defaultShortcutPaths.value]
   } catch {
-    storedShortcutPaths.value = availableShortcutItems.value.slice(0, 9).map((item) => item.path)
+    storedShortcutPaths.value = [...defaultShortcutPaths.value]
   }
 }
 
@@ -696,7 +674,7 @@ function removeShortcutSelection(path: string) {
 }
 
 function restoreDefaultShortcuts() {
-  editingShortcutPaths.value = availableShortcutItems.value.slice(0, 9).map((item) => item.path)
+  editingShortcutPaths.value = [...defaultShortcutPaths.value]
 }
 
 function saveShortcutSettings() {

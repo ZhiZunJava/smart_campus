@@ -1,5 +1,6 @@
 import { listUser } from '@/api/system/user'
 import { getUser } from '@/api/system/user'
+import { listRole } from '@/api/system/role'
 import { listAiModel } from '@/api/campus/ai'
 import { listCourse, listGrade, listClass, listSchoolTerm, listClassroom } from '@/api/campus/teaching'
 
@@ -97,6 +98,17 @@ export async function fetchTeachingUserOptions(identity?: 'course_teacher' | 'he
     postCodes: item.postCodes,
     roleLabels: item.roleLabels,
     postLabels: item.postLabels,
+  }))
+}
+
+export async function fetchRoleOptions(keyword?: string) {
+  const res = await listRole({ pageNum: 1, pageSize: 200, roleName: keyword || undefined } as any)
+  return (res.rows || []).map((item: any) => ({
+    label: `${item.roleName}（${item.roleId}）`,
+    shortLabel: item.roleName,
+    value: item.roleId,
+    roleKey: item.roleKey,
+    status: item.status,
   }))
 }
 

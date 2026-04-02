@@ -37,5 +37,7 @@ public interface IScStudentScoreService {
 
     Map<String, Object> buildPortalScoreOverview(Long userId, Long termId);
 
+    Map<String, Object> buildPortalScoreAnalytics(Long userId, Long termId, Long courseId);
+
     Map<String, Object> buildPortalScoreDetail(Long userId, Long classCourseId);
 }

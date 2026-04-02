@@ -1,6 +1,6 @@
 <template>
   <div class="exam-session-page" :class="{ 'is-result-mode': mode === 'result' }" v-loading="loading">
-    <template v-if="mode === 'exam' && questionList.length">
+    <template v-if="mode === 'exam' && allQuestionEntries.length">
       <!-- Top Header -->
       <header class="exam-header">
         <div class="exam-header-left">
@@ -10,6 +10,8 @@
             <el-tag effect="plain" type="info" size="small">{{ courseLabel(paper.courseId) }}</el-tag>
             <span class="meta-item">总分 {{ paper.totalScore || 0 }}</span>
             <span class="meta-item" v-if="activeSessionPaper">当前阶段: {{ paperStatusLabel(activeSessionPaper.paperStatus) }}</span>
+            <span class="meta-item" v-if="runtimeTimeSummary.startTime">开始于 {{ formatDateTime(runtimeTimeSummary.startTime) }}</span>
+            <span class="meta-item" v-if="runtimeElapsedText !== '-'">已作答 {{ runtimeElapsedText }}</span>
           </div>
         </div>
         
@@ -218,6 +220,8 @@
           <h1 class="exam-title">{{ resultPaper.paperName || '考试结果' }}</h1>
           <div class="exam-meta">
             <span class="meta-item">{{ canViewScoreSummary ? '本次考试已提交，你可以查看总成绩与作答结果。' : '本次考试已提交，当前试卷暂未开放总成绩查看。' }}</span>
+            <span class="meta-item" v-if="resultTimeSummary.submitTime">交卷于 {{ formatDateTime(resultTimeSummary.submitTime) }}</span>
+            <span class="meta-item" v-if="resultElapsedText !== '-'">总用时 {{ resultElapsedText }}</span>
           </div>
         </div>
         <div class="exam-header-right">
@@ -309,6 +313,37 @@
             </div>
           </div>
 
+          <div v-if="canViewScoreSummary" class="sidebar-card mt-4">
+            <div class="sidebar-title">时间与成长</div>
+            <div class="result-meta-grid">
+              <div class="result-meta-item">
+                <span>开始时间</span>
+                <strong>{{ formatDateTime(resultTimeSummary.startTime) }}</strong>
+              </div>
+              <div class="result-meta-item">
+                <span>交卷时间</span>
+                <strong>{{ formatDateTime(resultTimeSummary.submitTime) }}</strong>
+              </div>
+              <div class="result-meta-item">
+                <span>交卷用时</span>
+                <strong>{{ resultElapsedText }}</strong>
+              </div>
+              <div class="result-meta-item">
+                <span>成长积分</span>
+                <strong>+{{ resultGrowthPoints }}</strong>
+              </div>
+            </div>
+            <div v-if="resultGrowthRewards.length" class="result-growth-rewards">
+              <div v-for="item in resultGrowthRewards" :key="`${item.bizType}-${item.createTime || item.bizId}`" class="result-growth-reward">
+                <div class="result-growth-reward__main">
+                  <strong>{{ rewardTypeLabel(item.bizType) }}</strong>
+                  <span>{{ item.remark || rewardTypeLabel(item.bizType) }}</span>
+                </div>
+                <div class="result-growth-reward__point">+{{ item.changePoints || 0 }}</div>
+              </div>
+            </div>
+          </div>
+
           <div v-if="canViewScoreSummary && resultTypePerformance.length" class="sidebar-card mt-4">
             <div class="sidebar-title">题型表现</div>
             <div class="subpaper-list">
@@ -392,6 +427,21 @@ const recordId = computed(() => Number(route.params.recordId || 0))
 const paperId = computed(() => Number(route.query.paperId || 0))
 const durationMinutes = computed(() => Number(paper.value.durationMinutes || 0))
 const questionList = computed(() => paper.value.questions || [])
+const allQuestionEntries = computed(() => {
+  const seen = new Set<string>()
+  const result: any[] = []
+  const walk = (node: any) => {
+    ;(node?.questions || []).forEach((item: any) => {
+      const key = String(item?.questionId || '')
+      if (!key || seen.has(key)) return
+      seen.add(key)
+      result.push(item)
+    })
+    ;(node?.subPapers || []).forEach((item: any) => walk(item))
+  }
+  walk(paper.value)
+  return result
+})
 const questionCount = computed(() => currentSessionPaperQuestions.value.length)
 const answeredCount = computed(() => currentSessionPaperQuestions.value.filter((item: any) => item.answered).length)
 const unansweredCount = computed(() => Math.max(0, questionCount.value - answeredCount.value))
@@ -449,6 +499,14 @@ const paperNameMap = computed(() => {
   walk(paper.value)
   return map
 })
+const runtimeTimeSummary = computed(() => runtimeData.value.timeSummary || {})
+const resultTimeSummary = computed(() => resultRecord.value.timeSummary || {})
+const runtimeElapsedText = computed(() => formatElapsedSeconds(runtimeTimeSummary.value.elapsedSeconds))
+const resultElapsedText = computed(() => formatElapsedSeconds(resultTimeSummary.value.elapsedSeconds))
+const resultGrowthRewards = computed(() => resultRecord.value.growthRewards || [])
+const resultGrowthPoints = computed(() =>
+  Number(resultRecord.value.growthPoints || resultGrowthRewards.value.reduce((total: number, item: any) => total + Number(item.changePoints || 0), 0)),
+)
 const filteredResultAnswers = computed(() => resultRecord.value.answers || [])
 const resultQuestionCount = computed(() => filteredResultAnswers.value.length)
 const resultCorrectCount = computed(() => filteredResultAnswers.value.filter((item: any) => item.isCorrect === '1').length)
@@ -535,6 +593,35 @@ function formatDuration(totalSeconds: number) {
   const minutes = Math.floor((safe % 3600) / 60)
   const seconds = safe % 60
   return [hours, minutes, seconds].map((item) => String(item).padStart(2, '0')).join(':')
+}
+
+function formatElapsedSeconds(totalSeconds: any) {
+  const safe = Math.max(0, Number(totalSeconds || 0))
+  if (!safe) return '-'
+  const hours = Math.floor(safe / 3600)
+  const minutes = Math.floor((safe % 3600) / 60)
+  if (hours > 0) return `${hours}小时${minutes}分钟`
+  return `${Math.max(1, minutes)} 分钟`
+}
+
+function formatDateTime(value?: string | number | Date | null) {
+  if (!value) return '-'
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
+  return date.toLocaleString()
+}
+
+function rewardTypeLabel(value?: string) {
+  const map: Record<string, string> = {
+    EXAM_SUBMIT: '完成交卷',
+    EXAM_PASS: '通过考试',
+    EXAM_EXCELLENT: '高分表现',
+    EXAM_PERFECT: '满分答卷',
+    EXAM_DISCIPLINE: '规范作答',
+    EXAM_EFFICIENT: '高效完成',
+    EXAM_PROGRESS: '进步跃迁',
+  }
+  return map[String(value || '').toUpperCase()] || value || '成长奖励'
 }
 
 function isAnswered(item: any) {
@@ -813,7 +900,7 @@ async function submitCurrentExam(silent = false) {
   submitting.value = true
   submitted.value = true
   stopTimer()
-  const answersPayload = questionList.value.map((item: any) => ({
+  const answersPayload = allQuestionEntries.value.map((item: any) => ({
     questionId: item.questionId,
     userAnswer: item.question?.questionType === 'multiple'
       ? (multiAnswerMap.value[item.questionId] || []).join(',')
@@ -1120,6 +1207,75 @@ onBeforeRouteLeave(async () => {
   padding: 10px 24px;
   font-size: 14px;
   border-radius: 8px;
+}
+
+.result-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.result-meta-item {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.result-meta-item span {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.result-meta-item strong {
+  font-size: 14px;
+  color: #0f172a;
+  line-height: 1.5;
+}
+
+.result-growth-rewards {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.result-growth-reward {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+
+.result-growth-reward__main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.result-growth-reward__main strong {
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.result-growth-reward__main span {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.result-growth-reward__point {
+  color: #2563eb;
+  font-size: 18px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 /* Main Layout */
@@ -1837,6 +1993,9 @@ onBeforeRouteLeave(async () => {
   }
   .header-actions {
     margin-top: 12px;
+  }
+  .result-meta-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

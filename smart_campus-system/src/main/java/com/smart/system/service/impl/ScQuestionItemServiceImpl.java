@@ -38,6 +38,11 @@ public class ScQuestionItemServiceImpl implements IScQuestionItemService {
     }
 
     @Override
+    public ScQuestionItem selectLatestScQuestionItemBySourceRefId(Long sourceRefId) {
+        return scQuestionItemMapper.selectLatestScQuestionItemBySourceRefId(sourceRefId);
+    }
+
+    @Override
     public List<ScQuestionItem> selectScQuestionItemList(ScQuestionItem scQuestionItem) {
         return scQuestionItemMapper.selectScQuestionItemList(scQuestionItem);
     }

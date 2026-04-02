@@ -9,10 +9,14 @@
     <result property="bizId" column="biz_id" />
     <result property="changePoints" column="change_points" />
     <result property="balanceAfter" column="balance_after" />
+    <result property="createBy" column="create_by" />
+    <result property="createTime" column="create_time" />
+    <result property="remark" column="remark" />
   </resultMap>
 
   <select id="selectScUserPointLedgerList" parameterType="ScUserPointLedger" resultMap="ScUserPointLedgerResult">
-    select ledger_id, user_id, change_type, biz_type, biz_id, change_points, balance_after
+    select ledger_id, user_id, change_type, biz_type, biz_id, change_points, balance_after,
+           create_by, create_time, remark
     from sc_user_point_ledger
     <where>
       <if test="userId != null">and user_id = #{userId}</if>
@@ -28,4 +32,3 @@
     values(#{userId}, #{changeType}, #{bizType}, #{bizId}, #{changePoints}, #{balanceAfter}, #{createBy}, sysdate(), #{remark})
   </insert>
 </mapper>
-

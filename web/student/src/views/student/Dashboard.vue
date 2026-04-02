@@ -426,6 +426,7 @@ import {
 } from '@/api/portal'
 import usePortalUserStore from '@/store/user'
 import { useTabsStore } from '@/store/tabs'
+import { resolveDefaultShortcutPaths, resolveShortcutVisual } from '@/utils/portalDashboard'
 import { recordTaskFeedback, sortTasksWithFeedback, syncTaskFeedback } from '@/utils/taskFeedback'
 
 const router = useRouter()
@@ -712,10 +713,12 @@ const availableShortcutItems = computed(() => {
     }))
 })
 
+const defaultShortcutPaths = computed(() => resolveDefaultShortcutPaths(activeRole.value, availableShortcutItems.value))
+
 const displayShortcutItems = computed(() => {
   const selected = storedShortcutPaths.value.length
     ? storedShortcutPaths.value
-    : availableShortcutItems.value.slice(0, 9).map((item) => item.path)
+    : defaultShortcutPaths.value
   const itemMap = new Map(availableShortcutItems.value.map((item) => [item.path, item]))
   return selected
     .map((path) => itemMap.get(path))
@@ -803,44 +806,6 @@ function formatDateTime(value?: string | number | Date | null) {
   const minute = `${date.getMinutes()}`.padStart(2, '0')
   const second = `${date.getSeconds()}`.padStart(2, '0')
   return `${year}-${month}-${day} ${hour}:${minute}:${second}`
-}
-
-function resolveShortcutVisual(path: string, title: string) {
-  const text = `${path} ${title}`
-  if (text.includes('dashboard') || text.includes('概览') || text.includes('首页')) {
-    return { icon: 'ri-home-5-line', bg: 'linear-gradient(135deg, #5aa9ff, #2f6ee5)' }
-  }
-  if (text.includes('course') || title.includes('课程')) {
-    return { icon: 'ri-book-open-line', bg: 'linear-gradient(135deg, #edb580, #c97b4e)' }
-  }
-  if (text.includes('schedule') || title.includes('课表')) {
-    return { icon: 'ri-calendar-schedule-line', bg: 'linear-gradient(135deg, #70dbc9, #2fae95)' }
-  }
-  if (text.includes('resource') || title.includes('资源')) {
-    return { icon: 'ri-folder-chart-line', bg: 'linear-gradient(135deg, #ffb86a, #ff8f3c)' }
-  }
-  if (text.includes('recommend') || title.includes('推荐')) {
-    return { icon: 'ri-lightbulb-flash-line', bg: 'linear-gradient(135deg, #ffd36e, #f1a702)' }
-  }
-  if (text.includes('qa') || title.includes('问答')) {
-    return { icon: 'ri-chat-3-line', bg: 'linear-gradient(135deg, #77d3ef, #2f8de4)' }
-  }
-  if (text.includes('plaza') || title.includes('任务')) {
-    return { icon: 'ri-task-line', bg: 'linear-gradient(135deg, #ff9595, #f15f5f)' }
-  }
-  if (text.includes('exam') || title.includes('考试')) {
-    return { icon: 'ri-file-paper-2-line', bg: 'linear-gradient(135deg, #9ea2ff, #7168f1)' }
-  }
-  if (text.includes('wrongbook') || title.includes('错题')) {
-    return { icon: 'ri-bookmark-3-line', bg: 'linear-gradient(135deg, #f7a9c4, #ef668f)' }
-  }
-  if (text.includes('warning') || title.includes('预警')) {
-    return { icon: 'ri-alarm-warning-line', bg: 'linear-gradient(135deg, #ffc46a, #ee8b1f)' }
-  }
-  if (text.includes('report') || title.includes('报告')) {
-    return { icon: 'ri-bar-chart-box-line', bg: 'linear-gradient(135deg, #8bd8af, #2ca675)' }
-  }
-  return { icon: 'ri-grid-line', bg: 'linear-gradient(135deg, #a6b4c8, #6f8097)' }
 }
 
 function priorityLabel(value?: string) {
@@ -1117,7 +1082,7 @@ function restoreShortcutSelection() {
   const availablePaths = new Set(availableShortcutItems.value.map((item) => item.path))
   const raw = localStorage.getItem(shortcutStorageKey())
   if (!raw) {
-    storedShortcutPaths.value = availableShortcutItems.value.slice(0, 9).map((item) => item.path)
+    storedShortcutPaths.value = [...defaultShortcutPaths.value]
     return
   }
   try {
@@ -1125,9 +1090,10 @@ function restoreShortcutSelection() {
     if (!Array.isArray(parsed)) {
       throw new Error('invalid shortcuts')
     }
-    storedShortcutPaths.value = parsed.filter((path) => availablePaths.has(path)).slice(0, 9)
+    const safePaths = parsed.filter((path) => availablePaths.has(path)).slice(0, 9)
+    storedShortcutPaths.value = safePaths.length ? safePaths : [...defaultShortcutPaths.value]
   } catch {
-    storedShortcutPaths.value = availableShortcutItems.value.slice(0, 9).map((item) => item.path)
+    storedShortcutPaths.value = [...defaultShortcutPaths.value]
   }
 }
 
@@ -1157,7 +1123,7 @@ function removeShortcutSelection(path: string) {
 }
 
 function restoreDefaultShortcuts() {
-  editingShortcutPaths.value = availableShortcutItems.value.slice(0, 9).map((item) => item.path)
+  editingShortcutPaths.value = [...defaultShortcutPaths.value]
 }
 
 function saveShortcutSettings() {

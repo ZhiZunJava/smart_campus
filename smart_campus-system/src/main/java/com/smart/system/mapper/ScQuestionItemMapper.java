@@ -9,6 +9,8 @@ public interface ScQuestionItemMapper {
 
     ScQuestionItem selectScQuestionItemBySource(@Param("sourceType") String sourceType, @Param("sourceRefId") Long sourceRefId);
 
+    ScQuestionItem selectLatestScQuestionItemBySourceRefId(@Param("sourceRefId") Long sourceRefId);
+
     List<ScQuestionItem> selectScQuestionItemList(ScQuestionItem scQuestionItem);
 
     int insertScQuestionItem(ScQuestionItem scQuestionItem);

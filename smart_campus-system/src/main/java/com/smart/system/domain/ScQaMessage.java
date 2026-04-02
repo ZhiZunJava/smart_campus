@@ -25,6 +25,8 @@ public class ScQaMessage extends BaseEntity {
     private Integer tokenCount;
     private Integer latencyMs;
     private String sensitiveFlag;
+    private String feedbackType;
+    private String feedbackContent;
 
     public Long getMessageId() {
         return messageId;
@@ -130,6 +132,22 @@ public class ScQaMessage extends BaseEntity {
         this.sensitiveFlag = sensitiveFlag;
     }
 
+    public String getFeedbackType() {
+        return feedbackType;
+    }
+
+    public void setFeedbackType(String feedbackType) {
+        this.feedbackType = feedbackType;
+    }
+
+    public String getFeedbackContent() {
+        return feedbackContent;
+    }
+
+    public void setFeedbackContent(String feedbackContent) {
+        this.feedbackContent = feedbackContent;
+    }
+
     @Override
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.MULTI_LINE_STYLE)
@@ -146,6 +164,8 @@ public class ScQaMessage extends BaseEntity {
                 .append("tokenCount", getTokenCount())
                 .append("latencyMs", getLatencyMs())
                 .append("sensitiveFlag", getSensitiveFlag())
+                .append("feedbackType", getFeedbackType())
+                .append("feedbackContent", getFeedbackContent())
                 .append("createTime", getCreateTime())
                 .toString();
     }

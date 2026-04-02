@@ -35,16 +35,16 @@
       </div>
       <div class="exam-kpi-card">
         <div class="kpi-content">
-          <div class="kpi-label">考试记录</div>
-          <div class="kpi-value">{{ records.length }}</div>
-          <div class="kpi-sub">最近考试与练习记录</div>
+          <div class="kpi-label">已完成考试</div>
+          <div class="kpi-value">{{ submittedRecordCount }}</div>
+          <div class="kpi-sub">已成功交卷的考试次数</div>
         </div>
       </div>
       <div class="exam-kpi-card">
         <div class="kpi-content">
-          <div class="kpi-label">平均正确率</div>
-          <div class="kpi-value">{{ recordOverview.avgCorrectRate || 0 }}%</div>
-          <div class="kpi-sub">自动统计历史提交结果</div>
+          <div class="kpi-label">平均交卷用时</div>
+          <div class="kpi-value">{{ formatMinuteMetric(recordOverview.avgElapsedMinutes) }}</div>
+          <div class="kpi-sub">按已提交考试自动统计</div>
         </div>
       </div>
       <div class="exam-kpi-card">
@@ -205,6 +205,15 @@
                 <el-tag :type="scope.row.examStatus === 'SUBMITTED' ? 'success' : 'warning'">{{ examStatusLabel(scope.row.examStatus) }}</el-tag>
               </template>
             </el-table-column>
+            <el-table-column label="开始时间" min-width="170">
+              <template #default="scope">{{ formatDateTime(scope.row.startTime) }}</template>
+            </el-table-column>
+            <el-table-column label="交卷时间" min-width="170">
+              <template #default="scope">{{ formatDateTime(scope.row.submitTime) }}</template>
+            </el-table-column>
+            <el-table-column label="用时" min-width="120">
+              <template #default="scope">{{ formatElapsedTime(scope.row.startTime, scope.row.submitTime) }}</template>
+            </el-table-column>
             <el-table-column label="分层情况" min-width="140" show-overflow-tooltip>
               <template #default="scope">
                 {{ scope.row.subPaperStats?.length ? `子卷 ${scope.row.subPaperStats.length} 个` : '单层试卷' }}
@@ -242,6 +251,7 @@
             <el-table-column prop="skippedCount" label="跳过" min-width="90" />
             <el-table-column prop="avgScore" label="平均得分" min-width="100" />
             <el-table-column prop="avgCorrectRate" label="平均正确率" min-width="110" />
+            <el-table-column prop="avgElapsedMinutes" label="平均用时" min-width="110" />
           </el-table>
         </section>
       </div>
@@ -410,6 +420,39 @@
           <span>子卷数</span>
           <strong>{{ currentRecordDetail.subPaperStats?.length || 0 }}</strong>
         </div>
+        <div class="record-detail-insights__card">
+          <span>开始时间</span>
+          <strong>{{ formatDateTime(recordTimeSummary.startTime) }}</strong>
+        </div>
+        <div class="record-detail-insights__card">
+          <span>交卷时间</span>
+          <strong>{{ formatDateTime(recordTimeSummary.submitTime) }}</strong>
+        </div>
+        <div class="record-detail-insights__card">
+          <span>交卷用时</span>
+          <strong>{{ formatElapsedSeconds(recordTimeSummary.elapsedSeconds) }}</strong>
+        </div>
+        <div class="record-detail-insights__card">
+          <span>成长积分</span>
+          <strong>{{ currentRecordDetail.growthPoints || 0 }}</strong>
+        </div>
+      </section>
+      <section v-if="currentRecordDetail.growthRewards?.length" class="mt20">
+        <el-table :data="currentRecordDetail.growthRewards" border>
+          <el-table-column label="奖励时间" min-width="170">
+            <template #default="scope">{{ formatDateTime(scope.row.createTime) }}</template>
+          </el-table-column>
+          <el-table-column label="奖励类型" min-width="140">
+            <template #default="scope">{{ rewardTypeLabel(scope.row.bizType) }}</template>
+          </el-table-column>
+          <el-table-column label="说明" min-width="240" show-overflow-tooltip>
+            <template #default="scope">{{ scope.row.remark || rewardTypeLabel(scope.row.bizType) }}</template>
+          </el-table-column>
+          <el-table-column label="积分" width="100">
+            <template #default="scope">+{{ scope.row.changePoints || 0 }}</template>
+          </el-table-column>
+          <el-table-column prop="balanceAfter" label="奖励后余额" width="120" />
+        </el-table>
       </section>
       <el-table v-if="currentRecordDetail.allowViewScoreSummary" :data="currentRecordDetail.subPaperStats || []" border class="mt20">
         <el-table-column prop="paperName" label="子试卷" min-width="180" />
@@ -423,6 +466,7 @@
         <el-table-column prop="skippedCount" label="跳过" width="90" />
         <el-table-column prop="avgScore" label="平均得分" width="110" />
         <el-table-column prop="avgCorrectRate" label="平均正确率" width="120" />
+        <el-table-column prop="avgElapsedMinutes" label="平均用时" width="120" />
       </el-table>
       <el-alert v-else type="info" :closable="false" class="mt20" title="当前试卷暂未开放总成绩查看。" />
       <section v-if="currentRecordDetail.allowViewAnswerAnalysis && groupedRecordAnswers.length" class="record-detail-type-summary mt20">
@@ -523,6 +567,9 @@ const unmasteredWrongCount = computed(() =>
   wrongs.value.filter((item: any) => item.masteryStatus !== '1').length,
 )
 const ongoingRecords = computed(() => records.value.filter((item: any) => item.examStatus === 'ONGOING'))
+const submittedRecordCount = computed(() =>
+  Number(recordOverview.value.submittedCount || records.value.filter((item: any) => item.examStatus === 'SUBMITTED').length),
+)
 const latestOngoingRecord = computed(() => ongoingRecords.value[0] || null)
 const ongoingRecordMap = computed(() =>
   ongoingRecords.value.reduce((acc: Record<string, any>, item: any) => {
@@ -530,6 +577,7 @@ const ongoingRecordMap = computed(() =>
     return acc
   }, {}),
 )
+const recordTimeSummary = computed(() => currentRecordDetail.value.timeSummary || {})
 const groupedRecordAnswers = computed(() => {
   const groups = new Map<string, { questionType: string; answers: any[]; correctCount: number }>()
   ;(currentRecordDetail.value.answers || []).forEach((item: any) => {
@@ -633,6 +681,42 @@ function formatDateTime(value: string) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
   return date.toLocaleString()
+}
+
+function formatMinuteMetric(value: any) {
+  const numeric = Number(value || 0)
+  if (!numeric) return '0 分钟'
+  return `${numeric.toFixed(numeric >= 10 ? 0 : 1)} 分钟`
+}
+
+function formatElapsedTime(startTime?: string, submitTime?: string) {
+  if (!startTime || !submitTime) return '-'
+  const start = new Date(startTime).getTime()
+  const end = new Date(submitTime).getTime()
+  if (Number.isNaN(start) || Number.isNaN(end) || end < start) return '-'
+  return formatElapsedSeconds(Math.floor((end - start) / 1000))
+}
+
+function formatElapsedSeconds(totalSeconds: any) {
+  const safeSeconds = Math.max(0, Number(totalSeconds || 0))
+  if (!safeSeconds) return '-'
+  const hours = Math.floor(safeSeconds / 3600)
+  const minutes = Math.floor((safeSeconds % 3600) / 60)
+  if (hours > 0) return `${hours}小时${minutes}分钟`
+  return `${Math.max(1, minutes)} 分钟`
+}
+
+function rewardTypeLabel(value?: string) {
+  const map: Record<string, string> = {
+    EXAM_SUBMIT: '完成交卷',
+    EXAM_PASS: '通过考试',
+    EXAM_EXCELLENT: '高分表现',
+    EXAM_PERFECT: '满分答卷',
+    EXAM_DISCIPLINE: '规范作答',
+    EXAM_EFFICIENT: '高效完成',
+    EXAM_PROGRESS: '进步跃迁',
+  }
+  return map[String(value || '').toUpperCase()] || value || '成长奖励'
 }
 
 function courseLabel(courseId: number | string | undefined) {

@@ -58,6 +58,7 @@ import com.smart.system.domain.ScWrongQuestionBook;
 import com.smart.system.domain.ScParentStudentRel;
 import com.smart.system.domain.SysNotice;
 import com.smart.system.domain.campusvo.PortalCourseOfferingExportVo;
+import com.smart.system.domain.dto.CourseSelectionCountQueryDto;
 import com.smart.system.domain.dto.CourseSelectionOperateDto;
 import com.smart.system.domain.dto.CourseSelectionRequestReviewDto;
 import com.smart.system.domain.dto.PortalCourseOfferingExportRequest;
@@ -646,7 +647,11 @@ public class CampusPortalController extends BaseController {
     @PreAuthorize("@ss.hasAnyRoles('student,admin')")
     @GetMapping("/student/course-selection/options")
     public AjaxResult studentCourseSelectionOptions(@RequestParam Long userId,
-            @RequestParam(required = false) Long termId) {
+            @RequestParam(required = false) Long termId,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String teacherName,
+            @RequestParam(required = false) String courseKind,
+            @RequestParam(required = false) String onlySeats) {
         if (!canOperateStudentSelection(userId)) {
             return error("无权查看其他学生的选课信息");
         }
@@ -665,6 +670,7 @@ public class CampusPortalController extends BaseController {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
         Map<String, List<ScClassCourse>> selectedGroupMap = buildSelectedGroupMap(selectedClassCourses);
+        Map<String, ScClassCourse> selectedCombinedMap = buildSelectedCombinedMap(selectedClassCourses);
         ScCourseSelectionPlan plan = resolveSelectionPlan(termId);
         boolean selectionOpen = isSelectionWindowOpen(plan);
         boolean dropOpen = isDropWindowOpen(plan);
@@ -690,18 +696,27 @@ public class CampusPortalController extends BaseController {
             List<ScCourseSchedule> schedules = scheduleMap.getOrDefault(classCourse.getId(), Collections.emptyList());
             boolean selected = selectedIds.contains(classCourse.getId());
             Map<String, Object> item = buildStudentCourseSelectionItem(classCourse, term, schedules, profile, selected);
+            String combinedSelectionReason = selected ? null : resolveCombinedSelectionReason(classCourse, selectedCombinedMap);
+            if (StringUtils.isNotEmpty(combinedSelectionReason)) {
+                item.put("canSelect", false);
+                item.put("actionDisabledReason", combinedSelectionReason);
+                item.put("combinedLinkedSelection", true);
+            }
             String groupLimitReason = selected ? null : resolveGroupSelectionLimitReason(classCourse, selectedGroupMap);
-            if (StringUtils.isNotEmpty(groupLimitReason)) {
+            if (StringUtils.isNotEmpty(groupLimitReason) && !StringUtils.isNotEmpty(combinedSelectionReason)) {
                 item.put("canSelect", false);
                 item.put("actionDisabledReason", groupLimitReason);
             }
-            if (!selected && !selectionOpen) {
+            if (!selected && !selectionOpen && !StringUtils.isNotEmpty(combinedSelectionReason)) {
                 item.put("canSelect", false);
                 item.put("actionDisabledReason", "当前不在选课开放时间");
             }
             if (selected && Boolean.TRUE.equals(item.get("canDrop")) && !dropOpen) {
                 item.put("canDrop", false);
                 item.put("actionDisabledReason", "当前不在退课开放时间");
+            }
+            if (!matchesSelectionQuery(item, keyword, teacherName, courseKind, onlySeats)) {
+                continue;
             }
             availableCourses.add(item);
             if (selected) {
@@ -723,7 +738,52 @@ public class CampusPortalController extends BaseController {
         result.put("selectedCourses", selectedCourses);
         result.put("availableCourses", availableCourses);
         result.put("stats", stats);
+        result.put("timeTableLayout", buildDefaultTimeTableLayout());
         return success(result);
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('student,admin')")
+    @PostMapping("/student/course-selection/student-counts")
+    public AjaxResult studentCourseSelectionStudentCounts(@RequestBody CourseSelectionCountQueryDto dto) {
+        if (dto == null || dto.getUserId() == null) {
+            return error("查询参数不能为空");
+        }
+        if (!canOperateStudentSelection(dto.getUserId())) {
+            return error("无权查看其他学生的选课人数");
+        }
+        List<Long> classCourseIds = resolveSelectionCountClassCourseIds(dto);
+        if (classCourseIds.isEmpty()) {
+            return success(rowMap("items", Collections.emptyList()));
+        }
+        if (classCourseIds.size() > 200) {
+            return error("单次最多查询 200 个教学班的人数");
+        }
+        Map<Long, Map<String, Object>> snapshotMap = scCourseStudentService
+                .getSelectionCountSnapshotMap(classCourseIds.toArray(new Long[0]));
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (Long classCourseId : classCourseIds) {
+            Map<String, Object> snapshot = snapshotMap.get(classCourseId);
+            if (snapshot == null) {
+                continue;
+            }
+            int activeSelectedCount = snapshot.get("activeSelectedCount") == null ? 0
+                    : Integer.parseInt(String.valueOf(snapshot.get("activeSelectedCount")));
+            Integer studentLimit = snapshot.get("studentLimit") == null ? null
+                    : Integer.parseInt(String.valueOf(snapshot.get("studentLimit")));
+            int selectedCount = activeSelectedCount;
+            boolean capacityLimited = studentLimit != null && studentLimit > 0;
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("lessonId", classCourseId);
+            item.put("classCourseId", classCourseId);
+            item.put("selectedStudentCount", selectedCount);
+            item.put("actualStudentCount", selectedCount);
+            item.put("activeSelectedCount", activeSelectedCount);
+            item.put("studentLimit", studentLimit);
+            item.put("remainingSeats", capacityLimited ? Math.max(studentLimit - selectedCount, 0) : null);
+            item.put("capacityFull", capacityLimited && selectedCount >= studentLimit);
+            items.add(item);
+        }
+        return success(rowMap("items", items));
     }
 
     @PreAuthorize("@ss.hasAnyRoles('student,admin')")
@@ -784,6 +844,7 @@ public class CampusPortalController extends BaseController {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
         Map<String, List<ScClassCourse>> selectedGroupMap = buildSelectedGroupMap(selectedClassCourses);
+        Map<String, ScClassCourse> selectedCombinedMap = buildSelectedCombinedMap(selectedClassCourses);
         ScCourseSelectionRequest requestQuery = new ScCourseSelectionRequest();
         requestQuery.setStudentUserId(userId);
         requestQuery.setTermId(termId);
@@ -844,9 +905,10 @@ public class CampusPortalController extends BaseController {
             boolean standardCanSelect = Boolean.TRUE.equals(item.get("canSelect"));
             ScCourseSelectionRequest pendingRequest = pendingAddMap.get(classCourse.getId());
             boolean hasPending = pendingRequest != null;
+            String combinedSelectionReason = resolveCombinedSelectionReason(classCourse, selectedCombinedMap);
             String groupLimitReason = resolveGroupSelectionLimitReason(classCourse, selectedGroupMap);
             if (standardCanSelect && selectionOpen && !hasPending) {
-                if (StringUtils.isEmpty(groupLimitReason)) {
+                if (StringUtils.isEmpty(groupLimitReason) && StringUtils.isEmpty(combinedSelectionReason)) {
                     continue;
                 }
             }
@@ -855,6 +917,13 @@ public class CampusPortalController extends BaseController {
             item.put("requestStatus", hasPending ? pendingRequest.getRequestStatus() : null);
             item.put("requestStatusLabel", hasPending ? "待审核" : null);
             item.put("requestType", "ADD");
+            if (StringUtils.isNotEmpty(combinedSelectionReason)) {
+                item.put("requestHint", combinedSelectionReason);
+                item.put("canRequest", false);
+                item.put("combinedLinkedSelection", true);
+                addOptions.add(item);
+                continue;
+            }
             if (StringUtils.isNotEmpty(groupLimitReason)) {
                 item.put("requestHint", groupLimitReason);
                 item.put("canRequest", false);
@@ -2092,6 +2161,24 @@ public class CampusPortalController extends BaseController {
         return parts.isEmpty() ? studentName : studentName + " · " + String.join(" / ", parts);
     }
 
+    private List<Long> resolveSelectionCountClassCourseIds(CourseSelectionCountQueryDto dto) {
+        LinkedHashSet<Long> ids = new LinkedHashSet<>();
+        if (dto == null) {
+            return new ArrayList<>();
+        }
+        if (dto.getLessonIds() != null) {
+            dto.getLessonIds().stream()
+                    .filter(Objects::nonNull)
+                    .forEach(ids::add);
+        }
+        if (dto.getClassCourseIds() != null) {
+            dto.getClassCourseIds().stream()
+                    .filter(Objects::nonNull)
+                    .forEach(ids::add);
+        }
+        return new ArrayList<>(ids);
+    }
+
     private List<ScClassCourse> loadStudentSelectedClassCourses(Long userId, Long termId, boolean autoFillRequired) {
         List<ScCourseStudent> selections = scCourseStudentService.listStudentCourseSelections(userId, termId, autoFillRequired);
         List<ScClassCourse> classCourses = new ArrayList<>();
@@ -2254,6 +2341,24 @@ public class CampusPortalController extends BaseController {
         return result;
     }
 
+    private Map<String, ScClassCourse> buildSelectedCombinedMap(List<ScClassCourse> classCourses) {
+        Map<String, ScClassCourse> result = new LinkedHashMap<>();
+        if (classCourses == null) {
+            return result;
+        }
+        for (ScClassCourse classCourse : classCourses) {
+            if (classCourse == null) {
+                continue;
+            }
+            String combinedCode = StringUtils.trimToEmpty(classCourse.getCombinedClassCode());
+            if (StringUtils.isEmpty(combinedCode)) {
+                continue;
+            }
+            result.putIfAbsent(combinedCode, classCourse);
+        }
+        return result;
+    }
+
     private String resolveGroupSelectionLimitReason(ScClassCourse classCourse,
             Map<String, List<ScClassCourse>> selectedGroupMap) {
         if (classCourse == null || selectedGroupMap == null) {
@@ -2278,6 +2383,81 @@ public class CampusPortalController extends BaseController {
         String groupName = StringUtils.defaultIfEmpty(StringUtils.trimToEmpty(classCourse.getSelectionGroupName()), groupCode);
         return "专项组【" + groupName + "】最多可选 " + groupLimit + " 门，当前已选《"
                 + StringUtils.defaultIfEmpty(selectedNames, "同组课程") + "》";
+    }
+
+    private String resolveCombinedSelectionReason(ScClassCourse classCourse,
+            Map<String, ScClassCourse> selectedCombinedMap) {
+        if (classCourse == null || selectedCombinedMap == null) {
+            return null;
+        }
+        String combinedCode = StringUtils.trimToEmpty(classCourse.getCombinedClassCode());
+        if (StringUtils.isEmpty(combinedCode)) {
+            return null;
+        }
+        ScClassCourse selectedClassCourse = selectedCombinedMap.get(combinedCode);
+        if (selectedClassCourse == null || Objects.equals(selectedClassCourse.getId(), classCourse.getId())) {
+            return null;
+        }
+        String selectedName = resolveDisplayedCourseName(selectedClassCourse);
+        String selectedTeachingClass = StringUtils.defaultIfEmpty(StringUtils.trimToEmpty(selectedClassCourse.getTeachingClassCode()),
+                StringUtils.defaultIfEmpty(selectedClassCourse.getClassName(), "已选教学班"));
+        return "合班课程已通过《" + StringUtils.defaultIfEmpty(selectedName, "同组教学班")
+                + "》选入（" + selectedTeachingClass + "），无需重复选课";
+    }
+
+    private boolean matchesSelectionQuery(Map<String, Object> item, String keyword, String teacherName,
+            String courseKind, String onlySeats) {
+        if (item == null) {
+            return false;
+        }
+        String keywordValue = StringUtils.lowerCase(StringUtils.trimToEmpty(keyword));
+        if (StringUtils.isNotEmpty(keywordValue)) {
+            String combinedText = String.join(" ",
+                    asString(item.get("courseName")),
+                    asString(item.get("courseCode")),
+                    asString(item.get("className")),
+                    asString(item.get("teacherName")),
+                    asString(item.get("teachingClassCode")),
+                    asString(item.get("selectionOptionName")),
+                    asString(item.get("selectionGroupName"))).toLowerCase(Locale.ROOT);
+            if (!combinedText.contains(keywordValue)) {
+                return false;
+            }
+        }
+        String teacherValue = StringUtils.trimToEmpty(teacherName);
+        if (StringUtils.isNotEmpty(teacherValue)
+                && !StringUtils.equals(teacherValue, asString(item.get("teacherName")))) {
+            return false;
+        }
+        String courseKindValue = StringUtils.lowerCase(StringUtils.trimToEmpty(courseKind));
+        if (StringUtils.isNotEmpty(courseKindValue) && !"all".equals(courseKindValue)) {
+            boolean requiredSelection = Boolean.TRUE.equals(item.get("requiredSelection"));
+            boolean groupedCourse = StringUtils.isNotEmpty(asString(item.get("selectionGroupCode")));
+            boolean combinedCourse = StringUtils.isNotEmpty(asString(item.get("combinedClassCode")));
+            if ("required".equals(courseKindValue) && !requiredSelection) {
+                return false;
+            }
+            if ("grouped".equals(courseKindValue) && !groupedCourse) {
+                return false;
+            }
+            if ("combined".equals(courseKindValue) && !combinedCourse) {
+                return false;
+            }
+            if ("normal".equals(courseKindValue) && (requiredSelection || groupedCourse || combinedCourse)) {
+                return false;
+            }
+        }
+        if ("1".equals(StringUtils.trimToEmpty(onlySeats))) {
+            boolean selected = Boolean.TRUE.equals(item.get("selected"));
+            Integer studentLimit = item.get("studentLimit") == null ? null
+                    : Integer.parseInt(String.valueOf(item.get("studentLimit")));
+            Integer remainingSeats = item.get("remainingSeats") == null ? null
+                    : Integer.parseInt(String.valueOf(item.get("remainingSeats")));
+            if (!selected && studentLimit != null && studentLimit > 0 && (remainingSeats == null || remainingSeats <= 0)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private Map<String, Object> buildSchedulePayload(List<ScClassCourse> classCourses, ScSchoolTerm currentTerm) {

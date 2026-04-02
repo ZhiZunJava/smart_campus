@@ -10,17 +10,24 @@
     <result property="status" column="status" />
     <result property="progressValue" column="progress_value" />
     <result property="earnedTime" column="earned_time" />
+    <result property="createBy" column="create_by" />
+    <result property="createTime" column="create_time" />
+    <result property="updateBy" column="update_by" />
+    <result property="updateTime" column="update_time" />
+    <result property="remark" column="remark" />
   </resultMap>
 
   <select id="selectScUserAchievementByUserAndCode" resultMap="ScUserAchievementResult">
-    select achievement_id, user_id, achievement_code, achievement_title, achievement_desc, status, progress_value, earned_time
+    select achievement_id, user_id, achievement_code, achievement_title, achievement_desc, status, progress_value,
+           earned_time, create_by, create_time, update_by, update_time, remark
     from sc_user_achievement
     where user_id = #{param1} and achievement_code = #{param2}
     limit 1
   </select>
 
   <select id="selectScUserAchievementList" parameterType="ScUserAchievement" resultMap="ScUserAchievementResult">
-    select achievement_id, user_id, achievement_code, achievement_title, achievement_desc, status, progress_value, earned_time
+    select achievement_id, user_id, achievement_code, achievement_title, achievement_desc, status, progress_value,
+           earned_time, create_by, create_time, update_by, update_time, remark
     from sc_user_achievement
     <where>
       <if test="userId != null">and user_id = #{userId}</if>

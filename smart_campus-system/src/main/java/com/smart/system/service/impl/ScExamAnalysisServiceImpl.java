@@ -1,14 +1,18 @@
 package com.smart.system.service.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Collections;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,8 +28,10 @@ import com.smart.system.domain.ScExamSession;
 import com.smart.system.domain.ScExamSessionPaper;
 import com.smart.system.domain.ScKnowledgePoint;
 import com.smart.system.domain.ScQuestionBank;
+import com.smart.system.domain.ScUserPointLedger;
 import com.smart.system.domain.ScWrongQuestionBook;
 import com.smart.system.domain.campusvo.ExamPaperDetailVo;
+import com.smart.system.domain.campusvo.QuestionDetailVo;
 import com.smart.system.domain.dto.PaperQuestionConfigDto;
 import com.smart.system.domain.dto.PaperUpsertDto;
 import com.smart.system.domain.dto.WrongQuestionRetryDto;
@@ -38,6 +44,7 @@ import com.smart.system.mapper.ScExamSessionMapper;
 import com.smart.system.mapper.ScExamSessionPaperMapper;
 import com.smart.system.mapper.ScKnowledgePointMapper;
 import com.smart.system.mapper.ScQuestionBankMapper;
+import com.smart.system.mapper.ScUserPointLedgerMapper;
 import com.smart.system.mapper.ScWrongQuestionBookMapper;
 import com.smart.system.service.IScExamAnalysisService;
 import com.smart.system.service.IScExamManageService;
@@ -75,6 +82,12 @@ public class ScExamAnalysisServiceImpl implements IScExamAnalysisService {
     private ScKnowledgePointMapper scKnowledgePointMapper;
 
     @Autowired
+    private ScUserPointLedgerMapper scUserPointLedgerMapper;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Autowired
     private IScExamManageService scExamManageService;
 
     @Override
@@ -89,6 +102,12 @@ public class ScExamAnalysisServiceImpl implements IScExamAnalysisService {
         result.put("ongoingCount", countByStatus(records, "ONGOING"));
         result.put("avgScore", average(records.stream().map(ScExamRecord::getScore).collect(Collectors.toList())));
         result.put("avgCorrectRate", average(records.stream().map(ScExamRecord::getCorrectRate).collect(Collectors.toList())));
+        result.put("avgElapsedMinutes", averageDurationMinutes(records));
+        result.put("latestSubmitTime", records.stream()
+                .map(ScExamRecord::getSubmitTime)
+                .filter(Objects::nonNull)
+                .max(Comparator.naturalOrder())
+                .orElse(null));
         result.put("questionTypeStats", buildQuestionTypeStats(answers));
         result.put("knowledgePointStats", buildKnowledgePointStats(answers));
         result.put("sessionOverview", buildSessionOverview(sessions));
@@ -110,15 +129,20 @@ public class ScExamAnalysisServiceImpl implements IScExamAnalysisService {
         List<ScExamSessionPaper> sessionPapers = loadSessionPapers(record.getSessionId());
         boolean allowViewScoreSummary = paper == null || !"0".equals(paper.getAllowViewScore());
         boolean allowViewAnswerAnalysis = paper == null || !"0".equals(paper.getAllowReviewAnalysis());
+        List<ScUserPointLedger> growthRewards = loadGrowthRewards(record);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("record", sanitizeRecordDetail(record, allowViewScoreSummary));
         result.put("session", session);
+        result.put("timeSummary", buildRecordTimeSummary(record, session, paper, false));
         result.put("answers", sanitizeRecordAnswers(answers, allowViewScoreSummary, allowViewAnswerAnalysis));
         result.put("questionTypeStats", buildQuestionTypeStats(answers));
         result.put("knowledgePointStats", buildKnowledgePointStats(answers));
         result.put("subPaperStats", buildSessionPaperStats(sessionPapers));
         result.put("subPaperAnswers", buildSessionPaperAnswerDetail(sessionPapers, answers));
         result.put("behaviorLogs", loadBehaviorLogs(record.getSessionId()));
+        result.put("growthRewards", growthRewards);
+        result.put("growthPoints", growthRewards.stream().map(ScUserPointLedger::getChangePoints).filter(Objects::nonNull)
+                .reduce(0, Integer::sum));
         return result;
     }
 
@@ -134,10 +158,12 @@ public class ScExamAnalysisServiceImpl implements IScExamAnalysisService {
         List<ScExamSessionPaper> sessionPapers = loadSessionPapers(record.getSessionId());
         List<ScExamAnswer> answers = scExamAnswerMapper.selectScExamAnswerByRecordId(recordId);
         List<ScExamAnswerDraft> drafts = loadDrafts(recordId);
+        List<ScUserPointLedger> growthRewards = loadGrowthRewards(record);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("record", record);
         result.put("session", session);
+        result.put("timeSummary", buildRecordTimeSummary(record, session, resolvePaper(record.getPaperId()), true));
         result.put("paperDetail", paperDetail);
         result.put("sessionPapers", sessionPapers);
         result.put("answers", answers);
@@ -147,6 +173,9 @@ public class ScExamAnalysisServiceImpl implements IScExamAnalysisService {
         result.put("currentSessionPaper", resolveCurrentSessionPaper(sessionPapers));
         result.put("nextSessionPaper", resolveNextSessionPaper(sessionPapers));
         result.put("behaviorLogs", loadBehaviorLogs(record.getSessionId()));
+        result.put("growthRewards", growthRewards);
+        result.put("growthPoints", growthRewards.stream().map(ScUserPointLedger::getChangePoints).filter(Objects::nonNull)
+                .reduce(0, Integer::sum));
         return result;
     }
 
@@ -187,23 +216,40 @@ public class ScExamAnalysisServiceImpl implements IScExamAnalysisService {
         if (questionIds.isEmpty()) {
             throw new ServiceException("请选择要回练的错题");
         }
+        List<RetryQuestionSnapshot> retryQuestions = buildRetryQuestionSnapshots(questionIds);
+        BigDecimal totalScore = retryQuestions.stream()
+                .map(RetryQuestionSnapshot::getScore)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
         PaperUpsertDto paperUpsertDto = new PaperUpsertDto();
-        paperUpsertDto.setPaperName(StringUtils.defaultIfEmpty(dto.getPaperName(), "错题回练-" + System.currentTimeMillis()));
+        paperUpsertDto.setPaperName(
+                StringUtils.defaultIfEmpty(StringUtils.trim(dto.getPaperName()), buildRetryPaperName(questionIds.size())));
         paperUpsertDto.setCourseId(dto.getCourseId());
         paperUpsertDto.setPaperType("fixed");
+        paperUpsertDto.setPaperLevel("MAIN");
         paperUpsertDto.setDurationMinutes(dto.getDurationMinutes() == null ? 45 : dto.getDurationMinutes());
         paperUpsertDto.setPublishStatus("published");
         paperUpsertDto.setPublishStartTime(new java.util.Date());
         paperUpsertDto.setStatus("0");
-        paperUpsertDto.setRemark("错题回练自动生成");
+        paperUpsertDto.setRemark(buildRetryRemark(retryQuestions));
         paperUpsertDto.setAllowViewScore("1");
         paperUpsertDto.setAllowReviewAnalysis("1");
+        paperUpsertDto.setMarkingMode("auto_first");
+        paperUpsertDto.setQuestionOrderMode("manual");
         paperUpsertDto.setQuestionNavigationMode("free");
+        paperUpsertDto.setAntiCheatEnabled("0");
+        paperUpsertDto.setMaxFocusLossCount(0);
+        paperUpsertDto.setAutoSubmitOnFocusLossLimit("0");
+        paperUpsertDto.setAllowCopyPaste("1");
+        paperUpsertDto.setMaxAttemptCount(0);
+        paperUpsertDto.setTotalScore(totalScore);
+        paperUpsertDto.setPassScore(calculateRetryPassScore(totalScore));
+        paperUpsertDto.setSectionConfigJson(buildRetrySectionConfig(retryQuestions));
         List<PaperQuestionConfigDto> questions = new ArrayList<>();
-        for (int i = 0; i < questionIds.size(); i++) {
+        for (int i = 0; i < retryQuestions.size(); i++) {
             PaperQuestionConfigDto config = new PaperQuestionConfigDto();
-            config.setQuestionId(questionIds.get(i));
-            config.setScore(BigDecimal.TEN);
+            config.setQuestionId(retryQuestions.get(i).getQuestionId());
+            config.setScore(retryQuestions.get(i).getScore());
             config.setSortNo(i + 1);
             questions.add(config);
         }
@@ -231,9 +277,12 @@ public class ScExamAnalysisServiceImpl implements IScExamAnalysisService {
         result.setPaperName(dto.getPaperName());
         result.setCourseId(dto.getCourseId());
         result.setPaperType(dto.getPaperType());
+        result.setPaperLevel(dto.getPaperLevel());
         result.setDurationMinutes(dto.getDurationMinutes());
         result.setPublishStatus(dto.getPublishStatus());
         result.setStatus(dto.getStatus());
+        result.setPassScore(dto.getPassScore());
+        result.setSectionConfigJson(dto.getSectionConfigJson());
         result.setTotalScore(dto.getQuestions().stream().map(PaperQuestionConfigDto::getScore).reduce(BigDecimal.ZERO, BigDecimal::add));
         List<com.smart.system.domain.campusvo.ExamPaperQuestionDetailVo> details = new ArrayList<>();
         for (PaperQuestionConfigDto item : dto.getQuestions()) {
@@ -246,6 +295,138 @@ public class ScExamAnalysisServiceImpl implements IScExamAnalysisService {
         }
         result.setQuestions(details);
         return result;
+    }
+
+    private List<RetryQuestionSnapshot> buildRetryQuestionSnapshots(List<Long> questionIds) {
+        List<RetryQuestionSnapshot> snapshots = new ArrayList<>();
+        for (Long questionId : questionIds) {
+            QuestionDetailVo questionDetail = scExamManageService.selectQuestionDetail(questionId);
+            String questionType = questionDetail == null ? "single"
+                    : StringUtils.defaultIfEmpty(questionDetail.getQuestionType(), "single");
+            snapshots.add(new RetryQuestionSnapshot(questionId, questionType, resolveRetryQuestionScore(questionType)));
+        }
+        return snapshots;
+    }
+
+    private BigDecimal resolveRetryQuestionScore(String questionType) {
+        String normalizedType = StringUtils.defaultIfEmpty(questionType, "single").toLowerCase();
+        switch (normalizedType) {
+            case "judge":
+                return BigDecimal.valueOf(5);
+            case "single":
+                return BigDecimal.valueOf(6);
+            case "multiple":
+                return BigDecimal.valueOf(8);
+            case "fill":
+                return BigDecimal.valueOf(8);
+            case "essay":
+                return BigDecimal.valueOf(12);
+            case "material":
+            case "case":
+                return BigDecimal.valueOf(15);
+            default:
+                return BigDecimal.TEN;
+        }
+    }
+
+    private BigDecimal calculateRetryPassScore(BigDecimal totalScore) {
+        if (totalScore == null || totalScore.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal passScore = totalScore.multiply(BigDecimal.valueOf(0.6)).setScale(0, RoundingMode.HALF_UP);
+        if (passScore.compareTo(BigDecimal.ONE) < 0) {
+            return BigDecimal.ONE;
+        }
+        return passScore.compareTo(totalScore) > 0 ? totalScore : passScore;
+    }
+
+    private String buildRetryPaperName(int questionCount) {
+        java.text.SimpleDateFormat formatter = new java.text.SimpleDateFormat("yyyy-MM-dd");
+        return "错题回练卷-" + questionCount + "题-" + formatter.format(new java.util.Date());
+    }
+
+    private String buildRetryRemark(List<RetryQuestionSnapshot> retryQuestions) {
+        Map<String, Long> grouped = retryQuestions.stream().collect(
+                Collectors.groupingBy(RetryQuestionSnapshot::getQuestionType, LinkedHashMap::new, Collectors.counting()));
+        String summary = grouped.entrySet().stream()
+                .map(item -> retryQuestionTypeLabel(item.getKey()) + item.getValue() + "题")
+                .collect(Collectors.joining("，"));
+        return "错题回练自动生成，共 " + retryQuestions.size() + " 题"
+                + (StringUtils.isEmpty(summary) ? "" : "，结构：" + summary);
+    }
+
+    private String buildRetrySectionConfig(List<RetryQuestionSnapshot> retryQuestions) {
+        Map<String, List<RetryQuestionSnapshot>> grouped = retryQuestions.stream().collect(
+                Collectors.groupingBy(RetryQuestionSnapshot::getQuestionType, LinkedHashMap::new, Collectors.toList()));
+        List<Map<String, Object>> sectionConfigs = new ArrayList<>();
+        grouped.forEach((questionType, items) -> {
+            if (items == null || items.isEmpty()) {
+                return;
+            }
+            BigDecimal targetScore = items.stream().map(RetryQuestionSnapshot::getScore).reduce(BigDecimal.ZERO, BigDecimal::add)
+                    .setScale(2, RoundingMode.HALF_UP);
+            BigDecimal defaultScore = items.get(0).getScore();
+            Map<String, Object> section = new LinkedHashMap<>();
+            section.put("title", retryQuestionTypeLabel(questionType));
+            section.put("questionType", questionType);
+            section.put("defaultScore", defaultScore);
+            section.put("targetScore", targetScore);
+            section.put("instructions", "共 " + items.size() + " 题，建议先独立作答，再结合解析复盘。");
+            section.put("questionIds",
+                    items.stream().map(RetryQuestionSnapshot::getQuestionId).collect(Collectors.toList()));
+            sectionConfigs.add(section);
+        });
+        try {
+            return objectMapper.writeValueAsString(sectionConfigs);
+        } catch (Exception e) {
+            return "[]";
+        }
+    }
+
+    private String retryQuestionTypeLabel(String questionType) {
+        String normalizedType = StringUtils.defaultIfEmpty(questionType, "single").toLowerCase();
+        switch (normalizedType) {
+            case "single":
+                return "单选题";
+            case "multiple":
+                return "多选题";
+            case "judge":
+                return "判断题";
+            case "fill":
+                return "填空题";
+            case "essay":
+                return "简答题";
+            case "material":
+                return "材料题";
+            case "case":
+                return "案例题";
+            default:
+                return normalizedType;
+        }
+    }
+
+    private static final class RetryQuestionSnapshot {
+        private final Long questionId;
+        private final String questionType;
+        private final BigDecimal score;
+
+        private RetryQuestionSnapshot(Long questionId, String questionType, BigDecimal score) {
+            this.questionId = questionId;
+            this.questionType = questionType;
+            this.score = score == null ? BigDecimal.TEN : score;
+        }
+
+        public Long getQuestionId() {
+            return questionId;
+        }
+
+        public String getQuestionType() {
+            return questionType;
+        }
+
+        public BigDecimal getScore() {
+            return score;
+        }
     }
 
     private ExamPaperDetailVo sanitizePaperDetail(ExamPaperDetailVo paperDetail) {
@@ -414,6 +595,49 @@ public class ScExamAnalysisServiceImpl implements IScExamAnalysisService {
         return scExamAnswerDraftMapper.selectScExamAnswerDraftList(query);
     }
 
+    private List<ScUserPointLedger> loadGrowthRewards(ScExamRecord record) {
+        if (record == null || record.getUserId() == null || record.getRecordId() == null) {
+            return Collections.emptyList();
+        }
+        ScUserPointLedger query = new ScUserPointLedger();
+        query.setUserId(record.getUserId());
+        query.setBizId(record.getRecordId());
+        return scUserPointLedgerMapper.selectScUserPointLedgerList(query).stream()
+                .filter(item -> item != null && StringUtils.defaultIfEmpty(item.getBizType(), "").startsWith("EXAM_"))
+                .sorted(Comparator.comparing(ScUserPointLedger::getCreateTime, Comparator.nullsLast(Comparator.naturalOrder())))
+                .collect(Collectors.toList());
+    }
+
+    private Map<String, Object> buildRecordTimeSummary(ScExamRecord record, ScExamSession session, ScExamPaper paper,
+            boolean runtimeMode) {
+        Date startTime = record == null ? null : record.getStartTime();
+        Date endTime = record == null ? null : record.getSubmitTime();
+        long elapsedSeconds = resolveElapsedSeconds(startTime, endTime, runtimeMode);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("startTime", startTime);
+        result.put("submitTime", endTime);
+        result.put("elapsedSeconds", elapsedSeconds);
+        result.put("elapsedMinutes", elapsedSeconds <= 0 ? 0L : (elapsedSeconds + 59L) / 60L);
+        result.put("paperDurationMinutes", paper == null || paper.getDurationMinutes() == null ? 0 : paper.getDurationMinutes());
+        result.put("focusLossCount", session == null ? 0 : session.getFocusLossCount());
+        result.put("flaggedCount", session == null ? 0 : session.getFlaggedCount());
+        return result;
+    }
+
+    private BigDecimal averageDurationMinutes(List<ScExamRecord> records) {
+        List<Long> durations = records.stream()
+                .map(item -> resolveElapsedSeconds(item == null ? null : item.getStartTime(),
+                        item == null ? null : item.getSubmitTime(), false))
+                .filter(item -> item > 0)
+                .collect(Collectors.toList());
+        if (durations.isEmpty()) {
+            return BigDecimal.ZERO.setScale(1, RoundingMode.HALF_UP);
+        }
+        long totalSeconds = durations.stream().reduce(0L, Long::sum);
+        return BigDecimal.valueOf(totalSeconds)
+                .divide(BigDecimal.valueOf(durations.size() * 60D), 1, RoundingMode.HALF_UP);
+    }
+
     private List<Map<String, Object>> buildQuestionTypeStats(List<ScExamAnswer> answers) {
         Map<String, List<ScExamAnswer>> grouped = answers.stream()
                 .collect(Collectors.groupingBy(item -> StringUtils.defaultIfEmpty(item.getQuestionType(), "unknown"),
@@ -479,6 +703,9 @@ public class ScExamAnalysisServiceImpl implements IScExamAnalysisService {
                 : BigDecimal.valueOf(sessions.stream().map(ScExamSession::getFlaggedCount)
                         .filter(item -> item != null).mapToInt(Integer::intValue).average().orElse(0D))
                         .setScale(2, RoundingMode.HALF_UP));
+        result.put("avgElapsedMinutes", sessions == null || sessions.isEmpty()
+                ? BigDecimal.ZERO.setScale(1, RoundingMode.HALF_UP)
+                : averageSessionDurationMinutes(sessions));
         return result;
     }
 
@@ -513,6 +740,9 @@ public class ScExamAnalysisServiceImpl implements IScExamAnalysisService {
             row.put("skippedCount", items.stream().filter(item -> "SKIPPED".equals(item.getPaperStatus())).count());
             row.put("avgScore", average(items.stream().map(ScExamSessionPaper::getScore).collect(Collectors.toList())));
             row.put("avgCorrectRate", average(items.stream().map(ScExamSessionPaper::getCorrectRate).collect(Collectors.toList())));
+            row.put("avgElapsedMinutes", averageSessionPaperDurationMinutes(items));
+            row.put("latestSubmitTime", items.stream().map(ScExamSessionPaper::getSubmitTime).filter(Objects::nonNull)
+                    .max(Comparator.naturalOrder()).orElse(null));
             result.add(row);
         });
         return result;
@@ -561,6 +791,45 @@ public class ScExamAnalysisServiceImpl implements IScExamAnalysisService {
             }
         }
         return result;
+    }
+
+    private BigDecimal averageSessionDurationMinutes(List<ScExamSession> sessions) {
+        List<Long> durations = sessions.stream()
+                .map(item -> resolveElapsedSeconds(item == null ? null : item.getStartTime(),
+                        item == null ? null : item.getSubmitTime(), false))
+                .filter(item -> item > 0)
+                .collect(Collectors.toList());
+        if (durations.isEmpty()) {
+            return BigDecimal.ZERO.setScale(1, RoundingMode.HALF_UP);
+        }
+        long totalSeconds = durations.stream().reduce(0L, Long::sum);
+        return BigDecimal.valueOf(totalSeconds)
+                .divide(BigDecimal.valueOf(durations.size() * 60D), 1, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal averageSessionPaperDurationMinutes(List<ScExamSessionPaper> sessionPapers) {
+        List<Long> durations = sessionPapers.stream()
+                .map(item -> resolveElapsedSeconds(item == null ? null : item.getStartTime(),
+                        item == null ? null : item.getSubmitTime(), false))
+                .filter(item -> item > 0)
+                .collect(Collectors.toList());
+        if (durations.isEmpty()) {
+            return BigDecimal.ZERO.setScale(1, RoundingMode.HALF_UP);
+        }
+        long totalSeconds = durations.stream().reduce(0L, Long::sum);
+        return BigDecimal.valueOf(totalSeconds)
+                .divide(BigDecimal.valueOf(durations.size() * 60D), 1, RoundingMode.HALF_UP);
+    }
+
+    private long resolveElapsedSeconds(Date startTime, Date endTime, boolean runtimeMode) {
+        if (startTime == null) {
+            return 0L;
+        }
+        Date safeEndTime = endTime == null && runtimeMode ? new Date() : endTime;
+        if (safeEndTime == null || safeEndTime.before(startTime)) {
+            return 0L;
+        }
+        return Math.max(0L, (safeEndTime.getTime() - startTime.getTime()) / 1000L);
     }
 
     private ScExamSessionPaper resolveCurrentSessionPaper(List<ScExamSessionPaper> sessionPapers) {

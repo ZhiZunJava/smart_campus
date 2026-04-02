@@ -36,9 +36,11 @@
 <script setup lang="ts">
 import 'highlight.js/styles/github-dark.css'
 import '@vunk/markdown/index.css'
+import 'katex/dist/katex.min.css'
 
 import { computed } from 'vue'
 import hljs from 'highlight.js'
+import markdownItKatex from 'markdown-it-katex'
 import { VkMarkdown } from '@vunk/markdown'
 import { VkRendererTemplate } from '@vunk/markdown/components/strategy-renderer'
 import { normalizeQaMarkdownSource } from '@/utils/qaMarkdown'
@@ -60,6 +62,10 @@ const markdownItOptions = {
 }
 const markdownItSetup = (md: any) => {
   md.enable?.('table', true)
+  md.use?.(markdownItKatex, {
+    throwOnError: false,
+    errorColor: '#d14343',
+  })
 }
 
 const normalizedSource = computed(() => normalizeQaMarkdownSource(props.source))
@@ -235,5 +241,24 @@ function toEchartsFence(optionSource: string) {
 .qa-markdown-renderer {
   min-width: 0;
   width: 100%;
+}
+
+.qa-markdown-renderer :deep(.katex-display) {
+  margin: 1em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 0;
+}
+
+.qa-markdown-renderer :deep(.katex) {
+  font-size: 1.02em;
+}
+
+.qa-markdown-renderer :deep(.katex-error) {
+  color: #d14343;
+  background: rgba(209, 67, 67, 0.08);
+  border-radius: 8px;
+  padding: 2px 6px;
+  font-size: 0.95em;
 }
 </style>

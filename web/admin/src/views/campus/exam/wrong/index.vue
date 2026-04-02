@@ -166,7 +166,9 @@
       <div class="detail-header">
         <span>试卷名称：{{ retryResult.paperName || '-' }}</span>
         <span>总分：{{ retryResult.totalScore || 0 }}</span>
+        <span>及格线：{{ retryResult.passScore || 0 }}</span>
         <span>时长：{{ retryResult.durationMinutes || 0 }} 分钟</span>
+        <span>题数：{{ retryResult.questions?.length || 0 }} 题</span>
       </div>
       <el-table :data="retryResult.questions || []" border class="mt16">
         <el-table-column label="排序" prop="sortNo" width="90" />
@@ -238,6 +240,15 @@ function courseLabel(courseId: number | string | undefined) {
   return matched?.label || `课程 ${courseId}`
 }
 
+function buildRetryPaperName(courseId?: number | string) {
+  const matchedCourse = courseOptions.value.find((item: any) => String(item.value) === String(courseId || ''))
+  const coursePrefix = matchedCourse?.label ? `${matchedCourse.label}-` : ''
+  const now = new Date()
+  const month = `${now.getMonth() + 1}`.padStart(2, '0')
+  const day = `${now.getDate()}`.padStart(2, '0')
+  return `${coursePrefix}错题回练卷-${now.getFullYear()}-${month}-${day}`
+}
+
 async function getList() {
   loading.value = true
   try {
@@ -288,7 +299,7 @@ function handleRetry(row?: any) {
   }
   retryForm.wrongIds = wrongIds
   retryForm.courseId = row?.courseId || queryParams.courseId
-  retryForm.paperName = `错题回练-${new Date().toLocaleDateString()}`
+  retryForm.paperName = buildRetryPaperName(retryForm.courseId)
   retryForm.pickMode = 'selected'
   retryOpen.value = true
 }

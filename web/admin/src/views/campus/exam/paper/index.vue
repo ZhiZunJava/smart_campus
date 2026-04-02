@@ -14,6 +14,13 @@
           <el-option label="已归档" value="archived" />
         </el-select>
       </el-form-item>
+      <el-form-item label="试卷类型">
+        <el-select v-model="queryParams.paperType" clearable style="width: 160px">
+          <el-option label="固定" value="fixed" />
+          <el-option label="随机" value="random" />
+          <el-option label="自适应" value="adaptive" />
+        </el-select>
+      </el-form-item>
       <el-form-item>
         <el-button type="primary" icon="Search" @click="getList">搜索</el-button>
         <el-button icon="Refresh" @click="resetQuery">重置</el-button>
@@ -40,7 +47,7 @@
       <el-table-column label="层级" width="90">
         <template #default="scope">
           <el-tag :type="scope.row.paperLevel === 'SUB' ? 'warning' : 'success'" effect="plain">
-            {{ scope.row.paperLevel || 'MAIN' }}
+            {{ paperLevelLabel(scope.row.paperLevel) }}
           </el-tag>
         </template>
       </el-table-column>
@@ -533,7 +540,7 @@ const questionTypeOptions = ref<any[]>([])
 const knowledgePointOptions = ref<any[]>([])
 const strategyTemplateOptions = ref<any[]>([])
 
-const queryParams = reactive<any>({ pageNum: 1, pageSize: 10, courseId: undefined, paperName: '', publishStatus: '' })
+const queryParams = reactive<any>({ pageNum: 1, pageSize: 10, courseId: undefined, paperName: '', publishStatus: '', paperType: '' })
 const form = reactive<any>({})
 const paperSections = ref<PaperSection[]>([])
 const assembleForm = reactive<any>({})
@@ -657,6 +664,7 @@ const passScoreHintClass = computed(() => {
 function stripHtml(value: string) { return String(value || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() }
 function questionTypeLabel(type: string) { return questionTypeOptions.value.find((item: any) => item.code === type)?.label || type || '-' }
 function paperTypeLabel(type: string) { return ({ fixed: '固定', random: '随机', adaptive: '自适应' } as any)[type] || type || '-' }
+function paperLevelLabel(level?: string) { return ({ MAIN: '主试卷', SUB: '子试卷' } as any)[String(level || 'MAIN').toUpperCase()] || '主试卷' }
 function publishStatusLabel(status: string) { return ({ draft: '草稿', published: '已发布', archived: '已归档' } as any)[status] || status || '草稿' }
 function courseLabel(courseId: number | string | undefined) {
   if (!courseId) return '通用试卷'
@@ -930,6 +938,7 @@ function resetQuery() {
   queryParams.courseId = undefined
   queryParams.paperName = ''
   queryParams.publishStatus = ''
+  queryParams.paperType = ''
   getList()
 }
 async function getList() {

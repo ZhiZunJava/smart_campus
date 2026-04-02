@@ -3,8 +3,11 @@ package com.smart.web.controller.campus;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -101,6 +104,7 @@ public class ScQaController extends BaseController {
     public TableDataInfo messageList(ScQaMessage scQaMessage) {
         startPage();
         List<ScQaMessage> list = scQaMessageService.selectScQaMessageList(scQaMessage);
+        enrichMessageFeedback(list, getUserId());
         return getDataTable(list);
     }
 
@@ -119,8 +123,68 @@ public class ScQaController extends BaseController {
 
     @PostMapping("/feedback")
     public AjaxResult addFeedback(@Validated @RequestBody ScQaFeedback scQaFeedback) {
+        if (scQaFeedback == null || scQaFeedback.getMessageId() == null) {
+            return error("反馈消息不能为空");
+        }
+        Long userId = getUserId();
+        if (userId == null) {
+            return error("当前未获取到登录用户");
+        }
+        String feedbackType = StringUtils.lowerCase(StringUtils.trimToEmpty(scQaFeedback.getFeedbackType()));
+        if (!"helpful".equals(feedbackType) && !"unhelpful".equals(feedbackType)) {
+            return error("反馈类型不合法");
+        }
+        scQaFeedback.setUserId(userId);
+        scQaFeedback.setFeedbackType(feedbackType);
+
+        ScQaFeedback query = new ScQaFeedback();
+        query.setMessageId(scQaFeedback.getMessageId());
+        query.setUserId(userId);
+        List<ScQaFeedback> existingList = scQaFeedbackService.selectScQaFeedbackList(query);
+        if (existingList != null && !existingList.isEmpty()) {
+            ScQaFeedback existing = existingList.get(0);
+            existing.setFeedbackType(feedbackType);
+            existing.setFeedbackContent(scQaFeedback.getFeedbackContent());
+            existing.setUpdateBy(getUsername());
+            return toAjax(scQaFeedbackService.updateScQaFeedback(existing));
+        }
+
         scQaFeedback.setCreateBy(getUsername());
         return toAjax(scQaFeedbackService.insertScQaFeedback(scQaFeedback));
+    }
+
+    private void enrichMessageFeedback(List<ScQaMessage> messages, Long userId) {
+        if (messages == null || messages.isEmpty() || userId == null) {
+            return;
+        }
+        Set<Long> messageIds = messages.stream()
+                .map(ScQaMessage::getMessageId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (messageIds.isEmpty()) {
+            return;
+        }
+        ScQaFeedback query = new ScQaFeedback();
+        query.setUserId(userId);
+        Map<Long, ScQaFeedback> feedbackMap = scQaFeedbackService.selectScQaFeedbackList(query).stream()
+                .filter(Objects::nonNull)
+                .filter(item -> item.getMessageId() != null && messageIds.contains(item.getMessageId()))
+                .collect(Collectors.toMap(
+                        ScQaFeedback::getMessageId,
+                        item -> item,
+                        (left, right) -> left,
+                        LinkedHashMap::new));
+        for (ScQaMessage message : messages) {
+            if (message == null || message.getMessageId() == null) {
+                continue;
+            }
+            ScQaFeedback feedback = feedbackMap.get(message.getMessageId());
+            if (feedback == null) {
+                continue;
+            }
+            message.setFeedbackType(feedback.getFeedbackType());
+            message.setFeedbackContent(feedback.getFeedbackContent());
+        }
     }
 
     @PostMapping("/attachment/upload")

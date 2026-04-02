@@ -105,13 +105,43 @@
               </el-input>
             </div>
             <div class="selection-toolbar__right">
+              <el-button-group class="selection-view-switch">
+                <el-button
+                  :type="viewMode === 'schedule' ? 'primary' : 'default'"
+                  :plain="viewMode !== 'schedule'"
+                  @click="viewMode = 'schedule'"
+                >
+                  课表选课
+                </el-button>
+                <el-button
+                  :type="viewMode === 'list' ? 'primary' : 'default'"
+                  :plain="viewMode !== 'list'"
+                  @click="viewMode = 'list'"
+                >
+                  列表选课
+                </el-button>
+              </el-button-group>
               <el-button :icon="Refresh" circle @click="loadSelectionOptions" title="刷新数据" />
               <el-button plain @click="goClassCourses">我的班级课程</el-button>
               <el-button type="primary" plain @click="goPersonalizedSelection">选课申请</el-button>
             </div>
           </div>
 
-          <el-tabs v-model="activeTab" class="selection-tabs">
+          <CourseSelectionScheduleBoard
+            v-if="viewMode === 'schedule'"
+            :courses="scheduleBoardCourses"
+            :selected-courses="selectedCourses"
+            :time-table-layout="timeTableLayout"
+            :refresh-courses="loadSelectionOptions"
+            :poll-course-counts="refreshCourseSelectionStudentCounts"
+            :query-courses="queryCourseSelectionOptions"
+            @select-course="handleSelectCourse"
+            @drop-course="handleDropCourse"
+            @preview-course="previewClassCourse"
+            @switch-list="viewMode = 'list'"
+          />
+
+          <el-tabs v-else v-model="activeTab" class="selection-tabs">
             <el-tab-pane :label="`直接选课 (${filteredAddCourses.length})`" name="add">
               <el-table v-loading="loading" :data="filteredAddCourses" max-height="620" stripe>
                 <el-table-column label="课程 / 教学班" min-width="300">
@@ -231,13 +261,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
 import { Refresh } from '@element-plus/icons-vue'
-import { dropPortalCourse, getPortalCourseSelectionOptions, listPortalTermOptions, selectPortalCourse } from '@/api/portal'
+import {
+  dropPortalCourse,
+  getPortalCourseSelectionOptions,
+  getPortalCourseSelectionStudentCounts,
+  listPortalTermOptions,
+  selectPortalCourse,
+} from '@/api/portal'
 import usePortalUserStore from '@/store/user'
 import PlanUnavailableState from '@/components/selection/PlanUnavailableState.vue'
+import CourseSelectionScheduleBoard from '@/components/selection/CourseSelectionScheduleBoard.vue'
 
 defineOptions({ name: 'CourseSelection' })
 
@@ -252,6 +289,7 @@ const termOptions = ref<any[]>([])
 const allCourses = ref<any[]>([])
 const selectedCourses = ref<any[]>([])
 const selectionStats = ref<any>({})
+const timeTableLayout = ref<any>(null)
 const keyword = ref('')
 const searchInput = ref('')
 let searchTimer: ReturnType<typeof setTimeout> | null = null
@@ -260,25 +298,27 @@ function onSearchInput(val: string) {
   searchTimer = setTimeout(() => { keyword.value = val }, 300)
 }
 const activeTab = ref<'add' | 'drop'>('add')
+const viewMode = ref<'list' | 'schedule'>('list')
 const planInfo = ref<any>(null)
 const selectionOpen = ref(false)
 const dropOpen = ref(false)
 const queryParams = reactive<any>({ termId: undefined })
+const LIST_COUNT_POLLING_INTERVAL = 5000
+const COUNT_QUERY_BATCH_SIZE = 200
+let listCountPollingTimer: ReturnType<typeof setInterval> | null = null
+let listCountPollingBusy = false
 
 const currentTermLabel = computed(() => termOptions.value.find((item: any) => item.value === queryParams.termId)?.label || '当前学期')
 const hasPlan = computed(() => Boolean(planInfo.value?.enabled))
 const showClosedState = computed(() => hasPlan.value && !selectionOpen.value && !dropOpen.value)
+const shouldPollListCounts = computed(() => !initialLoading.value && viewMode.value === 'list' && hasPlan.value && allCourses.value.length > 0)
 
 const filteredAddCourses = computed(() => {
   const keywordValue = keyword.value.trim().toLowerCase()
   return allCourses.value.filter((item: any) => {
     if (item.selected) return false
     if (!keywordValue) return true
-    return String(item.courseName || '').toLowerCase().includes(keywordValue)
-      || String(item.courseCode || '').toLowerCase().includes(keywordValue)
-      || String(item.className || '').toLowerCase().includes(keywordValue)
-      || String(item.teacherName || '').toLowerCase().includes(keywordValue)
-      || String(item.teachingClassCode || '').toLowerCase().includes(keywordValue)
+    return matchesCourseKeyword(item, keywordValue)
   })
 })
 
@@ -286,11 +326,15 @@ const filteredDropCourses = computed(() => {
   const keywordValue = keyword.value.trim().toLowerCase()
   return selectedCourses.value.filter((item: any) => {
     if (!keywordValue) return true
-    return String(item.courseName || '').toLowerCase().includes(keywordValue)
-      || String(item.courseCode || '').toLowerCase().includes(keywordValue)
-      || String(item.className || '').toLowerCase().includes(keywordValue)
-      || String(item.teacherName || '').toLowerCase().includes(keywordValue)
-      || String(item.teachingClassCode || '').toLowerCase().includes(keywordValue)
+    return matchesCourseKeyword(item, keywordValue)
+  })
+})
+
+const scheduleBoardCourses = computed(() => {
+  const keywordValue = keyword.value.trim().toLowerCase()
+  return allCourses.value.filter((item: any) => {
+    if (!keywordValue) return true
+    return Boolean(item.selected) || matchesCourseKeyword(item, keywordValue)
   })
 })
 
@@ -371,12 +415,136 @@ function resolveTextValue(value: any) {
   return String(value)
 }
 
+function isVirtualVenueText(value: any) {
+  const text = String(value || '').trim()
+  if (!text) return true
+  return ['空场地', '空教室', '不占用教室', '待定教室', '未安排教室'].some((keyword) => text.includes(keyword))
+}
+
+function matchesCourseKeyword(item: any, keywordValue: string) {
+  return String(item.courseName || '').toLowerCase().includes(keywordValue)
+    || String(item.courseCode || '').toLowerCase().includes(keywordValue)
+    || String(item.className || '').toLowerCase().includes(keywordValue)
+    || String(item.teacherName || '').toLowerCase().includes(keywordValue)
+    || String(item.teachingClassCode || '').toLowerCase().includes(keywordValue)
+    || String(item.selectionOptionName || '').toLowerCase().includes(keywordValue)
+}
+
 function resolveScheduleText(row: any) {
   return resolveTextValue(row.scheduleText || row.scheduleVm?.dateTimeText).replace(/;\s*\n/g, '\n').trim() || '待排课'
 }
 
 function resolveScheduleRoom(row: any) {
-  return resolveTextValue(row.classroom || row.scheduleVm?.roomSeatText).replace(/;\s*\n/g, ' / ').trim() || '未安排教室'
+  const text = resolveTextValue(row.classroom || row.scheduleVm?.roomSeatText).replace(/;\s*\n/g, ' / ').trim()
+  return isVirtualVenueText(text) ? '' : text
+}
+
+function normalizeLessonIds(rawIds?: Array<number | string | null | undefined>) {
+  const seen = new Set<number>()
+  const result: number[] = []
+  ;(rawIds || []).forEach((item) => {
+    const parsed = Number(item)
+    if (!Number.isFinite(parsed) || parsed <= 0 || seen.has(parsed)) return
+    seen.add(parsed)
+    result.push(parsed)
+  })
+  return result
+}
+
+function resolveCourseLessonIds(rows: any[]) {
+  return normalizeLessonIds((rows || []).map((item: any) => item?.id))
+}
+
+function updateCourseCountState(row: any, snapshot: any) {
+  if (!row || !snapshot) return
+  const selectedStudentCount = Number(snapshot.selectedStudentCount ?? snapshot.actualStudentCount ?? 0)
+  const studentLimit = snapshot.studentLimit != null ? Number(snapshot.studentLimit) : Number(row.studentLimit || 0)
+  const remainingSeats = snapshot.remainingSeats != null
+    ? Number(snapshot.remainingSeats)
+    : (studentLimit > 0 ? Math.max(studentLimit - selectedStudentCount, 0) : null)
+  const isFull = studentLimit > 0 && remainingSeats != null && remainingSeats <= 0
+  const currentReason = String(row.actionDisabledReason || '').trim()
+  const reasonIsCapacity = currentReason === '人数已满'
+
+  row.selectedStudentCount = selectedStudentCount
+  row.actualStudentCount = selectedStudentCount
+  row.studentLimit = snapshot.studentLimit ?? row.studentLimit
+  row.remainingSeats = remainingSeats
+  row.capacityFull = isFull
+  row.selectedCount = selectedStudentCount
+  row.studentCountText = studentLimit > 0 ? `${selectedStudentCount}/${studentLimit}` : String(selectedStudentCount)
+
+  if (!row.selected) {
+    if (isFull) {
+      if (row.canSelect || reasonIsCapacity || !currentReason) {
+        row.canSelect = false
+        row.actionDisabledReason = '人数已满'
+      }
+    } else if (reasonIsCapacity) {
+      row.canSelect = true
+      row.actionDisabledReason = ''
+    }
+  }
+}
+
+function applyCourseCountSnapshots(items: any[]) {
+  const snapshotMap = new Map<string, any>()
+  ;(items || []).forEach((item: any) => {
+    const id = item?.classCourseId ?? item?.lessonId
+    if (id != null) {
+      snapshotMap.set(String(id), item)
+    }
+  })
+  ;[allCourses.value, selectedCourses.value].forEach((rows) => {
+    ;(rows || []).forEach((row: any) => {
+      const snapshot = snapshotMap.get(String(row?.id))
+      if (snapshot) {
+        updateCourseCountState(row, snapshot)
+      }
+    })
+  })
+}
+
+async function refreshCourseSelectionStudentCounts(lessonIds?: Array<number | string>) {
+  const userId = userStore.user?.userId
+  if (!userId) return []
+  const ids = normalizeLessonIds(lessonIds?.length ? lessonIds : resolveCourseLessonIds(allCourses.value))
+  if (!ids.length) return []
+  const requests: Promise<any>[] = []
+  for (let index = 0; index < ids.length; index += COUNT_QUERY_BATCH_SIZE) {
+    requests.push(getPortalCourseSelectionStudentCounts({
+      userId,
+      lessonIds: ids.slice(index, index + COUNT_QUERY_BATCH_SIZE),
+    }))
+  }
+  const responses = await Promise.all(requests)
+  const items = responses.flatMap((res: any) => res.data?.items || [])
+  applyCourseCountSnapshots(items)
+  return items
+}
+
+async function pollListCourseCounts() {
+  if (listCountPollingBusy) return
+  listCountPollingBusy = true
+  try {
+    await refreshCourseSelectionStudentCounts()
+  } finally {
+    listCountPollingBusy = false
+  }
+}
+
+function stopListCountPolling() {
+  if (listCountPollingTimer) {
+    clearInterval(listCountPollingTimer)
+    listCountPollingTimer = null
+  }
+}
+
+function startListCountPolling() {
+  if (listCountPollingTimer) return
+  listCountPollingTimer = setInterval(() => {
+    void pollListCourseCounts()
+  }, LIST_COUNT_POLLING_INTERVAL)
 }
 
 async function loadTerms() {
@@ -389,19 +557,30 @@ async function loadTerms() {
 }
 
 async function loadSelectionOptions() {
+  const data = await queryCourseSelectionOptions()
+  planInfo.value = data?.plan || null
+  selectionOpen.value = Boolean(data?.selectionOpen)
+  dropOpen.value = Boolean(data?.dropOpen)
+  allCourses.value = data?.availableCourses || []
+  selectedCourses.value = data?.selectedCourses || []
+  selectionStats.value = data?.stats || {}
+  timeTableLayout.value = data?.timeTableLayout || null
+}
+
+async function queryCourseSelectionOptions(extraParams: Record<string, any> = {}) {
   const userId = userStore.user?.userId
-  if (!userId) return
-  loading.value = true
+  if (!userId) return null
+  const shouldShowLoading = !extraParams || !Object.keys(extraParams).length
+  if (shouldShowLoading) {
+    loading.value = true
+  }
   try {
-    const res = await getPortalCourseSelectionOptions({ userId, termId: queryParams.termId })
-    planInfo.value = res.data?.plan || null
-    selectionOpen.value = Boolean(res.data?.selectionOpen)
-    dropOpen.value = Boolean(res.data?.dropOpen)
-    allCourses.value = res.data?.availableCourses || []
-    selectedCourses.value = res.data?.selectedCourses || []
-    selectionStats.value = res.data?.stats || {}
+    const res = await getPortalCourseSelectionOptions({ userId, termId: queryParams.termId, ...extraParams })
+    return res.data || {}
   } finally {
-    loading.value = false
+    if (shouldShowLoading) {
+      loading.value = false
+    }
   }
 }
 
@@ -488,6 +667,19 @@ watch(
   { immediate: true },
 )
 
+watch(
+  shouldPollListCounts,
+  (enabled) => {
+    if (enabled) {
+      void pollListCourseCounts()
+      startListCountPolling()
+      return
+    }
+    stopListCountPolling()
+  },
+  { immediate: true },
+)
+
 onMounted(async () => {
   try {
     await loadTerms()
@@ -495,6 +687,14 @@ onMounted(async () => {
     initialized.value = true
   } finally {
     initialLoading.value = false
+  }
+})
+
+onBeforeUnmount(() => {
+  stopListCountPolling()
+  if (searchTimer) {
+    clearTimeout(searchTimer)
+    searchTimer = null
   }
 })
 </script>
@@ -522,7 +722,7 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: 4px;
   background: #eaf2ff;
   color: #2563eb;
   font-size: 12px;
@@ -550,7 +750,7 @@ onMounted(async () => {
 
 .selection-stat {
   padding: 14px;
-  border-radius: 14px;
+  border-radius: 4px;
   background: #ffffff;
   border: 1px solid #dbe7f5;
 }
@@ -605,7 +805,7 @@ onMounted(async () => {
 .selection-window-item {
   min-width: 220px;
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: 4px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   text-align: left;
@@ -649,7 +849,7 @@ onMounted(async () => {
 
 .selection-notice-bar__item {
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: 4px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   transition: border-color 0.3s, background 0.3s;
@@ -705,6 +905,34 @@ onMounted(async () => {
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.selection-view-switch {
+  box-shadow: none;
+}
+
+.selection-view-switch :deep(.el-button) {
+  border-radius: 4px;
+  padding-left: 18px;
+  padding-right: 18px;
+}
+
+.selection-view-switch :deep(.el-button + .el-button) {
+  margin-left: -1px;
+}
+
+.selection-view-switch :deep(.el-button:first-child) {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.selection-view-switch :deep(.el-button:last-child) {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.selection-view-switch :deep(.el-button:not(:first-child):not(:last-child)) {
+  border-radius: 0;
 }
 
 .selection-tabs {

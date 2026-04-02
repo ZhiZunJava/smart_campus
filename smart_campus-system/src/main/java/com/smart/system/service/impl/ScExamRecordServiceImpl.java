@@ -5,6 +5,7 @@ import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -319,6 +320,7 @@ public class ScExamRecordServiceImpl implements IScExamRecordService {
             }
         }
         sessionPaper = scExamSessionPaperMapper.selectScExamSessionPaperById(sessionPaperId);
+        sessionPaper.setStartTime(sessionPaper.getStartTime() == null ? new Date() : sessionPaper.getStartTime());
         sessionPaper.setPaperStatus("SUBMITTED");
         sessionPaper.setSubmitTime(new Date());
         sessionPaper.setUpdateBy(operator);
@@ -334,6 +336,7 @@ public class ScExamRecordServiceImpl implements IScExamRecordService {
         if (record == null) {
             return null;
         }
+        List<Map<String, Object>> mergedAnswers = mergeSubmittedAnswers(recordId, answers);
         scExamAnswerMapper.deleteScExamAnswerByRecordId(recordId);
         List<ScExamPaperQuestion> paperQuestions = scExamPaperQuestionMapper
                 .selectScExamPaperQuestionByPaperId(record.getPaperId());
@@ -342,7 +345,7 @@ public class ScExamRecordServiceImpl implements IScExamRecordService {
         int correctCount = 0;
         List<Long> answeredQuestionIds = new ArrayList<>();
 
-        for (Map<String, Object> item : answers) {
+        for (Map<String, Object> item : mergedAnswers) {
             Long questionId = item.get("questionId") == null ? null
                     : Long.valueOf(String.valueOf(item.get("questionId")));
             String userAnswer = item.get("userAnswer") == null ? "" : String.valueOf(item.get("userAnswer"));
@@ -395,6 +398,35 @@ public class ScExamRecordServiceImpl implements IScExamRecordService {
         scLearningReportService.generateReport(record.getUserId(), "exam_after_submit");
         scUserGrowthService.rewardExamSubmit(record.getUserId(), recordId, "system");
         return record;
+    }
+
+    private List<Map<String, Object>> mergeSubmittedAnswers(Long recordId, List<Map<String, Object>> answers) {
+        Map<Long, String> mergedMap = new LinkedHashMap<>();
+        List<ScExamAnswer> existingAnswers = scExamAnswerMapper.selectScExamAnswerByRecordId(recordId);
+        for (ScExamAnswer answer : existingAnswers) {
+            if (answer == null || answer.getQuestionId() == null) {
+                continue;
+            }
+            mergedMap.put(answer.getQuestionId(), StringUtils.defaultIfEmpty(answer.getUserAnswer(), ""));
+        }
+        if (answers != null) {
+            for (Map<String, Object> item : answers) {
+                if (item == null || item.get("questionId") == null) {
+                    continue;
+                }
+                Long questionId = Long.valueOf(String.valueOf(item.get("questionId")));
+                String userAnswer = item.get("userAnswer") == null ? "" : String.valueOf(item.get("userAnswer"));
+                mergedMap.put(questionId, userAnswer);
+            }
+        }
+        List<Map<String, Object>> mergedAnswers = new ArrayList<>();
+        mergedMap.forEach((questionId, userAnswer) -> {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("questionId", questionId);
+            row.put("userAnswer", userAnswer);
+            mergedAnswers.add(row);
+        });
+        return mergedAnswers;
     }
 
     private Long initExamSession(Long paperId, Long userId) {

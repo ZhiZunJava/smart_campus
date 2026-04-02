@@ -73,55 +73,120 @@
 
     <div class="wrongbook-workbench mt20">
       <div class="wrongbook-section-card">
-        <div class="section-header">
-          <div class="section-title">错题列表</div>
-          <el-button type="primary" plain @click="openRetryDialog('smart')">智能回练</el-button>
+        <div class="section-header wrongbook-section-header">
+          <div class="section-title-block">
+            <div class="section-title">错题列表</div>
+            <div class="section-subtitle">优先处理未掌握、高频、近期重复出错的题目，并支持直接生成回练卷。</div>
+          </div>
+          <div class="wrongbook-toolbar">
+            <div class="wrongbook-toolbar__meta">
+              <span>{{ displayWrongs.length }} 条结果</span>
+              <span>{{ selectedWrongCount }} 题已选</span>
+            </div>
+            <div class="wrongbook-toolbar__actions">
+              <el-button plain :disabled="!canOpenSelectedRetry" @click="openRetryDialog('selected')">已选回练</el-button>
+              <el-button type="primary" plain @click="openRetryDialog('smart')">智能回练</el-button>
+            </div>
+          </div>
         </div>
 
-        <el-form :inline="true" :model="filters" class="wrongbook-filters">
-          <el-form-item label="课程">
-            <el-select v-model="filters.courseId" clearable filterable style="width: 140px" @change="getList">
-              <el-option v-for="item in courseOptions" :key="item.value" :label="item.label" :value="item.value" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="题库">
-            <el-select v-model="filters.catalogId" clearable filterable style="width: 140px" @change="getList">
-              <el-option v-for="item in catalogOptions" :key="item.value" :label="item.label" :value="item.value" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="题型">
-            <el-select v-model="filters.questionType" clearable style="width: 120px" @change="getList">
-              <el-option v-for="item in questionTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="知识点">
-            <el-input v-model="filters.knowledgePointId" style="width: 120px" @keyup.enter="getList" />
-          </el-form-item>
-          <el-form-item label="掌握状态">
-            <el-select v-model="filters.masteryStatus" clearable style="width: 110px" @change="getList">
-              <el-option label="未掌握" value="0" />
-              <el-option label="已掌握" value="1" />
-            </el-select>
-          </el-form-item>
+        <el-form :model="filters" class="wrongbook-filters" @submit.prevent>
+          <div class="wrongbook-filters__grid">
+            <el-form-item label="课程">
+              <el-select v-model="filters.courseId" clearable filterable style="width: 100%">
+                <el-option v-for="item in courseOptions" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="题库">
+              <el-select v-model="filters.catalogId" clearable filterable style="width: 100%">
+                <el-option v-for="item in catalogOptions" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="题型">
+              <el-select v-model="filters.questionType" clearable style="width: 100%">
+                <el-option v-for="item in questionTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="知识点">
+              <el-select v-model="filters.knowledgePointId" clearable filterable placeholder="按知识点筛选" style="width: 100%">
+                <el-option v-for="item in filteredListKnowledgePointOptions" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="掌握状态">
+              <el-select v-model="filters.masteryStatus" clearable style="width: 100%">
+                <el-option label="未掌握" value="0" />
+                <el-option label="已掌握" value="1" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="关键词">
+              <el-input v-model="filters.keyword" placeholder="搜索题干 / 题目ID" style="width: 100%" @keyup.enter="handleSearch" />
+            </el-form-item>
+          </div>
+          <div class="wrongbook-filters__actions">
+            <el-button type="primary" @click="handleSearch">搜索</el-button>
+            <el-button @click="resetFilters">重置</el-button>
+          </div>
         </el-form>
 
-        <el-table v-loading="loading" :data="wrongs" @row-click="selectWrong" class="custom-table" highlight-current-row>
-          <el-table-column prop="questionId" label="题目ID" min-width="90" />
-          <el-table-column label="题库" min-width="120" show-overflow-tooltip>
-            <template #default="scope">{{ catalogLabel(scope.row.catalogId) }}</template>
-          </el-table-column>
-          <el-table-column label="课程" min-width="140" show-overflow-tooltip>
-            <template #default="scope">{{ courseLabel(scope.row.courseId) }}</template>
-          </el-table-column>
-          <el-table-column label="知识点" min-width="120" show-overflow-tooltip>
-            <template #default="scope">{{ knowledgePointLabel(scope.row.knowledgePointId) }}</template>
-          </el-table-column>
-          <el-table-column prop="wrongCount" label="错误次数" min-width="100" align="center" />
-          <el-table-column label="掌握状态" min-width="110" align="center">
+        <el-table
+          v-loading="loading"
+          :data="displayWrongs"
+          @selection-change="handleWrongSelectionChange"
+          @row-click="selectWrong"
+          class="custom-table"
+          highlight-current-row
+          row-key="id"
+        >
+          <el-table-column type="selection" width="52" />
+          <el-table-column label="题目" min-width="360" show-overflow-tooltip>
             <template #default="scope">
-              <el-tag :type="scope.row.masteryStatus === '1' ? 'success' : 'warning'" effect="light" size="small">
-                {{ scope.row.masteryStatus === '1' ? '已掌握' : '未掌握' }}
+              <div class="question-summary">
+                <div class="question-summary__meta">
+                  <span class="question-summary__id">#{{ scope.row.questionId }}</span>
+                  <el-tag effect="plain" size="small">{{ questionTypeLabel(scope.row.questionType) }}</el-tag>
+                </div>
+                <div class="question-summary__stem">{{ buildStemPreview(scope.row.stem) }}</div>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column label="学习上下文" min-width="240" show-overflow-tooltip>
+            <template #default="scope">
+              <div class="context-summary">
+                <div class="context-summary__line">
+                  <span class="context-summary__label">课程</span>
+                  <strong>{{ courseLabel(scope.row.courseId) }}</strong>
+                </div>
+                <div class="context-summary__line">
+                  <span class="context-summary__label">知识点</span>
+                  <span>{{ knowledgePointLabel(scope.row.knowledgePointId) }}</span>
+                </div>
+                <div class="context-summary__line">
+                  <span class="context-summary__label">题库</span>
+                  <span>{{ catalogLabel(scope.row.catalogId) }}</span>
+                </div>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column label="最近错题" min-width="160">
+            <template #default="scope">{{ formatDateTime(scope.row.lastWrongTime) }}</template>
+          </el-table-column>
+          <el-table-column label="错误次数" width="110" align="center">
+            <template #default="scope">
+              <el-tag :type="wrongCountTagType(scope.row.wrongCount)" effect="light" size="small">
+                {{ scope.row.wrongCount || 0 }} 次
               </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="掌握状态" width="110" align="center">
+            <template #default="scope">
+              <el-tag :type="masteryStatusTagType(scope.row.masteryStatus)" effect="light" size="small">
+                {{ masteryStatusLabel(scope.row.masteryStatus) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="110" fixed="right">
+            <template #default="scope">
+              <el-button link type="primary" @click.stop="openRowRetry(scope.row)">回练</el-button>
             </template>
           </el-table-column>
           <template #empty>
@@ -212,48 +277,185 @@
       </div>
     </div>
 
-    <el-dialog v-model="retryOpen" title="错题回练" width="860px">
-      <el-form :model="retryForm" label-width="100px">
-        <el-form-item label="筛题模式">
-          <el-radio-group v-model="retryForm.pickMode">
-            <el-radio-button label="selected">已选错题</el-radio-button>
-            <el-radio-button label="smart">智能筛题</el-radio-button>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="回练名称"><el-input v-model="retryForm.paperName" /></el-form-item>
-        <el-form-item label="所属课程">
-          <el-select v-model="retryForm.courseId" clearable filterable placeholder="可不选，生成通用回练卷" style="width: 100%">
-            <el-option v-for="item in courseOptions" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item v-if="retryForm.pickMode === 'smart'" label="知识点">
-          <el-select v-model="retryForm.smartKnowledgePointId" clearable filterable placeholder="按知识点筛题，可留空" style="width: 100%">
-            <el-option v-for="item in filteredKnowledgePointOptions" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item v-if="retryForm.pickMode === 'smart'" label="最少错次"><el-input-number v-model="retryForm.minWrongCount" :min="1" :max="100" /></el-form-item>
-        <el-form-item v-if="retryForm.pickMode === 'smart'" label="排序方式">
-          <el-select v-model="retryForm.sortMode" style="width: 100%">
-            <el-option label="按未掌握优先" value="unmastered_first" />
-            <el-option label="按最近错题优先" value="recent_wrong_first" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="时长"><el-input-number v-model="retryForm.durationMinutes" :min="5" :max="180" /></el-form-item>
-        <el-form-item label="生成方式">
-          <el-switch v-model="retryForm.savePaper" active-text="保存为专属回练卷" inactive-text="仅预览不保存" />
-        </el-form-item>
+    <el-dialog
+      v-model="retryOpen"
+      title="错题回练"
+      width="960px"
+      top="6vh"
+      class="retry-dialog"
+      append-to-body
+      destroy-on-close
+    >
+      <div class="retry-dialog__hero">
+        <div class="retry-dialog__intro">
+          <div class="retry-dialog__title">生成错题回练卷</div>
+          <p class="retry-dialog__desc">{{ retryModeDescription }}</p>
+        </div>
+        <div class="retry-dialog__stats">
+          <div class="retry-stat-card">
+            <span>预计题数</span>
+            <strong>{{ retryEstimatedQuestionCount }}</strong>
+          </div>
+          <div class="retry-stat-card">
+            <span>预计总分</span>
+            <strong>{{ retryEstimatedTotalScore }}</strong>
+          </div>
+          <div class="retry-stat-card">
+            <span>预计及格线</span>
+            <strong>{{ retryEstimatedPassScore }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <el-form :model="retryForm" label-position="top" class="retry-form">
+        <div class="retry-panel">
+          <div class="retry-panel__title">1. 选择回练范围</div>
+          <div class="retry-panel__hint">{{ retrySelectionHint }}</div>
+          <el-form-item label="筛题模式" class="retry-form-item--compact">
+            <el-radio-group v-model="retryForm.pickMode">
+              <el-radio-button value="selected">已选错题</el-radio-button>
+              <el-radio-button value="smart">智能筛题</el-radio-button>
+            </el-radio-group>
+          </el-form-item>
+          <el-table
+            v-if="retryPreviewWrongs.length"
+            :data="retryPreviewWrongs"
+            size="small"
+            border
+            class="retry-preview-table"
+            max-height="240"
+          >
+            <el-table-column label="#" width="56" align="center">
+              <template #default="scope">{{ scope.$index + 1 }}</template>
+            </el-table-column>
+            <el-table-column label="题型" width="100">
+              <template #default="scope">{{ questionTypeLabel(scope.row.questionType) }}</template>
+            </el-table-column>
+            <el-table-column label="题目摘要" min-width="320" show-overflow-tooltip>
+              <template #default="scope">{{ buildStemPreview(scope.row.stem) }}</template>
+            </el-table-column>
+            <el-table-column label="错误次数" width="96" align="center">
+              <template #default="scope">{{ scope.row.wrongCount || 0 }}</template>
+            </el-table-column>
+            <el-table-column label="掌握状态" width="100" align="center">
+              <template #default="scope">{{ masteryStatusLabel(scope.row.masteryStatus) }}</template>
+            </el-table-column>
+            <el-table-column label="推荐值" width="90" align="center">
+              <template #default="scope">{{ scope.row._retryScore }}</template>
+            </el-table-column>
+          </el-table>
+        </div>
+
+        <div class="retry-panel">
+          <div class="retry-panel__title">2. 基础设置</div>
+          <div class="retry-form-grid">
+            <el-form-item label="回练名称">
+              <el-input v-model="retryForm.paperName" />
+            </el-form-item>
+            <el-form-item label="所属课程">
+              <el-select
+                v-model="retryForm.courseId"
+                clearable
+                filterable
+                placeholder="可不选，生成通用回练卷"
+                style="width: 100%"
+                popper-class="retry-dialog-popper"
+                teleported
+              >
+                <el-option v-for="item in courseOptions" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="回练时长">
+              <div class="retry-duration-field">
+                <el-input-number v-model="retryForm.durationMinutes" :min="5" :max="180" style="width: 100%" />
+                <el-radio-group v-model="retryForm.durationMinutes" class="retry-duration-radios">
+                  <el-radio-button v-for="item in durationPresetOptions" :key="item" :value="item">
+                    {{ item }} 分钟
+                  </el-radio-button>
+                </el-radio-group>
+              </div>
+            </el-form-item>
+            <el-form-item label="生成方式">
+              <div class="retry-save-mode">
+                <el-radio-group v-model="retryForm.savePaper">
+                  <el-radio-button :value="false">仅预览</el-radio-button>
+                  <el-radio-button :value="true">保存为专属回练卷</el-radio-button>
+                </el-radio-group>
+                <p>{{ retryForm.savePaper ? '会保存到“我的考试”，方便后续反复回练。' : '只生成预览结果，不会写入试卷列表。' }}</p>
+              </div>
+            </el-form-item>
+          </div>
+        </div>
+
+        <div v-if="retryForm.pickMode === 'smart'" class="retry-panel">
+          <div class="retry-panel__title">3. 智能筛题规则</div>
+          <div class="retry-form-grid">
+            <el-form-item label="知识点">
+              <el-select
+                v-model="retryForm.smartKnowledgePointId"
+                clearable
+                filterable
+                placeholder="按知识点筛题，可留空"
+                style="width: 100%"
+                popper-class="retry-dialog-popper"
+                teleported
+              >
+                <el-option v-for="item in filteredKnowledgePointOptions" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="最少错次">
+              <el-input-number v-model="retryForm.minWrongCount" :min="1" :max="100" style="width: 100%" />
+            </el-form-item>
+            <el-form-item label="排序方式">
+              <el-select
+                v-model="retryForm.sortMode"
+                style="width: 100%"
+                popper-class="retry-dialog-popper"
+                teleported
+              >
+                <el-option label="按未掌握优先" value="unmastered_first" />
+                <el-option label="按最近错题优先" value="recent_wrong_first" />
+              </el-select>
+            </el-form-item>
+          </div>
+        </div>
       </el-form>
       <template #footer>
         <el-button @click="retryOpen = false">取消</el-button>
-        <el-button type="primary" :loading="retryLoading" @click="submitRetry">生成回练卷</el-button>
+        <el-button type="primary" :loading="retryLoading" :disabled="retrySubmitDisabled" @click="submitRetry">生成回练卷</el-button>
       </template>
     </el-dialog>
 
-    <el-dialog v-model="retryResultOpen" title="回练卷预览" width="1080px">
+    <el-dialog
+      v-model="retryResultOpen"
+      title="回练卷预览"
+      width="1080px"
+      top="6vh"
+      class="retry-preview-dialog"
+      append-to-body
+      destroy-on-close
+    >
       <div class="preview-head">
-        <span>试卷名称：{{ retryResult.paperName || '-' }}</span>
-        <span>总分：{{ retryResult.totalScore || 0 }}</span>
-        <span>时长：{{ retryResult.durationMinutes || 0 }} 分钟</span>
+        <div class="preview-head__item">
+          <span>试卷名称</span>
+          <strong>{{ retryResult.paperName || '-' }}</strong>
+        </div>
+        <div class="preview-head__item">
+          <span>总分</span>
+          <strong>{{ retryResult.totalScore || 0 }}</strong>
+        </div>
+        <div class="preview-head__item">
+          <span>及格线</span>
+          <strong>{{ retryResult.passScore || 0 }}</strong>
+        </div>
+        <div class="preview-head__item">
+          <span>时长</span>
+          <strong>{{ retryResult.durationMinutes || 0 }} 分钟</strong>
+        </div>
+        <div class="preview-head__item">
+          <span>题数</span>
+          <strong>{{ retryResult.questions?.length || 0 }} 题</strong>
+        </div>
       </div>
       <el-table :data="retryResult.questions || []" border class="mt20">
         <el-table-column prop="sortNo" label="排序" width="90" />
@@ -275,7 +477,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from '@/utils/feedback'
 import { createWrongRetryPaper, fetchPortalCourseOptions, fetchPortalStudentKnowledgePointOptions, getWrongBookOverview, listWrongBook, startExam } from '@/api/portal'
@@ -293,6 +495,7 @@ const retryOpen = ref(false)
 const retryLoading = ref(false)
 const retryResultOpen = ref(false)
 const retryResult = ref<any>({})
+const selectedWrongIds = ref<number[]>([])
 
 const retryForm = reactive<any>({
   wrongIds: [] as number[],
@@ -311,8 +514,9 @@ const filters = reactive<any>({
   courseId: undefined,
   catalogId: undefined,
   questionType: '',
-  knowledgePointId: '',
+  knowledgePointId: undefined,
   masteryStatus: '',
+  keyword: '',
 })
 
 const highWrongCount = computed(() =>
@@ -321,6 +525,11 @@ const highWrongCount = computed(() =>
 const filteredKnowledgePointOptions = computed(() =>
   knowledgePointOptions.value.filter((item: any) => !retryForm.courseId || String(item.courseId || '') === String(retryForm.courseId)),
 )
+const filteredListKnowledgePointOptions = computed(() =>
+  knowledgePointOptions.value.filter((item: any) => !filters.courseId || String(item.courseId || '') === String(filters.courseId)),
+)
+const selectedWrongCount = computed(() => selectedWrongIds.value.length)
+const canOpenSelectedRetry = computed(() => Boolean(selectedWrongCount.value || selectedWrong.value?.id))
 
 const catalogOptions = computed(() => {
   const stats = overview.value.catalogStats || []
@@ -343,6 +552,65 @@ const catalogOptions = computed(() => {
   })
   return result
 })
+const displayWrongs = computed(() => {
+  const keyword = String(filters.keyword || '').trim().toLowerCase()
+  return [...wrongs.value]
+    .filter((item: any) => {
+      if (!keyword) return true
+      const haystack = [
+        item.questionId,
+        item.stem,
+        questionTypeLabel(item.questionType),
+        courseLabel(item.courseId),
+        catalogLabel(item.catalogId),
+        knowledgePointLabel(item.knowledgePointId),
+      ].join(' ').toLowerCase()
+      return haystack.includes(keyword)
+    })
+    .sort((left: any, right: any) => {
+      const leftMastery = String(left?.masteryStatus || '0') === '1' ? 1 : 0
+      const rightMastery = String(right?.masteryStatus || '0') === '1' ? 1 : 0
+      if (leftMastery !== rightMastery) return leftMastery - rightMastery
+      const wrongDiff = Number(right?.wrongCount || 0) - Number(left?.wrongCount || 0)
+      if (wrongDiff !== 0) return wrongDiff
+      const rightTime = new Date(right?.lastWrongTime || 0).getTime()
+      const leftTime = new Date(left?.lastWrongTime || 0).getTime()
+      if (rightTime !== leftTime) return rightTime - leftTime
+      return Number(left?.questionId || 0) - Number(right?.questionId || 0)
+    })
+})
+const retryPreviewWrongs = computed(() => {
+  if (retryForm.pickMode === 'smart') {
+    return buildSmartRetryCandidates(wrongs.value)
+  }
+  return getSelectedRetryWrongs(wrongs.value)
+})
+const retryEstimatedQuestionCount = computed(() => retryPreviewWrongs.value.length)
+const retryEstimatedTotalScore = computed(() =>
+  retryPreviewWrongs.value.reduce((sum: number, item: any) => sum + resolveRetryQuestionScore(item?.questionType), 0),
+)
+const retryEstimatedPassScore = computed(() => {
+  if (!retryEstimatedTotalScore.value) return 0
+  return Math.max(1, Math.round(retryEstimatedTotalScore.value * 0.6))
+})
+const retryModeDescription = computed(() => {
+  if (retryForm.pickMode === 'selected') {
+    return '从你勾选的错题或当前查看题目中生成一张更短、更聚焦的回练卷，适合针对性复盘。'
+  }
+  return '按课程、知识点、错误频次和掌握状态智能筛题，生成一张更适合阶段巩固的回练卷。'
+})
+const retrySelectionHint = computed(() => {
+  if (retryForm.pickMode === 'selected') {
+    return retryPreviewWrongs.value.length
+      ? `将使用 ${retryPreviewWrongs.value.length} 道已选/当前错题生成回练卷。`
+      : '请先在列表中勾选错题，或至少选择当前查看的一题。'
+  }
+  return retryPreviewWrongs.value.length
+    ? `当前智能规则预计命中 ${retryPreviewWrongs.value.length} 道错题，已按掌握状态、错次、近期错误与分散度综合推荐。`
+    : '当前智能规则还没有命中错题，请调整知识点或最少错次。'
+})
+const durationPresetOptions = [20, 30, 45, 60]
+const retrySubmitDisabled = computed(() => retryLoading.value || !retryPreviewWrongs.value.length)
 
 const questionTypeOptions = [
   { label: '单选题', value: 'single' },
@@ -374,6 +642,168 @@ function knowledgePointLabel(knowledgePointId: number | string | undefined) {
   if (!knowledgePointId) return '-'
   const matched = knowledgePointOptions.value.find((item: any) => String(item.value) === String(knowledgePointId))
   return matched?.label || `知识点 ${knowledgePointId}`
+}
+
+function buildRetryPaperName(courseId?: number | string) {
+  const matchedCourse = courseOptions.value.find((item: any) => String(item.value) === String(courseId || ''))
+  const coursePrefix = matchedCourse?.label ? `${matchedCourse.label}-` : ''
+  const now = new Date()
+  const month = `${now.getMonth() + 1}`.padStart(2, '0')
+  const day = `${now.getDate()}`.padStart(2, '0')
+  return `${coursePrefix}错题回练卷-${now.getFullYear()}-${month}-${day}`
+}
+
+function masteryStatusLabel(status: string) {
+  return status === '1' ? '已掌握' : '未掌握'
+}
+
+function masteryStatusTagType(status: string) {
+  return status === '1' ? 'success' : 'warning'
+}
+
+function wrongCountTagType(count: number | string | undefined) {
+  const value = Number(count || 0)
+  if (value >= 5) return 'danger'
+  if (value >= 3) return 'warning'
+  return 'info'
+}
+
+function formatDateTime(value?: string) {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  const month = `${date.getMonth() + 1}`.padStart(2, '0')
+  const day = `${date.getDate()}`.padStart(2, '0')
+  const hours = `${date.getHours()}`.padStart(2, '0')
+  const minutes = `${date.getMinutes()}`.padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day} ${hours}:${minutes}`
+}
+
+function buildStemPreview(stem?: string) {
+  const text = String(stem || '').replace(/\s+/g, ' ').trim()
+  if (!text) return '暂无题干摘要'
+  return text.length > 52 ? `${text.slice(0, 52)}...` : text
+}
+
+function resolveRetryQuestionScore(questionType?: string) {
+  const normalizedType = String(questionType || 'single').toLowerCase()
+  if (normalizedType === 'judge') return 5
+  if (normalizedType === 'single') return 6
+  if (normalizedType === 'multiple' || normalizedType === 'fill') return 8
+  if (normalizedType === 'essay') return 12
+  if (normalizedType === 'material' || normalizedType === 'case') return 15
+  return 10
+}
+
+function getSelectedRetryWrongs(source: any[]) {
+  const selectedIds = selectedWrongIds.value.length
+    ? selectedWrongIds.value
+    : (selectedWrong.value?.id ? [selectedWrong.value.id] : [])
+  const idSet = new Set(selectedIds.map((item: any) => Number(item)))
+  return source.filter((item: any) => idSet.has(Number(item.id)))
+}
+
+function estimateRetryQuestionMinutes(questionType?: string) {
+  const normalizedType = String(questionType || 'single').toLowerCase()
+  if (normalizedType === 'judge') return 1
+  if (normalizedType === 'single') return 1
+  if (normalizedType === 'multiple' || normalizedType === 'fill') return 2
+  if (normalizedType === 'essay') return 4
+  if (normalizedType === 'material' || normalizedType === 'case') return 5
+  return 2
+}
+
+function computeRecentRetryBonus(lastWrongTime?: string, sortMode?: string) {
+  if (!lastWrongTime) return 0
+  const target = new Date(lastWrongTime).getTime()
+  if (!target || Number.isNaN(target)) return 0
+  const diffDays = Math.max(0, Math.floor((Date.now() - target) / (1000 * 60 * 60 * 24)))
+  const base = Math.max(0, 30 - diffDays)
+  return sortMode === 'recent_wrong_first' ? base * 2 : base
+}
+
+function computeRetryPriority(item: any, sortMode?: string) {
+  const wrongCount = Number(item?.wrongCount || 0)
+  const masteryBonus = String(item?.masteryStatus || '0') === '0' ? 45 : 8
+  const frequencyBonus = Math.min(48, wrongCount * 12)
+  const recencyBonus = computeRecentRetryBonus(item?.lastWrongTime, sortMode)
+  const knowledgeBonus = item?.knowledgePointId ? 6 : 0
+  return masteryBonus + frequencyBonus + recencyBonus + knowledgeBonus
+}
+
+function buildSmartRetryCandidates(source: any[]) {
+  const filtered = [...source]
+    .filter((item: any) => {
+      const courseMatch = !retryForm.courseId || String(item.courseId || '') === String(retryForm.courseId)
+      const kpMatch = !retryForm.smartKnowledgePointId || String(item.knowledgePointId || '') === String(retryForm.smartKnowledgePointId)
+      const countMatch = Number(item.wrongCount || 0) >= Number(retryForm.minWrongCount || 1)
+      return courseMatch && kpMatch && countMatch
+    })
+    .map((item: any) => ({
+      ...item,
+      _retryScoreBase: computeRetryPriority(item, retryForm.sortMode),
+      _retryMinutes: estimateRetryQuestionMinutes(item?.questionType),
+    }))
+
+  const minuteBudget = Math.max(10, Math.round(Number(retryForm.durationMinutes || 45) * 0.75))
+  const selected: any[] = []
+  let usedMinutes = 0
+
+  while (filtered.length) {
+    let bestIndex = -1
+    let bestScore = -Infinity
+
+    filtered.forEach((item: any, index: number) => {
+      const sameTypeCount = selected.filter((selectedItem) => selectedItem.questionType === item.questionType).length
+      const sameKnowledgeCount = selected.filter((selectedItem) =>
+        String(selectedItem.knowledgePointId || '') === String(item.knowledgePointId || ''),
+      ).length
+      const durationPenalty = usedMinutes + item._retryMinutes > minuteBudget && selected.length > 0 ? 50 : 0
+      const diversityPenalty = sameTypeCount * 6 + sameKnowledgeCount * 10
+      const score = item._retryScoreBase - diversityPenalty - durationPenalty
+
+      if (score > bestScore) {
+        bestScore = score
+        bestIndex = index
+      }
+    })
+
+    if (bestIndex < 0) break
+
+    const [best] = filtered.splice(bestIndex, 1)
+    if (usedMinutes + best._retryMinutes > minuteBudget && selected.length > 0) {
+      if (selected.length >= 3) {
+        break
+      }
+    }
+    selected.push({
+      ...best,
+      _retryScore: Math.max(1, Math.round(bestScore)),
+    })
+    usedMinutes += best._retryMinutes
+    if (selected.length >= 24) break
+  }
+
+  return selected
+}
+
+function handleSearch() {
+  getList()
+}
+
+function resetFilters() {
+  filters.courseId = undefined
+  filters.catalogId = undefined
+  filters.questionType = ''
+  filters.knowledgePointId = undefined
+  filters.masteryStatus = ''
+  filters.keyword = ''
+  selectedWrongIds.value = []
+  getList()
+}
+
+function handleWrongSelectionChange(selection: any[]) {
+  selectedWrongIds.value = selection.map((item: any) => item.id)
 }
 
 async function getList() {
@@ -413,11 +843,24 @@ function selectWrong(row: any) {
   selectedWrong.value = row
 }
 
+function openRowRetry(row: any) {
+  if (!row) return
+  selectedWrong.value = row
+  selectedWrongIds.value = [row.id]
+  openRetryDialog('selected')
+}
+
 function openRetryDialog(mode: 'selected' | 'smart') {
+  if (mode === 'selected' && !canOpenSelectedRetry.value) {
+    ElMessage.warning('请先在列表中勾选错题，或选择当前查看的一题')
+    return
+  }
   retryForm.pickMode = mode
-  retryForm.paperName = `错题回练-${new Date().toLocaleDateString()}`
   retryForm.courseId = selectedWrong.value?.courseId || filters.courseId
-  retryForm.wrongIds = mode === 'selected' && selectedWrong.value ? [selectedWrong.value.id] : []
+  retryForm.paperName = buildRetryPaperName(retryForm.courseId)
+  retryForm.wrongIds = mode === 'selected'
+    ? getSelectedRetryWrongs(wrongs.value).map((item: any) => item.id)
+    : []
   retryForm.smartKnowledgePointId = selectedWrong.value?.knowledgePointId
   retryForm.savePaper = true
   retryForm.sortMode = 'unmastered_first'
@@ -429,30 +872,16 @@ async function submitRetry() {
   try {
     const payload = { ...retryForm }
     if (retryForm.pickMode === 'smart') {
-      const matched = wrongs.value.filter((item: any) => {
-        const kpMatch = !retryForm.smartKnowledgePointId || String(item.knowledgePointId || '') === String(retryForm.smartKnowledgePointId)
-        const countMatch = Number(item.wrongCount || 0) >= Number(retryForm.minWrongCount || 1)
-        return kpMatch && countMatch
-      })
-      const sorted = [...matched].sort((left: any, right: any) => {
-        if (retryForm.sortMode === 'recent_wrong_first') {
-          const rightTime = new Date(right?.lastWrongTime || 0).getTime()
-          const leftTime = new Date(left?.lastWrongTime || 0).getTime()
-          if (rightTime !== leftTime) return rightTime - leftTime
-          return Number(right?.wrongCount || 0) - Number(left?.wrongCount || 0)
-        }
-        const leftMastery = String(left?.masteryStatus || '0') === '0' ? 0 : 1
-        const rightMastery = String(right?.masteryStatus || '0') === '0' ? 0 : 1
-        if (leftMastery !== rightMastery) return leftMastery - rightMastery
-        const wrongDiff = Number(right?.wrongCount || 0) - Number(left?.wrongCount || 0)
-        if (wrongDiff !== 0) return wrongDiff
-        const rightTime = new Date(right?.lastWrongTime || 0).getTime()
-        const leftTime = new Date(left?.lastWrongTime || 0).getTime()
-        return rightTime - leftTime
-      })
-      payload.wrongIds = sorted.map((item: any) => item.id)
+      payload.wrongIds = buildSmartRetryCandidates(wrongs.value).map((item: any) => item.id)
       if (!payload.wrongIds.length) {
         ElMessage.warning('当前条件下没有可回练的错题')
+        retryLoading.value = false
+        return
+      }
+    } else if (!payload.wrongIds?.length) {
+      payload.wrongIds = getSelectedRetryWrongs(wrongs.value).map((item: any) => item.id)
+      if (!payload.wrongIds.length) {
+        ElMessage.warning('请先在列表中勾选错题，或选择当前查看的一题')
         retryLoading.value = false
         return
       }
@@ -509,6 +938,36 @@ onMounted(async () => {
   knowledgePointOptions.value = await fetchPortalStudentKnowledgePointOptions(userId)
   await getList()
 })
+
+watch(
+  () => retryForm.pickMode,
+  (value) => {
+    if (value === 'selected') {
+      retryForm.wrongIds = getSelectedRetryWrongs(wrongs.value).map((item: any) => item.id)
+      return
+    }
+    retryForm.wrongIds = []
+  },
+)
+
+watch(
+  () => retryForm.courseId,
+  () => {
+    const validKnowledgePointIds = new Set(filteredKnowledgePointOptions.value.map((item: any) => String(item.value)))
+    if (retryForm.smartKnowledgePointId && !validKnowledgePointIds.has(String(retryForm.smartKnowledgePointId))) {
+      retryForm.smartKnowledgePointId = undefined
+    }
+  },
+)
+
+watch(displayWrongs, (list) => {
+  const currentId = selectedWrong.value?.id
+  if (!currentId || !list.some((item: any) => item.id === currentId)) {
+    selectedWrong.value = list[0] || null
+  }
+  const validIdSet = new Set(list.map((item: any) => Number(item.id)))
+  selectedWrongIds.value = selectedWrongIds.value.filter((item) => validIdSet.has(Number(item)))
+}, { immediate: true })
 </script>
 
 <style scoped>
@@ -712,22 +1171,140 @@ onMounted(async () => {
   border-bottom: 1px solid #ebeef5;
 }
 
+.wrongbook-section-header {
+  align-items: flex-start;
+  gap: 16px;
+}
+
 .section-title {
   font-size: 18px;
   font-weight: 600;
   color: #303133;
 }
 
+.section-title-block {
+  min-width: 0;
+}
+
+.section-subtitle {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #909399;
+}
+
+.wrongbook-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.wrongbook-toolbar__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.wrongbook-toolbar__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .wrongbook-filters {
   background: #fafafa;
-  padding: 16px 16px 0;
+  padding: 18px 18px 14px;
   border-radius: 6px;
   margin-bottom: 20px;
+  border: 1px solid #eef2f7;
+}
+
+.wrongbook-filters__grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px 16px;
+}
+
+.wrongbook-filters :deep(.el-form-item) {
+  margin-bottom: 0;
+}
+
+.wrongbook-filters :deep(.el-form-item__label) {
+  padding-bottom: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.wrongbook-filters__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
 }
 
 .custom-table {
   --el-table-border-color: #ebeef5;
   --el-table-header-bg-color: #fafafa;
+}
+
+.question-summary {
+  display: grid;
+  gap: 8px;
+}
+
+.question-summary__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.question-summary__id {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.question-summary__stem {
+  color: #334155;
+  line-height: 1.7;
+  word-break: break-word;
+}
+
+.context-summary {
+  display: grid;
+  gap: 6px;
+}
+
+.context-summary__line {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #475569;
+}
+
+.context-summary__label {
+  color: #94a3b8;
 }
 
 .wrongbook-detail-block + .wrongbook-detail-block {
@@ -802,16 +1379,271 @@ onMounted(async () => {
 }
 
 .preview-head {
-  display: flex;
-  gap: 24px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  padding: 18px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, #f8fbff 0%, #fffaf0 100%);
+}
+
+.preview-head__item {
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(219, 234, 254, 0.9);
+  box-shadow: 0 6px 16px rgba(30, 64, 175, 0.04);
+}
+
+.preview-head__item span {
+  display: block;
+  margin-bottom: 8px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.preview-head__item strong {
+  display: block;
+  color: #1e293b;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+:deep(.retry-dialog .el-dialog),
+:deep(.retry-preview-dialog .el-dialog) {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+}
+
+:deep(.retry-dialog .el-dialog__header),
+:deep(.retry-preview-dialog .el-dialog__header) {
+  padding: 18px 22px 12px;
+  margin-right: 0;
+  border-bottom: 1px solid #eef2f7;
+  background: #fff;
+}
+
+:deep(.retry-dialog .el-dialog__title),
+:deep(.retry-preview-dialog .el-dialog__title) {
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+:deep(.retry-dialog .el-dialog__body) {
+  padding: 18px 22px 20px;
+  background: #fcfdff;
+}
+
+:deep(.retry-preview-dialog .el-dialog__body) {
+  padding: 18px 22px 20px;
+  background: #fcfdff;
+}
+
+:deep(.retry-dialog .el-dialog__footer),
+:deep(.retry-preview-dialog .el-dialog__footer) {
+  padding: 14px 22px 18px;
+  border-top: 1px solid #eef2f7;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(10px);
+}
+
+:deep(.retry-dialog .el-dialog__headerbtn),
+:deep(.retry-preview-dialog .el-dialog__headerbtn) {
+  top: 18px;
+  right: 18px;
+}
+
+:global(.retry-dialog-popper.el-select__popper),
+:global(.retry-dialog-popper.el-popper) {
+  z-index: 5602 !important;
+}
+
+:deep(.retry-dialog .el-radio-group),
+:deep(.retry-preview-dialog .el-radio-group) {
   flex-wrap: wrap;
-  font-weight: 600;
-  background: #fafafa;
-  padding: 16px;
-  border-radius: 6px;
-  border: 1px solid #ebeef5;
-  color: #303133;
-  font-size: 15px;
+}
+
+:deep(.retry-dialog .el-input__wrapper),
+:deep(.retry-dialog .el-select__wrapper),
+:deep(.retry-dialog .el-textarea__inner),
+:deep(.retry-dialog .el-input-number),
+:deep(.retry-preview-dialog .el-input__wrapper),
+:deep(.retry-preview-dialog .el-select__wrapper) {
+  border-radius: 10px;
+}
+
+:deep(.retry-dialog .el-form-item__label),
+:deep(.retry-preview-dialog .el-form-item__label) {
+  color: #475569;
+  font-weight: 700;
+}
+
+:deep(.retry-dialog .el-table),
+:deep(.retry-preview-dialog .el-table) {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.retry-dialog__intro {
+  min-width: 0;
+}
+
+.retry-form :deep(.el-form-item) {
+  margin-bottom: 0;
+}
+
+.retry-form :deep(.el-radio-button__inner) {
+  padding: 8px 16px;
+  font-weight: 700;
+}
+
+.retry-form :deep(.el-input-number) {
+  width: 100%;
+}
+
+.retry-dialog__hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  background: #f8fbff;
+  border: 1px solid #dbeafe;
+}
+
+.retry-dialog__eyebrow {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(30, 64, 175, 0.08);
+  color: #1e40af;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.retry-dialog__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e3a8a;
+}
+
+.retry-dialog__desc {
+  margin: 4px 0 0;
+  color: #475569;
+  line-height: 1.6;
+  font-size: 13px;
+}
+
+.retry-dialog__stats {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.retry-stat-card {
+  min-width: 112px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(219, 234, 254, 0.9);
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.05);
+}
+
+.retry-stat-card span {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.retry-stat-card strong {
+  display: block;
+  font-size: 20px;
+  line-height: 1;
+  color: #1e3a8a;
+}
+
+.retry-form {
+  display: grid;
+  gap: 16px;
+}
+
+.retry-panel {
+  padding: 18px 20px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.retry-panel__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.retry-panel__hint {
+  margin-top: 6px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #64748b;
+}
+
+.retry-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 18px;
+}
+
+.retry-form-item--compact {
+  margin-bottom: 0;
+}
+
+.retry-preview-table {
+  margin-top: 14px;
+}
+
+.retry-preview-table :deep(.el-table__cell) {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.retry-duration-field {
+  display: grid;
+  gap: 10px;
+}
+
+.retry-duration-radios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.retry-duration-radios :deep(.el-radio-button__inner) {
+  border-radius: 999px;
+}
+
+.retry-save-mode {
+  display: grid;
+  gap: 10px;
+}
+
+.retry-save-mode p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #64748b;
 }
 
 .retry-result-actions {
@@ -831,10 +1663,22 @@ onMounted(async () => {
   .kpi-card-wide {
     grid-column: span 2;
   }
+
+  .wrongbook-filters__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .preview-head {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 1200px) {
   .wrongbook-workbench {
+    grid-template-columns: 1fr;
+  }
+
+  .retry-form-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -848,6 +1692,31 @@ onMounted(async () => {
   }
   .portal-grid-3 {
     grid-template-columns: 1fr;
+  }
+
+  .wrongbook-filters__grid,
+  .retry-dialog__stats,
+  .preview-head {
+    grid-template-columns: 1fr;
+  }
+
+  .wrongbook-section-header,
+  .wrongbook-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .retry-dialog__hero {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .wrongbook-toolbar__actions {
+    width: 100%;
+  }
+
+  .wrongbook-toolbar__actions .el-button {
+    flex: 1;
   }
 }
 </style>

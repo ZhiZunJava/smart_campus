@@ -122,7 +122,7 @@
 
       <div class="portal-fixed-wrapper fixed-wrapper" :class="{ 'is-dashboard': isDashboardRoute, 'is-workspace': isWorkspaceRoute }">
         <el-scrollbar style="width: 100%; height: 100%;" view-style="display: flex; flex-direction: column; min-height: 100%;">
-          <div class="portal-stage" :class="{ 'portal-stage--white': !isDashboardRoute && !isWorkspaceRoute }">
+          <div class="portal-stage" :class="{ 'portal-stage--white': !isDashboardRoute && !isWorkspaceRoute, 'portal-stage--compact': isQaRoute }">
             <router-view v-slot="{ Component, route: childRoute }">
               <transition :name="resolveChildTransitionName(childRoute, 'portal-content-shift')" mode="out-in">
                 <div :key="childRoute.path" class="portal-route-transition-shell">
@@ -493,6 +493,7 @@ const menuItems = computed(() => menus[activeRole.value] || menus.student)
 const menuGroups = computed(() => groupedMenus[activeRole.value] || groupedMenus.student)
 const isWorkspaceRoute = computed(() => Boolean(route.meta.workspace))
 const isDashboardRoute = computed(() => route.path === `/${activeRole.value}/dashboard` || route.path === '/')
+const isQaRoute = computed(() => /\/qa$/.test(route.path))
 
 const roleLabel = computed(() => {
   const map: Record<string, string> = { student: '学生', teacher: '教师', advisor: '辅导员', parent: '家长', admin: '管理员' }
@@ -876,6 +877,10 @@ async function handleLogout() {
   min-height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+.portal-stage--white.portal-stage--compact {
+  padding-top: 8px;
 }
 
 .portal-route-transition-shell {
