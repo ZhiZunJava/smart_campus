@@ -20,12 +20,24 @@
     update_time from sc_qa_session</sql>
   <select id="selectScQaSessionBySessionId" parameterType="Long" resultMap="ScQaSessionResult"><include
       refid="selectScQaSessionVo" /> where session_id = #{sessionId}</select>
-  <select id="selectScQaSessionList" parameterType="ScQaSession" resultMap="ScQaSessionResult"><include
-      refid="selectScQaSessionVo" /><where><if test="userId != null">and user_id = #{userId}</if><if
-        test="courseId != null">and course_id = #{courseId}</if><if
-        test="sourceType != null and sourceType != ''">and source_type = #{sourceType}</if><if
-        test="status != null and status != ''">and status = #{status}</if></where> order by
-    session_id desc</select>
+  <select id="selectScQaSessionList" parameterType="ScQaSession" resultMap="ScQaSessionResult">
+    <include refid="selectScQaSessionVo" />
+    <where>
+      <if test="userId != null">
+        and user_id = #{userId}
+      </if>
+      <if test="courseId != null">
+        and course_id = #{courseId}
+      </if>
+      <if test="sourceType != null and sourceType != ''">
+        and source_type = #{sourceType}
+      </if>
+      <if test="status != null and status != ''">
+        and status = #{status}
+      </if>
+    </where>
+    order by session_id desc
+  </select>
   <insert id="insertScQaSession" parameterType="ScQaSession" useGeneratedKeys="true"
     keyProperty="sessionId">insert into sc_qa_session(user_id, course_id, session_title,
     source_type, status, message_count, last_message_preview, last_message_time, context_summary,

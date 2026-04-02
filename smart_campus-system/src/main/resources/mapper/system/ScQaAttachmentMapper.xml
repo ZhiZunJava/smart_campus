@@ -27,11 +27,24 @@
     resultMap="ScQaAttachmentResult"><include refid="selectScQaAttachmentVo" /> where attachment_id
     = #{attachmentId}</select>
   <select id="selectScQaAttachmentList" parameterType="ScQaAttachment"
-    resultMap="ScQaAttachmentResult"><include refid="selectScQaAttachmentVo" /><where><if
-        test="sessionId != null">and session_id = #{sessionId}</if><if test="messageId != null">and
-    message_id = #{messageId}</if><if test="userId != null">and user_id = #{userId}</if><if
-        test="status != null and status != ''">and status = #{status}</if></where> order by
-    attachment_id asc</select>
+    resultMap="ScQaAttachmentResult">
+    <include refid="selectScQaAttachmentVo" />
+    <where>
+      <if test="sessionId != null">
+        and session_id = #{sessionId}
+      </if>
+      <if test="messageId != null">
+        and message_id = #{messageId}
+      </if>
+      <if test="userId != null">
+        and user_id = #{userId}
+      </if>
+      <if test="status != null and status != ''">
+        and status = #{status}
+      </if>
+    </where>
+    order by attachment_id asc
+  </select>
   <insert id="insertScQaAttachment" parameterType="ScQaAttachment" useGeneratedKeys="true"
     keyProperty="attachmentId">insert into sc_qa_attachment(session_id, message_id, user_id,
     file_name, original_name, file_url, mime_type, file_size, storage_type, status, delete_time,

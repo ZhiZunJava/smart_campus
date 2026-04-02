@@ -13,11 +13,21 @@
     create_time from sc_qa_feedback</sql>
   <select id="selectScQaFeedbackById" parameterType="Long" resultMap="ScQaFeedbackResult"><include
       refid="selectScQaFeedbackVo" /> where id = #{id}</select>
-  <select id="selectScQaFeedbackList" parameterType="ScQaFeedback" resultMap="ScQaFeedbackResult"><include
-      refid="selectScQaFeedbackVo" /><where><if test="messageId != null">and message_id =
-    #{messageId}</if><if test="userId != null">and user_id = #{userId}</if><if
-        test="feedbackType != null and feedbackType != ''">and feedback_type = #{feedbackType}</if></where>
-    order by id desc</select>
+  <select id="selectScQaFeedbackList" parameterType="ScQaFeedback" resultMap="ScQaFeedbackResult">
+    <include refid="selectScQaFeedbackVo" />
+    <where>
+      <if test="messageId != null">
+        and message_id = #{messageId}
+      </if>
+      <if test="userId != null">
+        and user_id = #{userId}
+      </if>
+      <if test="feedbackType != null and feedbackType != ''">
+        and feedback_type = #{feedbackType}
+      </if>
+    </where>
+    order by id desc
+  </select>
   <insert id="insertScQaFeedback" parameterType="ScQaFeedback" useGeneratedKeys="true"
     keyProperty="id">insert into sc_qa_feedback(message_id, user_id, feedback_type,
     feedback_content, create_time) values(#{messageId}, #{userId}, #{feedbackType},

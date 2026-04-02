@@ -22,10 +22,18 @@
     token_count, latency_ms, sensitive_flag, create_time from sc_qa_message</sql>
   <select id="selectScQaMessageByMessageId" parameterType="Long" resultMap="ScQaMessageResult"><include
       refid="selectScQaMessageVo" /> where message_id = #{messageId}</select>
-  <select id="selectScQaMessageList" parameterType="ScQaMessage" resultMap="ScQaMessageResult"><include
-      refid="selectScQaMessageVo" /><where><if test="sessionId != null">and session_id =
-    #{sessionId}</if><if test="roleType != null and roleType != ''">and role_type = #{roleType}</if></where>
-    order by message_id asc</select>
+  <select id="selectScQaMessageList" parameterType="ScQaMessage" resultMap="ScQaMessageResult">
+    <include refid="selectScQaMessageVo" />
+    <where>
+      <if test="sessionId != null">
+        and session_id = #{sessionId}
+      </if>
+      <if test="roleType != null and roleType != ''">
+        and role_type = #{roleType}
+      </if>
+    </where>
+    order by message_id asc
+  </select>
   <insert id="insertScQaMessage" parameterType="ScQaMessage" useGeneratedKeys="true"
     keyProperty="messageId">insert into sc_qa_message(session_id, role_type, content_type, content,
     reference_source, attachment_json, reply_to_message_id, model_name, reasoning_content,
