@@ -49,6 +49,11 @@ import com.smart.framework.config.ServerConfig;
 @RequestMapping("/campus/qa")
 public class ScQaController extends BaseController {
     private static final Pattern CODE_FENCE_PATTERN = Pattern.compile("(```[\\s\\S]*?```|~~~[\\s\\S]*?~~~)");
+    private static final Pattern SIMPLE_GREETING_PATTERN = Pattern
+            .compile("^(你好|您好|嗨|哈喽|hello|hi|hey|在吗|测试|test|早上好|下午好|晚上好)[!！,.，。?？~～ ]*$",
+                    Pattern.CASE_INSENSITIVE);
+    private static final int QA_HISTORY_MESSAGE_LIMIT = 8;
+    private static final int QA_HISTORY_CONTENT_MAX_LENGTH = 1200;
 
     @Autowired
     private IScQaSessionService scQaSessionService;
@@ -259,7 +264,10 @@ public class ScQaController extends BaseController {
     public AjaxResult ask(@RequestBody QaAskDto askDto) {
         try {
             AskContext context = prepareAskContext(askDto, false);
-            AiChatResponseVo aiResponse = normalizeAssistantResponse(aiGatewayService.chat(context.requestDto));
+            AiChatResponseVo aiResponse = finalizeAssistantResponse(
+                    aiGatewayService.chat(context.requestDto),
+                    context.requestDto.getSystemPrompt(),
+                    context.deepThinkingApplied);
             ScQaMessage assistantMessage = saveAssistantMessage(context.session, aiResponse, context.operatorName);
 
             AjaxResult ajax = AjaxResult.success();
@@ -294,10 +302,16 @@ public class ScQaController extends BaseController {
                         mapOf("sessionId", context.session.getSessionId(), "modelId", context.requestDto.getModelId()));
                 sendEvent(emitter, "start", mapOf("message", "开始生成回答"));
                 StringBuilder contentBuilder = new StringBuilder();
+                ReasoningStreamState reasoningState = new ReasoningStreamState();
                 AiChatResponseVo aiResponse = aiGatewayService.streamChat(context.requestDto, chunk -> {
                     try {
                         if ("reasoning".equals(chunk.getType())) {
-                            sendEvent(emitter, "reasoning", mapOf("content", chunk.getContent()));
+                            String reasoningDelta = reasoningState.appendAndCollectVisible(
+                                    StringUtils.defaultString(chunk.getContent()),
+                                    context.requestDto.getSystemPrompt());
+                            if (StringUtils.isNotEmpty(reasoningDelta)) {
+                                sendEvent(emitter, "reasoning", mapOf("content", reasoningDelta));
+                            }
                             return;
                         }
                         contentBuilder.append(chunk.getContent());
@@ -306,8 +320,16 @@ public class ScQaController extends BaseController {
                         throw new RuntimeException(ioException);
                     }
                 });
+                String remainingReasoningDelta = reasoningState.flushRemaining(context.requestDto.getSystemPrompt());
+                if (StringUtils.isNotEmpty(remainingReasoningDelta)) {
+                    sendEvent(emitter, "reasoning", mapOf("content", remainingReasoningDelta));
+                }
                 aiResponse.setContent(contentBuilder.toString());
-                normalizeAssistantResponse(aiResponse);
+                aiResponse = finalizeAssistantResponse(
+                        aiResponse,
+                        context.requestDto.getSystemPrompt(),
+                        context.deepThinkingApplied,
+                        reasoningState.getVisibleReasoning());
                 ScQaMessage assistantMessage = saveAssistantMessage(context.session, aiResponse, context.operatorName);
                 Map<String, Object> donePayload = new HashMap<>();
                 donePayload.put("sessionId", context.session.getSessionId());
@@ -332,16 +354,18 @@ public class ScQaController extends BaseController {
         }
         String operatorName = getUsername();
         ScQaSession session = createOrLoadSession(askDto, operatorName);
-        List<AiHistoryMessageDto> historyMessages = loadRecentHistoryMessages(session.getSessionId(), 12);
+        List<AiHistoryMessageDto> historyMessages = loadRecentHistoryMessages(session.getSessionId(),
+                QA_HISTORY_MESSAGE_LIMIT);
         ScQaMessage userMessage = createUserMessage(session.getSessionId(), askDto, operatorName);
         Long modelId = scAiModelConfigService.resolveModel("chat", "qa", askDto.getModelId()).getModelId();
         String systemPrompt = resolveSystemPrompt(askDto);
+        boolean deepThinkingApplied = shouldEnableDeepThinking(askDto);
         AiChatRequestDto requestDto = new AiChatRequestDto();
         requestDto.setModelId(modelId);
         requestDto.setBizType("qa");
         requestDto.setSystemPrompt(systemPrompt);
         requestDto.setUserPrompt(buildQaUserPrompt(askDto));
-        requestDto.setDeepThinking(Boolean.TRUE.equals(askDto.getDeepThinking()));
+        requestDto.setDeepThinking(deepThinkingApplied);
         requestDto.setStream(stream);
         requestDto.setImages(askDto.getImages());
         requestDto.setHistoryMessages(historyMessages);
@@ -350,6 +374,7 @@ public class ScQaController extends BaseController {
         context.userMessage = userMessage;
         context.requestDto = requestDto;
         context.operatorName = operatorName;
+        context.deepThinkingApplied = deepThinkingApplied;
         return context;
     }
 
@@ -425,6 +450,7 @@ public class ScQaController extends BaseController {
         }
         if (Boolean.TRUE.equals(askDto.getDeepThinking())) {
             systemPrompt += "\n请先给出结构化分析，再给出明确结论与建议，必要时分点输出。";
+            systemPrompt += "\n思考过程与最终回答默认使用简体中文表达。除非用户明确要求，否则不要使用英文进行内部分析或作答。";
         }
         if (askDto.getImages() != null && !askDto.getImages().isEmpty()) {
             systemPrompt += "\n如果用户上传了图片，请结合图片内容回答；若当前模型不支持视觉能力，请明确说明。";
@@ -494,20 +520,43 @@ public class ScQaController extends BaseController {
         return aiResponse;
     }
 
+    private AiChatResponseVo finalizeAssistantResponse(AiChatResponseVo aiResponse, String systemPrompt,
+            boolean deepThinkingApplied) {
+        return finalizeAssistantResponse(aiResponse, systemPrompt, deepThinkingApplied, "");
+    }
+
+    private AiChatResponseVo finalizeAssistantResponse(AiChatResponseVo aiResponse, String systemPrompt,
+            boolean deepThinkingApplied, String streamedReasoningContent) {
+        if (aiResponse == null) {
+            return null;
+        }
+        String userFacingReasoning = resolveUserFacingReasoningContent(
+                sanitizeReasoningContent(aiResponse.getReasoningContent(), systemPrompt),
+                deepThinkingApplied);
+        if (StringUtils.isEmpty(userFacingReasoning) && StringUtils.isNotEmpty(streamedReasoningContent)) {
+            userFacingReasoning = streamedReasoningContent;
+        }
+        aiResponse.setReasoningContent(userFacingReasoning);
+        return normalizeAssistantResponse(aiResponse);
+    }
+
     private List<AiHistoryMessageDto> loadRecentHistoryMessages(Long sessionId, int limit) {
         ScQaMessage query = new ScQaMessage();
         query.setSessionId(sessionId);
+        query.setDescOrder(Boolean.TRUE);
+        query.setLimitCount(limit);
         List<ScQaMessage> historyList = scQaMessageService.selectScQaMessageList(query);
         if (historyList == null || historyList.isEmpty()) {
             return java.util.Collections.emptyList();
         }
+        java.util.Collections.reverse(historyList);
         return historyList.stream()
                 .filter(item -> StringUtils.isNotEmpty(item.getContent()))
                 .skip(Math.max(0, historyList.size() - limit))
                 .map(item -> {
                     AiHistoryMessageDto dto = new AiHistoryMessageDto();
                     dto.setRole("assistant".equals(item.getRoleType()) ? "assistant" : "user");
-                    dto.setContent(item.getContent());
+                    dto.setContent(truncateHistoryContent(item.getContent()));
                     return dto;
                 })
                 .collect(Collectors.toList());
@@ -517,12 +566,9 @@ public class ScQaController extends BaseController {
         if (sessionId == null) {
             return;
         }
-        ScQaMessage query = new ScQaMessage();
-        query.setSessionId(sessionId);
-        List<ScQaMessage> historyList = scQaMessageService.selectScQaMessageList(query);
         ScQaSession update = new ScQaSession();
         update.setSessionId(sessionId);
-        update.setMessageCount(historyList == null ? 0 : historyList.size());
+        update.setMessageCount(scQaMessageService.countScQaMessageBySessionId(sessionId));
         update.setLastMessageTime(new java.util.Date());
         if (StringUtils.isNotEmpty(latestContent)) {
             update.setLastMessagePreview(buildPreview(latestContent));
@@ -574,6 +620,105 @@ public class ScQaController extends BaseController {
         }
         String normalized = content.replaceAll("\\s+", " ").trim();
         return normalized.length() > 120 ? normalized.substring(0, 120) : normalized;
+    }
+
+    private String truncateHistoryContent(String content) {
+        if (StringUtils.isEmpty(content)) {
+            return "";
+        }
+        String normalized = content.trim();
+        if (normalized.length() <= QA_HISTORY_CONTENT_MAX_LENGTH) {
+            return normalized;
+        }
+        return normalized.substring(0, QA_HISTORY_CONTENT_MAX_LENGTH) + "\n\n[历史上下文已截断]";
+    }
+
+    private boolean shouldEnableDeepThinking(QaAskDto askDto) {
+        if (askDto == null || !Boolean.TRUE.equals(askDto.getDeepThinking())) {
+            return false;
+        }
+        String question = StringUtils.trimToEmpty(askDto.getQuestion());
+        if (StringUtils.isEmpty(question)) {
+            return false;
+        }
+        return !SIMPLE_GREETING_PATTERN.matcher(question).matches();
+    }
+
+    private String sanitizeReasoningContent(String reasoningContent, String systemPrompt) {
+        if (StringUtils.isEmpty(reasoningContent)) {
+            return "";
+        }
+        String sanitized = reasoningContent.replace("\r\n", "\n").replace("\r", "\n");
+        if (StringUtils.isNotEmpty(systemPrompt)) {
+            sanitized = sanitized.replace(systemPrompt, "");
+            String[] promptLines = systemPrompt.split("\n");
+            for (String line : promptLines) {
+                String trimmedLine = StringUtils.trim(line);
+                if (trimmedLine.length() < 8) {
+                    continue;
+                }
+                sanitized = sanitized.replace(trimmedLine, "");
+            }
+        }
+        String[] paragraphs = sanitized.split("\\n{2,}");
+        List<String> cleanedParagraphs = new ArrayList<>();
+        for (String paragraph : paragraphs) {
+            String normalizedParagraph = StringUtils.trim(paragraph);
+            if (StringUtils.isEmpty(normalizedParagraph)) {
+                continue;
+            }
+            if (isInternalReasoningParagraph(normalizedParagraph)) {
+                continue;
+            }
+            cleanedParagraphs.add(normalizedParagraph);
+        }
+        sanitized = String.join("\n\n", cleanedParagraphs)
+                .replaceAll("(?is)^(好的[,，]?我会遵循(?:以上|这些)?(?:系统)?要求[：:]?)", "")
+                .replaceAll("(?is)(系统提示词|system prompt|prompt 模板|提示词内容)[：:].*$", "")
+                .replaceAll("\n{3,}", "\n\n")
+                .trim();
+        return sanitized;
+    }
+
+    private String resolveUserFacingReasoningContent(String sanitizedReasoningContent, boolean deepThinkingApplied) {
+        if (!deepThinkingApplied) {
+            return "";
+        }
+        if (StringUtils.isNotEmpty(sanitizedReasoningContent)) {
+            return sanitizedReasoningContent;
+        }
+        return "已完成深度思考，已省略内部系统指令。";
+    }
+
+    private boolean isInternalReasoningParagraph(String paragraph) {
+        String normalized = StringUtils.trimToEmpty(paragraph).toLowerCase();
+        if (StringUtils.isEmpty(normalized)) {
+            return true;
+        }
+        return normalized.contains("github flavored markdown")
+                || normalized.contains("markdown 输出")
+                || normalized.contains("markdown")
+                || normalized.contains("system prompt")
+                || normalized.contains("prompt 模板")
+                || normalized.contains("系统提示词")
+                || normalized.contains("提示词内容")
+                || normalized.contains("便于前端渲染")
+                || normalized.contains("输出格式")
+                || normalized.contains("输出规范")
+                || normalized.contains("不要输出")
+                || normalized.contains("html 标签")
+                || normalized.contains("代码块")
+                || normalized.contains("fenced code block")
+                || normalized.contains("echarts")
+                || normalized.contains("换行")
+                || normalized.contains("我的职责")
+                || normalized.contains("核心功能")
+                || normalized.contains("智慧校园自主学习助手")
+                || normalized.contains("构建响应")
+                || normalized.contains("完整响应草案")
+                || normalized.contains("输出内容")
+                || normalized.contains("输出格式")
+                || normalized.contains("角色设定");
     }
 
     private String buildAssistantReferenceSource(AiChatResponseVo aiResponse) {
@@ -798,5 +943,89 @@ public class ScQaController extends BaseController {
         private ScQaMessage userMessage;
         private AiChatRequestDto requestDto;
         private String operatorName;
+        private boolean deepThinkingApplied;
+    }
+
+    private static class ReasoningStreamState {
+        private final StringBuilder pendingReasoning = new StringBuilder();
+        private final StringBuilder visibleReasoning = new StringBuilder();
+
+        private String appendAndCollectVisible(String chunk, String systemPrompt) {
+            if (StringUtils.isEmpty(chunk)) {
+                return "";
+            }
+            pendingReasoning.append(chunk);
+            return drainVisible(systemPrompt, false);
+        }
+
+        private String flushRemaining(String systemPrompt) {
+            return drainVisible(systemPrompt, true);
+        }
+
+        private String getVisibleReasoning() {
+            return visibleReasoning.toString();
+        }
+
+        private String drainVisible(String systemPrompt, boolean flushAll) {
+            String source = pendingReasoning.toString();
+            int splitIndex = flushAll ? source.length() : findLastReasoningBoundary(source);
+            if (splitIndex <= 0) {
+                return "";
+            }
+            String stableChunk = source.substring(0, splitIndex);
+            pendingReasoning.delete(0, splitIndex);
+            String sanitizedChunk = sanitizeReasoningStreamChunk(stableChunk, systemPrompt);
+            if (StringUtils.isEmpty(sanitizedChunk)) {
+                return "";
+            }
+            visibleReasoning.append(sanitizedChunk);
+            return sanitizedChunk;
+        }
+
+        private int findLastReasoningBoundary(String content) {
+            for (int index = content.length() - 1; index >= 0; index--) {
+                char current = content.charAt(index);
+                if (current == '\n') {
+                    if (index > 0 && content.charAt(index - 1) == '\n') {
+                        return index + 1;
+                    }
+                    return index + 1;
+                }
+                if (current == '。' || current == '！' || current == '？' || current == '!' || current == '?'
+                        || current == ';' || current == '；') {
+                    return index + 1;
+                }
+            }
+            return -1;
+        }
+
+        private String sanitizeReasoningStreamChunk(String content, String systemPrompt) {
+            if (StringUtils.isEmpty(content)) {
+                return "";
+            }
+            return sanitizeReasoningChunk(content, systemPrompt);
+        }
+    }
+
+    private static String sanitizeReasoningChunk(String reasoningChunk, String systemPrompt) {
+        if (StringUtils.isEmpty(reasoningChunk)) {
+            return "";
+        }
+        String sanitized = reasoningChunk.replace("\r\n", "\n").replace("\r", "\n");
+        if (StringUtils.isNotEmpty(systemPrompt)) {
+            sanitized = sanitized.replace(systemPrompt, "");
+            String[] promptLines = systemPrompt.split("\n");
+            for (String line : promptLines) {
+                String trimmedLine = StringUtils.trim(line);
+                if (trimmedLine.length() < 8) {
+                    continue;
+                }
+                sanitized = sanitized.replace(trimmedLine, "");
+            }
+        }
+        sanitized = sanitized
+                .replaceAll("(?is)(系统提示词|system prompt|prompt 模板|提示词内容)[：:].*$", "")
+                .replaceAll("\n{3,}", "\n\n");
+        return sanitized.trim().isEmpty() ? "" : sanitized;
     }
 }

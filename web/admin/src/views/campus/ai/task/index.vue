@@ -94,6 +94,14 @@
         <el-descriptions-item label="错误信息" :span="2">{{ detail.errorMsg || '-' }}</el-descriptions-item>
       </el-descriptions>
 
+      <div v-if="detailTraceRows.length" class="payload-section">
+        <div class="payload-title">阶段耗时</div>
+        <el-table :data="detailTraceRows" size="small" border>
+          <el-table-column label="阶段" prop="phase" min-width="220" />
+          <el-table-column label="耗时(ms)" prop="durationMs" width="120" />
+        </el-table>
+      </div>
+
       <div class="payload-section">
         <div class="payload-title">请求报文</div>
         <pre class="payload-code"><code>{{ formatPayload(detail.requestPayload) }}</code></pre>
@@ -149,6 +157,10 @@ const visibleBizTypeOptions = computed(() => {
     return bizTypeOptions.filter((item) => BUSINESS_BIZ_TYPES.includes(item.value))
   }
   return bizTypeOptions
+})
+const detailTraceRows = computed(() => {
+  const payload = parsePayload(detail.value?.responsePayload)
+  return Array.isArray(payload?.trace) ? payload.trace : []
 })
 
 function bizTypeLabel(value: string) {

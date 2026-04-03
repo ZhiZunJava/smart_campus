@@ -27,6 +27,8 @@ public class ScQaMessage extends BaseEntity {
     private String sensitiveFlag;
     private String feedbackType;
     private String feedbackContent;
+    private Integer limitCount;
+    private Boolean descOrder;
 
     public Long getMessageId() {
         return messageId;
@@ -146,6 +148,22 @@ public class ScQaMessage extends BaseEntity {
 
     public void setFeedbackContent(String feedbackContent) {
         this.feedbackContent = feedbackContent;
+    }
+
+    public Integer getLimitCount() {
+        return limitCount;
+    }
+
+    public void setLimitCount(Integer limitCount) {
+        this.limitCount = limitCount;
+    }
+
+    public Boolean getDescOrder() {
+        return descOrder;
+    }
+
+    public void setDescOrder(Boolean descOrder) {
+        this.descOrder = descOrder;
     }
 
     @Override

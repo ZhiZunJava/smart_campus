@@ -49,15 +49,44 @@
             <div class="qa-td-poc__assistant-shell">
               <div class="qa-td-poc__assistant-content">
                 <template v-for="(block, blockIndex) in entry.content" :key="`${entry.item.id}_${block.type}_${blockIndex}`">
-                  <t-chat-thinking
+                  <t-chat-reasoning
                     v-if="block.type === 'thinking'"
+                    :key="`${entry.item.id}_thinking_${block.status || 'complete'}`"
                     class="qa-td-poc__assistant-block"
-                    :content="block.data"
-                    :status="block.status"
                     :default-collapsed="block.ext?.defaultCollapsed"
                     :layout="block.ext?.layout"
-                    :max-height="block.ext?.maxHeight"
-                  />
+                    :collapse-panel-props="{ destroyOnCollapse: false }"
+                  >
+                    <template #header>
+                      <div class="qa-td-poc__thinking-header">
+                        <span>{{ block.data.title }}</span>
+                        <span
+                          v-if="block.status === 'pending'"
+                          class="qa-td-poc__thinking-pending"
+                        >
+                          生成中
+                        </span>
+                      </div>
+                    </template>
+
+                    <div
+                      class="qa-td-poc__thinking-body"
+                      :style="{ maxHeight: `${block.ext?.maxHeight || 180}px` }"
+                    >
+                      <div
+                        v-if="block.status === 'pending'"
+                        class="qa-td-poc__thinking-stream"
+                      >
+                        {{ block.data.text }}
+                      </div>
+                      <t-chat-markdown
+                        v-else
+                        class="qa-td-poc__assistant-markdown"
+                        :content="block.data.text"
+                        :options="MARKDOWN_OPTIONS"
+                      />
+                    </div>
+                  </t-chat-reasoning>
 
                   <t-chat-markdown
                     v-else-if="block.type === 'markdown'"
@@ -194,7 +223,7 @@ import { computed, nextTick, ref, watch } from 'vue'
 import {
   ChatMarkdown as TChatMarkdown,
   ChatMessage as TChatMessage,
-  ChatThinking as TChatThinking,
+  ChatReasoning as TChatReasoning,
 } from '@tdesign-vue-next/chat'
 import { Button as TButton, Tooltip as TTooltip } from 'tdesign-vue-next'
 import QaEchartsBlock from '@/components/qa/QaEchartsBlock.vue'
@@ -355,7 +384,7 @@ function buildAssistantMessageContent(item: QaMessage) {
   if (String(item.reasoningContent || '').trim()) {
     content.push({
       type: 'thinking',
-      status: streamingMessage ? 'streaming' : 'complete',
+      status: streamingMessage ? 'pending' : 'complete',
       data: {
         title: streamingMessage ? '思考中...' : '思考过程',
         text: normalizeQaMarkdownSource(item.reasoningContent || ''),
@@ -716,6 +745,32 @@ function handleAttachmentClick(item: QaMessage, event: any) {
   gap: 12px;
 }
 
+.qa-td-poc__thinking-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.qa-td-poc__thinking-pending {
+  color: #0f5e70;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.qa-td-poc__thinking-body {
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.qa-td-poc__thinking-stream {
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--portal-text-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
 .qa-td-poc__assistant-block {
   min-width: 0;
 }
@@ -737,7 +792,7 @@ function handleAttachmentClick(item: QaMessage, event: any) {
   margin-top: 0;
 }
 
-.qa-td-poc__list :deep(.t-chat__item__role--assistant .t-chat__think) {
+.qa-td-poc__list :deep(.t-chat__item__role--assistant .t-chat__reasoning) {
   border-radius: 14px;
   overflow: hidden;
   background: #f8fbfd;

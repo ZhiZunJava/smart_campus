@@ -32,7 +32,17 @@
         and role_type = #{roleType}
       </if>
     </where>
-    order by message_id asc
+    order by message_id
+    <choose>
+      <when test="descOrder != null and descOrder">desc</when>
+      <otherwise>asc</otherwise>
+    </choose>
+    <if test="limitCount != null and limitCount > 0">
+      limit #{limitCount}
+    </if>
+  </select>
+  <select id="countScQaMessageBySessionId" parameterType="Long" resultType="int">
+    select count(1) from sc_qa_message where session_id = #{sessionId}
   </select>
   <insert id="insertScQaMessage" parameterType="ScQaMessage" useGeneratedKeys="true"
     keyProperty="messageId">insert into sc_qa_message(session_id, role_type, content_type, content,

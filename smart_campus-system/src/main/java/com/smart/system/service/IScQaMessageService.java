@@ -8,6 +8,8 @@ public interface IScQaMessageService {
 
     List<ScQaMessage> selectScQaMessageList(ScQaMessage scQaMessage);
 
+    int countScQaMessageBySessionId(Long sessionId);
+
     int insertScQaMessage(ScQaMessage scQaMessage);
 
     int updateScQaMessage(ScQaMessage scQaMessage);

@@ -45,7 +45,7 @@ public class ScAiController extends BaseController {
     }
 
     @PreAuthorize("@ss.hasPermi('campus:ai:model:add')")
-    @Log(title = "AI模型配置", businessType = BusinessType.INSERT)
+    @Log(title = "AI模型配置", businessType = BusinessType.INSERT, excludeParamNames = { "apiKey" })
     @PostMapping("/model")
     public AjaxResult addModel(@Validated @RequestBody ScAiModelConfig scAiModelConfig) {
         scAiModelConfig.setCreateBy(getUsername());
@@ -53,7 +53,7 @@ public class ScAiController extends BaseController {
     }
 
     @PreAuthorize("@ss.hasPermi('campus:ai:model:edit')")
-    @Log(title = "AI模型配置", businessType = BusinessType.UPDATE)
+    @Log(title = "AI模型配置", businessType = BusinessType.UPDATE, excludeParamNames = { "apiKey" })
     @PutMapping("/model")
     public AjaxResult editModel(@Validated @RequestBody ScAiModelConfig scAiModelConfig) {
         scAiModelConfig.setUpdateBy(getUsername());
@@ -118,6 +118,7 @@ public class ScAiController extends BaseController {
                     : testDto.getPrompt());
             requestDto.setStream(Boolean.TRUE);
             requestDto.setDeepThinking(Boolean.FALSE);
+            emitter.send(SseEmitter.event().name("start").data("正在连接模型"));
 
             new Thread(() -> {
                 try {

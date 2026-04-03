@@ -2,6 +2,7 @@ package com.smart.system.domain;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.smart.common.core.domain.BaseEntity;
 
 /**
@@ -16,7 +17,11 @@ public class ScAiModelConfig extends BaseEntity {
     private String modelName;
     private String provider;
     private String baseUrl;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String apiKey;
+    private Boolean apiKeyConfigured;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private Boolean clearApiKey;
     private String modelType;
     private String status;
     private String isDefault;
@@ -67,6 +72,22 @@ public class ScAiModelConfig extends BaseEntity {
 
     public void setApiKey(String apiKey) {
         this.apiKey = apiKey;
+    }
+
+    public Boolean getApiKeyConfigured() {
+        return apiKeyConfigured;
+    }
+
+    public void setApiKeyConfigured(Boolean apiKeyConfigured) {
+        this.apiKeyConfigured = apiKeyConfigured;
+    }
+
+    public Boolean getClearApiKey() {
+        return clearApiKey;
+    }
+
+    public void setClearApiKey(Boolean clearApiKey) {
+        this.clearApiKey = clearApiKey;
     }
 
     public String getModelType() {

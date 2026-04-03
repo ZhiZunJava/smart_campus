@@ -26,9 +26,9 @@
       <el-table-column label="思考编码" prop="reasoningModelCode" min-width="160" show-overflow-tooltip />
       <el-table-column label="能力" min-width="160">
         <template #default="scope">
-          <el-tag v-if="scope.row.supportStream === '1'" size="small">Stream</el-tag>
-          <el-tag v-if="scope.row.supportReasoning === '1'" size="small" type="warning">思考</el-tag>
-          <el-tag v-if="scope.row.supportVision === '1'" size="small" type="success">视觉</el-tag>
+          <el-tag v-if="scope.row.supportStream === '1'" size="small">流式</el-tag>
+          <el-tag v-if="scope.row.supportReasoning === '1'" size="small" type="warning" class="ms-1">思考</el-tag>
+          <el-tag v-if="scope.row.supportVision === '1'" size="small" type="success" class="ms-1">视觉</el-tag>
         </template>
       </el-table-column>
       <el-table-column label="默认" width="80">
@@ -70,7 +70,22 @@
         </el-form-item>
         <el-form-item label="接口地址"><el-input v-model="form.baseUrl"
             placeholder="如 https://api.deepseek.com" /></el-form-item>
-        <el-form-item label="API Key"><el-input v-model="form.apiKey" show-password /></el-form-item>
+        <el-form-item label="API Key">
+          <el-input
+            v-model="form.apiKey"
+            show-password
+            :disabled="form.clearApiKey"
+            :placeholder="apiKeyPlaceholder"
+          />
+          <div class="tip-text">
+            {{ apiKeyHint }}
+          </div>
+        </el-form-item>
+        <el-form-item v-if="form.modelId && form.apiKeyConfigured" label="密钥处理">
+          <el-checkbox v-model="form.clearApiKey">
+            清空已保存密钥
+          </el-checkbox>
+        </el-form-item>
         <el-form-item label="模型类型">
           <el-select v-model="form.modelType">
             <el-option label="Chat" value="chat" />
@@ -154,6 +169,8 @@ const form = reactive<any>({
   provider: "",
   baseUrl: "",
   apiKey: "",
+  apiKeyConfigured: false,
+  clearApiKey: false,
   modelType: "chat",
   status: "0",
   isDefault: "0",
@@ -175,6 +192,24 @@ const testTokenUsed = ref<number | null>(null);
 const testUsageText = computed(() =>
   testTokenUsed.value === null ? "暂未返回" : String(testTokenUsed.value),
 );
+const apiKeyPlaceholder = computed(() => {
+  if (form.clearApiKey) {
+    return "已选择清空当前密钥";
+  }
+  if (form.modelId && form.apiKeyConfigured) {
+    return "已配置密钥；留空则保持不变";
+  }
+  return "请输入 API Key";
+});
+const apiKeyHint = computed(() => {
+  if (form.clearApiKey) {
+    return "保存后将移除当前已存密钥。";
+  }
+  if (form.modelId && form.apiKeyConfigured) {
+    return "当前不会回显真实密钥，只有输入新值时才会替换。";
+  }
+  return "密钥将由后端加密后再存储到数据库。";
+});
 const defaultSwitch = computed({
   get: () => form.isDefault === "1",
   set: (value: boolean) => {
@@ -215,6 +250,8 @@ function resetForm() {
     provider: "",
     baseUrl: "",
     apiKey: "",
+    apiKeyConfigured: false,
+    clearApiKey: false,
     modelType: "chat",
     status: "0",
     isDefault: "0",
@@ -275,7 +312,26 @@ function handleAdd() {
   open.value = true;
 }
 function handleEdit(row: any) {
-  Object.assign(form, row);
+  Object.assign(form, {
+    modelId: row.modelId,
+    modelName: row.modelName || "",
+    provider: row.provider || "",
+    baseUrl: row.baseUrl || "",
+    apiKey: "",
+    apiKeyConfigured: Boolean(row.apiKeyConfigured),
+    clearApiKey: false,
+    modelType: row.modelType || "chat",
+    status: row.status || "0",
+    isDefault: row.isDefault || "0",
+    priority: typeof row.priority === "number" ? row.priority : 0,
+    bizTypes: row.bizTypes || "",
+    modelCode: row.modelCode || "",
+    reasoningModelCode: row.reasoningModelCode || "",
+    visionModelCode: row.visionModelCode || "",
+    supportStream: row.supportStream || "1",
+    supportReasoning: row.supportReasoning || "0",
+    supportVision: row.supportVision || "0",
+  });
   open.value = true;
 }
 async function handleDelete(row: any) {
@@ -389,11 +445,18 @@ async function submitStreamTest() {
   }
 }
 async function submitForm() {
+  const payload = {
+    ...form,
+    apiKey:
+      form.modelId && !form.clearApiKey && !form.apiKey
+        ? null
+        : form.apiKey,
+  };
   if (form.modelId) {
-    await updateAiModel(form);
+    await updateAiModel(payload);
     ElMessage.success("修改成功");
   } else {
-    await addAiModel(form);
+    await addAiModel(payload);
     ElMessage.success("新增成功");
   }
   open.value = false;

@@ -8,25 +8,36 @@ import com.smart.common.utils.StringUtils;
 import com.smart.system.domain.ScAiModelConfig;
 import com.smart.system.mapper.ScAiModelConfigMapper;
 import com.smart.system.service.IScAiModelConfigService;
+import com.smart.system.service.ai.AiSecretCryptoService;
 
 @Service
 public class ScAiModelConfigServiceImpl implements IScAiModelConfigService {
     @Autowired
     private ScAiModelConfigMapper scAiModelConfigMapper;
+    @Autowired
+    private AiSecretCryptoService aiSecretCryptoService;
 
     @Override
     public ScAiModelConfig selectScAiModelConfigByModelId(Long modelId) {
-        return scAiModelConfigMapper.selectScAiModelConfigByModelId(modelId);
+        return decryptLoadedModel(scAiModelConfigMapper.selectScAiModelConfigByModelId(modelId));
     }
 
     @Override
     public List<ScAiModelConfig> selectScAiModelConfigList(ScAiModelConfig scAiModelConfig) {
-        return scAiModelConfigMapper.selectScAiModelConfigList(scAiModelConfig);
+        List<ScAiModelConfig> list = scAiModelConfigMapper.selectScAiModelConfigList(scAiModelConfig);
+        if (list == null || list.isEmpty()) {
+            return list;
+        }
+        for (ScAiModelConfig item : list) {
+            decryptLoadedModel(item);
+        }
+        return list;
     }
 
     @Override
     public int insertScAiModelConfig(ScAiModelConfig scAiModelConfig) {
         normalizeModelConfig(scAiModelConfig);
+        prepareApiKeyForPersistence(scAiModelConfig, null);
         if (isDefault(scAiModelConfig)) {
             clearOtherDefault(scAiModelConfig);
         }
@@ -36,6 +47,8 @@ public class ScAiModelConfigServiceImpl implements IScAiModelConfigService {
     @Override
     public int updateScAiModelConfig(ScAiModelConfig scAiModelConfig) {
         normalizeModelConfig(scAiModelConfig);
+        ScAiModelConfig existingModel = requireExistingModel(scAiModelConfig.getModelId());
+        prepareApiKeyForPersistence(scAiModelConfig, existingModel);
         if (isDefault(scAiModelConfig)) {
             clearOtherDefault(scAiModelConfig);
         }
@@ -56,7 +69,7 @@ public class ScAiModelConfigServiceImpl implements IScAiModelConfigService {
     public ScAiModelConfig resolveModel(String modelType, String bizType, Long modelId) {
         String resolvedModelType = StringUtils.isEmpty(modelType) ? "chat" : modelType;
         if (modelId != null) {
-            ScAiModelConfig directModel = scAiModelConfigMapper.selectScAiModelConfigByModelId(modelId);
+            ScAiModelConfig directModel = selectScAiModelConfigByModelId(modelId);
             if (directModel == null) {
                 throw new ServiceException("指定模型不存在");
             }
@@ -73,7 +86,7 @@ public class ScAiModelConfigServiceImpl implements IScAiModelConfigService {
         ScAiModelConfig query = new ScAiModelConfig();
         query.setStatus("0");
         query.setModelType(resolvedModelType);
-        List<ScAiModelConfig> modelList = scAiModelConfigMapper.selectScAiModelConfigList(query);
+        List<ScAiModelConfig> modelList = selectScAiModelConfigList(query);
         if (modelList == null || modelList.isEmpty()) {
             throw new ServiceException("未找到可用模型，请先在AI管理中配置模型");
         }
@@ -137,6 +150,9 @@ public class ScAiModelConfigServiceImpl implements IScAiModelConfigService {
             String normalized = scAiModelConfig.getBizTypes().replace("，", ",").replace(" ", "").toLowerCase();
             scAiModelConfig.setBizTypes(normalized);
         }
+        if (scAiModelConfig.getClearApiKey() == null) {
+            scAiModelConfig.setClearApiKey(Boolean.FALSE);
+        }
     }
 
     private boolean isDefault(ScAiModelConfig scAiModelConfig) {
@@ -147,13 +163,55 @@ public class ScAiModelConfigServiceImpl implements IScAiModelConfigService {
         ScAiModelConfig query = new ScAiModelConfig();
         query.setModelType(scAiModelConfig.getModelType());
         query.setStatus("0");
-        List<ScAiModelConfig> modelList = scAiModelConfigMapper.selectScAiModelConfigList(query);
+        List<ScAiModelConfig> modelList = selectScAiModelConfigList(query);
         for (ScAiModelConfig modelConfig : modelList) {
             if (modelConfig.getModelId() != null && !modelConfig.getModelId().equals(scAiModelConfig.getModelId())
                     && "1".equals(modelConfig.getIsDefault())) {
                 modelConfig.setIsDefault("0");
+                prepareApiKeyForPersistence(modelConfig, null);
                 scAiModelConfigMapper.updateScAiModelConfig(modelConfig);
             }
         }
+    }
+
+    private ScAiModelConfig requireExistingModel(Long modelId) {
+        if (modelId == null) {
+            throw new ServiceException("模型ID不能为空");
+        }
+        ScAiModelConfig existingModel = selectScAiModelConfigByModelId(modelId);
+        if (existingModel == null) {
+            throw new ServiceException("模型配置不存在");
+        }
+        return existingModel;
+    }
+
+    private ScAiModelConfig decryptLoadedModel(ScAiModelConfig scAiModelConfig) {
+        if (scAiModelConfig == null) {
+            return null;
+        }
+        String decryptedApiKey = aiSecretCryptoService.decryptIfNeeded(scAiModelConfig.getApiKey());
+        scAiModelConfig.setApiKey(decryptedApiKey);
+        scAiModelConfig.setApiKeyConfigured(StringUtils.isNotEmpty(decryptedApiKey));
+        scAiModelConfig.setClearApiKey(Boolean.FALSE);
+        return scAiModelConfig;
+    }
+
+    private void prepareApiKeyForPersistence(ScAiModelConfig scAiModelConfig, ScAiModelConfig existingModel) {
+        if (scAiModelConfig == null) {
+            return;
+        }
+        if (Boolean.TRUE.equals(scAiModelConfig.getClearApiKey())) {
+            scAiModelConfig.setApiKey("");
+            scAiModelConfig.setApiKeyConfigured(Boolean.FALSE);
+            return;
+        }
+
+        String apiKey = StringUtils.trim(scAiModelConfig.getApiKey());
+        if (StringUtils.isEmpty(apiKey) && existingModel != null) {
+            apiKey = StringUtils.trim(existingModel.getApiKey());
+        }
+
+        scAiModelConfig.setApiKey(aiSecretCryptoService.encryptIfNeeded(apiKey));
+        scAiModelConfig.setApiKeyConfigured(StringUtils.isNotEmpty(apiKey));
     }
 }

@@ -182,6 +182,8 @@ const pinnedSessionIds = ref<number[]>([])
 const chatMessages = ref<Array<{ id: string; role: 'user' | 'assistant'; content: string; modelName?: string; reasoningContent?: string; attachments?: any[]; messageId?: number; feedbackType?: string; feedbackContent?: string }>>([])
 const currentAbortController = ref<AbortController | null>(null)
 const currentStreamingAssistantId = ref('')
+const streamChunkBuffers = ref<Record<string, { content: string; reasoning: string }>>({})
+const streamFlushTimers = ref<Record<string, number>>({})
 const titleInputFocused = ref(false)
 const editingSessionTitle = ref('')
 const titleInputRef = ref<any>(null)
@@ -347,11 +349,12 @@ async function openSession(item: any) {
       ? parseAssistantReferenceSource(message.referenceSource)
       : { modelName: '', reasoningContent: '' }
     return {
-      ...meta,
       id: `${message.roleType}_${message.messageId}`,
       messageId: message.messageId,
       role,
       content: message.content,
+      modelName: message.modelName || meta.modelName || '',
+      reasoningContent: message.reasoningContent || meta.reasoningContent || '',
       attachments: parseQaAttachments(message.attachmentJson),
       feedbackType: message.feedbackType,
       feedbackContent: message.feedbackContent,
@@ -610,6 +613,8 @@ function openAttachment(attachment: any) {
 function stopStreaming() {
   currentAbortController.value?.abort()
   currentAbortController.value = null
+  flushStreamBuffers(currentStreamingAssistantId.value)
+  clearStreamBufferState(currentStreamingAssistantId.value)
   streaming.value = false
   inputText.value = '请从刚才中断的位置继续回答。'
 }
@@ -715,8 +720,14 @@ async function handleSubmit() {
       let buffer = ''
       while (true) {
         const { done, value } = await reader.read()
-        if (done) break
-        buffer += decoder.decode(value, { stream: true })
+        if (done) {
+          flushStreamBuffers(assistantId)
+          if (buffer.trim()) {
+            parseSseBlock(buffer.trim(), assistantId)
+          }
+          break
+        }
+        buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n')
         const parts = buffer.split('\n\n')
         buffer = parts.pop() || ''
         for (const part of parts) parseSseBlock(part, assistantId)
@@ -741,20 +752,70 @@ async function handleSubmit() {
       }
     }
 
+    flushStreamBuffers(assistantId)
     await loadSessions()
     const currentSession = sessions.value.find((item) => item.sessionId === activeSessionId.value)
     if (currentSession) {
       await openSession(currentSession)
     }
   } catch (error: any) {
+    flushStreamBuffers(assistantId)
     const target = chatMessages.value.find((item) => item.id === assistantId)
     if (target) {
       target.content = error?.name === 'AbortError' ? '已停止生成，你可以继续追问。' : normalizeQaErrorMessage(error?.message || '问答请求失败')
     }
   } finally {
+    clearStreamBufferState(assistantId)
     streaming.value = false
     currentStreamingAssistantId.value = ''
     images.value = []
+  }
+}
+
+function ensureStreamBufferState(assistantId: string) {
+  if (!assistantId) return
+  if (!streamChunkBuffers.value[assistantId]) {
+    streamChunkBuffers.value[assistantId] = { content: '', reasoning: '' }
+  }
+}
+
+function scheduleStreamFlush(assistantId: string) {
+  if (!assistantId || streamFlushTimers.value[assistantId]) return
+  streamFlushTimers.value[assistantId] = window.setTimeout(() => {
+    flushStreamBuffers(assistantId)
+  }, 80)
+}
+
+function flushStreamBuffers(assistantId: string) {
+  if (!assistantId) return
+  const timer = streamFlushTimers.value[assistantId]
+  if (timer) {
+    window.clearTimeout(timer)
+    delete streamFlushTimers.value[assistantId]
+  }
+  const buffer = streamChunkBuffers.value[assistantId]
+  if (!buffer) return
+  const target = chatMessages.value.find((item) => item.id === assistantId)
+  if (!target) return
+  if (buffer.reasoning) {
+    target.reasoningContent = (target.reasoningContent || '') + buffer.reasoning
+    buffer.reasoning = ''
+  }
+  if (buffer.content) {
+    target.content = (target.content || '') + buffer.content
+    buffer.content = ''
+  }
+}
+
+function clearStreamBufferState(assistantId: string) {
+  if (!assistantId) return
+  const timer = streamFlushTimers.value[assistantId]
+  if (timer) {
+    window.clearTimeout(timer)
+    delete streamFlushTimers.value[assistantId]
+  }
+  if (streamChunkBuffers.value[assistantId]) {
+    delete streamChunkBuffers.value[assistantId]
   }
 }
 
@@ -777,15 +838,27 @@ function parseSseBlock(block: string, assistantId: string) {
     saveActiveSessionId(payload.sessionId)
   }
   if (eventName === 'reasoning') {
-    target.reasoningContent = (target.reasoningContent || '') + (payload.content || '')
+    ensureStreamBufferState(assistantId)
+    streamChunkBuffers.value[assistantId].reasoning += payload.content || ''
+    scheduleStreamFlush(assistantId)
   }
-  if (eventName === 'chunk') target.content += payload.content || ''
-  if (eventName === 'done' && payload.aiResponse?.modelName) {
-    target.modelName = payload.aiResponse.modelName
+  if (eventName === 'chunk') {
+    ensureStreamBufferState(assistantId)
+    streamChunkBuffers.value[assistantId].content += payload.content || ''
+    scheduleStreamFlush(assistantId)
+  }
+  if (eventName === 'done') {
+    flushStreamBuffers(assistantId)
+    if (payload.aiResponse?.modelName) {
+      target.modelName = payload.aiResponse.modelName
+    }
     target.content = payload.aiResponse?.content || target.content || ''
     target.reasoningContent = payload.aiResponse?.reasoningContent || target.reasoningContent || ''
   }
-  if (eventName === 'error') target.content = payload.message || '生成失败'
+  if (eventName === 'error') {
+    flushStreamBuffers(assistantId)
+    target.content = payload.message || '生成失败'
+  }
 }
 
 async function copyText(text: string) {

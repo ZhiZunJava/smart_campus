@@ -149,3 +149,8 @@ office:
     officeHome:
     workingDir: D:/smart_campus/uploadPath/office-work
     outputDir: D:/smart_campus/uploadPath/preview
+
+ai:
+  security:
+    # 建议通过环境变量 AI_SECURITY_MASTER_KEY 注入 32 位以上随机字符串
+    master-key: ${AI_SECURITY_MASTER_KEY:gD5bZ3hU9hR0mB4zL0yF6tI0yM6xH7gD}

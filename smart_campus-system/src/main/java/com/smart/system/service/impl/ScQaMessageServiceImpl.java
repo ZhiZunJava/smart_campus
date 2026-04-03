@@ -20,6 +20,10 @@ public class ScQaMessageServiceImpl implements IScQaMessageService {
         return scQaMessageMapper.selectScQaMessageList(scQaMessage);
     }
 
+    public int countScQaMessageBySessionId(Long sessionId) {
+        return scQaMessageMapper.countScQaMessageBySessionId(sessionId);
+    }
+
     public int insertScQaMessage(ScQaMessage scQaMessage) {
         return scQaMessageMapper.insertScQaMessage(scQaMessage);
     }

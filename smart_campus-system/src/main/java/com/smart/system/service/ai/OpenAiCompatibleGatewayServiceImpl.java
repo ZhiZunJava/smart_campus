@@ -14,12 +14,16 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -41,6 +45,8 @@ public class OpenAiCompatibleGatewayServiceImpl implements IAiGatewayService {
     private static final Logger log = LoggerFactory.getLogger(OpenAiCompatibleGatewayServiceImpl.class);
     private static final int MAX_RETRY_TIMES = 2;
     private static final long RETRY_SLEEP_MILLIS = 800L;
+    private static final int MODEL_TEST_MAX_TOKENS = 96;
+    private static final int DEFAULT_CHAT_MAX_TOKENS = 512;
     private static final int QA_BASE_MAX_TOKENS = 4096;
     private static final int QA_DEEP_THINKING_MAX_TOKENS = 6144;
     private static final int QA_IMAGE_BONUS_TOKENS = 512;
@@ -61,6 +67,10 @@ public class OpenAiCompatibleGatewayServiceImpl implements IAiGatewayService {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired(required = false)
+    @Qualifier("threadPoolTaskExecutor")
+    private Executor taskExecutor;
 
     @Override
     public AiChatResponseVo testModel(AiModelTestDto testDto) {
@@ -89,6 +99,8 @@ public class OpenAiCompatibleGatewayServiceImpl implements IAiGatewayService {
     }
 
     private ExecutionContext prepareExecution(AiChatRequestDto requestDto) {
+        ExecutionContext context = new ExecutionContext();
+        context.startedAt = System.currentTimeMillis();
         if (requestDto == null) {
             throw new ServiceException("模型请求不能为空");
         }
@@ -96,10 +108,14 @@ public class OpenAiCompatibleGatewayServiceImpl implements IAiGatewayService {
             throw new ServiceException("用户提示词不能为空");
         }
 
+        long phaseStart = System.currentTimeMillis();
         ScAiModelConfig modelConfig = scAiModelConfigService.resolveModel("chat", requestDto.getBizType(),
                 requestDto.getModelId());
+        recordPhase(context, "resolve_model", phaseStart);
+        phaseStart = System.currentTimeMillis();
         String actualModelCode = resolveActualModelCode(modelConfig, requestDto.getDeepThinking(),
                 hasImages(requestDto));
+        recordPhase(context, "resolve_model_code", phaseStart);
         if (StringUtils.isEmpty(modelConfig.getBaseUrl()) || StringUtils.isEmpty(modelConfig.getApiKey())
                 || StringUtils.isEmpty(actualModelCode)) {
             throw new ServiceException("AI 模型配置不完整，请检查地址、密钥和模型编码");
@@ -111,26 +127,32 @@ public class OpenAiCompatibleGatewayServiceImpl implements IAiGatewayService {
             throw new ServiceException("当前 DeepSeek 聊天模型未配置可用的视觉模型，请切换支持图片理解的模型或在模型配置中填写视觉模型编码");
         }
 
-        ExecutionContext context = new ExecutionContext();
         context.requestDto = requestDto;
         context.modelConfig = modelConfig;
         context.actualModelCode = actualModelCode;
-        context.startedAt = System.currentTimeMillis();
         context.taskLog = new ScAiTaskLog();
         context.taskLog.setBizType(StringUtils.isEmpty(requestDto.getBizType()) ? "ai_chat" : requestDto.getBizType());
         context.taskLog.setBizId(resolveBizId(requestDto, modelConfig));
         context.taskLog.setModelId(modelConfig.getModelId());
         context.taskLog.setTaskStatus("RUNNING");
+        recordPhase(context, "prepare_context", System.currentTimeMillis());
         return context;
     }
 
     private AiChatResponseVo executeNormalChat(ExecutionContext context) {
         try {
+            long phaseStart = System.currentTimeMillis();
             String payload = buildChatPayload(context.actualModelCode, context.requestDto);
+            recordPhase(context, "build_payload", phaseStart);
             context.taskLog.setRequestPayload(payload);
+            phaseStart = System.currentTimeMillis();
             HttpRequest request = buildRequest(context.modelConfig, payload);
+            recordPhase(context, "build_http_request", phaseStart);
+            phaseStart = System.currentTimeMillis();
             HttpResponse<String> response = sendWithRetry(context, request,
                     HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8), "普通对话");
+            recordPhase(context, "upstream_http", phaseStart);
+            context.rawResponsePayload = response.body();
             context.taskLog.setResponsePayload(response.body());
             context.taskLog.setDurationMs((int) (System.currentTimeMillis() - context.startedAt));
 
@@ -138,13 +160,16 @@ public class OpenAiCompatibleGatewayServiceImpl implements IAiGatewayService {
                 failTask(context, "HTTP状态码异常: " + response.statusCode());
             }
 
+            phaseStart = System.currentTimeMillis();
             JsonNode root = objectMapper.readTree(response.body());
             String content = parseContent(root);
             String reasoningContent = parseReasoningContent(root);
             int totalTokens = parseTokens(root);
+            recordPhase(context, "parse_response", phaseStart);
             context.taskLog.setTokenUsed(totalTokens);
             context.taskLog.setTaskStatus("SUCCESS");
-            scAiTaskLogService.insertScAiTaskLog(context.taskLog);
+            context.taskLog.setResponsePayload(buildTaskPayload(context, content, reasoningContent, totalTokens, null));
+            persistTaskLogAsync(context.taskLog);
             return buildResponse(context, content, reasoningContent, totalTokens);
         } catch (IOException e) {
             failTask(context, e.getMessage());
@@ -160,21 +185,29 @@ public class OpenAiCompatibleGatewayServiceImpl implements IAiGatewayService {
         StringBuilder fullContent = new StringBuilder();
         StringBuilder fullReasoning = new StringBuilder();
         try {
+            long phaseStart = System.currentTimeMillis();
             String payload = buildChatPayload(context.actualModelCode, context.requestDto);
+            recordPhase(context, "build_payload", phaseStart);
             context.taskLog.setRequestPayload(payload);
+            phaseStart = System.currentTimeMillis();
             HttpRequest request = buildRequest(context.modelConfig, payload);
+            recordPhase(context, "build_http_request", phaseStart);
+            phaseStart = System.currentTimeMillis();
             HttpResponse<InputStream> response = sendWithRetry(context, request, HttpResponse.BodyHandlers.ofInputStream(),
                     "流式对话");
+            recordPhase(context, "upstream_handshake", phaseStart);
             context.taskLog.setDurationMs((int) (System.currentTimeMillis() - context.startedAt));
 
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
                 String body = readAll(response.body());
+                context.rawResponsePayload = body;
                 context.taskLog.setResponsePayload(body);
                 failTask(context, "HTTP状态码异常: " + response.statusCode());
             }
 
             int totalTokens = 0;
             StringBuilder rawSse = new StringBuilder();
+            phaseStart = System.currentTimeMillis();
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(response.body(), StandardCharsets.UTF_8))) {
                 String line;
@@ -191,24 +224,30 @@ public class OpenAiCompatibleGatewayServiceImpl implements IAiGatewayService {
                         continue;
                     }
                     JsonNode root = objectMapper.readTree(data);
-                    String reasoningDelta = parseDeltaReasoningContent(root);
+                    JsonNode deltaNode = firstDeltaNode(root);
+                    String reasoningDelta = parseDeltaReasoningContent(deltaNode);
                     if (StringUtils.isNotEmpty(reasoningDelta)) {
                         fullReasoning.append(reasoningDelta);
                         onChunk.accept(new AiStreamChunkVo("reasoning", reasoningDelta));
                     }
-                    String delta = parseDeltaContent(root);
+                    String delta = parseDeltaContent(deltaNode);
                     if (StringUtils.isNotEmpty(delta)) {
                         fullContent.append(delta);
                         onChunk.accept(new AiStreamChunkVo("content", delta));
                     }
-                    totalTokens = parseTokens(root) > 0 ? parseTokens(root) : totalTokens;
+                    int parsedTokens = parseTokens(root);
+                    totalTokens = parsedTokens > 0 ? parsedTokens : totalTokens;
                 }
             }
+            recordPhase(context, "stream_consume", phaseStart);
+            context.rawResponsePayload = rawSse.toString();
             context.taskLog.setResponsePayload(rawSse.toString());
             context.taskLog.setTokenUsed(totalTokens);
             context.taskLog.setDurationMs((int) (System.currentTimeMillis() - context.startedAt));
             context.taskLog.setTaskStatus("SUCCESS");
-            scAiTaskLogService.insertScAiTaskLog(context.taskLog);
+            context.taskLog.setResponsePayload(
+                    buildTaskPayload(context, fullContent.toString(), fullReasoning.toString(), totalTokens, null));
+            persistTaskLogAsync(context.taskLog);
             return buildResponse(context, fullContent.toString(), fullReasoning.toString(), totalTokens);
         } catch (IOException e) {
             failTask(context, e.getMessage());
@@ -300,15 +339,10 @@ public class OpenAiCompatibleGatewayServiceImpl implements IAiGatewayService {
     }
 
     private void appendRetryTrace(ExecutionContext context, String message) {
-        if (context == null || context.taskLog == null) {
+        if (context == null) {
             return;
         }
-        String existing = context.taskLog.getResponsePayload();
-        if (StringUtils.isEmpty(existing)) {
-            context.taskLog.setResponsePayload("[retry] " + message);
-            return;
-        }
-        context.taskLog.setResponsePayload(existing + "\n[retry] " + message);
+        context.retryTraces.add(message);
     }
 
     private AiChatResponseVo buildResponse(ExecutionContext context, String content, String reasoningContent,
@@ -328,8 +362,88 @@ public class OpenAiCompatibleGatewayServiceImpl implements IAiGatewayService {
         context.taskLog.setTaskStatus("FAILED");
         context.taskLog.setErrorMsg(message);
         context.taskLog.setDurationMs((int) (System.currentTimeMillis() - context.startedAt));
-        scAiTaskLogService.insertScAiTaskLog(context.taskLog);
+        context.taskLog.setResponsePayload(buildTaskPayload(context, null, null, context.taskLog.getTokenUsed(), message));
+        persistTaskLogAsync(context.taskLog);
         throw new ServiceException(message);
+    }
+
+    private void recordPhase(ExecutionContext context, String phaseName, long phaseStartedAt) {
+        if (context == null || StringUtils.isEmpty(phaseName) || phaseStartedAt <= 0) {
+            return;
+        }
+        long durationMs = Math.max(0L, System.currentTimeMillis() - phaseStartedAt);
+        Map<String, Object> phase = new LinkedHashMap<>();
+        phase.put("phase", phaseName);
+        phase.put("durationMs", durationMs);
+        context.phaseTimings.add(phase);
+    }
+
+    private String buildTaskPayload(ExecutionContext context, String content, String reasoningContent, Integer tokenUsed,
+            String errorMessage) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        if (context != null) {
+            payload.put("actualModelCode", context.actualModelCode);
+            payload.put("durationMs", Math.max(0L, System.currentTimeMillis() - context.startedAt));
+            payload.put("trace", context.phaseTimings);
+            if (context.retryTraces != null && !context.retryTraces.isEmpty()) {
+                payload.put("retries", context.retryTraces);
+            }
+            if (StringUtils.isNotEmpty(context.rawResponsePayload)) {
+                payload.put("rawResponse", context.rawResponsePayload);
+            }
+        }
+        if (StringUtils.isNotEmpty(content) || StringUtils.isNotEmpty(reasoningContent) || tokenUsed != null) {
+            Map<String, Object> parsed = new LinkedHashMap<>();
+            parsed.put("content", StringUtils.defaultString(content));
+            parsed.put("reasoningContent", StringUtils.defaultString(reasoningContent));
+            parsed.put("tokenUsed", tokenUsed == null ? 0 : tokenUsed);
+            payload.put("parsed", parsed);
+        }
+        if (StringUtils.isNotEmpty(errorMessage)) {
+            payload.put("errorMessage", errorMessage);
+        }
+        try {
+            return objectMapper.writeValueAsString(payload);
+        } catch (Exception e) {
+            return StringUtils.defaultString(context == null ? null : context.rawResponsePayload);
+        }
+    }
+
+    private void persistTaskLogAsync(ScAiTaskLog taskLog) {
+        if (taskLog == null) {
+            return;
+        }
+        ScAiTaskLog snapshot = copyTaskLog(taskLog);
+        Runnable action = () -> {
+            try {
+                scAiTaskLogService.insertScAiTaskLog(snapshot);
+            } catch (Exception e) {
+                log.warn("AI任务日志异步写入失败，bizType={}, modelId={}, message={}",
+                        snapshot.getBizType(), snapshot.getModelId(), e.getMessage());
+            }
+        };
+        if (taskExecutor != null) {
+            taskExecutor.execute(action);
+            return;
+        }
+        CompletableFuture.runAsync(action);
+    }
+
+    private ScAiTaskLog copyTaskLog(ScAiTaskLog source) {
+        ScAiTaskLog target = new ScAiTaskLog();
+        target.setBizType(source.getBizType());
+        target.setBizId(source.getBizId());
+        target.setModelId(source.getModelId());
+        target.setRequestPayload(source.getRequestPayload());
+        target.setResponsePayload(source.getResponsePayload());
+        target.setTokenUsed(source.getTokenUsed());
+        target.setTaskStatus(source.getTaskStatus());
+        target.setErrorMsg(source.getErrorMsg());
+        target.setDurationMs(source.getDurationMs());
+        target.setCreateBy(source.getCreateBy());
+        target.setUpdateBy(source.getUpdateBy());
+        target.setRemark(source.getRemark());
+        return target;
     }
 
     private boolean hasImages(AiChatRequestDto requestDto) {
@@ -371,13 +485,16 @@ public class OpenAiCompatibleGatewayServiceImpl implements IAiGatewayService {
         if ("exam_question_generate".equalsIgnoreCase(bizType)) {
             return resolveExamGenerateMaxTokens(requestDto);
         }
+        if ("model_test".equalsIgnoreCase(bizType)) {
+            return MODEL_TEST_MAX_TOKENS;
+        }
         if ("qa".equalsIgnoreCase(bizType)) {
             return resolveQaMaxTokens(requestDto);
         }
         if ("learning_profile_analysis".equalsIgnoreCase(bizType) || "resource_analysis".equalsIgnoreCase(bizType)) {
             return 512;
         }
-        return 1024;
+        return DEFAULT_CHAT_MAX_TOKENS;
     }
 
     private int resolveQaMaxTokens(AiChatRequestDto requestDto) {
@@ -593,27 +710,60 @@ public class OpenAiCompatibleGatewayServiceImpl implements IAiGatewayService {
         return "";
     }
 
-    private String parseDeltaContent(JsonNode root) {
+    private JsonNode firstDeltaNode(JsonNode root) {
+        if (root == null || root.isMissingNode() || root.isNull()) {
+            return null;
+        }
         JsonNode choices = root.path("choices");
-        if (choices.isArray() && !choices.isEmpty()) {
-            JsonNode delta = choices.get(0).path("delta");
-            if (delta.has("content")) {
-                return delta.path("content").asText("");
+        if (!choices.isArray() || choices.isEmpty()) {
+            return null;
+        }
+        JsonNode firstChoice = choices.get(0);
+        if (firstChoice == null || firstChoice.isNull() || firstChoice.isMissingNode()) {
+            return null;
+        }
+        JsonNode delta = firstChoice.path("delta");
+        return delta.isMissingNode() || delta.isNull() ? null : delta;
+    }
+
+    private String parseDeltaContent(JsonNode delta) {
+        if (delta == null) {
+            return "";
+        }
+        JsonNode contentNode = delta.path("content");
+        if (contentNode.isMissingNode() || contentNode.isNull()) {
+            return "";
+        }
+        if (contentNode.isArray()) {
+            StringBuilder builder = new StringBuilder();
+            for (JsonNode item : contentNode) {
+                if (item == null || item.isNull()) {
+                    continue;
+                }
+                String text = item.path("text").asText("");
+                if (StringUtils.isNotEmpty(text)) {
+                    builder.append(text);
+                }
             }
+            return builder.toString();
+        }
+        if (contentNode.isTextual()) {
+            return contentNode.asText("");
         }
         return "";
     }
 
-    private String parseDeltaReasoningContent(JsonNode root) {
-        JsonNode choices = root.path("choices");
-        if (choices.isArray() && !choices.isEmpty()) {
-            JsonNode delta = choices.get(0).path("delta");
-            if (delta.has("reasoning_content")) {
-                return delta.path("reasoning_content").asText("");
-            }
-            if (delta.has("reasoning")) {
-                return delta.path("reasoning").asText("");
-            }
+    private String parseDeltaReasoningContent(JsonNode delta) {
+        if (delta == null) {
+            return "";
+        }
+        JsonNode reasoningContentNode = delta.path("reasoning_content");
+        if (!reasoningContentNode.isMissingNode() && !reasoningContentNode.isNull()) {
+            return reasoningContentNode.asText("");
+        }
+        JsonNode reasoningNode = delta.path("reasoning");
+        if (!reasoningNode.isMissingNode() && !reasoningNode.isNull()) {
+            return reasoningNode.asText("");
         }
         return "";
     }
@@ -647,5 +797,8 @@ public class OpenAiCompatibleGatewayServiceImpl implements IAiGatewayService {
         private String actualModelCode;
         private long startedAt;
         private ScAiTaskLog taskLog;
+        private String rawResponsePayload;
+        private List<Map<String, Object>> phaseTimings = new ArrayList<>();
+        private List<String> retryTraces = new ArrayList<>();
     }
 }

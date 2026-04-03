@@ -4,9 +4,8 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "lib": ["esnext", "dom"],
-    "baseUrl": "./",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     },
     "strict": true,
     "skipLibCheck": true,
