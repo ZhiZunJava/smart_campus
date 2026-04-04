@@ -120,6 +120,7 @@ const shortcutVisualByPath: Record<string, ShortcutVisualConfig> = {
   '/parent/courses': { icon: 'ri-book-open-line', bg: 'linear-gradient(135deg, #edb580, #c97b4e)' },
   '/parent/schedule': { icon: 'ri-calendar-schedule-line', bg: 'linear-gradient(135deg, #70dbc9, #2fae95)' },
   '/parent/child-bind': { icon: 'ri-links-line', bg: 'linear-gradient(135deg, #f7a9c4, #ef668f)' },
+  '/student/parent-requests': { icon: 'ri-parent-line', bg: 'linear-gradient(135deg, #a78bfa, #7c3aed)' },
 }
 
 const studentDefaultShortcutPaths = [

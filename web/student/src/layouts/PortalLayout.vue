@@ -340,6 +340,7 @@ const menus: Record<string, MenuItem[]> = {
     { title: '我的错题本', path: '/student/wrongbook', desc: '错题回顾、练习与复盘' },
     { title: '全校开课查询', path: '/student/course-offerings', desc: '查询全校各学期课程开设情况' },
     { title: '学籍核对', path: '/student/verification', desc: '核对并确认个人学籍信息' },
+    { title: '家长绑定请求', path: '/student/parent-requests', desc: '查看并处理家长发来的绑定请求' },
   ],
   teacher: [
     { title: '教学概览', path: '/teacher/dashboard', desc: '课程与教学资源概览' },
@@ -376,6 +377,7 @@ const groupedMenus: Record<string, MenuGroup[]> = {
         menus.student[1],
         menus.student[2],
         menus.student[30],
+        menus.student[31],
         menus.student[22],
         menus.student[23],
       ],

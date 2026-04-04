@@ -120,7 +120,11 @@
       "Read(//mnt/e/smart_campus/web/student/src/**)",
       "Bash(Read \"E:\\\\smart_campus\\\\web\\\\student\\\\src\\\\views\\\\student\\\\Dashboard.vue\")",
       "Bash(node:*)",
-      "Read(//e/smart_campus/web/student/src/views/account/**)"
+      "Read(//e/smart_campus/web/student/src/views/account/**)",
+      "Read(//c/Users/33088/.claude/**)",
+      "Bash(rm -rf \"E:\\\\\\\\smart_campus\\\\\\\\.claude\\\\\\\\mcp\\\\\\\\git-mcp\")",
+      "Bash(mkdir -p \"E:\\\\\\\\smart_campus\\\\\\\\.claude\\\\\\\\commands\")",
+      "Bash(git add:*)"
     ]
   }
 }
