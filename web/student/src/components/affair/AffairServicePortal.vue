@@ -345,14 +345,14 @@ function handleQuickTemplate(item: any) {
 /* B1: Skeleton loading */
 .portal-skeleton { display: grid; gap: 24px; }
 .skeleton-hero { padding: 32px; border-radius: 24px; background: #f8fafc; border: 1px solid #dbeafe; }
-.skeleton-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 1rem; }
-.skeleton-stat-card { height: 4.5rem; border-radius: 16px; }
+.skeleton-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 10px; }
+.skeleton-stat-card { height: 45px; border-radius: 16px; }
 .skeleton-section { display: grid; gap: 14px; }
 .skeleton-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
 .skeleton-grid--wide { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
 .skeleton-module { display: grid; gap: 12px; }
-.skeleton-quick-card { height: 4rem; border-radius: 16px; }
-.skeleton-category-card { height: 4.5rem; border-radius: 16px; }
+.skeleton-quick-card { height: 40px; border-radius: 16px; }
+.skeleton-category-card { height: 45px; border-radius: 16px; }
 
 .skeleton-line,
 .skeleton-stat-card,
@@ -364,11 +364,11 @@ function handleQuickTemplate(item: any) {
   border-radius: 6px;
 }
 
-.skeleton-line--eyebrow { height: 0.75rem; width: 25%; margin-bottom: 0.5rem; }
-.skeleton-line--title { height: 1.75rem; width: 40%; margin-bottom: 0.5rem; }
-.skeleton-line--subtitle { height: 1rem; width: 60%; }
-.skeleton-line--heading { height: 1.25rem; width: 20%; }
-.skeleton-line--tag { height: 1.5rem; width: 15%; border-radius: 20px; }
+.skeleton-line--eyebrow { height: 7.5px; width: 25%; margin-bottom: 5px; }
+.skeleton-line--title { height: 17.5px; width: 40%; margin-bottom: 5px; }
+.skeleton-line--subtitle { height: 10px; width: 60%; }
+.skeleton-line--heading { height: 12.5px; width: 20%; }
+.skeleton-line--tag { height: 15px; width: 15%; border-radius: 20px; }
 
 @keyframes shimmer {
   0%   { background-position: 200% 0; }
@@ -376,10 +376,10 @@ function handleQuickTemplate(item: any) {
 }
 
 /* B7: Empty state */
-.empty-state { display: flex; flex-direction: column; align-items: center; padding: 2rem 1rem; color: #94a3b8; }
-.empty-state__icon { font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.6; }
-.empty-state__text { font-size: 0.875rem; margin: 0; }
-.empty-state__subtext { font-size: 0.75rem; color: #cbd5e1; margin-top: 0.25rem; }
+.empty-state { display: flex; flex-direction: column; align-items: center; padding: 20px 10px; color: #94a3b8; }
+.empty-state__icon { font-size: 20px; margin-bottom: 5px; opacity: 0.6; }
+.empty-state__text { font-size: 8.75px; margin: 0; }
+.empty-state__subtext { font-size: 7.5px; color: #cbd5e1; margin-top: 2.5px; }
 
 @media (max-width: 900px) {
   .portal-stats, .skeleton-stats { grid-template-columns: repeat(2, 1fr); }

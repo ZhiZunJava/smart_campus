@@ -23,6 +23,9 @@ $menuLightActiveText: #006eff;
 // 基础变量
 $base-sidebar-width: 232px;
 $sideBarWidth: 232px;
+$base-sidebar-collapsed-width: 60px;
+$navbar-height: 58px;
+$tags-view-height: 40px;
 
 // 菜单暗色变量
 $base-menu-color: #d7e3f7;
@@ -48,6 +51,9 @@ $--color-info: #737d89;
   menuLightText: $menuLightText;
   menuLightActiveText: $menuLightActiveText;
   sideBarWidth: $sideBarWidth;
+  sideBarCollapsedWidth: $base-sidebar-collapsed-width;
+  navbarHeight: $navbar-height;
+  tagsViewHeight: $tags-view-height;
   blue: $blue;
   lightBlue: $light-blue;
   red: $red;

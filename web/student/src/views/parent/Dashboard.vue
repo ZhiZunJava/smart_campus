@@ -28,40 +28,7 @@
     @drawer-task-click="openDrawerTask"
     @drawer-message-click="openDrawerMessage"
     @message-center="openMessageCenter"
-  >
-    <template #greeting-extra>
-      <div class="parent-greeting-panel">
-        <div class="parent-greeting-panel__switcher">
-          <span class="parent-greeting-panel__label">孩子视角</span>
-          <el-select
-            v-model="selectedChildId"
-            filterable
-            placeholder="选择孩子"
-            class="parent-greeting-panel__select"
-            @change="handleChildChange"
-          >
-            <el-option v-for="item in childOptions" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
-        </div>
-        <div class="parent-greeting-panel__summary">
-          <div class="parent-greeting-panel__metric">
-            <span>当前孩子</span>
-            <strong>{{ currentChild?.studentName || '未绑定孩子' }}</strong>
-          </div>
-          <div class="parent-greeting-panel__metric">
-            <span>班级 / 专业</span>
-            <strong>{{ currentChild?.className || '待完善' }}</strong>
-            <p>{{ currentChild?.major || '未配置专业' }}</p>
-          </div>
-          <div class="parent-greeting-panel__metric">
-            <span>家庭关系</span>
-            <strong>{{ currentChild?.relationType || '未标注' }}</strong>
-            <p>已绑定 {{ childOptions.length }} 位孩子</p>
-          </div>
-        </div>
-      </div>
-    </template>
-  </PortalDashboardShell>
+  />
 </template>
 
 <script setup lang="ts">
@@ -71,6 +38,8 @@ import PortalDashboardShell from '@/components/dashboard/PortalDashboardShell.vu
 import {
   getParentDashboard,
   getPortalParentSchedule,
+  getPortalUnreadMessages,
+  listPortalNotice,
   listPortalParentChildren,
   listPortalTermOptions,
 } from '@/api/portal'
@@ -117,12 +86,21 @@ const currentSemesterLabel = computed(() => {
   return [schoolYear, termName].filter(Boolean).join(' ')
 })
 const currentTeachingWeek = computed(() => Number(schedulePayload.value?.currentWeek || 1))
-const secondaryInfo = computed(() => [
-  `孩子账号：${currentChild.value?.studentNo || '--'}`,
-  `考试记录：${dashboard.value.examRecordCount || 0} 条`,
-  `学习记录：${dashboard.value.studyRecordCount || 0} 条`,
-  `上次登录时间：${formatDateTime(userStore.user?.loginDate) || '暂无记录'}`,
-])
+const secondaryInfo = computed(() => {
+  if (!childOptions.value.length) {
+    return [
+      '孩子账号：暂未绑定',
+      '绑定状态：待绑定',
+      `上次登录时间：${formatDateTime(userStore.user?.loginDate) || '暂无记录'}`,
+    ]
+  }
+  return [
+    `孩子账号：${currentChild.value?.studentNo || '--'}`,
+    `考试记录：${dashboard.value.examRecordCount || 0} 条`,
+    `学习记录：${dashboard.value.studyRecordCount || 0} 条`,
+    `上次登录时间：${formatDateTime(userStore.user?.loginDate) || '暂无记录'}`,
+  ]
+})
 
 const todayMeta = computed(() => {
   const today = new Date()
@@ -156,6 +134,9 @@ const activeScheduleTitle = computed(() => {
   return `${prefix} · ${formatMonthDay(meta.date)}`
 })
 const activeScheduleSummary = computed(() => {
+  if (!childOptions.value.length) {
+    return '暂未绑定孩子，绑定后可查看孩子的课程安排。'
+  }
   const childName = currentChild.value?.studentName || '孩子'
   const count = activeScheduleCards.value.length
   if (!count) {
@@ -174,12 +155,30 @@ const activeScheduleEmptyDescription = computed(() =>
 )
 
 const baseTaskItems = computed(() => {
+  const hasBoundChild = childOptions.value.length > 0
   const childName = currentChild.value?.studentName || '孩子'
+
+  if (!hasBoundChild) {
+    return [
+      {
+        key: 'parent-no-child',
+        title: '尚未绑定孩子',
+        desc: '当前账号暂未绑定孩子信息，请联系学校管理员或班主任完成亲子关系绑定后再使用家长端功能。',
+        tag: '待绑定',
+        tagType: 'danger',
+        meta: ['请联系管理员完成绑定'],
+        actionLabel: '了解详情',
+        path: '/parent/dashboard',
+        iconType: 'homework' as const,
+      },
+    ]
+  }
+
   return [
     {
       key: 'parent-course-list',
       title: '查看孩子课程',
-      desc: `进入 ${childName} 的课程列表，继续查看课程和教师信息`,
+      desc: `进入 ${childName} 的课程列表，查看课程和教师信息`,
       tag: '课程概览',
       tagType: 'primary',
       meta: [`当前学期：${currentSemesterLabel.value}`],
@@ -198,64 +197,28 @@ const baseTaskItems = computed(() => {
       path: '/parent/schedule',
       iconType: 'practice' as const,
     },
-    {
-      key: 'parent-child-switch',
-      title: '切换孩子视角',
-      desc: childOptions.value.length > 1 ? '当前家庭绑定了多位孩子，可随时切换查看' : '当前仅绑定 1 位孩子，可持续关注学习安排',
-      tag: '家庭关系',
-      tagType: 'warning',
-      meta: [`已绑定：${childOptions.value.length} 位`],
-      actionLabel: '继续查看',
-      path: '/parent/dashboard',
-      iconType: 'homework' as const,
-    },
   ]
 })
 
 const recentTasks = computed(() => buildStaticTaskCards(baseTaskItems.value))
-const taskOverviewBadges = computed(() => [
-  `已绑定孩子 ${childOptions.value.length}`,
-  `考试记录 ${dashboard.value.examRecordCount || 0}`,
-  `当前查看 ${currentChild.value?.studentName || '未选择孩子'}`,
-].filter(Boolean))
+const taskOverviewBadges = computed(() => {
+  if (!childOptions.value.length) {
+    return ['暂未绑定孩子', '请联系管理员完成绑定']
+  }
+  return [
+    `已绑定孩子 ${childOptions.value.length}`,
+    `考试记录 ${dashboard.value.examRecordCount || 0}`,
+    `当前查看 ${currentChild.value?.studentName || '未选择孩子'}`,
+  ].filter(Boolean)
+})
 const drawerTodoList = computed(() => recentTasks.value.map((item) => ({
   key: item.key,
   title: item.title,
   desc: item.statusText,
   action: item.raw?.action,
 })))
-const drawerMessageList = computed(() => [
-  {
-    messageId: 'parent-child-focus',
-    messageTitle: `当前查看：${currentChild.value?.studentName || '未选择孩子'}`,
-    messageSummary: `${currentChild.value?.className || '待完善班级'} · ${currentChild.value?.major || '未完善专业'}`,
-    createTime: formatDateTime(new Date()),
-    readFlag: '0',
-  },
-  {
-    messageId: 'parent-week-focus',
-    messageTitle: `第 ${currentTeachingWeek.value} 教学周提醒`,
-    messageSummary: `本周共 ${Array.isArray(schedulePayload.value?.activities) ? schedulePayload.value.activities.length : 0} 条排课安排`,
-    createTime: formatDateTime(new Date()),
-    readFlag: '0',
-  },
-])
-const drawerNoticeList = computed(() => [
-  {
-    messageId: 'parent-exam-summary',
-    messageTitle: '考试记录概览',
-    messageSummary: `孩子当前共有 ${dashboard.value.examRecordCount || 0} 条考试记录`,
-    createTime: formatDateTime(new Date()),
-    readFlag: '0',
-  },
-  {
-    messageId: 'parent-course-summary',
-    messageTitle: '课程同步完成',
-    messageSummary: `当前学期已同步 ${activeScheduleCards.value.length} 条当日预览课程`,
-    createTime: formatDateTime(new Date()),
-    readFlag: '0',
-  },
-])
+const drawerMessageList = ref<any[]>([])
+const drawerNoticeList = ref<any[]>([])
 
 function buildScheduleCards(meta: { weekDay: number; targetWeek: number }, prefix: string) {
   const activities = Array.isArray(schedulePayload.value?.activities) ? schedulePayload.value.activities : []
@@ -317,12 +280,26 @@ async function loadScheduleData() {
   schedulePayload.value = res.data || {}
 }
 
+async function preloadDrawerBadges() {
+  const userId = userStore.user?.userId
+  if (!userId) return
+  try {
+    const [msgRes, noticeRes] = await Promise.all([
+      getPortalUnreadMessages({ userId, limit: 20 }),
+      listPortalNotice({ limit: 20 }),
+    ])
+    drawerMessageList.value = (msgRes.data || []).filter((item: any) => item.readFlag === '0')
+    drawerNoticeList.value = (noticeRes.data || []).filter((item: any) => item.readFlag === '0')
+  } catch { /* silent */ }
+}
+
 async function loadData() {
   if (!userStore.user?.userId) return
   loading.value = true
   try {
     await loadTerms()
     await loadChildren()
+    preloadDrawerBadges()
     if (!selectedChildId.value) return
     await Promise.all([
       loadDashboardData(),
@@ -349,8 +326,21 @@ function openDrawerTask(task: any) {
   openTask(task)
 }
 
-function openQuickDrawer() {
-  drawerLoading.value = false
+async function openQuickDrawer(tab?: string) {
+  drawerLoading.value = true
+  try {
+    const userId = userStore.user?.userId
+    if (!userId) return
+    if (tab === 'message') {
+      const res = await getPortalUnreadMessages({ userId, limit: 6 })
+      drawerMessageList.value = (res.data || []).filter((item: any) => item.readFlag === '0')
+    } else if (tab === 'notice') {
+      const res = await listPortalNotice({ limit: 6 })
+      drawerNoticeList.value = (res.data || []).filter((item: any) => item.readFlag === '0')
+    }
+  } finally {
+    drawerLoading.value = false
+  }
 }
 
 function openDrawerMessage(payload?: { tab: 'message' | 'notice'; item: any }) {
@@ -371,73 +361,4 @@ onMounted(loadData)
 </script>
 
 <style scoped>
-.parent-greeting-panel {
-  margin-top: 2.2rem;
-  padding: 1.8rem 2rem;
-  border-radius: 1.8rem;
-  background: linear-gradient(135deg, rgba(255, 244, 240, 0.92), rgba(255, 255, 255, 0.96));
-  border: 1px solid rgba(194, 65, 45, 0.16);
-  box-shadow: 0 10px 24px rgba(194, 65, 45, 0.08);
-}
-
-.parent-greeting-panel__switcher {
-  display: flex;
-  align-items: center;
-  gap: 1.2rem;
-  flex-wrap: wrap;
-}
-
-.parent-greeting-panel__label {
-  font-size: 1.3rem;
-  color: #7c2d12;
-  font-weight: 700;
-}
-
-.parent-greeting-panel__select {
-  width: 30rem;
-}
-
-.parent-greeting-panel__summary {
-  margin-top: 1.6rem;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1.2rem;
-}
-
-.parent-greeting-panel__metric {
-  padding: 1.4rem 1.6rem;
-  border-radius: 1.4rem;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(194, 65, 45, 0.12);
-}
-
-.parent-greeting-panel__metric span {
-  display: block;
-  font-size: 1.2rem;
-  color: #9a3412;
-}
-
-.parent-greeting-panel__metric strong {
-  display: block;
-  margin-top: 0.8rem;
-  font-size: 1.7rem;
-  color: #7c2d12;
-}
-
-.parent-greeting-panel__metric p {
-  margin: 0.6rem 0 0;
-  font-size: 1.2rem;
-  color: #7c6f6a;
-  line-height: 1.6;
-}
-
-@media (max-width: 900px) {
-  .parent-greeting-panel__summary {
-    grid-template-columns: 1fr;
-  }
-
-  .parent-greeting-panel__select {
-    width: 100%;
-  }
-}
 </style>

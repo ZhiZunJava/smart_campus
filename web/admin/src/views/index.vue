@@ -1,582 +1,607 @@
 <template>
-  <div class="min-h-full bg-[var(--el-bg-color-page)] text-[var(--el-text-color-primary)]">
-    <div class="m-3 mt-4 flex w-auto flex-col gap-3 md:m-4 md:mt-4 xl:m-4 xl:mt-4">
-      <section
-        class="relative overflow-hidden rounded-md border border-slate-200/70 bg-gradient-to-br from-cyan-50 via-white to-sky-100 shadow-[0_14px_34px_rgba(8,145,178,0.10)]"
+  <div class="min-h-full bg-[var(--el-bg-color-page)] p-4 lg:p-6">
+    <!-- Header -->
+    <section class="mb-6 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">智慧校园管理总览</h1>
+        <p class="mt-1 text-sm text-slate-500">
+          {{ currentTermName }} &middot; {{ todayLabel }}
+        </p>
+      </div>
+      <span
+        class="inline-flex items-center gap-1.5 self-start rounded-md border px-3 py-1.5 text-xs font-semibold"
+        :class="riskClass"
       >
-        <div class="absolute inset-y-0 right-0 hidden w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.18),transparent_58%)] lg:block"></div>
-        <div class="absolute -right-16 top-8 h-40 w-40 bg-cyan-200/35 blur-3xl"></div>
-        <div class="absolute bottom-0 left-1/3 h-24 w-24 bg-emerald-200/40 blur-2xl"></div>
+        <i :class="riskIcon" class="text-sm"></i>
+        {{ riskLabel }}
+      </span>
+    </section>
 
-        <div class="relative px-3 py-3 lg:px-4 lg:py-4">
-          <div class="space-y-4">
-            <div class="inline-flex items-center gap-2 rounded-sm border border-cyan-200 bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-800">
-              <i class="ri-dashboard-line text-sm"></i>
-              Campus Operations Hub
+    <!-- KPI Cards -->
+    <section class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
+      <div
+        v-for="card in kpiCards"
+        :key="card.title"
+        class="group relative overflow-hidden rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+      >
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ card.title }}</span>
+          <div class="flex h-8 w-8 items-center justify-center rounded-md bg-slate-50 text-slate-500">
+            <i :class="card.icon" class="text-base"></i>
+          </div>
+        </div>
+        <div class="mt-3 text-3xl font-black tracking-tight text-slate-900">{{ card.value }}</div>
+        <p class="mt-1 text-xs text-slate-500">{{ card.desc }}</p>
+      </div>
+    </section>
+
+    <!-- Charts Row 1 -->
+    <section class="mb-6 grid gap-6 xl:grid-cols-2">
+      <!-- User Distribution Pie -->
+      <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <div class="mb-4 flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">用户分布</h2>
+            <p class="mt-0.5 text-xs text-slate-500">按角色统计平台用户构成</p>
+          </div>
+          <span class="text-xs font-semibold text-slate-400">共 {{ data.userTotal || 0 }} 人</span>
+        </div>
+        <div ref="userChartRef" class="h-[320px] w-full"></div>
+      </div>
+
+      <!-- Scheduling Bar Chart -->
+      <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <div class="mb-4 flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">排课概况</h2>
+            <p class="mt-0.5 text-xs text-slate-500">教学班排课完成情况对比</p>
+          </div>
+          <span class="text-xs font-semibold text-slate-400">覆盖率 {{ scheduleCoverage }}%</span>
+        </div>
+        <div ref="scheduleChartRef" class="h-[320px] w-full"></div>
+      </div>
+    </section>
+
+    <!-- Charts Row 2 -->
+    <section class="mb-6 grid gap-6 xl:grid-cols-2">
+      <!-- Exam Trend Line -->
+      <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <div class="mb-4">
+          <h2 class="text-base font-bold text-slate-900">考试记录趋势</h2>
+          <p class="mt-0.5 text-xs text-slate-500">近 7 天新增考试记录数量</p>
+        </div>
+        <div ref="examChartRef" class="h-[280px] w-full"></div>
+      </div>
+
+      <!-- Login Trend Line -->
+      <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <div class="mb-4">
+          <h2 class="text-base font-bold text-slate-900">登录活跃度</h2>
+          <p class="mt-0.5 text-xs text-slate-500">近 7 天系统登录次数</p>
+        </div>
+        <div ref="loginChartRef" class="h-[280px] w-full"></div>
+      </div>
+    </section>
+
+    <!-- Bottom Row -->
+    <section class="grid gap-6 xl:grid-cols-[1fr_360px]">
+      <!-- Teaching Readiness -->
+      <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <div class="mb-4 flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">教学资源就绪度</h2>
+            <p class="mt-0.5 text-xs text-slate-500">本学期教学组织准备情况一览</p>
+          </div>
+          <i class="ri-bar-chart-grouped-line text-lg text-slate-400"></i>
+        </div>
+
+        <!-- Progress Bars -->
+        <div class="space-y-4">
+          <div v-for="bar in progressBars" :key="bar.label">
+            <div class="mb-1.5 flex items-center justify-between">
+              <span class="text-sm font-medium text-slate-700">{{ bar.label }}</span>
+              <span class="text-sm font-bold text-slate-900">{{ bar.text }}</span>
             </div>
-
-            <div class="max-w-4xl space-y-2">
-              <div class="flex flex-wrap items-center gap-2">
-                <h1 class="text-3xl font-black tracking-tight text-slate-900 md:text-4xl">
-                  智慧校园运营首页
-                </h1>
-                <span
-                  class="inline-flex items-center rounded-sm border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700"
-                >
-                  {{ currentTermLabel }}
-                </span>
-              </div>
-              <p class="max-w-3xl text-sm leading-7 text-slate-600 md:text-[15px]">
-                这里汇总了本学期最值得优先关注的校园运营信息。你可以快速查看排课进度、用户规模、考试数据和教学资源状态，并从首页直接进入对应模块处理事项。
-              </p>
-            </div>
-
-            <div class="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="h-2.5 rounded-full bg-slate-100">
               <div
-                v-for="item in headlineMetrics"
-                :key="item.title"
-                class="rounded-md border border-white/70 bg-white/78 p-3.5 backdrop-blur"
-              >
-                <div class="flex items-center justify-between gap-3">
-                  <span class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    {{ item.title }}
-                  </span>
-                  <i :class="item.icon" class="text-lg text-cyan-600"></i>
-                </div>
-                <div class="mt-4 text-3xl font-black tracking-tight text-slate-900">
-                  {{ item.value }}
-                </div>
-                <p class="mt-2 text-xs leading-6 text-slate-500">
-                  {{ item.desc }}
-                </p>
-              </div>
-            </div>
-
-            <div class="flex flex-wrap gap-2">
-              <span
-                v-for="item in statusChips"
-                :key="item.label"
-                class="inline-flex items-center gap-2 rounded-sm border px-3 py-1.5 text-xs font-medium"
-                :class="item.className"
-              >
-                <i :class="item.icon" class="text-sm"></i>
-                {{ item.label }}
-              </span>
-            </div>
-
-            <div class="grid gap-2.5 border-t border-cyan-100/70 pt-3 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
-              <section class="rounded-md border border-slate-200/70 bg-white/90 p-3 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
-                <div class="flex items-center justify-between">
-                  <div>
-                    <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">运营风险概览</div>
-                    <div class="mt-1 text-sm font-semibold text-slate-900">关注当前需要优先处理的排课与教学运行状态</div>
-                  </div>
-                  <span class="rounded-sm px-2.5 py-1 text-xs font-semibold" :class="riskBadgeClass">
-                    {{ riskLabel }}
-                  </span>
-                </div>
-
-                <div class="mt-3 grid gap-2.5 md:grid-cols-3">
-                  <div class="rounded-sm border border-slate-200 bg-slate-950 p-3 text-white">
-                    <div class="flex items-start justify-between gap-3">
-                      <div>
-                        <div class="text-xs uppercase tracking-[0.18em] text-slate-400">考试记录</div>
-                        <strong class="mt-2 block text-4xl font-black leading-none">{{ dashboard.examRecordCount || 0 }}</strong>
-                      </div>
-                      <i class="ri-alarm-warning-line text-lg text-amber-300"></i>
-                    </div>
-                    <p class="mt-3 text-xs leading-5 text-slate-300">{{ warningHint }}</p>
-                  </div>
-
-                  <div class="rounded-sm border border-amber-200 bg-amber-50 p-3">
-                    <div class="flex items-start justify-between gap-3">
-                      <div>
-                        <div class="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">待排课教学班</div>
-                        <div class="mt-2 text-3xl font-black text-amber-900">{{ metrics.pendingArrangeCount }}</div>
-                      </div>
-                      <i class="ri-calendar-todo-line text-lg text-amber-600"></i>
-                    </div>
-                    <p class="mt-2 text-xs leading-5 text-amber-800">建议先处理总课时尚未排满的班级课程。</p>
-                  </div>
-
-                  <div class="rounded-sm border border-cyan-200 bg-cyan-50 p-3">
-                    <div class="flex items-center justify-between gap-3">
-                      <div>
-                        <div class="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">排课完成度</div>
-                        <p class="mt-1 text-xs leading-5 text-cyan-800">已进入执行阶段的教学班覆盖率。</p>
-                      </div>
-                      <i class="ri-line-chart-line text-lg text-cyan-700"></i>
-                    </div>
-                    <div class="mt-3 flex items-end justify-between gap-3">
-                      <strong class="text-3xl font-black text-cyan-950">{{ scheduleCoverageLabel }}</strong>
-                      <span class="text-xs font-semibold text-cyan-700">{{ metrics.arrangedClassCourseCount }}/{{ metrics.classCourseCount }}</span>
-                    </div>
-                    <div class="mt-3 h-2 rounded-sm bg-cyan-100">
-                      <div
-                        class="h-2 rounded-sm bg-gradient-to-r from-cyan-500 to-sky-600 transition-all duration-300"
-                        :style="{ width: `${scheduleCoveragePercent}%` }"
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              <section class="rounded-md border border-slate-200/70 bg-white/90 p-3 shadow-[0_10px_20px_rgba(15,23,42,0.05)]">
-                <div class="flex items-center justify-between">
-                  <div class="text-sm font-semibold text-slate-900">今日建议</div>
-                  <i class="ri-flashlight-line text-lg text-emerald-600"></i>
-                </div>
-                <ul class="mt-3 grid gap-2 text-sm text-slate-600">
-                  <li v-for="tip in focusTips" :key="tip" class="flex items-start gap-2.5">
-                    <span class="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-sm bg-emerald-100 text-emerald-700">
-                      <i class="ri-check-line text-xs"></i>
-                    </span>
-                    <span class="leading-6">{{ tip }}</span>
-                  </li>
-                </ul>
-              </section>
+                class="h-2.5 rounded-full transition-all duration-500"
+                :class="bar.color"
+                :style="{ width: `${bar.percent}%` }"
+              ></div>
             </div>
           </div>
         </div>
-      </section>
 
-      <section class="grid gap-2.5 xl:grid-cols-[minmax(0,1.55fr)_340px]">
-        <div class="grid gap-3">
-          <div class="grid gap-3 lg:grid-cols-2 2xl:grid-cols-4">
-            <div
-              v-for="item in topMetrics"
-              :key="item.title"
-              class="rounded-md border border-slate-200 bg-white p-4 shadow-[0_8px_18px_rgba(15,23,42,0.05)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(15,23,42,0.07)]"
+        <!-- Readiness Radar Chart -->
+        <div ref="radarChartRef" class="mt-4 h-[280px] w-full"></div>
+
+        <!-- Teaching Metrics Grid -->
+        <div class="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-5 sm:grid-cols-3 lg:grid-cols-6">
+          <div v-for="m in teachingMetrics" :key="m.label" class="rounded-md border border-slate-100 bg-slate-50 p-3">
+            <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{{ m.label }}</div>
+            <div class="mt-1 text-xl font-black text-slate-900">{{ m.value }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="space-y-4">
+        <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 class="mb-3 text-base font-bold text-slate-900">快捷入口</h2>
+          <div class="grid gap-2">
+            <button
+              v-for="link in quickLinks"
+              :key="link.title"
+              type="button"
+              class="flex w-full cursor-pointer items-center gap-3 rounded-md border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-left transition hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-cyan-50"
+              @click="navigateTo(link.path)"
             >
-              <div class="flex items-center justify-between gap-3">
-                <span class="text-sm font-semibold text-slate-700">{{ item.title }}</span>
-                <div class="flex h-9 w-9 items-center justify-center rounded-sm bg-slate-100 text-slate-600">
-                  <i :class="item.icon" class="text-lg"></i>
-                </div>
+              <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-white text-cyan-600 shadow-sm">
+                <i :class="link.icon" class="text-lg"></i>
               </div>
-              <div class="mt-4 text-4xl font-black tracking-tight text-slate-900">
-                {{ item.value }}
+              <div class="min-w-0">
+                <div class="text-sm font-semibold text-slate-900">{{ link.title }}</div>
+                <p class="truncate text-xs text-slate-500">{{ link.desc }}</p>
               </div>
-              <p class="mt-2 text-xs leading-6 text-slate-500">
-                {{ item.desc }}
-              </p>
-            </div>
-          </div>
-
-          <div class="grid gap-3 2xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-            <section class="rounded-md border border-slate-200 bg-white p-4 shadow-[0_10px_22px_rgba(15,23,42,0.05)]">
-              <div class="flex flex-col gap-2 border-b border-slate-100 pb-3 md:flex-row md:items-end md:justify-between">
-                <div>
-                  <div class="text-lg font-bold text-slate-900">用户基础</div>
-                  <p class="mt-1 text-sm text-slate-500">快速了解当前平台服务的用户规模，方便判断运营覆盖范围和活跃基础。</p>
-                </div>
-                <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Identity Base</span>
-              </div>
-
-              <div class="mt-4 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
-                <div
-                  v-for="item in userMetrics"
-                  :key="item.title"
-                  class="rounded-sm border border-slate-200 bg-slate-50/80 p-3.5"
-                >
-                  <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{{ item.title }}</div>
-                  <div class="mt-3 text-3xl font-black tracking-tight text-slate-900">{{ item.value }}</div>
-                  <p class="mt-2 text-xs leading-6 text-slate-500">{{ item.desc }}</p>
-                </div>
-              </div>
-            </section>
-
-            <section class="rounded-md border border-slate-200 bg-white p-4 shadow-[0_10px_22px_rgba(15,23,42,0.05)]">
-              <div class="flex flex-col gap-2 border-b border-slate-100 pb-3 md:flex-row md:items-end md:justify-between">
-                <div>
-                  <div class="text-lg font-bold text-slate-900">教学资源就绪度</div>
-                  <p class="mt-1 text-sm text-slate-500">查看本学期教学组织是否准备充分，及时发现排课、教室和课程资源上的缺口。</p>
-                </div>
-                <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Teaching Base</span>
-              </div>
-
-              <div class="mt-4 space-y-3">
-                <div
-                  v-for="item in readinessMetrics"
-                  :key="item.title"
-                  class="rounded-sm border border-slate-200 bg-white p-3.5"
-                >
-                  <div class="flex items-center justify-between gap-3">
-                    <div>
-                      <div class="text-sm font-semibold text-slate-800">{{ item.title }}</div>
-                      <p class="mt-1 text-xs text-slate-500">{{ item.desc }}</p>
-                    </div>
-                    <div class="text-right">
-                      <div class="text-2xl font-black tracking-tight text-slate-900">{{ item.value }}</div>
-                      <div class="text-[11px] font-semibold text-slate-400">{{ item.caption }}</div>
-                    </div>
-                  </div>
-                  <div class="mt-3 h-2 rounded-sm bg-slate-100">
-                    <div
-                      class="h-2 rounded-sm transition-all duration-300"
-                      :class="item.barClass"
-                      :style="{ width: `${item.percent}%` }"
-                    ></div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="mt-4 grid gap-2.5 sm:grid-cols-2">
-                <div
-                  v-for="item in teachingMetrics"
-                  :key="item.title"
-                  class="rounded-sm border border-slate-200 bg-slate-50/80 p-3.5"
-                >
-                  <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{{ item.title }}</div>
-                  <div class="mt-2 text-2xl font-black tracking-tight text-slate-900">{{ item.value }}</div>
-                  <p class="mt-1 text-xs leading-6 text-slate-500">{{ item.desc }}</p>
-                </div>
-              </div>
-            </section>
+            </button>
           </div>
         </div>
 
-        <aside class="content-start">
-          <section class="rounded-md border border-slate-200 bg-white p-3.5 shadow-[0_10px_22px_rgba(15,23,42,0.05)]">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <div class="text-lg font-bold text-slate-900">待处理事项</div>
-                <p class="mt-1 text-sm text-slate-500">建议优先从这些事项开始处理，能更快稳定本学期教学运行。</p>
+        <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 class="mb-3 text-base font-bold text-slate-900">待处理事项</h2>
+          <div class="space-y-2">
+            <div
+              v-for="item in actionItems"
+              :key="item.label"
+              class="flex cursor-pointer items-center justify-between rounded-md border px-3 py-2.5 transition hover:-translate-y-0.5"
+              :class="item.cls"
+              @click="navigateTo(item.path)"
+            >
+              <div class="flex items-center gap-2">
+                <i :class="item.icon" class="text-base"></i>
+                <span class="text-sm font-medium">{{ item.label }}</span>
               </div>
-              <span class="inline-flex h-11 min-w-[52px] shrink-0 flex-col items-center justify-center rounded-md bg-slate-100 px-2 text-xs font-semibold leading-tight text-slate-600">
-                <span>{{ actionItems.length }}</span>
-                <span>项</span>
-              </span>
+              <span class="text-lg font-black">{{ item.value }}</span>
             </div>
-
-            <div class="mt-3 grid gap-2">
-              <button
-                v-for="item in actionItems"
-                :key="item.title"
-                type="button"
-                class="group grid w-full cursor-pointer grid-cols-[44px_minmax(0,1fr)_68px] items-start gap-3 rounded-md border px-3 py-3 text-left transition duration-200 hover:-translate-y-0.5"
-                :class="item.className"
-                @click="navigateTo(item.path)"
-              >
-                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-white/80 shadow-sm">
-                  <i :class="item.icon" class="text-lg"></i>
-                </div>
-                <div class="min-w-0 pt-0.5">
-                  <div class="truncate text-[15px] font-semibold leading-6">{{ item.title }}</div>
-                  <p class="mt-4 pr-1 text-xs leading-6 opacity-80">
-                    {{ item.desc }}
-                  </p>
-                </div>
-                <div class="pt-0.5 text-right">
-                  <div class="text-[42px] font-black leading-none">{{ item.value }}</div>
-                  <div class="mt-4 text-[12px] font-semibold uppercase tracking-[0.2em] opacity-70">{{ item.level }}</div>
-                </div>
-              </button>
-            </div>
-          </section>
-
-          <section class="mt-4 rounded-md border border-slate-200 bg-white p-3.5 shadow-[0_10px_22px_rgba(15,23,42,0.05)]">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <div class="text-lg font-bold text-slate-900">快捷入口</div>
-                <p class="mt-1 text-sm text-slate-500">常用管理入口集中在这里，便于快速切换到日常高频工作。</p>
-              </div>
-              <i class="ri-links-line text-lg text-slate-400"></i>
-            </div>
-
-            <div class="mt-3 grid grid-cols-1 gap-2">
-              <button
-                v-for="item in quickLinks"
-                :key="item.title"
-                type="button"
-                class="group grid w-full cursor-pointer grid-cols-[44px_minmax(0,1fr)] items-start gap-3 rounded-md border border-slate-200 bg-slate-50/80 px-3 py-3 text-left transition duration-200 hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-cyan-50"
-                @click="navigateTo(item.path)"
-              >
-                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-white text-cyan-700 shadow-sm">
-                  <i :class="item.icon" class="text-xl"></i>
-                </div>
-                <div class="min-w-0 pt-0.5">
-                  <div class="text-[15px] font-semibold leading-6 text-slate-900">{{ item.title }}</div>
-                  <p class="mt-2 text-xs leading-6 text-slate-500">{{ item.desc }}</p>
-                </div>
-              </button>
-            </div>
-          </section>
-        </aside>
-      </section>
-    </div>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import useUserStore from '@/store/modules/user'
-import { getCampusDashboard } from '@/api/campus/overview'
-import { listGrade, listClass, listCourse, listClassCourse, listCourseSchedule, listSchoolTerm, listClassroom } from '@/api/campus/teaching'
-import { listUser } from '@/api/system/user'
+import * as echarts from 'echarts'
+import { getAdminDashboard } from '@/api/campus/overview'
 
 const router = useRouter()
-const userStore = useUserStore()
 
-const dashboard = reactive<any>({})
-const metrics = reactive<any>({
-  userTotal: 0,
-  studentCount: 0,
-  teacherCount: 0,
-  parentCount: 0,
-  adminCount: 0,
-  gradeCount: 0,
-  classCount: 0,
-  courseCount: 0,
-  classCourseCount: 0,
-  scheduleCount: 0,
-  classroomCount: 0,
-  termCount: 0,
-  enabledTermCount: 0,
-  pendingArrangeCount: 0,
-  arrangedClassCourseCount: 0,
+// ===== Data =====
+const data = ref<any>({})
+const loading = ref(true)
+
+// ===== Chart Refs =====
+const userChartRef = ref<HTMLElement>()
+const scheduleChartRef = ref<HTMLElement>()
+const examChartRef = ref<HTMLElement>()
+const loginChartRef = ref<HTMLElement>()
+const radarChartRef = ref<HTMLElement>()
+
+let userChart: echarts.ECharts | null = null
+let scheduleChart: echarts.ECharts | null = null
+let examChart: echarts.ECharts | null = null
+let loginChart: echarts.ECharts | null = null
+let radarChart: echarts.ECharts | null = null
+
+// ===== Computed =====
+const todayLabel = computed(() => {
+  const d = new Date()
+  const weekDays = ['日', '一', '二', '三', '四', '五', '六']
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 星期${weekDays[d.getDay()]}`
 })
 
-const currentTermLabel = computed(() => {
-  const label = dashboard.currentTermName || dashboard.currentTermLabel
-  return label || '未识别当前学期'
+const currentTermName = computed(() => data.value.currentTermName || '未设置学期')
+
+const scheduleCoverage = computed(() => {
+  const total = data.value.classCourseCount || 0
+  const arranged = data.value.arrangedClassCourseCount || 0
+  if (!total) return 0
+  return Math.round((arranged / total) * 100)
 })
 
-const warningHint = computed(() => {
-  const count = Number(dashboard.examRecordCount || 0)
-  if (count <= 0) return '当前还没有沉淀考试记录'
-  if (count <= 20) return '可以继续补充考试与测评数据'
-  return '考试数据沉淀稳定，可用于教学复盘'
+const riskClass = computed(() => {
+  const pending = data.value.pendingArrangeCount || 0
+  if (pending <= 0) return 'border-emerald-200 bg-emerald-50 text-emerald-700'
+  if (pending <= 5) return 'border-amber-200 bg-amber-50 text-amber-700'
+  return 'border-rose-200 bg-rose-50 text-rose-700'
 })
 
-const scheduleCoveragePercent = computed(() => {
-  if (!metrics.classCourseCount) return 0
-  return Math.min(100, Math.round((metrics.arrangedClassCourseCount / metrics.classCourseCount) * 100))
-})
-
-const scheduleCoverageLabel = computed(() => `${scheduleCoveragePercent.value}%`)
-
-const enabledTermPercent = computed(() => {
-  if (!metrics.termCount) return 0
-  return Math.min(100, Math.round((metrics.enabledTermCount / metrics.termCount) * 100))
-})
-
-const warningRiskLevel = computed(() => {
-  const count = Number(metrics.pendingArrangeCount || 0)
-  if (count <= 0) return 'stable'
-  if (count <= 5) return 'attention'
-  return 'urgent'
+const riskIcon = computed(() => {
+  const pending = data.value.pendingArrangeCount || 0
+  if (pending <= 0) return 'ri-shield-check-line'
+  if (pending <= 5) return 'ri-alert-line'
+  return 'ri-alarm-warning-line'
 })
 
 const riskLabel = computed(() => {
-  if (warningRiskLevel.value === 'stable') return '平稳'
-  if (warningRiskLevel.value === 'attention') return '关注'
-  return '优先处理'
+  const pending = data.value.pendingArrangeCount || 0
+  if (pending <= 0) return '运行平稳'
+  if (pending <= 5) return `${pending} 项待处理`
+  return `${pending} 项需优先处理`
 })
 
-const riskBadgeClass = computed(() => {
-  if (warningRiskLevel.value === 'stable') return 'bg-emerald-100 text-emerald-700'
-  if (warningRiskLevel.value === 'attention') return 'bg-amber-100 text-amber-700'
-  return 'bg-rose-100 text-rose-700'
+const kpiCards = computed(() => [
+  { title: '用户总量', value: data.value.userTotal || 0, desc: '平台全部账号', icon: 'ri-team-line' },
+  { title: '班级', value: data.value.classCount || 0, desc: '参与教学组织', icon: 'ri-community-line' },
+  { title: '课程', value: data.value.courseCount || 0, desc: '系统维护课程', icon: 'ri-book-2-line' },
+  { title: '排课记录', value: data.value.scheduleCount || 0, desc: '正式排课条数', icon: 'ri-calendar-schedule-line' },
+  { title: '考试记录', value: data.value.examRecordCount || 0, desc: '测评数据沉淀', icon: 'ri-file-chart-line' },
+  { title: '教学资源', value: data.value.resourceCount || 0, desc: '已发布资源', icon: 'ri-folder-open-line' },
+])
+
+const progressBars = computed(() => {
+  const total = data.value.classCourseCount || 0
+  const arranged = data.value.arrangedClassCourseCount || 0
+  const termTotal = data.value.termCount || 0
+  const termEnabled = data.value.enabledTermCount || 0
+  return [
+    {
+      label: '排课覆盖率',
+      text: `${scheduleCoverage.value}% (${arranged}/${total})`,
+      percent: scheduleCoverage.value,
+      color: scheduleCoverage.value >= 80 ? 'bg-gradient-to-r from-emerald-500 to-cyan-500' : 'bg-gradient-to-r from-amber-400 to-orange-500',
+    },
+    {
+      label: '启用学期占比',
+      text: `${termTotal ? Math.round((termEnabled / termTotal) * 100) : 0}% (${termEnabled}/${termTotal})`,
+      percent: termTotal ? Math.round((termEnabled / termTotal) * 100) : 0,
+      color: 'bg-gradient-to-r from-cyan-500 to-sky-600',
+    },
+  ]
 })
-
-const headlineMetrics = computed(() => [
-  { title: '用户总量', value: metrics.userTotal, desc: '当前平台已纳管的全部账号数量', icon: 'ri-team-line' },
-  { title: '教学班关系', value: metrics.classCourseCount, desc: '已完成课程、班级与教师关联的教学班数量', icon: 'ri-node-tree' },
-  { title: '排课记录', value: metrics.scheduleCount, desc: '本系统当前生成的正式排课记录总数', icon: 'ri-calendar-schedule-line' },
-  { title: '考试记录', value: dashboard.examRecordCount || 0, desc: '当前已沉淀的考试与测评数据总量', icon: 'ri-file-chart-line' },
-])
-
-const statusChips = computed(() => [
-  {
-    label: `启用学期 ${metrics.enabledTermCount}/${metrics.termCount || 0}`,
-    icon: 'ri-calendar-check-line',
-    className: 'border-cyan-200 bg-white/80 text-cyan-800',
-  },
-  {
-    label: `待排课程 ${metrics.pendingArrangeCount}`,
-    icon: 'ri-time-line',
-    className: metrics.pendingArrangeCount > 0 ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800',
-  },
-  {
-    label: `考试记录 ${dashboard.examRecordCount || 0}`,
-    icon: 'ri-file-chart-line',
-    className: 'border-slate-200 bg-slate-50 text-slate-700',
-  },
-])
-
-const topMetrics = computed(() => [
-  { title: '已排课教学班', value: metrics.arrangedClassCourseCount, desc: '已经进入排课执行阶段的教学班数量。', icon: 'ri-checkbox-circle-line' },
-  { title: '待排课教学班', value: metrics.pendingArrangeCount, desc: '仍有课时未排满，建议尽快补齐安排。', icon: 'ri-alarm-warning-line' },
-  { title: '考试记录', value: dashboard.examRecordCount || 0, desc: '当前已沉淀的考试与测评记录数量。', icon: 'ri-notification-3-line' },
-  { title: '教室资源', value: metrics.classroomCount, desc: '当前可投入教学使用的教室资源数量。', icon: 'ri-building-4-line' },
-])
-
-const userMetrics = computed(() => [
-  { title: '学生', value: metrics.studentCount, desc: '当前纳入平台管理的学生账号数量' },
-  { title: '教师', value: metrics.teacherCount, desc: '任课教师与班主任账号数量' },
-  { title: '家长', value: metrics.parentCount, desc: '参与家校协同的家长账号数量' },
-  { title: '管理员', value: metrics.adminCount, desc: '负责后台运营与教务管理的账号数量' },
-  { title: '全部用户', value: metrics.userTotal, desc: '平台统一身份体系下的账号总量' },
-  { title: '考试记录', value: dashboard.examRecordCount || 0, desc: '当前已沉淀的考试与测评记录数量' },
-])
 
 const teachingMetrics = computed(() => [
-  { title: '年级', value: metrics.gradeCount, desc: '当前已配置的年级数量' },
-  { title: '班级', value: metrics.classCount, desc: '当前参与教学组织的班级数量' },
-  { title: '课程', value: metrics.courseCount, desc: '系统中维护的课程数量' },
-  { title: '排课表', value: metrics.scheduleCount, desc: '已经生成的正式排课记录数量' },
-  { title: '教室', value: metrics.classroomCount, desc: '可用于排课的教室资源数量' },
-  { title: '学期', value: metrics.enabledTermCount, desc: `当前启用 ${metrics.enabledTermCount} 个学期，共维护 ${metrics.termCount} 个学期` },
-])
-
-const readinessMetrics = computed(() => [
-  {
-    title: '排课覆盖率',
-    value: `${scheduleCoveragePercent.value}%`,
-    caption: `${metrics.arrangedClassCourseCount}/${metrics.classCourseCount || 0}`,
-    percent: scheduleCoveragePercent.value,
-    desc: '教学班中已有明确排课安排的覆盖情况。',
-    barClass: scheduleCoveragePercent.value >= 80 ? 'bg-gradient-to-r from-emerald-500 to-cyan-500' : 'bg-gradient-to-r from-amber-400 to-orange-500',
-  },
-  {
-    title: '启用学期占比',
-    value: `${enabledTermPercent.value}%`,
-    caption: `${metrics.enabledTermCount}/${metrics.termCount || 0}`,
-    percent: enabledTermPercent.value,
-    desc: '当前学期配置是否清晰、是否可支撑正常教学安排。',
-    barClass: 'bg-gradient-to-r from-cyan-500 to-sky-600',
-  },
-])
-
-const actionItems = computed(() => [
-  {
-    title: '处理待排课教学班',
-    value: metrics.pendingArrangeCount,
-    desc: '优先补齐尚未排满课时的班级课程安排。',
-    path: 'courseSchedule',
-    level: metrics.pendingArrangeCount > 0 ? 'High' : 'Normal',
-    icon: 'ri-calendar-todo-line',
-    className: metrics.pendingArrangeCount > 0
-      ? 'border-amber-200 bg-amber-50 text-amber-900 hover:border-amber-300 hover:shadow-[0_14px_30px_rgba(245,158,11,0.12)]'
-      : 'border-emerald-200 bg-emerald-50 text-emerald-900 hover:border-emerald-300 hover:shadow-[0_14px_30px_rgba(16,185,129,0.10)]',
-  },
-  {
-    title: '查看考试记录',
-    value: dashboard.examRecordCount || 0,
-    desc: '进入考试记录模块查看测评沉淀情况。',
-    path: 'examRecord',
-    level: Number(dashboard.examRecordCount || 0) > 20 ? 'High' : 'Watch',
-    icon: 'ri-alert-line',
-    className: Number(dashboard.examRecordCount || 0) > 20
-      ? 'border-rose-200 bg-rose-50 text-rose-900 hover:border-rose-300 hover:shadow-[0_14px_30px_rgba(244,63,94,0.12)]'
-      : 'border-cyan-200 bg-cyan-50 text-cyan-900 hover:border-cyan-300 hover:shadow-[0_14px_30px_rgba(8,145,178,0.10)]',
-  },
-  {
-    title: '检查班级课表',
-    value: metrics.scheduleCount,
-    desc: '核对课表安排、教室占用和时间冲突。',
-    path: 'classSchedule',
-    level: 'Check',
-    icon: 'ri-table-line',
-    className: 'border-slate-200 bg-slate-50 text-slate-900 hover:border-slate-300 hover:shadow-[0_14px_30px_rgba(15,23,42,0.10)]',
-  },
-  {
-    title: '维护教室资源',
-    value: metrics.classroomCount,
-    desc: '完善教室容量、校区和类型信息，减少排课阻塞。',
-    path: 'classroom',
-    level: 'Base',
-    icon: 'ri-building-line',
-    className: 'border-sky-200 bg-sky-50 text-sky-900 hover:border-sky-300 hover:shadow-[0_14px_30px_rgba(14,165,233,0.10)]',
-  },
+  { label: '年级', value: data.value.gradeCount || 0 },
+  { label: '班级', value: data.value.classCount || 0 },
+  { label: '课程', value: data.value.courseCount || 0 },
+  { label: '教室', value: data.value.classroomCount || 0 },
+  { label: '题库', value: data.value.questionBankCount || 0 },
+  { label: '学习任务', value: data.value.learningTaskCount || 0 },
 ])
 
 const quickLinks = [
-  { title: '用户与身份', desc: '查看并维护学生、教师、家长和后台账号', path: 'user', icon: 'ri-user-settings-line' },
-  { title: '班级课程', desc: '管理教学班、任课教师和课时完成情况', path: 'classCourse', icon: 'ri-book-open-line' },
-  { title: '排课表', desc: '处理手工排课、自动排课和课表调整', path: 'courseSchedule', icon: 'ri-calendar-2-line' },
-  { title: '考试记录', desc: '查看考试与测评数据沉淀情况', path: 'examRecord', icon: 'ri-radar-line' },
+  { title: '用户管理', desc: '学生、教师、家长和管理员账号', path: '/system/user', icon: 'ri-user-settings-line' },
+  { title: '班级课程', desc: '教学班、任课教师和课时', path: '/campus/classCourse', icon: 'ri-book-open-line' },
+  { title: '排课管理', desc: '手工排课、自动排课和调整', path: '/campus/courseSchedule', icon: 'ri-calendar-2-line' },
+  { title: '考试记录', desc: '测评数据与成绩分析', path: '/campus/exam/record', icon: 'ri-file-chart-line' },
+  { title: '教室资源', desc: '教室容量、校区和类型', path: '/campus/classroom', icon: 'ri-building-4-line' },
 ]
 
-const focusTips = computed(() => [
-  metrics.pendingArrangeCount > 0
-    ? `还有 ${metrics.pendingArrangeCount} 个教学班的课时安排未完成，建议优先处理排课任务。`
-    : '当前教学班排课整体平稳，可以把精力转向课程优化和教室资源调整。',
-  Number(dashboard.examRecordCount || 0) > 0
-    ? `当前已有 ${dashboard.examRecordCount || 0} 条考试记录，可继续围绕成绩与题库质量做复盘。`
-    : '当前考试记录还比较少，可以优先完善考试与测评数据。',
-  `目前平台共有 ${metrics.userTotal} 个账号、${metrics.classroomCount} 间教室和 ${metrics.scheduleCount} 条排课记录，整体运行情况一目了然。`,
-])
+const actionItems = computed(() => {
+  const pending = data.value.pendingArrangeCount || 0
+  const exams = data.value.examRecordCount || 0
+  return [
+    {
+      label: '待排课教学班',
+      value: pending,
+      path: '/campus/courseSchedule',
+      icon: 'ri-calendar-todo-line',
+      cls: pending > 0
+        ? 'border-amber-200 bg-amber-50 text-amber-900 hover:shadow-md'
+        : 'border-emerald-200 bg-emerald-50 text-emerald-900 hover:shadow-md',
+    },
+    {
+      label: '考试记录',
+      value: exams,
+      path: '/campus/exam/record',
+      icon: 'ri-file-chart-line',
+      cls: 'border-cyan-200 bg-cyan-50 text-cyan-900 hover:shadow-md',
+    },
+  ]
+})
 
-const routePathMap: Record<string, string> = {
-  user: '/system/user',
-  classCourse: '/campus/classCourse',
-  courseSchedule: '/campus/courseSchedule',
-  classSchedule: '/campus/classSchedule',
-  classroom: '/campus/classroom',
-  examRecord: '/campus/exam/record',
-}
-
+// ===== Navigation =====
 function navigateTo(path: string) {
-  router.push(routePathMap[path] || path)
+  router.push(path)
 }
 
-async function loadDashboard() {
-  const userId = Number(userStore.id || 0)
-  if (!userId) return
-  const res = await getCampusDashboard({ userId, recommendLimit: 5 })
-  Object.assign(dashboard, res.data || {})
+// ===== Chart Initialization =====
+function initUserChart() {
+  if (!userChartRef.value) return
+  userChart = echarts.init(userChartRef.value, 'macarons')
+  const d = data.value
+  userChart.setOption({
+    tooltip: {
+      trigger: 'item',
+      formatter: '{b}: {c} ({d}%)',
+    },
+    legend: {
+      orient: 'vertical',
+      right: 16,
+      top: 'center',
+      textStyle: { fontSize: 13 },
+    },
+    series: [
+      {
+        name: '用户分布',
+        type: 'pie',
+        radius: ['42%', '70%'],
+        center: ['35%', '50%'],
+        avoidLabelOverlap: true,
+        itemStyle: {
+          borderRadius: 6,
+          borderColor: '#fff',
+          borderWidth: 2,
+        },
+        label: { show: false },
+        emphasis: {
+          label: { show: true, fontSize: 14, fontWeight: 'bold' },
+        },
+        data: [
+          { value: d.studentCount || 0, name: '学生', itemStyle: { color: '#06b6d4' } },
+          { value: d.teacherCount || 0, name: '教师', itemStyle: { color: '#8b5cf6' } },
+          { value: d.parentCount || 0, name: '家长', itemStyle: { color: '#f59e0b' } },
+          { value: d.adminCount || 0, name: '管理员', itemStyle: { color: '#10b981' } },
+        ],
+      },
+    ],
+    animationDuration: 800,
+    animationEasing: 'cubicInOut',
+  })
 }
 
-async function loadUserMetrics() {
-  const [allRes, studentRes, teacherRes, parentRes, adminRes] = await Promise.all([
-    listUser({ pageNum: 1, pageSize: 1 }),
-    listUser({ pageNum: 1, pageSize: 1, userType: 'student' }),
-    listUser({ pageNum: 1, pageSize: 1, userType: 'teacher' }),
-    listUser({ pageNum: 1, pageSize: 1, userType: 'parent' }),
-    listUser({ pageNum: 1, pageSize: 1, userType: 'admin' }),
-  ])
-  metrics.userTotal = Number(allRes.total || 0)
-  metrics.studentCount = Number(studentRes.total || 0)
-  metrics.teacherCount = Number(teacherRes.total || 0)
-  metrics.parentCount = Number(parentRes.total || 0)
-  metrics.adminCount = Number(adminRes.total || 0)
+function initScheduleChart() {
+  if (!scheduleChartRef.value) return
+  scheduleChart = echarts.init(scheduleChartRef.value, 'macarons')
+  const d = data.value
+  scheduleChart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+    },
+    legend: {
+      data: ['已排课', '待排课'],
+      top: 0,
+    },
+    grid: {
+      left: 50,
+      right: 30,
+      bottom: 30,
+      top: 40,
+    },
+    xAxis: {
+      type: 'category',
+      data: ['教学班', '排课记录', '教室', '课程'],
+      axisLabel: { fontSize: 12 },
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: { fontSize: 11 },
+    },
+    series: [
+      {
+        name: '已排课',
+        type: 'bar',
+        barWidth: 28,
+        itemStyle: { color: '#06b6d4', borderRadius: [4, 4, 0, 0] },
+        data: [
+          d.arrangedClassCourseCount || 0,
+          d.scheduleCount || 0,
+          d.classroomCount || 0,
+          d.courseCount || 0,
+        ],
+      },
+      {
+        name: '待排课',
+        type: 'bar',
+        barWidth: 28,
+        itemStyle: { color: '#f59e0b', borderRadius: [4, 4, 0, 0] },
+        data: [
+          d.pendingArrangeCount || 0,
+          0,
+          0,
+          0,
+        ],
+      },
+    ],
+    animationDuration: 800,
+    animationEasing: 'cubicInOut',
+  })
 }
 
-async function loadTeachingMetrics() {
-  const [gradeRes, classRes, courseRes, classCourseRes, scheduleRes, termRes, classroomRes] = await Promise.all([
-    listGrade({ pageNum: 1, pageSize: 1 }),
-    listClass({ pageNum: 1, pageSize: 1 }),
-    listCourse({ pageNum: 1, pageSize: 1 }),
-    listClassCourse({ pageNum: 1, pageSize: 500 }),
-    listCourseSchedule({ pageNum: 1, pageSize: 1 }),
-    listSchoolTerm({ pageNum: 1, pageSize: 200 }),
-    listClassroom({ pageNum: 1, pageSize: 1 }),
-  ])
-
-  const classCourseRows = classCourseRes.rows || []
-
-  metrics.gradeCount = Number(gradeRes.total || 0)
-  metrics.classCount = Number(classRes.total || 0)
-  metrics.courseCount = Number(courseRes.total || 0)
-  metrics.classCourseCount = Number(classCourseRes.total || classCourseRows.length || 0)
-  metrics.scheduleCount = Number(scheduleRes.total || 0)
-  metrics.classroomCount = Number(classroomRes.total || 0)
-  metrics.termCount = Number(termRes.total || termRes.rows?.length || 0)
-  metrics.enabledTermCount = (termRes.rows || []).filter((item: any) => item.status === '0').length
-  metrics.pendingArrangeCount = classCourseRows.filter((item: any) => Number(item.totalHours || 0) > Number(item.arrangedHours || 0)).length
-  metrics.arrangedClassCourseCount = classCourseRows.filter((item: any) => Number(item.arrangedHours || 0) > 0).length
-
-  const currentTerm = (termRes.rows || []).find((item: any) => item.isCurrent === '1')
-  if (currentTerm) {
-    dashboard.currentTermName = currentTerm.termName
-    dashboard.currentTermLabel = `${currentTerm.termName}（${currentTerm.schoolYear}）`
-  }
+function initExamChart() {
+  if (!examChartRef.value) return
+  examChart = echarts.init(examChartRef.value, 'macarons')
+  const trend = data.value.examTrend || []
+  const dates = trend.map((t: any) => t.date?.substring(5) || '')
+  const counts = trend.map((t: any) => t.count || 0)
+  examChart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params: any) => {
+        const p = params[0]
+        return `${p.axisValue}<br/>${p.marker} 考试记录: <b>${p.value}</b>`
+      },
+    },
+    grid: {
+      left: 45,
+      right: 20,
+      bottom: 30,
+      top: 20,
+    },
+    xAxis: {
+      type: 'category',
+      data: dates,
+      boundaryGap: false,
+      axisLabel: { fontSize: 11 },
+    },
+    yAxis: {
+      type: 'value',
+      minInterval: 1,
+      axisLabel: { fontSize: 11 },
+    },
+    series: [
+      {
+        name: '考试记录',
+        type: 'line',
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 8,
+        lineStyle: { width: 3, color: '#8b5cf6' },
+        itemStyle: { color: '#8b5cf6' },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(139,92,246,0.25)' },
+            { offset: 1, color: 'rgba(139,92,246,0.02)' },
+          ]),
+        },
+        data: counts,
+      },
+    ],
+    animationDuration: 800,
+    animationEasing: 'cubicInOut',
+  })
 }
 
+function initLoginChart() {
+  if (!loginChartRef.value) return
+  loginChart = echarts.init(loginChartRef.value, 'macarons')
+  const trend = data.value.loginTrend || []
+  const dates = trend.map((t: any) => t.date?.substring(5) || '')
+  const counts = trend.map((t: any) => t.count || 0)
+  loginChart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params: any) => {
+        const p = params[0]
+        return `${p.axisValue}<br/>${p.marker} 登录次数: <b>${p.value}</b>`
+      },
+    },
+    grid: {
+      left: 45,
+      right: 20,
+      bottom: 30,
+      top: 20,
+    },
+    xAxis: {
+      type: 'category',
+      data: dates,
+      boundaryGap: false,
+      axisLabel: { fontSize: 11 },
+    },
+    yAxis: {
+      type: 'value',
+      minInterval: 1,
+      axisLabel: { fontSize: 11 },
+    },
+    series: [
+      {
+        name: '登录次数',
+        type: 'line',
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 8,
+        lineStyle: { width: 3, color: '#06b6d4' },
+        itemStyle: { color: '#06b6d4' },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(6,182,212,0.25)' },
+            { offset: 1, color: 'rgba(6,182,212,0.02)' },
+          ]),
+        },
+        data: counts,
+      },
+    ],
+    animationDuration: 800,
+    animationEasing: 'cubicInOut',
+  })
+}
+
+function initRadarChart() {
+  if (!radarChartRef.value) return
+  radarChart = echarts.init(radarChartRef.value, 'macarons')
+  const d = data.value
+  const maxUser = Math.max(d.userTotal || 1, 1)
+  const maxCourse = Math.max(d.courseCount || 1, d.classCount || 1, d.gradeCount || 1, 1)
+  const maxSchedule = Math.max(d.classCourseCount || 1, d.scheduleCount || 1, 1)
+  const maxResource = Math.max(d.resourceCount || 1, d.questionBankCount || 1, d.learningTaskCount || 1, 1)
+
+  radarChart.setOption({
+    tooltip: {},
+    radar: {
+      indicator: [
+        { name: '用户规模', max: maxUser },
+        { name: '课程体系', max: maxCourse },
+        { name: '班级覆盖', max: maxCourse },
+        { name: '排课完成', max: maxSchedule },
+        { name: '教学资源', max: maxResource },
+        { name: '题库建设', max: maxResource },
+      ],
+      radius: '65%',
+      axisName: { fontSize: 12, color: '#64748b' },
+    },
+    series: [
+      {
+        type: 'radar',
+        data: [
+          {
+            value: [
+              d.userTotal || 0,
+              d.courseCount || 0,
+              d.classCount || 0,
+              d.arrangedClassCourseCount || 0,
+              d.resourceCount || 0,
+              d.questionBankCount || 0,
+            ],
+            name: '当前就绪度',
+            areaStyle: { color: 'rgba(6,182,212,0.15)' },
+            lineStyle: { color: '#06b6d4', width: 2 },
+            itemStyle: { color: '#06b6d4' },
+          },
+        ],
+      },
+    ],
+    animationDuration: 800,
+    animationEasing: 'cubicInOut',
+  })
+}
+
+function handleResize() {
+  userChart?.resize()
+  scheduleChart?.resize()
+  examChart?.resize()
+  loginChart?.resize()
+  radarChart?.resize()
+}
+
+// ===== Lifecycle =====
 onMounted(async () => {
-  await Promise.all([loadDashboard(), loadUserMetrics(), loadTeachingMetrics()])
+  try {
+    const res = await getAdminDashboard()
+    data.value = res.data || {}
+  } catch (e) {
+    console.error('Failed to load admin dashboard:', e)
+  } finally {
+    loading.value = false
+  }
+
+  await nextTick()
+  initUserChart()
+  initScheduleChart()
+  initExamChart()
+  initLoginChart()
+  initRadarChart()
+  window.addEventListener('resize', handleResize)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize)
+  userChart?.dispose()
+  scheduleChart?.dispose()
+  examChart?.dispose()
+  loginChart?.dispose()
+  radarChart?.dispose()
 })
 </script>

@@ -18,4 +18,9 @@ public interface ICampusOverviewService {
     TeacherDashboardVo getTeacherDashboard(Long teacherId);
 
     ParentDashboardVo getParentDashboard(Long parentUserId, Long studentUserId, Long courseId);
+
+    /**
+     * 管理端首页聚合数据（一次性返回所有统计 + 趋势）
+     */
+    CampusDashboardVo getAdminDashboard();
 }

@@ -58,7 +58,8 @@ const routes = [
       { path: 'wrongbook', component: () => import('@/views/student/wrongbook/index.vue'), meta: { title: '我的错题本' } },
       { path: 'course-offerings', component: () => import('@/views/student/CourseOfferings.vue'), meta: { title: '全校开课查询' } },
       { path: 'verification', component: () => import('@/views/student/Verification/index.vue'), meta: { title: '学籍核对' } },
-      { path: 'verification/:batchId', component: () => import('@/views/student/Verification/VerificationDetail.vue'), meta: { title: '学籍核对详情', hideShortcut: true } }
+      { path: 'verification/:batchId', component: () => import('@/views/student/Verification/VerificationDetail.vue'), meta: { title: '学籍核对详情', hideShortcut: true } },
+      { path: 'parent-requests', component: () => import('@/views/student/ParentRequests.vue'), meta: { title: '家长绑定请求', hideShortcut: true } }
     ]
   },
   {
@@ -99,6 +100,7 @@ const routes = [
       { path: 'dashboard', component: () => import('@/views/parent/Dashboard.vue'), meta: { title: '孩子概览' } },
       { path: 'courses', component: () => import('@/views/parent/Courses.vue'), meta: { title: '孩子课程' } },
       { path: 'schedule', component: () => import('@/views/parent/Schedule.vue'), meta: { title: '孩子课表' } },
+      { path: 'child-bind', component: () => import('@/views/parent/ChildBind.vue'), meta: { title: '孩子绑定' } },
       { path: 'messages', component: () => import('@/views/student/Messages.vue'), meta: { title: '消息中心', hideShortcut: true } },
       { path: 'notices', component: () => import('@/views/student/Notices.vue'), meta: { title: '消息中心', hideShortcut: true } }
     ]

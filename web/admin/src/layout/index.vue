@@ -103,7 +103,7 @@ function setLayout() {
 }
 
 .hideSidebar .fixed-header {
-  width: calc(100% - 54px);
+  width: calc(100% - #{vars.$base-sidebar-collapsed-width});
 }
 
 .sidebarHide .fixed-header {

@@ -37,7 +37,9 @@ import { useRouter } from 'vue-router'
 import PortalDashboardShell from '@/components/dashboard/PortalDashboardShell.vue'
 import {
   getPortalTeacherSchedule,
+  getPortalUnreadMessages,
   getTeacherDashboard,
+  listPortalNotice,
   listPortalTermOptions,
 } from '@/api/portal'
 import usePortalUserStore from '@/store/user'
@@ -196,38 +198,8 @@ const drawerTodoList = computed(() => recentTasks.value.map((item) => ({
   desc: item.statusText,
   action: item.raw?.action,
 })))
-const drawerMessageList = computed(() => [
-  {
-    messageId: 'teacher-course-summary',
-    messageTitle: '授课课程概览',
-    messageSummary: `当前负责 ${dashboard.value.courseCount || 0} 门课程，覆盖 ${dashboard.value.classCount || 0} 个班级`,
-    createTime: formatDateTime(new Date()),
-    readFlag: '0',
-  },
-  {
-    messageId: 'teacher-resource-summary',
-    messageTitle: '资源中心概览',
-    messageSummary: `资源 ${dashboard.value.resourceCount || 0} 份，题库 ${dashboard.value.questionCount || 0} 题`,
-    createTime: formatDateTime(new Date()),
-    readFlag: '0',
-  },
-])
-const drawerNoticeList = computed(() => [
-  {
-    messageId: 'teacher-week-plan',
-    messageTitle: `第 ${currentTeachingWeek.value} 周教学提醒`,
-    messageSummary: `本周共 ${Array.isArray(schedulePayload.value?.activities) ? schedulePayload.value.activities.length : 0} 条授课安排`,
-    createTime: formatDateTime(new Date()),
-    readFlag: '0',
-  },
-  {
-    messageId: 'teacher-tomorrow-plan',
-    messageTitle: '明日授课预览',
-    messageSummary: `明日共有 ${tomorrowScheduleCards.value.length} 节授课安排待关注`,
-    createTime: formatDateTime(new Date()),
-    readFlag: '0',
-  },
-])
+const drawerMessageList = ref<any[]>([])
+const drawerNoticeList = ref<any[]>([])
 
 function buildScheduleCards(meta: { weekDay: number; targetWeek: number }, prefix: string) {
   const activities = Array.isArray(schedulePayload.value?.activities) ? schedulePayload.value.activities : []
@@ -287,6 +259,7 @@ async function loadData() {
       loadDashboardData(),
       loadScheduleData(),
     ])
+    await preloadDrawerBadges()
   } finally {
     setTimeout(() => {
       loading.value = false
@@ -303,8 +276,31 @@ function openDrawerTask(task: any) {
   openTask(task)
 }
 
-function openQuickDrawer() {
-  drawerLoading.value = false
+async function openQuickDrawer() {
+  drawerLoading.value = true
+  try {
+    const [msgRes, noticeRes] = await Promise.all([
+      getPortalUnreadMessages({ pageNum: 1, pageSize: 5 }),
+      listPortalNotice({ pageNum: 1, pageSize: 5 }),
+    ])
+    drawerMessageList.value = msgRes.rows || msgRes.data || []
+    drawerNoticeList.value = noticeRes.rows || noticeRes.data || []
+  } finally {
+    drawerLoading.value = false
+  }
+}
+
+async function preloadDrawerBadges() {
+  try {
+    const [msgRes, noticeRes] = await Promise.all([
+      getPortalUnreadMessages({ pageNum: 1, pageSize: 5 }),
+      listPortalNotice({ pageNum: 1, pageSize: 5 }),
+    ])
+    drawerMessageList.value = msgRes.rows || msgRes.data || []
+    drawerNoticeList.value = noticeRes.rows || noticeRes.data || []
+  } catch (_) {
+    // silent — badge counts are non-critical
+  }
 }
 
 function openDrawerMessage(payload?: { tab: 'message' | 'notice'; item: any }) {

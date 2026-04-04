@@ -174,8 +174,8 @@ onMounted(() => {
 <style lang="scss">
 .topmenu-container.el-menu--horizontal > .el-menu-item {
   float: left;
-  height: 50px !important;
-  line-height: 50px !important;
+  height: 58px !important;
+  line-height: 58px !important;
   color: var(--navbar-text) !important;
   padding: 0 5px !important;
   margin: 0 10px !important;
@@ -189,8 +189,8 @@ onMounted(() => {
 /* sub-menu item */
 .topmenu-container.el-menu--horizontal > .el-sub-menu .el-sub-menu__title {
   float: left;
-  height: 50px !important;
-  line-height: 50px !important;
+  height: 58px !important;
+  line-height: 58px !important;
   color: var(--navbar-text) !important;
   padding: 0 5px !important;
   margin: 0 10px !important;

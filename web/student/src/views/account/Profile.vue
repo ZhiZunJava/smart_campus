@@ -15,21 +15,40 @@
             <span class="stat-value">{{ profileCompleteness }}<small>%</small></span>
             <span class="stat-label">档案完整度</span>
           </div>
-          <div class="stat-divider"></div>
-          <div class="stat-item">
-            <span class="stat-value">{{ growth.honorScore || 0 }}</span>
-            <span class="stat-label">荣誉成绩</span>
-          </div>
-          <div class="stat-divider"></div>
-          <div class="stat-item">
-            <span class="stat-value">{{ growth.account?.levelCode || 'L1' }}</span>
-            <span class="stat-label">成长等级</span>
-          </div>
-          <div class="stat-divider"></div>
-          <div class="stat-item">
-            <span class="stat-value">{{ growth.account?.totalPoints || 0 }}</span>
-            <span class="stat-label">累计积分</span>
-          </div>
+          <!-- Student stats -->
+          <template v-if="isStudent">
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <span class="stat-value">{{ growth.honorScore || 0 }}</span>
+              <span class="stat-label">荣誉成绩</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <span class="stat-value">{{ growth.account?.levelCode || 'L1' }}</span>
+              <span class="stat-label">成长等级</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <span class="stat-value">{{ growth.account?.totalPoints || 0 }}</span>
+              <span class="stat-label">累计积分</span>
+            </div>
+          </template>
+          <!-- Parent stats -->
+          <template v-if="isParent">
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <span class="stat-value">{{ parentChildren.length }}</span>
+              <span class="stat-label">已绑定孩子</span>
+            </div>
+          </template>
+          <!-- Staff stats -->
+          <template v-if="isStaff">
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <span class="stat-value">{{ roleGroup || '--' }}</span>
+              <span class="stat-label">角色组</span>
+            </div>
+          </template>
         </div>
       </div>
     </div>
@@ -56,28 +75,54 @@
           </el-descriptions>
         </el-card>
 
-        <el-card shadow="never" class="profile-card mb-4" :body-style="{ padding: '0px' }">
+        <el-card v-if="!isParent" shadow="never" class="profile-card mb-4" :body-style="{ padding: '0px' }">
           <template #header>
             <div class="card-header">
               <div class="card-title">
                 <el-icon><Postcard /></el-icon>
-                <span>身份与学籍</span>
+                <span>{{ isStaff ? '身份与职务' : '身份与学籍' }}</span>
               </div>
             </div>
           </template>
           <el-descriptions :column="2" border class="profile-descriptions">
-            <el-descriptions-item label="用户类型"><el-tag size="small" type="info">{{ profile.userType || '--' }}</el-tag></el-descriptions-item>
-            <el-descriptions-item label="学号/工号">{{ profile.studentNo || profile.teacherNo || '--' }}</el-descriptions-item>
-            <el-descriptions-item label="专业/学科">{{ profile.major || '--' }}</el-descriptions-item>
-            <el-descriptions-item label="入学年份">{{ profile.admissionYear || '--' }}</el-descriptions-item>
-            <el-descriptions-item label="角色组" :span="2">{{ roleGroup || '--' }}</el-descriptions-item>
+            <el-descriptions-item label="用户类型"><el-tag size="small" type="info">{{ userTypeLabel }}</el-tag></el-descriptions-item>
+            <el-descriptions-item :label="isStaff ? '工号' : '学号'">{{ isStaff ? (profile.teacherNo || '--') : (profile.studentNo || '--') }}</el-descriptions-item>
+            <el-descriptions-item :label="isStaff ? '学科方向' : '专业/学科'">{{ profile.major || '--' }}</el-descriptions-item>
+            <el-descriptions-item v-if="isStudent" label="入学年份">{{ profile.admissionYear || '--' }}</el-descriptions-item>
+            <el-descriptions-item label="角色组" :span="isStudent ? 2 : 1">{{ roleGroup || '--' }}</el-descriptions-item>
           </el-descriptions>
+        </el-card>
+
+        <!-- Parent: bound children card in left column -->
+        <el-card v-if="isParent" shadow="never" class="profile-card mb-4" :body-style="{ padding: '0px' }">
+          <template #header>
+            <div class="card-header">
+              <div class="card-title">
+                <el-icon><User /></el-icon>
+                <span>已绑定孩子</span>
+              </div>
+              <el-button type="primary" link @click="$router.push('/parent/child-bind')">管理绑定</el-button>
+            </div>
+          </template>
+          <div v-if="parentChildren.length" class="parent-children-list">
+            <div v-for="child in parentChildren" :key="child.value" class="parent-child-row">
+              <div class="parent-child-avatar">{{ (child.studentName || '?').slice(0, 1) }}</div>
+              <div class="parent-child-info">
+                <div class="parent-child-name">{{ child.studentName || child.label }}</div>
+                <div class="parent-child-meta">{{ child.studentNo || '' }} · {{ child.className || '' }} · {{ child.relationType || '' }}</div>
+              </div>
+            </div>
+          </div>
+          <el-empty v-else description="暂未绑定孩子" :image-size="60">
+            <el-button type="primary" size="small" @click="$router.push('/parent/child-bind')">去绑定</el-button>
+          </el-empty>
         </el-card>
 
       </el-col>
 
       <el-col :span="8">
-        <el-card shadow="never" class="profile-card mb-4 points-card" :body-style="{ padding: '0px' }">
+        <!-- Student-only: Points & Growth -->
+        <el-card v-if="isStudent" shadow="never" class="profile-card mb-4 points-card" :body-style="{ padding: '0px' }">
           <template #header>
             <div class="card-header">
               <div class="card-title">
@@ -166,7 +211,8 @@
           </div>
         </el-card>
 
-        <el-card shadow="never" class="profile-card mb-4" :body-style="{ padding: '0px' }">
+        <!-- Student-only: Honors & Achievements -->
+        <el-card v-if="isStudent" shadow="never" class="profile-card mb-4" :body-style="{ padding: '0px' }">
           <template #header>
             <div class="card-header">
               <div class="card-title">
@@ -213,10 +259,45 @@
             <el-empty v-if="!(growth.achievements || []).length" description="暂未解锁成就" :image-size="60" />
           </div>
         </el-card>
+
+        <!-- Non-student: role info card -->
+        <el-card v-if="!isStudent" shadow="never" class="profile-card mb-4" :body-style="{ padding: '20px' }">
+          <template #header>
+            <div class="card-header">
+              <div class="card-title">
+                <el-icon><Postcard /></el-icon>
+                <span>{{ isParent ? '家长信息' : '职业信息' }}</span>
+              </div>
+            </div>
+          </template>
+          <div class="role-info-card">
+            <div class="role-info-item">
+              <span class="role-info-label">用户类型</span>
+              <span class="role-info-value"><el-tag size="small" type="info">{{ userTypeLabel }}</el-tag></span>
+            </div>
+            <div class="role-info-item">
+              <span class="role-info-label">角色组</span>
+              <span class="role-info-value">{{ roleGroup || '--' }}</span>
+            </div>
+            <div v-if="isStaff" class="role-info-item">
+              <span class="role-info-label">工号</span>
+              <span class="role-info-value">{{ profile.teacherNo || '--' }}</span>
+            </div>
+            <div v-if="isStaff" class="role-info-item">
+              <span class="role-info-label">学科方向</span>
+              <span class="role-info-value">{{ profile.major || '--' }}</span>
+            </div>
+            <div v-if="isParent" class="role-info-item">
+              <span class="role-info-label">已绑定孩子</span>
+              <span class="role-info-value">{{ parentChildren.length }} 位</span>
+            </div>
+          </div>
+        </el-card>
       </el-col>
     </el-row>
 
     <el-dialog
+      v-if="isStudent"
       v-model="growthDialogVisible"
       title="积分与成长详情"
       width="min(1100px, 94vw)"
@@ -321,7 +402,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { getPortalGrowthSummary, getPortalProfile } from '@/api/portal'
+import { getPortalGrowthSummary, getPortalProfile, listPortalParentChildren } from '@/api/portal'
 import usePortalUserStore from '@/store/user'
 import { User, Postcard, Coin, Trophy, Medal } from '@element-plus/icons-vue'
 
@@ -331,6 +412,15 @@ const growth = ref<any>({ account: null, achievements: [], recentLedgers: [] })
 const userStore = usePortalUserStore()
 const growthDialogVisible = ref(false)
 const growthDialogTab = ref<'ledger' | 'honor' | 'achievement'>('ledger')
+const parentChildren = ref<any[]>([])
+
+// Role detection
+const userType = computed(() => profile.value?.userType || userStore.preferredPortalRole || 'student')
+const isStudent = computed(() => userType.value === 'student')
+const isTeacher = computed(() => userType.value === 'teacher')
+const isAdvisor = computed(() => userType.value === 'advisor')
+const isParent = computed(() => userType.value === 'parent')
+const isStaff = computed(() => isTeacher.value || isAdvisor.value)
 const levelInfo = computed(() => growth.value.levelInfo || {})
 const growthStats = computed(() => growth.value.stats || {})
 const monthlyPoints = computed(() => growth.value.monthlyPoints || [])
@@ -351,6 +441,7 @@ const userTypeLabel = computed(() => {
   const value = String(profile.value.userType || '')
   if (value === 'student') return '学生'
   if (value === 'teacher') return '教师'
+  if (value === 'advisor') return '辅导员'
   if (value === 'parent') return '家长'
   return value || '--'
 })
@@ -427,13 +518,25 @@ function honorBadgeType(tone?: string) {
 }
 
 onMounted(async () => {
-  const [profileRes, growthRes] = await Promise.all([
-    getPortalProfile(),
-    getPortalGrowthSummary({ userId: userStore.user?.userId }),
-  ])
+  const profileRes = await getPortalProfile()
   profile.value = profileRes.data?.user || {}
   roleGroup.value = profileRes.data?.roleGroup || ''
-  growth.value = growthRes.data || { account: null, achievements: [], recentLedgers: [] }
+
+  // Only load growth data for students
+  if (profile.value.userType === 'student' || (!profile.value.userType && userStore.preferredPortalRole === 'student')) {
+    try {
+      const growthRes = await getPortalGrowthSummary({ userId: userStore.user?.userId })
+      growth.value = growthRes.data || { account: null, achievements: [], recentLedgers: [] }
+    } catch { /* non-critical */ }
+  }
+
+  // Load bound children for parents
+  if (profile.value.userType === 'parent' || (!profile.value.userType && userStore.preferredPortalRole === 'parent')) {
+    try {
+      const childRes = await listPortalParentChildren({ parentUserId: userStore.user?.userId })
+      parentChildren.value = (childRes.data || []).filter((c: any) => c.status === '1')
+    } catch { /* non-critical */ }
+  }
 })
 </script>
 
@@ -1208,5 +1311,72 @@ onMounted(async () => {
   .stat-item {
     align-items: center;
   }
+}
+
+/* Parent children list */
+.parent-children-list {
+  padding: 12px 20px;
+}
+
+.parent-child-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.parent-child-row:last-child {
+  border-bottom: none;
+}
+
+.parent-child-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f7a9c4, #ef668f);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 600;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.parent-child-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--portal-text, #303133);
+  margin-bottom: 2px;
+}
+
+.parent-child-meta {
+  font-size: 12px;
+  color: var(--portal-text-secondary, #909399);
+}
+
+/* Role info card (non-student right column) */
+.role-info-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.role-info-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.role-info-label {
+  font-size: 13px;
+  color: var(--portal-text-secondary, #909399);
+}
+
+.role-info-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--portal-text, #303133);
 }
 </style>

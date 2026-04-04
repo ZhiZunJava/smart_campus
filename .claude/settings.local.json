@@ -115,7 +115,12 @@
       "Bash(mvn compile:*)",
       "Bash(node _fix_key.js)",
       "Bash(node _fix_v4.js)",
-      "Bash(node _fix_v5.js)"
+      "Bash(node _fix_v5.js)",
+      "Bash(more +301)",
+      "Read(//mnt/e/smart_campus/web/student/src/**)",
+      "Bash(Read \"E:\\\\smart_campus\\\\web\\\\student\\\\src\\\\views\\\\student\\\\Dashboard.vue\")",
+      "Bash(node:*)",
+      "Read(//e/smart_campus/web/student/src/views/account/**)"
     ]
   }
 }

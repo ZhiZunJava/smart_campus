@@ -58,42 +58,119 @@ onMounted(() => {
 </script>
 
 <style lang="scss">
-/* menu item */
-.topbar-menu.el-menu--horizontal .el-submenu__title, .topbar-menu.el-menu--horizontal .el-menu-item {
-  padding: 0 10px !important;
-}
+/* ===== TopBar (navType 3) horizontal menu reset ===== */
 
-.topbar-menu.el-menu--horizontal > .el-menu-item {
-  float: left;
-  height: 50px !important;
-  line-height: 50px !important;
-  color: var(--navbar-text) !important;
-  padding: 0 5px !important;
-  margin: 0 10px !important;
-}
+/* Reset sidebar styles that leak into horizontal mode */
+.topbar-menu.el-menu--horizontal {
+  border-bottom: none !important;
+  background: transparent !important;
+  display: flex;
+  align-items: center;
+  gap: 0;
 
-.el-sub-menu.is-active .svg-icon, .el-menu-item.is-active .svg-icon + span, .el-sub-menu.is-active .svg-icon + span, .el-sub-menu.is-active .el-sub-menu__title span {
-  color: v-bind(theme);
-}
+  /* All direct menu items */
+  > .el-menu-item,
+  > .el-sub-menu {
+    float: none !important;
+    width: auto !important;
+    min-width: auto !important;
+    max-width: none !important;
+    margin: 0 !important;
+    margin-bottom: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    flex-shrink: 0;
+  }
 
-/* sub-menu item */
-.topbar-menu.el-menu--horizontal > .el-sub-menu .el-sub-menu__title {
-  float: left;
-  line-height: 50px !important;
-  color: var(--navbar-text) !important;
-  margin: 0 15px -3px!important;
-}
+  > .el-menu-item {
+    height: 58px !important;
+    line-height: 58px !important;
+    padding: 0 8px !important;
+    color: var(--navbar-text) !important;
+    font-size: 14px;
+    font-weight: 600;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
 
-/* topbar more arrow */
-.topbar-menu .el-sub-menu .el-sub-menu__icon-arrow {
-  position: static;
-  margin-left: 8px;
-  margin-top: 0px;
-  display: block !important;
-}
+    &:hover {
+      background: var(--navbar-hover, rgba(0, 0, 0, 0.04)) !important;
+      color: var(--el-color-primary) !important;
+    }
 
-/* menu__title el-menu-item */
-.topbar-menu.el-menu--horizontal .el-sub-menu__title, .topbar-menu.el-menu--horizontal .el-menu-item {
-  height: 60px;
+    &.is-active {
+      color: var(--el-color-primary) !important;
+      border-bottom-color: var(--el-color-primary) !important;
+      background: transparent !important;
+    }
+
+    /* Reset sidebar ::before pseudo-element */
+    &::before {
+      display: none !important;
+    }
+  }
+
+  > .el-sub-menu {
+    .el-sub-menu__title {
+      height: 58px !important;
+      line-height: 58px !important;
+      padding: 0 8px !important;
+      margin: 0 !important;
+      color: var(--navbar-text) !important;
+      font-size: 14px;
+      font-weight: 600;
+      border-bottom: 2px solid transparent;
+      border-radius: 0 !important;
+      width: auto !important;
+      min-width: auto !important;
+      max-width: none !important;
+
+      &::before {
+        display: none !important;
+      }
+    }
+
+    &:hover > .el-sub-menu__title {
+      background: var(--navbar-hover, rgba(0, 0, 0, 0.04)) !important;
+      color: var(--el-color-primary) !important;
+    }
+
+    &.is-active > .el-sub-menu__title {
+      color: var(--el-color-primary) !important;
+      border-bottom-color: var(--el-color-primary) !important;
+    }
+  }
+
+  /* SVG icons in topbar */
+  .svg-icon {
+    margin-right: 6px !important;
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Menu title text */
+  .menu-title {
+    display: inline !important;
+    white-space: nowrap;
+    font-size: inherit;
+    font-weight: inherit;
+  }
+
+  /* Sub-menu arrow */
+  .el-sub-menu__icon-arrow {
+    position: static !important;
+    margin-left: 6px !important;
+    margin-right: 0 !important;
+    margin-top: 0 !important;
+    display: inline-flex !important;
+    font-size: 12px;
+  }
+
+  /* Active state icon color */
+  .el-menu-item.is-active .svg-icon,
+  .el-sub-menu.is-active .svg-icon,
+  .el-sub-menu.is-active .el-sub-menu__title span {
+    color: var(--el-color-primary);
+  }
 }
 </style>

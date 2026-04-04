@@ -184,8 +184,9 @@ async function toggleTheme(event?: MouseEvent): Promise<void> {
   }
 
   .topmenu-container {
-    position: absolute;
-    left: 58px;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
   }
 
   .topbar-container {

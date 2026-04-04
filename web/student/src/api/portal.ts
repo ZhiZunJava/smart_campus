@@ -88,6 +88,32 @@ export function listPortalParentChildren(params: any) {
   return request({ url: '/campus/portal/parent/children', method: 'get', params })
 }
 
+export function bindParentChild(data: { parentUserId: number; studentNo: string; relationType: string }) {
+  return request({ url: '/campus/portal/parent/bind-child', method: 'post', data })
+}
+
+export function unbindParentChild(relId: number) {
+  return request({ url: `/campus/portal/parent/unbind-child/${relId}`, method: 'delete' })
+}
+
+// Parent: search students for binding
+export function searchStudentsForBind(params: { parentUserId: number; keyword: string }) {
+  return request({ url: '/campus/portal/parent/search-students', method: 'get', params })
+}
+
+// Student: parent binding requests
+export function getStudentParentRequests(status?: string) {
+  return request({ url: '/campus/portal/student/parent-requests', method: 'get', params: { status: status || '' } })
+}
+
+export function acceptParentRequest(relId: number) {
+  return request({ url: `/campus/portal/student/parent-requests/${relId}/accept`, method: 'put' })
+}
+
+export function rejectParentRequest(relId: number) {
+  return request({ url: `/campus/portal/student/parent-requests/${relId}/reject`, method: 'put' })
+}
+
 export function listPortalParentCourses(params: any) {
   return request({ url: '/campus/portal/parent/child-courses', method: 'get', params })
 }

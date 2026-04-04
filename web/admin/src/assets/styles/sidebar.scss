@@ -59,7 +59,7 @@
 
     &.has-logo {
       .el-scrollbar {
-        height: calc(100% - 58px);
+        height: calc(100% - vars.$navbar-height);
       }
     }
 
@@ -328,11 +328,11 @@
 
   .hideSidebar {
     .sidebar-container {
-      width: 60px !important;
+      width: vars.$base-sidebar-collapsed-width !important;
     }
 
     .main-container {
-      margin-left: 60px;
+      margin-left: vars.$base-sidebar-collapsed-width;
     }
 
     .sidebar-container .el-menu {
@@ -342,67 +342,46 @@
       padding-bottom: 18px;
     }
 
-    .el-menu-item,
-    .el-sub-menu__title {
-      justify-content: center;
-      width: 42px;
-      min-width: 42px;
-      margin-left: auto;
-      margin-right: auto;
-      padding-left: 0 !important;
-      padding-right: 0 !important;
-    }
-
-    .el-sub-menu__title {
-      padding-left: 30px !important;
-    }
-
-    .sub-menu-title-noDropdown {
-      padding: 0 !important;
-      position: relative;
-
-      .el-tooltip {
-        padding: 0 !important;
-        display: flex !important;
-        align-items: center;
+    // 所有折叠样式限定在 .sidebar-container 内，避免污染 TopBar/TopNav
+    .sidebar-container {
+      .el-menu-item,
+      .el-sub-menu__title {
         justify-content: center;
-        width: 100%;
-        height: 42px;
+        width: 42px;
+        min-width: 42px;
+        margin-left: auto;
+        margin-right: auto;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+      }
 
-        .svg-icon {
-          margin-left: 0;
-          margin-right: 0 !important;
-          display: block;
-          transform: translateX(1px);
+      .el-sub-menu__title {
+        padding-left: 0 !important;
+      }
+
+      .sub-menu-title-noDropdown {
+        padding: 0 !important;
+        position: relative;
+
+        .el-tooltip {
+          padding: 0 !important;
+          display: flex !important;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 42px;
+
+          .svg-icon {
+            margin-left: 0;
+            margin-right: 0 !important;
+            display: block;
+            transform: translateX(1px);
+          }
         }
       }
-    }
 
-    .el-menu-item .el-menu-tooltip__trigger {
-      display: inline-flex !important;
-      align-items: center;
-      justify-content: center;
-      width: 42px;
-      min-width: 42px;
-      height: 42px;
-      margin-left: auto;
-      margin-right: auto;
-      padding: 0 !important;
-    }
-
-    .el-menu-item .el-menu-tooltip__trigger .svg-icon {
-      margin-left: 0;
-      margin-right: 0 !important;
-      display: block;
-      transform: translateX(1px);
-    }
-
-    .el-sub-menu {
-      overflow: hidden;
-
-      > .el-sub-menu__title {
-        padding: 0 0 0 30px !important;
-        display: inline-flex;
+      .el-menu-item .el-menu-tooltip__trigger {
+        display: inline-flex !important;
         align-items: center;
         justify-content: center;
         width: 42px;
@@ -410,26 +389,50 @@
         height: 42px;
         margin-left: auto;
         margin-right: auto;
+        padding: 0 !important;
+      }
 
-        .svg-icon {
-          margin-left: 0;
-          margin-right: 0 !important;
-          display: block;
-          transform: translateX(1px);
+      .el-menu-item .el-menu-tooltip__trigger .svg-icon {
+        margin-left: 0;
+        margin-right: 0 !important;
+        display: block;
+        transform: translateX(1px);
+      }
+
+      .el-sub-menu {
+        overflow: hidden;
+
+        > .el-sub-menu__title {
+          padding: 0 !important;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 42px;
+          min-width: 42px;
+          height: 42px;
+          margin-left: auto;
+          margin-right: auto;
+
+          .svg-icon {
+            margin-left: 0;
+            margin-right: 0 !important;
+            display: block;
+            transform: translateX(1px);
+          }
         }
       }
-    }
 
-    .el-menu--collapse {
-      .el-sub-menu {
-        > .el-sub-menu__title {
-          > span,
-          > i:not(.svg-icon) {
-            height: 0;
-            width: 0;
-            overflow: hidden;
-            visibility: hidden;
-            display: inline-block;
+      .el-menu--collapse {
+        .el-sub-menu {
+          > .el-sub-menu__title {
+            > span,
+            > i:not(.svg-icon) {
+              height: 0;
+              width: 0;
+              overflow: hidden;
+              visibility: hidden;
+              display: inline-block;
+            }
           }
         }
       }

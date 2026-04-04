@@ -36,9 +36,10 @@ function addIframe(): void {
 </script>
 
 <style lang="scss" scoped>
+@use "@/assets/styles/variables.module.scss" as vars;
+
 .app-main {
-  /* 50= navbar  50  */
-  min-height: calc(100vh - 50px);
+  min-height: calc(100vh - vars.$navbar-height);
   width: 100%;
   position: relative;
   overflow: hidden;
@@ -48,7 +49,7 @@ function addIframe(): void {
 .fixed-header + .app-main {
   overflow-y: auto;
   scrollbar-gutter: auto;
-  height: calc(100vh - 50px);
+  height: calc(100vh - vars.$navbar-height);
   min-height: 0px;
 }
 
@@ -57,18 +58,17 @@ function addIframe(): void {
 }
 
 .fixed-header + .app-main {
-  margin-top: 50px;
+  margin-top: vars.$navbar-height;
 }
 
 .hasTagsView {
   .app-main {
-    /* 84 = navbar + tags-view = 50 + 34 */
-    min-height: calc(100vh - 84px);
+    min-height: calc(100vh - vars.$navbar-height - vars.$tags-view-height);
   }
 
   .fixed-header + .app-main {
-    margin-top: 84px;
-    height: calc(100vh - 84px);
+    margin-top: calc(vars.$navbar-height + vars.$tags-view-height);
+    height: calc(100vh - vars.$navbar-height - vars.$tags-view-height);
     min-height: 0px;
   }
 }
@@ -93,15 +93,15 @@ function addIframe(): void {
     .fixed-header + .app-main {
       padding-bottom: max(17px, calc(constant(safe-area-inset-bottom) + 10px));
       padding-bottom: max(17px, calc(env(safe-area-inset-bottom) + 10px));
-      height: calc(100svh - 50px);
-      height: calc(100dvh - 50px);
+      height: calc(100svh - vars.$navbar-height);
+      height: calc(100dvh - vars.$navbar-height);
     }
 
     .hasTagsView .fixed-header + .app-main {
       padding-bottom: max(17px, calc(constant(safe-area-inset-bottom) + 10px));
       padding-bottom: max(17px, calc(env(safe-area-inset-bottom) + 10px));
-      height: calc(100svh - 84px);
-      height: calc(100dvh - 84px);
+      height: calc(100svh - vars.$navbar-height - vars.$tags-view-height);
+      height: calc(100dvh - vars.$navbar-height - vars.$tags-view-height);
     }
   }
 }

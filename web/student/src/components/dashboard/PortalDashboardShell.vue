@@ -343,17 +343,30 @@
           <strong>已选快捷入口</strong>
           <span>{{ editingShortcutPaths.length }} / 9</span>
         </div>
+        <div v-if="selectedShortcutItems.length" class="shortcut-config__drag-hint">拖拽可调整顺序，点击 × 移除</div>
         <div v-if="selectedShortcutItems.length" class="shortcut-config__selected-list">
           <button
             v-for="(item, idx) in selectedShortcutItems"
             :key="`selected-${item.path}`"
             type="button"
             class="shortcut-config__selected-chip"
-            @click="removeShortcutSelection(item.path)"
+            :class="{
+              'is-dragging': chipDragIndex === idx,
+              'is-drag-over': chipDragOverIndex === idx
+            }"
+            draggable="true"
+            @dragstart="onChipDragStart(idx)"
+            @dragover="onChipDragOver($event, idx)"
+            @drop="onChipDrop(idx)"
+            @dragend="onChipDragEnd"
           >
             <span class="shortcut-config__selected-order">{{ idx + 1 }}</span>
             <span class="shortcut-config__selected-label">{{ item.title }}</span>
-            <span class="shortcut-config__selected-close">×</span>
+            <span class="shortcut-config__selected-arrows">
+              <i class="ri-arrow-left-s-line" :class="{ disabled: idx === 0 }" @click.stop="moveShortcutUp(idx)"></i>
+              <i class="ri-arrow-right-s-line" :class="{ disabled: idx === selectedShortcutItems.length - 1 }" @click.stop="moveShortcutDown(idx)"></i>
+            </span>
+            <span class="shortcut-config__selected-close" @click.stop="removeShortcutSelection(item.path)">×</span>
           </button>
         </div>
         <div v-else class="shortcut-config__empty">
@@ -381,8 +394,9 @@
                   <span>{{ isShortcutSelected(item.path) ? '已加入首页快捷入口' : '点击加入首页快捷入口' }}</span>
                 </div>
               </div>
-              <div class="shortcut-config__checkbox-wrapper">
-                <el-checkbox :model-value="isShortcutSelected(item.path)" @click.stop />
+              <div class="shortcut-config__card-status">
+                <el-icon v-if="isShortcutSelected(item.path)" class="shortcut-config__card-check"><i class="ri-checkbox-circle-fill"></i></el-icon>
+                <el-icon v-else class="shortcut-config__card-add"><i class="ri-add-circle-line"></i></el-icon>
               </div>
             </button>
           </div>
@@ -673,6 +687,51 @@ function removeShortcutSelection(path: string) {
   editingShortcutPaths.value = editingShortcutPaths.value.filter((item) => item !== path)
 }
 
+const chipDragIndex = ref<number | null>(null)
+const chipDragOverIndex = ref<number | null>(null)
+
+function onChipDragStart(index: number) {
+  chipDragIndex.value = index
+}
+
+function onChipDragOver(event: DragEvent, index: number) {
+  event.preventDefault()
+  chipDragOverIndex.value = index
+}
+
+function onChipDrop(index: number) {
+  if (chipDragIndex.value === null || chipDragIndex.value === index) {
+    chipDragIndex.value = null
+    chipDragOverIndex.value = null
+    return
+  }
+  const paths = [...editingShortcutPaths.value]
+  const [moved] = paths.splice(chipDragIndex.value, 1)
+  paths.splice(index, 0, moved)
+  editingShortcutPaths.value = paths
+  chipDragIndex.value = null
+  chipDragOverIndex.value = null
+}
+
+function onChipDragEnd() {
+  chipDragIndex.value = null
+  chipDragOverIndex.value = null
+}
+
+function moveShortcutUp(index: number) {
+  if (index <= 0) return
+  const paths = [...editingShortcutPaths.value]
+  ;[paths[index - 1], paths[index]] = [paths[index], paths[index - 1]]
+  editingShortcutPaths.value = paths
+}
+
+function moveShortcutDown(index: number) {
+  if (index >= editingShortcutPaths.value.length - 1) return
+  const paths = [...editingShortcutPaths.value]
+  ;[paths[index], paths[index + 1]] = [paths[index + 1], paths[index]]
+  editingShortcutPaths.value = paths
+}
+
 function restoreDefaultShortcuts() {
   editingShortcutPaths.value = [...defaultShortcutPaths.value]
 }
@@ -705,6 +764,7 @@ function hexToRgba(hex: string, alpha: number) {
   padding: 0 4%;
   box-sizing: border-box;
   gap: 28px;
+  min-height: 100%;
 }
 
 .dashboard-main-content {
@@ -716,7 +776,7 @@ function hexToRgba(hex: string, alpha: number) {
 
 .hello-wrapper {
   margin-left: 1%;
-  margin-bottom: 4rem;
+  margin-bottom: 40px;
   display: flex;
   flex-flow: column nowrap;
   color: #333333;
@@ -725,25 +785,25 @@ function hexToRgba(hex: string, alpha: number) {
 }
 
 .greetings {
-  margin-top: 2rem;
-  font-size: 3.6rem;
+  margin-top: 20px;
+  font-size: 36px;
   font-weight: 300;
-  letter-spacing: 0.2rem;
+  letter-spacing: 2px;
 }
 
 .hello-hr {
   width: 100%;
-  margin-top: 1.5rem;
-  margin-bottom: 1.5rem;
+  margin-top: 15px;
+  margin-bottom: 15px;
   border: 0;
   border-top: 1px solid rgba(48, 49, 51, 0.15);
   height: 0;
 }
 
 .hello-other-info {
-  font-size: 1.8rem;
+  font-size: 18px;
   margin: 0 0 8px;
-  line-height: 2.8rem;
+  line-height: 28px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -752,7 +812,7 @@ function hexToRgba(hex: string, alpha: number) {
 }
 
 .login-info {
-  font-size: 1.2rem;
+  font-size: 12px;
   gap: 20px;
   margin-top: 10px;
   color: #666666;
@@ -765,11 +825,11 @@ function hexToRgba(hex: string, alpha: number) {
 }
 
 .m-2 {
-  margin: 0 0.5rem;
+  margin: 0 5px;
 }
 
 .font-size-11 {
-  font-size: 2rem;
+  font-size: 20px;
   font-weight: 600;
   color: var(--dashboard-primary-text);
 }
@@ -783,7 +843,7 @@ function hexToRgba(hex: string, alpha: number) {
 }
 
 .recent-tabs-title {
-  font-size: 1.4rem;
+  font-size: 14px;
   color: #606266;
   white-space: nowrap;
 }
@@ -800,7 +860,7 @@ function hexToRgba(hex: string, alpha: number) {
   background-color: rgba(255, 255, 255, 0.6);
   border: 1px solid rgba(48, 49, 51, 0.15);
   color: #303133;
-  font-size: 1.3rem;
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.2s;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
@@ -852,7 +912,7 @@ function hexToRgba(hex: string, alpha: number) {
 
 .module-header h3 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 15px;
   color: #333333;
   font-weight: 600;
   text-shadow: none;
@@ -887,7 +947,7 @@ function hexToRgba(hex: string, alpha: number) {
   color: #5c6b7f;
   border-radius: 999px;
   padding: 6px 12px;
-  font-size: 1.15rem;
+  font-size: 11.5px;
   line-height: 1;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -918,13 +978,13 @@ function hexToRgba(hex: string, alpha: number) {
 }
 
 .schedule-preview-summary__title {
-  font-size: 1.3rem;
+  font-size: 13px;
   font-weight: 600;
   color: #2f3e52;
 }
 
 .schedule-preview-summary__desc {
-  font-size: 1.15rem;
+  font-size: 11.5px;
   color: #6b7b8f;
   text-align: right;
 }
@@ -1036,7 +1096,7 @@ function hexToRgba(hex: string, alpha: number) {
 
 .modern-progress-head h4 {
   margin: 0;
-  font-size: 1.4rem;
+  font-size: 14px;
   color: #333333;
   font-weight: 600;
 }
@@ -1058,7 +1118,7 @@ function hexToRgba(hex: string, alpha: number) {
   border-radius: 999px;
   background: #f8fafc;
   color: #64748b;
-  font-size: 1.15rem;
+  font-size: 11.5px;
   line-height: 1;
   font-weight: 700;
   box-sizing: border-box;
@@ -1067,7 +1127,7 @@ function hexToRgba(hex: string, alpha: number) {
 .modern-progress-pill--primary {
   background: linear-gradient(135deg, var(--dashboard-primary-soft), rgba(255, 255, 255, 0.95));
   color: var(--dashboard-primary-text);
-  font-size: 1.15rem;
+  font-size: 11.5px;
   font-weight: 800;
 }
 
@@ -1088,14 +1148,14 @@ function hexToRgba(hex: string, alpha: number) {
 
 .modern-progress-fact__label {
   flex: 0 0 auto;
-  font-size: 1.1rem;
+  font-size: 11px;
   color: #94a3b8;
   font-weight: 700;
 }
 
 .modern-progress-fact__value {
   min-width: 0;
-  font-size: 1.2rem;
+  font-size: 12px;
   color: #475569;
   line-height: 1.55;
   overflow: hidden;
@@ -1123,7 +1183,7 @@ function hexToRgba(hex: string, alpha: number) {
   border-radius: 999px;
   background: var(--dashboard-primary-soft);
   color: var(--dashboard-primary-text);
-  font-size: 1.1rem;
+  font-size: 11px;
   line-height: 1.4;
 }
 
@@ -1200,7 +1260,7 @@ function hexToRgba(hex: string, alpha: number) {
 
 .modern-task-title h4 {
   margin: 0;
-  font-size: 1.3rem;
+  font-size: 13px;
   color: #303133;
   font-weight: 500;
   white-space: nowrap;
@@ -1209,7 +1269,7 @@ function hexToRgba(hex: string, alpha: number) {
 }
 
 .modern-task-status {
-  font-size: 1.2rem;
+  font-size: 12px;
   font-weight: 500;
 }
 
@@ -1217,12 +1277,12 @@ function hexToRgba(hex: string, alpha: number) {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  font-size: 1.2rem;
+  font-size: 12px;
   color: #909399;
 }
 
 .modern-task-reason {
-  font-size: 1.15rem;
+  font-size: 11.5px;
   line-height: 1.6;
   color: #5c6b7f;
 }
@@ -1258,9 +1318,8 @@ function hexToRgba(hex: string, alpha: number) {
 }
 
 .short-wrapper {
-  margin-bottom: 5rem;
-  margin-right: 2rem;
-  flex: 0 0 38rem;
+  margin-right: 20px;
+  flex: 0 0 380px;
   background-color: rgba(255, 255, 255, 0.9);
   border-radius: 16px;
   border: none;
@@ -1272,8 +1331,8 @@ function hexToRgba(hex: string, alpha: number) {
   display: flex;
   justify-content: space-between;
   color: #303133;
-  margin-bottom: 2rem;
-  font-size: 1.6rem;
+  margin-bottom: 20px;
+  font-size: 16px;
   font-weight: 600;
   text-shadow: none;
 }
@@ -1281,8 +1340,7 @@ function hexToRgba(hex: string, alpha: number) {
 .shortcut-panel {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px 24px;
-  min-height: 280px;
+  gap: 12px 20px;
 }
 
 .shortcut-item {
@@ -1294,7 +1352,7 @@ function hexToRgba(hex: string, alpha: number) {
   border: none;
   border-radius: 16px;
   width: 100%;
-  aspect-ratio: 1;
+  padding: 16px 8px;
   text-decoration: none;
   transition: all 0.2s ease-out;
   cursor: pointer;
@@ -1313,7 +1371,7 @@ function hexToRgba(hex: string, alpha: number) {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: 1.2rem;
+  margin-bottom: 12px;
   font-size: 24px;
   color: #fff;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
@@ -1333,7 +1391,7 @@ function hexToRgba(hex: string, alpha: number) {
 
 .shortcut-item__title {
   color: #606266;
-  font-size: 1.3rem;
+  font-size: 13px;
   text-align: center;
 }
 
@@ -1583,7 +1641,7 @@ function hexToRgba(hex: string, alpha: number) {
 
 .icon-text {
   color: #606266;
-  font-size: 1.1rem;
+  font-size: 11px;
   text-shadow: none;
 }
 
@@ -1673,6 +1731,72 @@ function hexToRgba(hex: string, alpha: number) {
   font-size: 16px;
   line-height: 1;
   flex: 0 0 auto;
+}
+
+.shortcut-config__drag-hint {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 8px;
+}
+
+.shortcut-config__selected-chip {
+  user-select: none;
+}
+
+.shortcut-config__selected-chip.is-dragging {
+  opacity: 0.4;
+  transform: scale(0.95);
+}
+
+.shortcut-config__selected-chip.is-drag-over {
+  border-color: #409eff;
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+}
+
+.shortcut-config__selected-arrows {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.shortcut-config__selected-arrows i {
+  font-size: 16px;
+  color: #909399;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 2px;
+  transition: all 0.15s;
+}
+
+.shortcut-config__selected-arrows i:hover:not(.disabled) {
+  color: #409eff;
+  background: rgba(64, 158, 255, 0.1);
+}
+
+.shortcut-config__selected-arrows i.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.shortcut-config__card-status {
+  flex-shrink: 0;
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+}
+
+.shortcut-config__card-check {
+  color: #409eff;
+}
+
+.shortcut-config__card-add {
+  color: #c0c4cc;
+  transition: color 0.2s;
+}
+
+.shortcut-config__card:hover .shortcut-config__card-add {
+  color: #909399;
 }
 
 .shortcut-config__empty {
@@ -1803,13 +1927,10 @@ function hexToRgba(hex: string, alpha: number) {
   z-index: 5202 !important;
 }
 
-html {
-  font-size: 10px;
-}
-
 @media (max-width: 1200px) {
   .dashboard-container {
     flex-direction: column;
+    align-items: flex-start;
     padding: 20px;
     height: auto;
     gap: 20px;
@@ -1836,7 +1957,7 @@ html {
   }
 
   .shortcut-panel {
-    min-height: auto;
+    gap: 10px 16px;
   }
 
   .suspension-wrapper {
@@ -1853,12 +1974,12 @@ html {
 
 @media (max-width: 768px) {
   .greetings {
-    font-size: 3.2rem;
-    letter-spacing: 0.08rem;
+    font-size: 32px;
+    letter-spacing: 0.8px;
   }
 
   .hello-other-info {
-    font-size: 1.5rem;
+    font-size: 15px;
     white-space: normal;
     flex-wrap: wrap;
   }

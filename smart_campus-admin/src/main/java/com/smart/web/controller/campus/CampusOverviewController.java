@@ -28,4 +28,12 @@ public class CampusOverviewController extends BaseController {
             @RequestParam(required = false) Integer recommendLimit) {
         return success(campusOverviewService.getDashboard(userId, courseId, recommendLimit));
     }
+
+    /**
+     * 管理端首页聚合数据
+     */
+    @GetMapping("/admin-dashboard")
+    public AjaxResult adminDashboard() {
+        return success(campusOverviewService.getAdminDashboard());
+    }
 }

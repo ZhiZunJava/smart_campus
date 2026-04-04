@@ -31,3 +31,10 @@ export function getParentDashboard(params: any) {
     params,
   })
 }
+
+export function getAdminDashboard() {
+  return request({
+    url: '/campus/overview/admin-dashboard',
+    method: 'get',
+  })
+}

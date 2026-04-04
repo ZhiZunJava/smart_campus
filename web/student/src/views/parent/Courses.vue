@@ -230,27 +230,27 @@ onMounted(async () => {
 
 <style scoped>
 .parent-courses-page {
-  padding: 2.4rem 3.2rem;
-  gap: 2.4rem;
+  padding: 24px 32px;
+  gap: 24px;
   background: transparent;
 }
 
 .course-overview {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(28rem, 1fr);
-  gap: 1.6rem;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  gap: 16px;
 }
 
 .parent-courses__hero {
   padding: 0;
-  border-radius: 1.2rem;
+  border-radius: 12px;
   background: #ffffff;
   border: 1px solid rgba(194, 65, 45, 0.12);
   box-shadow: none;
 }
 
 .parent-courses__hero :deep(.el-card__body) {
-  padding: 2.4rem;
+  padding: 24px;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -259,69 +259,69 @@ onMounted(async () => {
 .parent-courses__eyebrow {
   display: inline-flex;
   align-items: center;
-  padding: 0.4rem 1rem;
+  padding: 4px 10px;
   border-radius: 999px;
   background: rgba(194, 65, 45, 0.12);
   color: #c2412d;
-  font-size: 1.2rem;
+  font-size: 12px;
   font-weight: 700;
-  margin-bottom: 1.6rem;
+  margin-bottom: 16px;
 }
 
 .parent-courses__hero-copy h4 {
-  margin: 0 0 0.8rem;
+  margin: 0 0 8px;
   color: #0f172a;
-  font-size: 2.4rem;
+  font-size: 24px;
   line-height: 1.3;
   font-weight: 700;
 }
 
 .parent-courses__hero-copy p {
-  margin: 0 0 1.6rem;
+  margin: 0 0 16px;
   color: #64748b;
-  font-size: 1.3rem;
+  font-size: 13px;
   line-height: 1.6;
 }
 
 .parent-courses__hero-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.8rem;
+  gap: 8px;
 }
 
 .parent-courses__tag {
   display: inline-flex;
   align-items: center;
-  height: 2.8rem;
-  padding: 0 1.2rem;
-  border-radius: 0.8rem;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 8px;
   background: #ffffff;
   border: 1px solid rgba(194, 65, 45, 0.16);
   color: #7c2d12;
-  font-size: 1.2rem;
+  font-size: 12px;
   font-weight: 500;
 }
 
 .parent-courses__hero-stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.6rem;
+  gap: 16px;
   margin-top: auto;
-  padding-top: 2rem;
+  padding-top: 20px;
   border-top: 1px dashed #e2e8f0;
 }
 
 .parent-courses__hero-stat span {
   color: #64748b;
-  font-size: 1.2rem;
+  font-size: 12px;
   font-weight: 500;
 }
 
 .parent-courses__hero-stat strong {
   display: block;
-  margin-top: 0.4rem;
+  margin-top: 4px;
   color: #7c2d12;
-  font-size: 2.4rem;
+  font-size: 24px;
   line-height: 1;
   font-weight: 700;
 }
@@ -329,12 +329,12 @@ onMounted(async () => {
 .course-overview__metrics {
   display: flex;
   flex-direction: column;
-  gap: 1.2rem;
+  gap: 12px;
 }
 
 .course-metric-card {
   padding: 0;
-  border-radius: 1.2rem;
+  border-radius: 12px;
   border: 1px solid #e2e8f0;
   box-shadow: none;
   background: #ffffff;
@@ -344,37 +344,37 @@ onMounted(async () => {
 .course-metric-card__body {
   display: flex;
   align-items: center;
-  padding: 1.6rem 2rem;
+  padding: 16px 20px;
 }
 
 .course-metric-card__icon {
-  width: 4.8rem;
-  height: 4.8rem;
-  border-radius: 1.2rem;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2.4rem;
-  margin-right: 1.6rem;
+  font-size: 24px;
+  margin-right: 16px;
   flex-shrink: 0;
 }
 
 .course-metric-card__label {
   color: #64748b;
-  font-size: 1.2rem;
+  font-size: 12px;
 }
 
 .course-metric-card__value {
   color: #0f172a;
-  font-size: 2.4rem;
+  font-size: 24px;
   font-weight: 700;
   line-height: 1.1;
 }
 
 .course-metric-card__sub {
   color: #94a3b8;
-  font-size: 1.2rem;
-  margin-top: 0.4rem;
+  font-size: 12px;
+  margin-top: 4px;
 }
 
 .course-metric-card--courses .course-metric-card__icon {
@@ -394,33 +394,33 @@ onMounted(async () => {
 
 .parent-courses__toolbar,
 .parent-courses__list-card {
-  padding: 1.8rem 2rem;
+  padding: 18px 20px;
 }
 
 .parent-courses__toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 1.6rem;
+  gap: 16px;
   flex-wrap: wrap;
 }
 
 .parent-courses__toolbar-left,
 .parent-courses__filters {
   display: flex;
-  gap: 1.2rem;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
 .course-summary-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.8rem;
-  padding: 0.8rem 1.2rem;
+  gap: 8px;
+  padding: 8px 12px;
   border-radius: 999px;
   background: #f8fafc;
   color: #475569;
-  font-size: 1.3rem;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -430,38 +430,38 @@ onMounted(async () => {
 }
 
 .filter-select {
-  width: 22rem;
+  width: 220px;
 }
 
 .filter-input {
-  width: 32rem;
+  width: 320px;
 }
 
 .parent-courses__grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1.6rem;
+  gap: 16px;
 }
 
 .parent-course-card {
   display: flex;
   flex-direction: column;
-  border-radius: 1.8rem;
+  border-radius: 18px;
   border: 1px solid rgba(226, 232, 240, 0.9);
   background: linear-gradient(180deg, #ffffff, #fff7f4);
   overflow: hidden;
-  min-height: 28rem;
+  min-height: 280px;
 }
 
 .parent-course-card--skeleton {
-  padding: 1.8rem;
-  min-height: 22rem;
+  padding: 18px;
+  min-height: 220px;
 }
 
 .parent-course-card__skeleton-line {
-  height: 1.2rem;
+  height: 12px;
   border-radius: 999px;
-  margin-bottom: 1.2rem;
+  margin-bottom: 12px;
 }
 
 .parent-course-card__skeleton-line--short {
@@ -474,8 +474,8 @@ onMounted(async () => {
 
 .parent-course-card__skeleton-block {
   width: 100%;
-  height: 10rem;
-  border-radius: 1.2rem;
+  height: 100px;
+  border-radius: 12px;
 }
 
 .parent-course-card__header,
@@ -483,8 +483,8 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 1.2rem;
-  padding: 1.6rem 2rem;
+  gap: 12px;
+  padding: 16px 20px;
 }
 
 .parent-course-card__header {
@@ -492,41 +492,41 @@ onMounted(async () => {
 }
 
 .parent-course-card__body {
-  padding: 1.4rem 2rem 1.8rem;
+  padding: 14px 20px 18px;
   flex: 1;
 }
 
 .parent-course-card__type {
   display: inline-flex;
   align-items: center;
-  padding: 0.4rem 1rem;
+  padding: 4px 10px;
   border-radius: 999px;
   background: rgba(194, 65, 45, 0.12);
   color: #c2412d;
-  font-size: 1.2rem;
+  font-size: 12px;
   font-weight: 700;
 }
 
 .parent-course-card__credits {
   color: #7c2d12;
-  font-size: 1.2rem;
+  font-size: 12px;
   font-weight: 700;
 }
 
 .parent-course-card__body h4 {
   margin: 0;
-  font-size: 2rem;
+  font-size: 20px;
   color: #0f172a;
   line-height: 1.35;
 }
 
 .parent-course-card__code {
-  margin-top: 0.8rem;
+  margin-top: 8px;
   color: #64748b;
-  font-size: 1.3rem;
+  font-size: 13px;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.6rem;
+  gap: 6px;
   align-items: center;
 }
 
@@ -535,56 +535,56 @@ onMounted(async () => {
 }
 
 .parent-course-card__meta {
-  margin-top: 1.4rem;
+  margin-top: 14px;
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: 10px;
 }
 
 .parent-course-card__meta span {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.7rem 1rem;
+  gap: 5px;
+  padding: 7px 10px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.8);
   border: 1px solid rgba(226, 232, 240, 0.9);
   color: #475569;
-  font-size: 1.2rem;
+  font-size: 12px;
 }
 
 .parent-course-card__schedule {
-  margin-top: 1.6rem;
+  margin-top: 16px;
   display: grid;
-  gap: 0.8rem;
+  gap: 8px;
 }
 
 .parent-course-card__schedule-item {
   display: flex;
   align-items: flex-start;
-  gap: 0.8rem;
-  font-size: 1.25rem;
+  gap: 8px;
+  font-size: 12.5px;
   color: #334155;
   line-height: 1.6;
 }
 
 .parent-course-card__schedule-item i {
   color: #c2412d;
-  margin-top: 0.2rem;
+  margin-top: 2px;
 }
 
 .parent-course-card__schedule-more {
-  padding-left: 2rem;
+  padding-left: 20px;
   color: #64748b;
-  font-size: 1.2rem;
+  font-size: 12px;
 }
 
 .parent-course-card__schedule-empty {
   display: inline-flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 6px;
   color: #94a3b8;
-  font-size: 1.3rem;
+  font-size: 13px;
 }
 
 .parent-course-card__footer {
@@ -595,13 +595,13 @@ onMounted(async () => {
 .parent-course-card__limit {
   display: inline-flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 6px;
   color: #64748b;
-  font-size: 1.25rem;
+  font-size: 12.5px;
 }
 
 .course-empty {
-  padding: 6rem 0;
+  padding: 60px 0;
 }
 
 @media (max-width: 1100px) {
@@ -612,7 +612,7 @@ onMounted(async () => {
 
 @media (max-width: 900px) {
   .parent-courses-page {
-    padding: 2rem;
+    padding: 20px;
   }
 
   .parent-courses__grid {

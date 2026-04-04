@@ -327,11 +327,11 @@ onMounted(async () => {
 }
 
 .teacher-course-card--skeleton {
-  min-height: 22rem;
+  min-height: 220px;
 }
 
 .teacher-course-card__skeleton-line {
-  height: 1.2rem;
+  height: 12px;
   border-radius: 999px;
 }
 
@@ -341,13 +341,13 @@ onMounted(async () => {
 
 .teacher-course-card__skeleton-line--title {
   width: 72%;
-  margin-top: 1rem;
+  margin-top: 10px;
 }
 
 .teacher-course-card__skeleton-block {
   width: 100%;
-  height: 9.6rem;
-  border-radius: 1.2rem;
+  height: 96px;
+  border-radius: 12px;
   margin-top: auto;
 }
 

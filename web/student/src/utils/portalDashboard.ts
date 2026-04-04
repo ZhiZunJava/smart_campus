@@ -109,6 +109,7 @@ const shortcutVisualByPath: Record<string, ShortcutVisualConfig> = {
   '/teacher/dashboard': { icon: 'ri-home-5-line', bg: 'linear-gradient(135deg, #5aa9ff, #2f6ee5)' },
   '/teacher/courses': { icon: 'ri-book-open-line', bg: 'linear-gradient(135deg, #edb580, #c97b4e)' },
   '/teacher/schedule': { icon: 'ri-calendar-schedule-line', bg: 'linear-gradient(135deg, #70dbc9, #2fae95)' },
+  '/teacher/affairs': { icon: 'ri-briefcase-4-line', bg: 'linear-gradient(135deg, #8f9fb8, #5e718d)' },
   '/teacher/resources': { icon: 'ri-folder-chart-line', bg: 'linear-gradient(135deg, #ffb86a, #ff8f3c)' },
   '/teacher/course-offerings': { icon: 'ri-search-eye-line', bg: 'linear-gradient(135deg, #ffbf75, #f08c33)' },
   '/advisor/dashboard': { icon: 'ri-home-5-line', bg: 'linear-gradient(135deg, #5aa9ff, #2f6ee5)' },
@@ -118,6 +119,7 @@ const shortcutVisualByPath: Record<string, ShortcutVisualConfig> = {
   '/parent/dashboard': { icon: 'ri-home-5-line', bg: 'linear-gradient(135deg, #5aa9ff, #2f6ee5)' },
   '/parent/courses': { icon: 'ri-book-open-line', bg: 'linear-gradient(135deg, #edb580, #c97b4e)' },
   '/parent/schedule': { icon: 'ri-calendar-schedule-line', bg: 'linear-gradient(135deg, #70dbc9, #2fae95)' },
+  '/parent/child-bind': { icon: 'ri-links-line', bg: 'linear-gradient(135deg, #f7a9c4, #ef668f)' },
 }
 
 const studentDefaultShortcutPaths = [

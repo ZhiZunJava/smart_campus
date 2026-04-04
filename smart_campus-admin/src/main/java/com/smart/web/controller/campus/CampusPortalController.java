@@ -14,14 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import com.smart.common.annotation.Log;
 import com.smart.common.constant.HttpStatus;
 import com.smart.common.core.controller.BaseController;
@@ -1690,6 +1683,7 @@ public class CampusPortalController extends BaseController {
             ScUserProfile profile = scUserProfileService.selectScUserProfileByUserId(rel.getStudentUserId());
             ScClass scClass = profile == null || profile.getClassId() == null ? null : scClassService.selectScClassByClassId(profile.getClassId());
             Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", rel.getId());
             item.put("value", rel.getStudentUserId());
             item.put("studentUserId", rel.getStudentUserId());
             item.put("studentName", resolveProfileName(rel.getStudentUserId(), profile));
@@ -1698,6 +1692,8 @@ public class CampusPortalController extends BaseController {
             item.put("className", scClass == null ? null : scClass.getClassName());
             item.put("major", profile == null ? null : profile.getMajor());
             item.put("relationType", rel.getRelationType());
+            item.put("status", rel.getStatus());
+            item.put("createTime", rel.getCreateTime());
             item.put("label", buildParentChildLabel(item));
             result.add(item);
         }
@@ -1720,6 +1716,277 @@ public class CampusPortalController extends BaseController {
             @RequestParam(required = false) Long termId) {
         Long targetStudentId = resolveParentStudentId(parentUserId, studentUserId);
         return studentMySchedule(targetStudentId, termId);
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('parent,admin')")
+    @PostMapping("/parent/bind-child")
+    public AjaxResult parentBindChild(@RequestBody Map<String, Object> params) {
+        Long parentUserId = params.get("parentUserId") != null ? Long.parseLong(params.get("parentUserId").toString()) : null;
+        String studentNo = params.get("studentNo") != null ? params.get("studentNo").toString().trim() : null;
+        String relationType = params.get("relationType") != null ? params.get("relationType").toString() : null;
+
+        if (parentUserId == null || StringUtils.isEmpty(studentNo) || StringUtils.isEmpty(relationType)) {
+            return error("参数不完整，请填写学号和家庭关系");
+        }
+        if (!canOperateParentPortal(parentUserId)) {
+            return error("无权操作");
+        }
+
+        ScUserProfile profileQuery = new ScUserProfile();
+        profileQuery.setStudentNo(studentNo);
+        List<ScUserProfile> profiles = scUserProfileService.selectScUserProfileList(profileQuery);
+        if (profiles == null || profiles.isEmpty()) {
+            return error("未找到该学号对应的学生，请核实后重试");
+        }
+        ScUserProfile studentProfile = profiles.get(0);
+        Long studentUserId = studentProfile.getUserId();
+        if (studentUserId == null) {
+            return error("该学生档案无关联用户，请联系管理员");
+        }
+
+        ScParentStudentRel checkRel = new ScParentStudentRel();
+        checkRel.setParentUserId(parentUserId);
+        checkRel.setStudentUserId(studentUserId);
+        List<ScParentStudentRel> existingRels = scParentStudentRelService.selectScParentStudentRelList(checkRel);
+        if (existingRels != null && !existingRels.isEmpty()) {
+            ScParentStudentRel existingRel = existingRels.get(0);
+            String existingStatus = existingRel.getStatus();
+            if ("1".equals(existingStatus)) {
+                return error("已绑定该学生，无需重复操作");
+            } else if ("0".equals(existingStatus)) {
+                return error("绑定请求已发送，请等待学生确认");
+            } else if ("2".equals(existingStatus)) {
+                // Rejected — allow re-send: reset status to pending
+                existingRel.setStatus("0");
+                existingRel.setRelationType(relationType);
+                existingRel.setUpdateBy(SecurityUtils.getUsername());
+                scParentStudentRelService.updateScParentStudentRel(existingRel);
+                sendParentBindNotification(existingRel, studentUserId);
+                return success("绑定请求已重新发送，等待学生确认");
+            }
+        }
+
+        ScParentStudentRel rel = new ScParentStudentRel();
+        rel.setParentUserId(parentUserId);
+        rel.setStudentUserId(studentUserId);
+        rel.setRelationType(relationType);
+        rel.setStatus("0");
+        rel.setCreateBy(SecurityUtils.getUsername());
+        scParentStudentRelService.insertScParentStudentRel(rel);
+        sendParentBindNotification(rel, studentUserId);
+        return success("绑定请求已发送，等待学生确认");
+    }
+
+    @PreAuthorize("@ss.hasAnyRoles('parent,admin')")
+    @DeleteMapping("/parent/unbind-child/{relId}")
+    public AjaxResult parentUnbindChild(@PathVariable Long relId) {
+        ScParentStudentRel rel = scParentStudentRelService.selectScParentStudentRelById(relId);
+        if (rel == null) {
+            return error("绑定关系不存在");
+        }
+        if (!canOperateParentPortal(rel.getParentUserId())) {
+            return error("无权操作");
+        }
+        scParentStudentRelService.deleteScParentStudentRelById(relId);
+        return success("解绑成功");
+    }
+
+    /**
+     * Parent: search students for binding (excludes already accepted bindings)
+     */
+    @PreAuthorize("@ss.hasAnyRoles('parent,admin')")
+    @GetMapping("/parent/search-students")
+    public AjaxResult parentSearchStudents(@RequestParam Long parentUserId,
+            @RequestParam(required = false) String keyword) {
+        if (!canOperateParentPortal(parentUserId)) {
+            return error("无权操作");
+        }
+        if (StringUtils.isEmpty(keyword) || keyword.trim().length() < 1) {
+            return success(new ArrayList<>());
+        }
+        keyword = keyword.trim();
+
+        // Get already-bound student IDs (status = 0 or 1)
+        ScParentStudentRel relQuery = new ScParentStudentRel();
+        relQuery.setParentUserId(parentUserId);
+        List<ScParentStudentRel> existingRels = scParentStudentRelService.selectScParentStudentRelList(relQuery);
+        java.util.Set<Long> excludeIds = new java.util.HashSet<>();
+        for (ScParentStudentRel r : existingRels) {
+            if (r.getStudentUserId() != null && ("0".equals(r.getStatus()) || "1".equals(r.getStatus()))) {
+                excludeIds.add(r.getStudentUserId());
+            }
+        }
+
+        // Search students by studentNo or name — only student userType
+        ScUserProfile profileQuery = new ScUserProfile();
+        profileQuery.setStudentNo(keyword);
+        profileQuery.setUserType("student");
+        List<ScUserProfile> byNo = scUserProfileService.selectScUserProfileList(profileQuery);
+
+        ScUserProfile nameQuery = new ScUserProfile();
+        nameQuery.setRealName(keyword);
+        nameQuery.setUserType("student");
+        List<ScUserProfile> byName = scUserProfileService.selectScUserProfileList(nameQuery);
+
+        // Merge unique, filter — only include student type users
+        java.util.Map<Long, ScUserProfile> merged = new java.util.LinkedHashMap<>();
+        for (ScUserProfile p : byNo) {
+            if (p.getUserId() != null && !excludeIds.contains(p.getUserId())
+                    && "student".equals(p.getUserType())) {
+                merged.put(p.getUserId(), p);
+            }
+        }
+        for (ScUserProfile p : byName) {
+            if (p.getUserId() != null && !excludeIds.contains(p.getUserId())
+                    && "student".equals(p.getUserType())) {
+                merged.put(p.getUserId(), p);
+            }
+        }
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        int count = 0;
+        for (ScUserProfile p : merged.values()) {
+            if (count >= 20) break;
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("userId", p.getUserId());
+            item.put("studentNo", p.getStudentNo());
+            item.put("studentName", p.getRealName() != null ? p.getRealName() : resolveProfileName(p.getUserId(), p));
+            ScClass scClass = p.getClassId() != null ? scClassService.selectScClassByClassId(p.getClassId()) : null;
+            item.put("className", scClass != null ? scClass.getClassName() : null);
+            item.put("major", p.getMajor());
+            result.add(item);
+            count++;
+        }
+        return success(result);
+    }
+
+    // ==================== Student: Parent Binding Requests ====================
+
+    /**
+     * Student: list parent binding requests (default: pending status=0)
+     */
+    @PreAuthorize("@ss.hasAnyRoles('student,admin')")
+    @GetMapping("/student/parent-requests")
+    public AjaxResult listStudentParentRequests(
+            @RequestParam(required = false, defaultValue = "0") String status) {
+        Long studentUserId = SecurityUtils.getUserId();
+        ScParentStudentRel query = new ScParentStudentRel();
+        query.setStudentUserId(studentUserId);
+        if (StringUtils.isNotEmpty(status)) {
+            query.setStatus(status);
+        }
+        List<ScParentStudentRel> rels = scParentStudentRelService.selectScParentStudentRelList(query);
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (ScParentStudentRel rel : rels) {
+            if (rel == null || rel.getParentUserId() == null) continue;
+            SysUser parentUser = userService.selectUserById(rel.getParentUserId());
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("relId", rel.getId());
+            item.put("parentUserId", rel.getParentUserId());
+            item.put("parentName", parentUser != null ? parentUser.getNickName() : "未知用户");
+            item.put("parentPhone", parentUser != null ? maskPhone(parentUser.getPhonenumber()) : null);
+            item.put("relationType", rel.getRelationType());
+            item.put("status", rel.getStatus());
+            item.put("createTime", rel.getCreateTime());
+            result.add(item);
+        }
+        return success(result);
+    }
+
+    /**
+     * Student: accept a parent binding request
+     */
+    @PreAuthorize("@ss.hasAnyRoles('student,admin')")
+    @PutMapping("/student/parent-requests/{relId}/accept")
+    public AjaxResult acceptParentRequest(@PathVariable Long relId) {
+        Long studentUserId = SecurityUtils.getUserId();
+        ScParentStudentRel rel = scParentStudentRelService.selectScParentStudentRelById(relId);
+        if (rel == null) {
+            return error("绑定关系不存在");
+        }
+        if (!rel.getStudentUserId().equals(studentUserId) && !SecurityUtils.isAdmin()) {
+            return error("无权操作");
+        }
+        if (!"0".equals(rel.getStatus())) {
+            return error("该请求不在待确认状态");
+        }
+        rel.setStatus("1");
+        rel.setUpdateBy(SecurityUtils.getUsername());
+        scParentStudentRelService.updateScParentStudentRel(rel);
+        // Notify parent
+        try {
+            SysUser studentUser = userService.selectUserById(studentUserId);
+            String studentName = studentUser != null ? studentUser.getNickName() : "学生";
+            SysNotice notice = new SysNotice();
+            notice.setNoticeTitle("绑定请求已通过");
+            notice.setNoticeContent("学生 " + studentName + " 已接受您的绑定请求。");
+            notice.setNoticeType("2");
+            notice.setStatus("0");
+            notice.setCreateBy(SecurityUtils.getUsername());
+            noticeService.insertNotice(notice);
+        } catch (Exception ignored) {}
+        return success("已接受绑定请求");
+    }
+
+    /**
+     * Student: reject a parent binding request
+     */
+    @PreAuthorize("@ss.hasAnyRoles('student,admin')")
+    @PutMapping("/student/parent-requests/{relId}/reject")
+    public AjaxResult rejectParentRequest(@PathVariable Long relId) {
+        Long studentUserId = SecurityUtils.getUserId();
+        ScParentStudentRel rel = scParentStudentRelService.selectScParentStudentRelById(relId);
+        if (rel == null) {
+            return error("绑定关系不存在");
+        }
+        if (!rel.getStudentUserId().equals(studentUserId) && !SecurityUtils.isAdmin()) {
+            return error("无权操作");
+        }
+        if (!"0".equals(rel.getStatus())) {
+            return error("该请求不在待确认状态");
+        }
+        rel.setStatus("2");
+        rel.setUpdateBy(SecurityUtils.getUsername());
+        scParentStudentRelService.updateScParentStudentRel(rel);
+        // Notify parent
+        try {
+            SysUser studentUser = userService.selectUserById(studentUserId);
+            String studentName = studentUser != null ? studentUser.getNickName() : "学生";
+            SysNotice notice = new SysNotice();
+            notice.setNoticeTitle("绑定请求被拒绝");
+            notice.setNoticeContent("学生 " + studentName + " 已拒绝您的绑定请求。");
+            notice.setNoticeType("2");
+            notice.setStatus("0");
+            notice.setCreateBy(SecurityUtils.getUsername());
+            noticeService.insertNotice(notice);
+        } catch (Exception ignored) {}
+        return success("已拒绝绑定请求");
+    }
+
+    /**
+     * Send notification to student when parent requests binding
+     */
+    private void sendParentBindNotification(ScParentStudentRel rel, Long studentUserId) {
+        try {
+            SysUser parentUser = userService.selectUserById(rel.getParentUserId());
+            String parentName = parentUser != null ? parentUser.getNickName() : "家长";
+            String relType = rel.getRelationType() != null ? rel.getRelationType() : "家长";
+            SysNotice notice = new SysNotice();
+            notice.setNoticeTitle("家长绑定请求");
+            notice.setNoticeContent(parentName + "（" + relType + "）请求绑定为您的家长，请前往确认。");
+            notice.setNoticeType("2");
+            notice.setStatus("0");
+            notice.setCreateBy(SecurityUtils.getUsername());
+            noticeService.insertNotice(notice);
+        } catch (Exception ignored) {}
+    }
+
+    /**
+     * Mask phone number: 138****1234
+     */
+    private String maskPhone(String phone) {
+        if (StringUtils.isEmpty(phone) || phone.length() < 7) return phone;
+        return phone.substring(0, 3) + "****" + phone.substring(phone.length() - 4);
     }
 
     @PreAuthorize("@ss.hasAnyRoles('student,teacher,parent,admin')")

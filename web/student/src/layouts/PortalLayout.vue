@@ -362,6 +362,7 @@ const menus: Record<string, MenuItem[]> = {
     { title: '孩子课程', path: '/parent/courses', desc: '查看孩子当前学期课程' },
     { title: '孩子课表', path: '/parent/schedule', desc: '按周查看孩子课程安排' },
     { title: '消息中心', path: '/parent/messages', desc: '查看系统消息与通知公告' },
+    { title: '孩子绑定', path: '/parent/child-bind', desc: '管理与孩子账号的绑定关系' },
   ],
 }
 
@@ -464,6 +465,7 @@ const groupedMenus: Record<string, MenuGroup[]> = {
       items: [
         menus.parent[0],
         menus.parent[3],
+        menus.parent[4],
       ],
     },
     {
@@ -625,7 +627,7 @@ async function handleLogout() {
 .portal-tabs-wrapper {
   padding: 0 20px;
   z-index: 10;
-  height: 4.5rem;
+  height: 45px;
   flex: none;
   display: block;
   width: 100%;
@@ -737,11 +739,11 @@ async function handleLogout() {
 :global(.ctx-fade-leave-to) { opacity: 0; transform: scale(0.95) translateY(-4px); }
 
 .portal-breadcrumb-wrapper {
-  --el-font-size-base: 1.3rem;
+  --el-font-size-base: 13px;
   margin: 0 20px;
   padding-left: 2em;
   padding-right: 2em;
-  height: 4rem;
+  height: 40px;
   background-color: #fff;
   border-radius: 8px 8px 0 0;
   border-bottom: 1px dotted var(--table-border-color, #e6e7e8);
@@ -749,7 +751,7 @@ async function handleLogout() {
   align-items: center;
   z-index: 10;
   position: absolute;
-  top: calc(4.5rem + 10px);
+  top: calc(45px + 10px);
   left: 0;
   right: 0;
   flex: none;
@@ -757,7 +759,7 @@ async function handleLogout() {
 .breadcrumb-label {
   color: #606266;
   margin-right: 12px;
-  font-size: 1.3rem;
+  font-size: 13px;
 }
 .breadcrumb-link {
   display: inline-flex;
@@ -767,7 +769,7 @@ async function handleLogout() {
   border: none;
   background: transparent;
   color: #606266;
-  font-size: 1.3rem;
+  font-size: 13px;
   cursor: pointer;
   transition: color 0.2s ease;
   outline: none;
@@ -821,7 +823,7 @@ async function handleLogout() {
 
 .portal-fixed-wrapper {
   position: absolute;
-  top: calc(7.5rem + 10px); /* 4.5rem tabs + 3rem breadcrumbs + margin */
+  top: calc(75px + 10px); /* 45px tabs + 30px breadcrumbs + margin */
   right: 20px;
   bottom: 20px;
   left: 20px;
@@ -857,7 +859,7 @@ async function handleLogout() {
 }
 
 .portal-fixed-wrapper.is-dashboard {
-  top: calc(4.5rem + 58px);
+  top: calc(45px + 58px);
 }
 
 .portal-stage {
@@ -909,7 +911,7 @@ async function handleLogout() {
 .breadcrumb-current {
   color: #303133;
   font-weight: 400;
-  font-size: 1.3rem;
+  font-size: 13px;
 }
 
 :global(.portal-breadcrumb-dropdown.el-popper) {

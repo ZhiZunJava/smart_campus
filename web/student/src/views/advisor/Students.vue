@@ -125,15 +125,15 @@ onMounted(loadData)
 
 <style scoped>
 .advisor-students-page {
-  padding: 2.4rem 3.2rem;
-  gap: 2rem;
+  padding: 24px 32px;
+  gap: 20px;
 }
 
 .advisor-students-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(24rem, 0.7fr);
-  gap: 1.8rem;
-  padding: 2.4rem;
+  grid-template-columns: minmax(0, 1.5fr) minmax(240px, 0.7fr);
+  gap: 18px;
+  padding: 24px;
   background:
     radial-gradient(circle at top left, rgba(37, 99, 235, 0.12) 0%, rgba(37, 99, 235, 0) 34%),
     linear-gradient(135deg, #ffffff 0%, #f4f8ff 100%);
@@ -141,100 +141,100 @@ onMounted(loadData)
 
 .advisor-students-hero__eyebrow {
   display: inline-flex;
-  padding: 0.4rem 1rem;
+  padding: 4px 10px;
   border-radius: 999px;
   background: rgba(37, 99, 235, 0.12);
   color: #2563eb;
-  font-size: 1.2rem;
+  font-size: 12px;
   font-weight: 700;
 }
 
 .advisor-students-hero__copy h3 {
-  margin: 1.2rem 0 0;
-  font-size: 3rem;
+  margin: 12px 0 0;
+  font-size: 30px;
   font-weight: 800;
 }
 
 .advisor-students-hero__copy p {
-  margin: 1rem 0 0;
+  margin: 10px 0 0;
   color: var(--portal-text-secondary);
-  font-size: 1.4rem;
+  font-size: 14px;
   line-height: 1.8;
 }
 
 .advisor-students-hero__stats {
   display: grid;
-  gap: 1.2rem;
+  gap: 12px;
 }
 
 .advisor-students-hero__stat {
-  padding: 1.6rem 1.8rem;
-  border-radius: 1.8rem;
+  padding: 16px 18px;
+  border-radius: 18px;
   background: rgba(255, 255, 255, 0.84);
   border: 1px solid var(--portal-border);
 }
 
 .advisor-students-hero__stat span {
   color: var(--portal-text-secondary);
-  font-size: 1.3rem;
+  font-size: 13px;
 }
 
 .advisor-students-hero__stat strong {
   display: block;
-  margin-top: 0.8rem;
-  font-size: 2.8rem;
+  margin-top: 8px;
+  font-size: 28px;
   color: #2563eb;
 }
 
 .advisor-students-filter,
 .advisor-students-table {
-  padding: 2rem;
+  padding: 20px;
 }
 
 .advisor-students-filter__row {
-  margin-top: 1rem;
+  margin-top: 10px;
 }
 
 .advisor-students-filter__select {
-  width: 22rem;
+  width: 220px;
 }
 
 .advisor-students-filter__input {
-  width: 32rem;
+  width: 320px;
 }
 
 .table-skeleton {
   display: grid;
-  gap: 1.2rem;
+  gap: 12px;
 }
 
 .table-skeleton__row {
-  height: 5.2rem;
-  border-radius: 1rem;
+  height: 52px;
+  border-radius: 10px;
 }
 
 .advisor-rich-cell,
 .advisor-soft-cell {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 6px;
 }
 
 .advisor-rich-cell strong,
 .advisor-soft-cell strong {
   color: var(--portal-text);
-  font-size: 1.4rem;
+  font-size: 14px;
 }
 
 .advisor-rich-cell span,
 .advisor-soft-cell span {
   color: var(--portal-text-secondary);
-  font-size: 1.2rem;
+  font-size: 12px;
 }
 
 @media (max-width: 960px) {
   .advisor-students-page {
-    padding: 2rem;
+    padding: 20px;
   }
 
   .advisor-students-hero {

@@ -794,6 +794,200 @@ onMounted(async () => {
 })
 </script>
 
+
+      </head>
+      <body>
+        <div class="print-page">${printNode.innerHTML}</div>
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 120);
+          };
+        <\/script>
+      </body>
+    </html>
+  `
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+  const printUrl = URL.createObjectURL(blob)
+  const printWindow = window.open(printUrl, '_blank', 'toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes')
+  if (!printWindow) return
+  printWindow.onbeforeunload = () => {
+    URL.revokeObjectURL(printUrl)
+  }
+}
+
+function buildPrintStyles() {
+  return `
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #fff;
+      color: #000;
+      font-family: "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+    }
+    .print-page {
+      width: 1055px;
+      margin: 0 auto;
+      padding: 12px 0 20px;
+      color: #000;
+    }
+    .tableTopName {
+      margin-bottom: 0;
+      font-size: 20px;
+      letter-spacing: 0.45em;
+      line-height: 1.4;
+      text-align: center;
+    }
+    .semester-container {
+      font-size: 20px;
+      letter-spacing: normal;
+    }
+    .table-head-info {
+      margin: 2px 0 2px;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .table-head-info span {
+      display: inline-block;
+      margin: 0 auto;
+      vertical-align: top;
+    }
+    .table-head-info > span:nth-child(1) { width: 10%; }
+    .table-head-info > span:nth-child(2),
+    .table-head-info > span:nth-child(3),
+    .table-head-info > span:nth-child(4) { width: 20%; }
+    .table-head-info > span:nth-child(5),
+    .table-head-info > span:nth-child(6) { width: 15%; }
+    .courseTable {
+      width: 100%;
+      margin-bottom: 0;
+      font-size: 12px;
+      word-break: break-all;
+      white-space: normal;
+      border: 1px solid #000;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    .courseTable > thead > tr > th {
+      border: 1px solid #000;
+      vertical-align: middle;
+      padding: 0;
+      text-align: center;
+      height: 25px;
+      background: #fff !important;
+    }
+    .courseTable > tbody > tr > td {
+      padding: 0;
+      max-height: 44px;
+      border: 1px solid #000;
+      text-align: left;
+      vertical-align: top;
+      background: #fff !important;
+    }
+    .dayPartUnit, .timeArea {
+      width: 2%;
+      text-align: center !important;
+      vertical-align: middle !important;
+      color: #000;
+    }
+    .td-content { height: auto; }
+    .tdHtml {
+      min-height: 30px;
+      margin: 0;
+      padding: 2px 3px;
+      color: #000;
+      box-shadow: none;
+      border-left: none !important;
+      background: transparent !important;
+      line-height: 1.4;
+    }
+    .course-name {
+      font-size: 12px;
+      font-weight: 700;
+      text-decoration: none;
+      margin-bottom: 0;
+      color: #000;
+    }
+    .tdHtml div { color: #000; }
+    .tdHtml--empty { min-height: 30px; }
+    .course-table-fontSize { font-size: 11px; }
+    .course-table-remark {
+      margin-top: 0;
+      padding: 0;
+      line-height: 1.5;
+      color: #000;
+      background: transparent;
+    }
+    .course-table-footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 2px;
+      color: #000;
+    }
+    .pull-right { margin-left: auto; }
+  `
+}
+
+function getCardStyle(item: any) {
+  const color = colorFromKey(item.courseCode || item.classCourseId || item.scheduleId)
+  return {
+    background: `${hexToRgba(color, 0.18)}`,
+    borderLeft: `2px solid ${color}`,
+  }
+}
+
+function colorFromKey(key: string | number) {
+  const palette = ['#d2a1f2', '#38c8b4', '#f49060', '#7996ca', '#a9ce95', '#6fb0f3', '#dac4a5', '#7fc5a6']
+  const value = String(key || '')
+  let hash = 0
+  for (let index = 0; index < value.length; index += 1) {
+    hash = ((hash << 5) - hash) + value.charCodeAt(index)
+    hash |= 0
+  }
+  return palette[Math.abs(hash) % palette.length]
+}
+
+function hexToRgba(hex: string, alpha: number) {
+  const normalized = hex.replace('#', '')
+  const bigint = Number.parseInt(normalized, 16)
+  const r = (bigint >> 16) & 255
+  const g = (bigint >> 8) & 255
+  const b = bigint & 255
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+function getUnitLabel(unit: number) {
+  const row = tableRows.value.find((item: any) => Number(item.unit) === Number(unit))
+  return String(row?.label || unit)
+}
+
+function getSectionText(item: any) {
+  const start = Number(item?.startSection || 0)
+  const end = Number(item?.endSection || start)
+  if (!start) return '-'
+  const labels: string[] = []
+  for (let unit = start; unit <= end; unit += 1) {
+    labels.push(getUnitLabel(unit))
+  }
+  if (!labels.length) return `${item?.startSection || '-'}-${item?.endSection || '-'}节`
+  return `${labels[0]}-${labels[labels.length - 1]}节`
+}
+
+onMounted(async () => {
+  if (route.query.termId) {
+    queryParams.termId = Number(route.query.termId)
+  }
+  if (route.query.studentUserId) {
+    queryParams.studentUserId = Number(route.query.studentUserId)
+  }
+  await loadTerms()
+  await loadChildren()
+  await loadSchedule()
+})
+</script>
+
 <style scoped>
 .schedule-page {
   padding: 20px;

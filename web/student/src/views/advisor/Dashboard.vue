@@ -38,8 +38,10 @@ import { useRouter } from 'vue-router'
 import PortalDashboardShell from '@/components/dashboard/PortalDashboardShell.vue'
 import {
   getAdvisorDashboard,
+  getPortalUnreadMessages,
   listAdvisorScores,
   listAdvisorStudents,
+  listPortalNotice,
   listPortalTermOptions,
 } from '@/api/portal'
 import usePortalUserStore from '@/store/user'
@@ -74,6 +76,12 @@ const shortcutItems = [
     title: '成绩管理',
     icon: 'ri-bar-chart-box-line',
     bg: 'linear-gradient(135deg, #89d5ff, #3c9fec)',
+  },
+  {
+    path: '/advisor/affairs',
+    title: '事务审核',
+    icon: 'ri-briefcase-4-line',
+    bg: 'linear-gradient(135deg, #8f9fb8, #5e718d)',
   },
   {
     path: '/advisor/students',
@@ -255,40 +263,8 @@ const drawerTodoList = computed(() => recentTasks.value.map((item) => ({
   desc: item.statusText,
   action: item.raw?.action,
 })))
-const drawerMessageList = computed(() => [
-  {
-    messageId: 'advisor-class-summary',
-    messageTitle: '班级概览同步完成',
-    messageSummary: `当前负责 ${dashboard.value.classCount || 0} 个班级，共 ${dashboard.value.studentCount || 0} 名学生`,
-    createTime: formatDateTime(new Date()),
-    readFlag: '0',
-  },
-  {
-    messageId: 'advisor-score-summary',
-    messageTitle: '成绩概况提醒',
-    messageSummary: `当前学期均分 ${formatScore(dashboard.value.avgScore)}，课程数 ${dashboard.value.courseCount || 0}`,
-    createTime: formatDateTime(new Date()),
-    readFlag: '0',
-  },
-])
-const drawerNoticeList = computed(() => [
-  {
-    messageId: 'advisor-focus-class',
-    messageTitle: '重点班级跟进',
-    messageSummary: classSummaryCards.value[0]
-      ? `${classSummaryCards.value[0].className} 当前最值得优先关注`
-      : '当前暂无重点班级提醒',
-    createTime: formatDateTime(new Date()),
-    readFlag: '0',
-  },
-  {
-    messageId: 'advisor-student-summary',
-    messageTitle: '学生名单提示',
-    messageSummary: `学生管理页已同步 ${studentRows.value.length} 条学生记录`,
-    createTime: formatDateTime(new Date()),
-    readFlag: '0',
-  },
-])
+const drawerMessageList = ref<any[]>([])
+const drawerNoticeList = ref<any[]>([])
 
 function formatScore(value: any) {
   const num = Number(value)
@@ -328,6 +304,7 @@ async function loadData() {
       loadDashboardData(),
       loadAdvisorAuxiliaryData(),
     ])
+    preloadDrawerBadges()
   } finally {
     setTimeout(() => {
       loading.value = false
@@ -344,8 +321,34 @@ function openDrawerTask(task: any) {
   openTask(task)
 }
 
-function openQuickDrawer() {
-  drawerLoading.value = false
+async function openQuickDrawer(tab?: string) {
+  drawerLoading.value = true
+  try {
+    const userId = userStore.user?.userId
+    if (!userId) return
+    if (tab === 'message') {
+      const res = await getPortalUnreadMessages({ userId, limit: 6 })
+      drawerMessageList.value = (res.data || []).filter((item: any) => item.readFlag === '0')
+    } else if (tab === 'notice') {
+      const res = await listPortalNotice({ limit: 6 })
+      drawerNoticeList.value = (res.data || []).filter((item: any) => item.readFlag === '0')
+    }
+  } finally {
+    drawerLoading.value = false
+  }
+}
+
+async function preloadDrawerBadges() {
+  const userId = userStore.user?.userId
+  if (!userId) return
+  try {
+    const [msgRes, noticeRes] = await Promise.all([
+      getPortalUnreadMessages({ userId, limit: 20 }),
+      listPortalNotice({ limit: 20 }),
+    ])
+    drawerMessageList.value = (msgRes.data || []).filter((item: any) => item.readFlag === '0')
+    drawerNoticeList.value = (noticeRes.data || []).filter((item: any) => item.readFlag === '0')
+  } catch { /* silent */ }
 }
 
 function openDrawerMessage(payload?: { tab: 'message' | 'notice'; item: any }) {

@@ -151,6 +151,7 @@ watch(() => navType, (val: any) => {
   }
   if (val.value == 2) {
     appStore.sidebar.opened = true
+    appStore.toggleSideBarHide(false)
   }
   if (val.value == 3) {
     appStore.sidebar.opened = false

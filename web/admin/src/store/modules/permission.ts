@@ -48,6 +48,12 @@ const usePermissionStore = defineStore(
             this.setSidebarRouters(constantRoutes.concat(sidebarRoutes))
             this.setDefaultRoutes(sidebarRoutes)
             this.setTopbarRoutes(defaultRoutes)
+            // 所有动态路由加载完毕后，再添加 404 兜底路由，避免它拦截正常路由
+            router.addRoute({
+              path: '/:pathMatch(.*)*',
+              component: () => import('@/views/error/404.vue'),
+              hidden: true
+            } as any)
             resolve(rewriteRoutes)
           })
         })
