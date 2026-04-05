@@ -1,5 +1,5 @@
 <template>
-  <div class="portal-page settings-page !pb-5">
+  <div v-loading="pageLoading" class="portal-page settings-page !pb-5">
     <div class="settings-header">
       <h2>账号设置</h2>
       <p>统一管理个人资料、安全信息与使用偏好，定制您的智慧校园体验。</p>
@@ -17,9 +17,11 @@
           <el-icon>
             <User v-if="tab.value === 'profile'" />
             <Lock v-else-if="tab.value === 'security'" />
-            <Setting v-else-if="tab.value === 'preferences'" />
           </el-icon>
-          <span>{{ tab.label }}</span>
+          <div class="sidebar-item__text">
+            <span class="sidebar-item__label">{{ tab.label }}</span>
+            <span class="sidebar-item__desc">{{ tab.desc }}</span>
+          </div>
         </div>
       </div>
 
@@ -31,33 +33,61 @@
               <p>管理您的基本账号信息与联系方式。</p>
             </div>
 
-            <el-form ref="profileFormRef" :model="profileForm" :rules="profileRules" label-position="top" class="settings-form">
-              <el-row :gutter="32">
-                <el-col :span="12">
-                  <el-form-item label="昵称" prop="nickName">
-                    <el-input v-model="profileForm.nickName" maxlength="30" placeholder="请输入昵称" size="large" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="12">
-                  <el-form-item label="真实姓名" prop="realName">
-                    <el-input v-model="profileForm.realName" maxlength="30" placeholder="请输入真实姓名" size="large" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="12">
-                  <el-form-item label="手机号" prop="phonenumber">
-                    <el-input v-model="profileForm.phonenumber" maxlength="11" placeholder="请输入手机号" size="large" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="12">
-                  <el-form-item label="邮箱" prop="email">
-                    <el-input v-model="profileForm.email" maxlength="50" placeholder="请输入邮箱" size="large" />
-                  </el-form-item>
-                </el-col>
-              </el-row>
-            </el-form>
+            <!-- User Overview Card -->
+            <div class="user-overview-card">
+              <div class="user-overview-info">
+                <div class="user-overview-name">
+                  {{ userStore.user?.nickName || userStore.user?.userName || '用户' }}
+                  <el-tag v-if="userStore.preferredPortalRole" size="small" class="role-tag" effect="light">
+                    {{ roleLabel }}
+                  </el-tag>
+                </div>
+                <div class="user-overview-meta">
+                  <span>账号：{{ userStore.user?.userName || '-' }}</span>
+                  <span v-if="userStore.user?.loginDate" class="meta-dot">·</span>
+                  <span v-if="userStore.user?.loginDate">上次登录：{{ userStore.user.loginDate }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-card">
+              <div class="form-card__title">基本信息</div>
+              <el-form ref="profileFormRef" :model="profileForm" :rules="profileRules" label-position="top" class="settings-form">
+                <el-row :gutter="32">
+                  <el-col :span="12">
+                    <el-form-item label="昵称" prop="nickName">
+                      <el-input v-model="profileForm.nickName" maxlength="30" placeholder="请输入昵称" size="large">
+                        <template #prefix><el-icon><User /></el-icon></template>
+                      </el-input>
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="12">
+                    <el-form-item label="真实姓名" prop="realName">
+                      <el-input v-model="profileForm.realName" maxlength="30" placeholder="请输入真实姓名" size="large">
+                        <template #prefix><el-icon><Postcard /></el-icon></template>
+                      </el-input>
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="12">
+                    <el-form-item label="手机号" prop="phonenumber">
+                      <el-input v-model="profileForm.phonenumber" maxlength="11" placeholder="请输入手机号" size="large">
+                        <template #prefix><el-icon><Iphone /></el-icon></template>
+                      </el-input>
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="12">
+                    <el-form-item label="邮箱" prop="email">
+                      <el-input v-model="profileForm.email" maxlength="50" placeholder="请输入邮箱" size="large">
+                        <template #prefix><el-icon><Message /></el-icon></template>
+                      </el-input>
+                    </el-form-item>
+                  </el-col>
+                </el-row>
+              </el-form>
+            </div>
 
             <div class="settings-actions">
-              <el-button type="primary" size="large" @click="submitProfile" class="submit-btn">保存资料</el-button>
+              <el-button type="primary" size="large" :loading="profileSaving" class="submit-btn" @click="submitProfile">保存资料</el-button>
             </div>
           </div>
 
@@ -94,13 +124,20 @@
                 </el-form-item>
                 <el-form-item label="新密码" prop="newPassword">
                   <el-input v-model="passwordForm.newPassword" type="password" show-password placeholder="请输入新密码（至少6位）" size="large" />
+                  <!-- Password Strength Indicator -->
+                  <div v-if="passwordForm.newPassword" class="password-strength">
+                    <div class="strength-bar">
+                      <div class="strength-bar__fill" :class="strengthClass" :style="{ width: strengthPercent + '%' }" />
+                    </div>
+                    <span class="strength-label" :class="strengthClass">{{ strengthLabel }}</span>
+                  </div>
                 </el-form-item>
                 <el-form-item label="确认新密码" prop="confirmPassword">
                   <el-input v-model="passwordForm.confirmPassword" type="password" show-password placeholder="请再次输入新密码" size="large" />
                 </el-form-item>
                 <el-form-item class="mt-8">
                   <el-button size="large" @click="resetPasswordForm">重置</el-button>
-                  <el-button type="primary" size="large" @click="submitPassword">更新密码</el-button>
+                  <el-button type="primary" size="large" :loading="passwordSaving" @click="submitPassword">更新密码</el-button>
                 </el-form-item>
               </el-form>
             </div>
@@ -116,21 +153,46 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from '@/utils/feedback'
 import usePortalUserStore from '@/store/user'
 import { getPortalProfile, updatePortalPassword, updatePortalProfile } from '@/api/portal'
-import { User, Lock, CircleCheckFilled, WarningFilled, Setting } from '@element-plus/icons-vue'
+import {
+  CircleCheckFilled,
+  Iphone,
+  Lock,
+  Message,
+  Postcard,
+  User,
+  WarningFilled,
+} from '@element-plus/icons-vue'
 
 const userStore = usePortalUserStore()
 const profileFormRef = ref()
 const passwordFormRef = ref()
 const activeTab = ref<'profile' | 'security'>('profile')
+const pageLoading = ref(false)
+const profileSaving = ref(false)
+const passwordSaving = ref(false)
 
 const tabs = [
-  { value: 'profile', label: '个人资料', desc: '基础资料与学习偏好' },
+  { value: 'profile', label: '个人资料', desc: '基础资料与联系方式' },
   { value: 'security', label: '账号安全', desc: '密码与安全维护' },
 ] as const
 
-const activeTabLabel = computed(() => tabs.find((tab) => tab.value === activeTab.value)?.label || '个人资料')
+const roleLabels: Record<string, string> = {
+  student: '学生',
+  teacher: '教师',
+  advisor: '辅导员',
+  parent: '家长',
+}
 
-const profileForm = reactive<any>({
+const roleLabel = computed(() => roleLabels[userStore.preferredPortalRole] || '用户')
+
+interface ProfileForm {
+  nickName: string
+  realName: string
+  phonenumber: string
+  email: string
+}
+
+const profileForm = reactive<ProfileForm>({
   nickName: '',
   realName: '',
   phonenumber: '',
@@ -169,22 +231,68 @@ const passwordRules = {
   }],
 }
 
+/* ===================== Password Strength ===================== */
+const passwordStrength = computed(() => {
+  const pw = passwordForm.newPassword
+  if (!pw) return 0
+  let score = 0
+  if (pw.length >= 6) score += 1
+  if (pw.length >= 10) score += 1
+  if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score += 1
+  if (/\d/.test(pw)) score += 1
+  if (/[^a-zA-Z0-9]/.test(pw)) score += 1
+  return score
+})
+
+const strengthClass = computed(() => {
+  const s = passwordStrength.value
+  if (s <= 1) return 'weak'
+  if (s <= 3) return 'medium'
+  return 'strong'
+})
+
+const strengthPercent = computed(() => {
+  return Math.min(100, (passwordStrength.value / 5) * 100)
+})
+
+const strengthLabel = computed(() => {
+  const s = passwordStrength.value
+  if (s <= 1) return '弱'
+  if (s <= 3) return '中'
+  return '强'
+})
+
+/* ===================== Data Loading ===================== */
 async function loadProfile() {
-  const res = await getPortalProfile()
-  const user = res.data?.user || {}
-  Object.assign(profileForm, {
-    nickName: user.nickName || '',
-    realName: user.realName || '',
-    phonenumber: user.phonenumber || '',
-    email: user.email || '',
-  })
+  pageLoading.value = true
+  try {
+    const res = await getPortalProfile()
+    const user = res.data?.user || {}
+    Object.assign(profileForm, {
+      nickName: user.nickName || '',
+      realName: user.realName || '',
+      phonenumber: user.phonenumber || '',
+      email: user.email || '',
+    })
+  } catch {
+    ElMessage.error('加载个人资料失败')
+  } finally {
+    pageLoading.value = false
+  }
 }
 
 async function submitProfile() {
   await profileFormRef.value?.validate()
-  await updatePortalProfile({ ...profileForm })
-  await userStore.refreshUserInfo()
-  ElMessage.success('个人资料已更新')
+  profileSaving.value = true
+  try {
+    await updatePortalProfile({ ...profileForm })
+    await userStore.refreshUserInfo()
+    ElMessage.success('个人资料已更新')
+  } catch {
+    ElMessage.error('更新个人资料失败')
+  } finally {
+    profileSaving.value = false
+  }
 }
 
 function resetPasswordForm() {
@@ -196,12 +304,19 @@ function resetPasswordForm() {
 
 async function submitPassword() {
   await passwordFormRef.value?.validate()
-  await updatePortalPassword({
-    oldPassword: passwordForm.oldPassword,
-    newPassword: passwordForm.newPassword,
-  })
-  ElMessage.success('密码修改成功')
-  resetPasswordForm()
+  passwordSaving.value = true
+  try {
+    await updatePortalPassword({
+      oldPassword: passwordForm.oldPassword,
+      newPassword: passwordForm.newPassword,
+    })
+    ElMessage.success('密码修改成功')
+    resetPasswordForm()
+  } catch {
+    ElMessage.error('密码修改失败，请检查旧密码是否正确')
+  } finally {
+    passwordSaving.value = false
+  }
 }
 
 onMounted(async () => {
@@ -249,7 +364,7 @@ onMounted(async () => {
 
 .sidebar-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   padding: 14px 20px;
   border-radius: 8px;
   cursor: pointer;
@@ -257,6 +372,7 @@ onMounted(async () => {
   font-size: 15px;
   margin-bottom: 8px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
 }
 
 .sidebar-item:hover {
@@ -270,9 +386,46 @@ onMounted(async () => {
   font-weight: 500;
 }
 
-.sidebar-item .el-icon {
+.sidebar-item.is-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--portal-brand);
+}
+
+.sidebar-item > .el-icon {
   margin-right: 12px;
   font-size: 18px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.sidebar-item__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sidebar-item__label {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.sidebar-item__desc {
+  font-size: 12px;
+  color: var(--portal-text-secondary);
+  opacity: 0.7;
+  line-height: 1.3;
+}
+
+.sidebar-item.is-active .sidebar-item__desc {
+  opacity: 0.85;
+  color: var(--portal-brand);
 }
 
 .settings-content {
@@ -287,7 +440,7 @@ onMounted(async () => {
 }
 
 .settings-panel-header {
-  margin-bottom: 40px;
+  margin-bottom: 32px;
   padding-bottom: 20px;
   border-bottom: 1px solid #ebeef5;
 }
@@ -305,8 +458,66 @@ onMounted(async () => {
   color: var(--portal-text-secondary);
 }
 
-.w-full {
-  width: 100%;
+/* User Overview Card */
+.user-overview-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px 24px;
+  border: 1px solid #ebeef5;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(64, 158, 255, 0.04), rgba(255, 255, 255, 0.8));
+  margin-bottom: 24px;
+}
+
+.user-overview-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.user-overview-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--portal-text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.role-tag {
+  font-size: 12px;
+  border-radius: 4px;
+}
+
+.user-overview-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--portal-text-secondary);
+  font-size: 13px;
+}
+
+.meta-dot {
+  color: #dcdfe6;
+}
+
+/* Form Card */
+.form-card {
+  border: 1px solid #ebeef5;
+  border-radius: 12px;
+  padding: 20px 24px;
+  background: #fff;
+}
+
+.form-card__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--portal-text);
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f2f5;
 }
 
 .settings-form :deep(.el-form-item__label) {
@@ -315,8 +526,12 @@ onMounted(async () => {
   padding-bottom: 8px;
 }
 
+.settings-form :deep(.el-input__prefix) {
+  color: var(--portal-text-secondary);
+}
+
 .settings-actions {
-  margin-top: 40px;
+  margin-top: 24px;
   display: flex;
   justify-content: flex-start;
 }
@@ -405,6 +620,59 @@ onMounted(async () => {
   color: var(--portal-text);
 }
 
+/* Password Strength Indicator */
+.password-strength {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.strength-bar {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: #ebeef5;
+  overflow: hidden;
+}
+
+.strength-bar__fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s, background 0.3s;
+}
+
+.strength-bar__fill.weak {
+  background: #f56c6c;
+}
+
+.strength-bar__fill.medium {
+  background: #e6a23c;
+}
+
+.strength-bar__fill.strong {
+  background: #67c23a;
+}
+
+.strength-label {
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.strength-label.weak {
+  color: #f56c6c;
+}
+
+.strength-label.medium {
+  color: #e6a23c;
+}
+
+.strength-label.strong {
+  color: #67c23a;
+}
+
 .my-8 {
   margin: 32px 0;
 }
@@ -413,11 +681,15 @@ onMounted(async () => {
   margin-top: 32px;
 }
 
+.mb-4 {
+  margin-bottom: 16px;
+}
+
 @media (max-width: 768px) {
   .settings-main-container {
     flex-direction: column;
   }
-  
+
   .settings-sidebar {
     width: 100%;
     padding: 0 0 16px 0;
@@ -425,21 +697,49 @@ onMounted(async () => {
     display: flex;
     overflow-x: auto;
   }
-  
+
   .sidebar-item {
     margin-bottom: 0;
     margin-right: 8px;
     white-space: nowrap;
+    padding: 10px 16px;
   }
-  
+
+  .sidebar-item__desc {
+    display: none;
+  }
+
+  .sidebar-item.is-active::before {
+    display: none;
+  }
+
   .security-status-cards {
     flex-direction: column;
   }
-  
+
   .settings-content {
     padding: 24px 0 60px 0;
     border-left: none;
     border-top: 1px solid #ebeef5;
+  }
+
+  .user-overview-card {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .user-overview-name {
+    justify-content: center;
+  }
+
+  .user-overview-meta {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .settings-form :deep(.el-col) {
+    max-width: 100%;
+    flex: 0 0 100%;
   }
 }
 </style>

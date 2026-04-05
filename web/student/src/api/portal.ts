@@ -559,7 +559,7 @@ export async function fetchPortalCourseOptions(userId?: number) {
     if (!userId) return []
     const res = await listPortalMyCourses({ userId })
     return (res.data || res || []).map((item: any) => ({
-      label: `${item.courseName}（${item.courseId}）`,
+      label: item.courseName || `课程 ${item.courseId}`,
       value: item.courseId,
     }))
   } catch {
@@ -572,7 +572,7 @@ export async function fetchPortalCourseCatalogOptions(userId?: number) {
     if (!userId) return []
     const res = await listPortalMyCourses({ userId })
     return (res.data || res || []).map((item: any) => ({
-      label: `${item.courseName}（${item.courseId}）`,
+      label: item.courseName || `课程 ${item.courseId}`,
       value: item.courseId,
     }))
   } catch {

@@ -124,7 +124,16 @@
       "Read(//c/Users/33088/.claude/**)",
       "Bash(rm -rf \"E:\\\\\\\\smart_campus\\\\\\\\.claude\\\\\\\\mcp\\\\\\\\git-mcp\")",
       "Bash(mkdir -p \"E:\\\\\\\\smart_campus\\\\\\\\.claude\\\\\\\\commands\")",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(wc:*)",
+      "Bash(npm run:*)",
+      "WebSearch",
+      "WebFetch(domain:vite.dev)",
+      "WebFetch(domain:rolldown.rs)",
+      "Bash(awk NR>=565 && NR<=620:*)"
     ]
   }
 }

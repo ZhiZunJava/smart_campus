@@ -350,10 +350,10 @@
               <div v-for="item in resultTypePerformance" :key="item.type" class="subpaper-item">
                 <div class="subpaper-name">
                   <div>{{ questionTypeLabel(item.type) }}</div>
-                  <div class="text-xs text-gray-500 mt-1">{{ item.count }}题 / 正确{{ item.correct }}题</div>
+                  <div class="type-perf-sub">{{ item.count }}题 / 正确{{ item.correct }}题</div>
                 </div>
                 <div class="subpaper-status">
-                  <span :class="item.correctRate >= 60 ? 'text-success' : 'text-danger'" class="font-bold">{{ item.correctRate }}%</span>
+                  <span :class="item.correctRate >= 60 ? 'text-success' : 'text-danger'" class="type-perf-rate">{{ item.correctRate }}%</span>
                 </div>
               </div>
             </div>
@@ -361,10 +361,10 @@
 
           <div v-if="canViewScoreSummary" class="sidebar-card mt-4">
             <div class="sidebar-title">结果总结</div>
-            <div class="text-sm text-gray-600 leading-relaxed">
+            <div class="result-summary-text">
               <p>{{ resultSummaryText }}</p>
-              <p v-if="weakQuestionTypeText" class="mt-2 text-warning">薄弱题型：{{ weakQuestionTypeText }}</p>
-              <p v-if="canViewAnswerAnalysis && resultWrongCount > 0" class="mt-2 text-primary">建议优先复盘错题与解析，再回到错题本做针对性回练。</p>
+              <p v-if="weakQuestionTypeText" class="result-summary-weak">薄弱题型：{{ weakQuestionTypeText }}</p>
+              <p v-if="canViewAnswerAnalysis && resultWrongCount > 0" class="result-summary-tip">建议优先复盘错题与解析，再回到错题本做针对性回练。</p>
             </div>
           </div>
         </aside>
@@ -1065,7 +1065,7 @@ onBeforeRouteLeave(async () => {
   padding: 24px 32px;
   margin-bottom: 24px;
   background: #ffffff;
-  border-radius: 16px;
+  border-radius: 6px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
   position: relative;
@@ -1134,7 +1134,7 @@ onBeforeRouteLeave(async () => {
 .exam-timer {
   text-align: center;
   padding: 16px 32px;
-  border-radius: 16px;
+  border-radius: 6px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   min-width: 200px;
@@ -1206,7 +1206,7 @@ onBeforeRouteLeave(async () => {
 .header-actions .el-button {
   padding: 10px 24px;
   font-size: 14px;
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 .result-meta-grid {
@@ -1216,25 +1216,26 @@ onBeforeRouteLeave(async () => {
 }
 
 .result-meta-item {
-  padding: 12px 14px;
-  border-radius: 12px;
+  padding: 14px 16px;
+  border-radius: 6px;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .result-meta-item span {
-  font-size: 12px;
+  font-size: 13px;
   color: #64748b;
   font-weight: 600;
 }
 
 .result-meta-item strong {
-  font-size: 14px;
+  font-size: 15px;
   color: #0f172a;
   line-height: 1.5;
+  word-break: break-word;
 }
 
 .result-growth-rewards {
@@ -1249,7 +1250,7 @@ onBeforeRouteLeave(async () => {
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
-  border-radius: 12px;
+  border-radius: 6px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
 }
@@ -1262,12 +1263,12 @@ onBeforeRouteLeave(async () => {
 
 .result-growth-reward__main strong {
   color: #0f172a;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .result-growth-reward__main span {
   color: #64748b;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
@@ -1278,10 +1279,43 @@ onBeforeRouteLeave(async () => {
   white-space: nowrap;
 }
 
+.type-perf-sub {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.type-perf-rate {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.result-summary-text {
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.8;
+}
+
+.result-summary-text p {
+  margin: 0;
+}
+
+.result-summary-weak {
+  margin-top: 10px !important;
+  color: #f59e0b;
+  font-weight: 500;
+}
+
+.result-summary-tip {
+  margin-top: 10px !important;
+  color: #2563eb;
+  font-weight: 500;
+}
+
 /* Main Layout */
 .exam-main-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) 360px;
   gap: 24px;
   align-items: start;
 }
@@ -1290,7 +1324,7 @@ onBeforeRouteLeave(async () => {
 .exam-question-sheet {
   padding: 32px;
   background: #ffffff;
-  border-radius: 16px;
+  border-radius: 6px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
 }
@@ -1360,7 +1394,7 @@ onBeforeRouteLeave(async () => {
   margin: 0 !important;
   padding: 16px 20px;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  border-radius: 6px;
   background: #f8fafc;
   transition: all 0.2s ease;
   height: auto;
@@ -1425,7 +1459,7 @@ onBeforeRouteLeave(async () => {
 .sheet-footer .el-button {
   padding: 12px 28px;
   font-size: 15px;
-  border-radius: 8px;
+  border-radius: 6px;
   height: auto;
 }
 
@@ -1439,7 +1473,7 @@ onBeforeRouteLeave(async () => {
 .sidebar-card {
   padding: 24px;
   background: #ffffff;
-  border-radius: 16px;
+  border-radius: 6px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
 }
@@ -1460,22 +1494,26 @@ onBeforeRouteLeave(async () => {
   text-align: center;
 }
 
+.is-result-mode .progress-stats {
+  grid-template-columns: repeat(2, 1fr);
+}
+
 .stat-box {
   background: #f8fafc;
   padding: 16px 8px;
-  border-radius: 12px;
+  border-radius: 6px;
   border: 1px solid #f1f5f9;
 }
 
 .stat-val {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 800;
   color: #0f172a;
   margin-bottom: 6px;
 }
 
 .stat-lbl {
-  font-size: 13px;
+  font-size: 14px;
   color: #64748b;
   font-weight: 500;
 }
@@ -1493,7 +1531,7 @@ onBeforeRouteLeave(async () => {
   color: #64748b;
   background: #f8fafc;
   padding: 12px;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px dashed #e2e8f0;
 }
 
@@ -1509,7 +1547,7 @@ onBeforeRouteLeave(async () => {
   align-items: center;
   padding: 14px 16px;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
   background: #ffffff;
@@ -1582,7 +1620,7 @@ onBeforeRouteLeave(async () => {
 
 .palette-btn {
   height: 40px;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid #e2e8f0;
   background: #ffffff;
   color: #475569;
@@ -1645,7 +1683,7 @@ onBeforeRouteLeave(async () => {
   gap: 32px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 16px;
+  border-radius: 6px;
   box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
   position: relative;
   overflow: hidden;
@@ -1708,7 +1746,7 @@ onBeforeRouteLeave(async () => {
 .exam-result-metric {
   padding: 20px;
   text-align: center;
-  border-radius: 12px;
+  border-radius: 6px;
   background: #f8fafc;
   border: 1px solid #f1f5f9;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -1741,14 +1779,14 @@ onBeforeRouteLeave(async () => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
-  border-radius: 16px;
+  border-radius: 6px;
   box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
   border: 1px solid #e2e8f0;
 }
 
 .exam-result-insights__card {
   padding: 20px;
-  border-radius: 12px;
+  border-radius: 6px;
   border: 1px solid #f1f5f9;
   background: #f8fafc;
   display: flex;
@@ -1782,7 +1820,7 @@ onBeforeRouteLeave(async () => {
 .exam-result-performance {
   margin-top: 24px;
   padding: 24px;
-  border-radius: 16px;
+  border-radius: 6px;
   box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
   border: 1px solid #e2e8f0;
 }
@@ -1814,7 +1852,7 @@ onBeforeRouteLeave(async () => {
 
 .exam-result-performance__card {
   padding: 20px;
-  border-radius: 12px;
+  border-radius: 6px;
   border: 1px solid #e2e8f0;
   background: #ffffff;
   box-shadow: 0 2px 10px rgba(15, 23, 42, 0.02);
@@ -1846,7 +1884,7 @@ onBeforeRouteLeave(async () => {
 .exam-result-summary {
   margin-top: 24px;
   padding: 24px;
-  border-radius: 16px;
+  border-radius: 6px;
   box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
   border: 1px solid #e2e8f0;
 }
@@ -1868,7 +1906,7 @@ onBeforeRouteLeave(async () => {
 
 .exam-result-summary__item {
   padding: 16px 20px;
-  border-radius: 12px;
+  border-radius: 6px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   color: #334155;
@@ -1892,7 +1930,7 @@ onBeforeRouteLeave(async () => {
   flex: 1;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  border-radius: 6px;
   padding: 16px;
 }
 
@@ -1912,7 +1950,7 @@ onBeforeRouteLeave(async () => {
 .exam-result-analysis {
   background: #f0fdfa;
   border: 1px solid #fef3c7;
-  border-radius: 12px;
+  border-radius: 6px;
   padding: 16px;
 }
 

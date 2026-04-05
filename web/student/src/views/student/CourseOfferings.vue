@@ -1,7 +1,7 @@
 <template>
   <div class="portal-page course-offerings-page">
     <!-- Search Area -->
-    <section class="portal-card search-card">
+    <section v-loading="filterOptionsLoading" class="portal-card search-card">
       <div class="search-head">
         <div class="search-head__left">
           <div class="search-head__icon">
@@ -9,7 +9,7 @@
           </div>
           <div>
             <div class="search-head__title">筛选条件</div>
-            <div class="search-head__desc">学期和其他筛选条件保持同层级展示，常用条件默认展开，自定义字段优先使用学生端专用下拉数据。</div>
+            <div class="search-head__desc">设置筛选条件查询全校开课信息，点击右侧「自定义查询条件」可调整显示的筛选字段。</div>
           </div>
         </div>
         <div class="search-head__right">
@@ -50,6 +50,7 @@
               :controls="false"
               class="credit-range__input"
               placeholder="最小值"
+              @keyup.enter="handleSearch"
             />
             <span class="credit-range__separator">~</span>
             <el-input-number
@@ -60,6 +61,7 @@
               :controls="false"
               class="credit-range__input"
               placeholder="最大值"
+              @keyup.enter="handleSearch"
             />
           </div>
           <el-select
@@ -85,6 +87,7 @@
             v-model="queryParams[field.key]"
             :placeholder="field.placeholder"
             clearable
+            @keyup.enter="handleSearch"
           />
         </div>
       </div>
@@ -109,6 +112,7 @@
                   :controls="false"
                   class="credit-range__input"
                   placeholder="最小值"
+                  @keyup.enter="handleSearch"
                 />
                 <span class="credit-range__separator">~</span>
                 <el-input-number
@@ -119,6 +123,7 @@
                   :controls="false"
                   class="credit-range__input"
                   placeholder="最大值"
+                  @keyup.enter="handleSearch"
                 />
               </div>
               <el-select
@@ -143,6 +148,7 @@
                 v-model="queryParams[field.key]"
                 :placeholder="field.placeholder"
                 clearable
+                @keyup.enter="handleSearch"
               />
             </div>
           </div>
@@ -150,7 +156,7 @@
       </div>
 
       <div v-if="activeFilterTags.length" class="active-tags">
-        <div class="active-tags__label">当前筛选：</div>
+        <div class="active-tags__label">当前筛选：<span class="active-tags__count">{{ activeFilterTags.length }}</span></div>
         <div class="active-tags__list">
           <el-tag
             v-for="t in activeFilterTags"
@@ -373,7 +379,12 @@
               <template #image>
                 <div class="empty-illus">
                   <div class="empty-illus__dot"></div>
+                  <div class="empty-illus__dot-sm"></div>
+                  <div class="empty-illus__card-shadow"></div>
                   <div class="empty-illus__card"></div>
+                  <div class="empty-illus__icon">
+                    <el-icon :size="18"><Search /></el-icon>
+                  </div>
                 </div>
               </template>
             </el-empty>
@@ -394,282 +405,43 @@
     </section>
 
     <!-- Custom Query Config Dialog -->
-    <el-dialog
-      v-model="showQueryConfigDialog"
-      title="自定义查询条件"
-      width="680px"
-      destroy-on-close
-      append-to-body
-      modal-append-to-body
-      class="course-offerings-dialog"
-      modal-class="course-offerings-dialog-modal"
-    >
-      <div class="query-config-body">
-        <div class="query-config-left">
-          <div class="query-config-header">
-            <span>全部字段</span>
-            <span>
-              <el-button link type="primary" size="small" @click="toggleAllQueryFields(true)">全选</el-button>
-              <el-button link type="primary" size="small" @click="invertQueryFields">反选</el-button>
-            </span>
-          </div>
-          <div class="query-config-search">
-            <el-input v-model="queryConfigKeyword" clearable placeholder="搜索字段…" />
-          </div>
-          <el-scrollbar class="query-config-scroll">
-            <div class="query-config-list">
-              <el-checkbox
-                v-for="field in filteredAllQueryFields"
-                :key="field.key"
-                v-model="tempActiveQueryKeys[field.key]"
-                :disabled="field.key === 'termId'"
-              >
-                {{ field.label }}
-              </el-checkbox>
-            </div>
-          </el-scrollbar>
-        </div>
-        <div class="query-config-right">
-          <div class="query-config-header">
-            <span>已选 ({{ tempActiveCount }})</span>
-          </div>
-          <el-scrollbar class="query-config-scroll">
-            <div class="query-config-selected">
-              <div v-for="(field, idx) in tempSelectedFields" :key="field.key" class="selected-item">
-                <span class="selected-item__idx">{{ idx + 1 }}</span>
-                <el-tag closable @close="tempActiveQueryKeys[field.key] = false">
-                  {{ field.label }}
-                </el-tag>
-              </div>
-              <span v-if="!tempSelectedFields.length" class="empty-hint">请从左侧选择字段</span>
-            </div>
-          </el-scrollbar>
-        </div>
-      </div>
-      <template #footer>
-        <el-button @click="resetQueryConfigToDefault">恢复默认</el-button>
-        <el-button @click="showQueryConfigDialog = false">取消</el-button>
-        <el-button type="primary" @click="saveQueryConfig">保存</el-button>
-      </template>
-    </el-dialog>
+    <QueryConfigDialog
+      v-model:visible="showQueryConfigDialog"
+      :all-query-fields="allQueryFields"
+      :active-query-keys="activeQueryKeys"
+      :default-query-keys="defaultQueryKeys"
+      @save="handleQueryConfigSave"
+    />
 
     <!-- Page Settings Dialog -->
-    <el-dialog
-      v-model="showPageSettingsDialog"
-      title="页面设置"
-      width="480px"
-      destroy-on-close
-      append-to-body
-      modal-append-to-body
-      class="course-offerings-dialog"
-      modal-class="course-offerings-dialog-modal"
-    >
-      <div class="page-settings">
-        <div class="ps-section">
-          <div class="ps-title">显示列（{{ tempVisibleColumnCount }}/{{ allColumns.length }}）</div>
-          <el-checkbox-group v-model="tempPageSettings.visibleColumns" class="ps-cols">
-            <el-checkbox v-for="col in allColumns" :key="col.key" :label="col.key">{{ col.label }}</el-checkbox>
-          </el-checkbox-group>
-        </div>
-
-        <div class="ps-section">
-          <div class="ps-title">列表显示</div>
-          <div class="ps-inline">
-            <el-checkbox v-model="tempPageSettings.showIndex">表格序号</el-checkbox>
-          </div>
-        </div>
-
-        <div class="ps-section">
-          <div class="ps-title">显示模式</div>
-          <el-radio-group v-model="tempPageSettings.density" class="ps-radio-group">
-            <el-radio-button label="compact">紧凑</el-radio-button>
-            <el-radio-button label="medium">适中</el-radio-button>
-            <el-radio-button label="loose">宽松</el-radio-button>
-          </el-radio-group>
-        </div>
-
-        <div class="ps-section">
-          <div class="ps-title">列宽策略</div>
-          <el-radio-group v-model="tempPageSettings.columnWidth" class="ps-radio-group">
-            <el-radio-button label="fit">适应内容</el-radio-button>
-            <el-radio-button label="fill">铺满表格</el-radio-button>
-          </el-radio-group>
-        </div>
-
-        <div class="ps-section">
-          <div class="ps-title">每页行数</div>
-          <el-radio-group v-model="tempPageSettings.pageSize" class="ps-radio-group ps-radio-group--sizes">
-            <el-radio-button v-for="s in [20, 50, 100, 200, 500, 1000]" :key="s" :label="s">{{ s }}</el-radio-button>
-          </el-radio-group>
-        </div>
-      </div>
-      <template #footer>
-        <el-button @click="resetPageSettingsToDefault">恢复默认</el-button>
-        <el-button @click="showPageSettingsDialog = false">取消</el-button>
-        <el-button type="primary" @click="savePageSettings">保存</el-button>
-      </template>
-    </el-dialog>
+    <PageSettingsDialog
+      v-model:visible="showPageSettingsDialog"
+      :settings="pageSettings"
+      :all-columns="allColumns"
+      @save="handlePageSettingsSave"
+    />
 
     <!-- Export Fields Dialog -->
-    <el-dialog
-      v-model="showExportDialog"
-      title="导出字段"
-      width="560px"
-      destroy-on-close
-      append-to-body
-      modal-append-to-body
-      class="course-offerings-dialog"
-      modal-class="course-offerings-dialog-modal"
-    >
-      <div class="export-intro">
-        <div class="export-intro__title">导出说明</div>
-        <div class="export-intro__desc">
-          导出范围：
-          <span class="export-scope">
-            {{ selectedRows.length ? `已选 ${selectedRows.length} 条` : '全部数据（按当前筛选）' }}
-          </span>
-        </div>
-      </div>
-
-      <div class="export-actions-top">
-        <el-button link type="primary" size="small" @click="toggleAllExportFields(true)">全选</el-button>
-        <el-button link type="primary" size="small" @click="invertExportFields">反选</el-button>
-        <el-button link type="danger" size="small" @click="toggleAllExportFields(false)">取消选中</el-button>
-        <div class="export-picked">已选 <span class="export-picked__n">{{ selectedExportFieldCount }}</span> 个字段</div>
-      </div>
-
-      <div class="export-groups">
-        <div v-for="g in exportFieldGroups" :key="g.key" class="export-group">
-          <div class="export-group__title">{{ g.label }}</div>
-          <div class="export-field-grid">
-            <el-checkbox v-for="ef in g.fields" :key="ef.key" v-model="exportFieldSelection[ef.key]">
-              {{ ef.label }}
-            </el-checkbox>
-          </div>
-        </div>
-      </div>
-      <template #footer>
-        <el-button @click="showExportDialog = false">取消</el-button>
-        <el-button type="primary" :loading="exporting" @click="handleExport">
-          导出 {{ selectedExportFieldCount }} 个字段
-        </el-button>
-      </template>
-    </el-dialog>
+    <ExportFieldsDialog
+      v-model:visible="showExportDialog"
+      :selected-count="selectedRows.length"
+      :all-export-fields="allExportFields"
+      :field-groups="exportFieldGroups"
+      :exporting="exporting"
+      @export="handleExportFields"
+    />
 
     <!-- Course Detail Dialog -->
-    <el-dialog
-      v-model="showDetailDialog"
-      title="课程详情"
-      width="840px"
-      destroy-on-close
-      append-to-body
-      modal-append-to-body
-      class="course-offerings-dialog"
-      modal-class="course-offerings-dialog-modal"
-    >
-      <div class="detail-wrap">
-        <div class="detail-hero">
-          <div class="detail-hero__top">
-            <div class="detail-hero__eyebrow">{{ detailRow.termName || currentTermLabel }}</div>
-            <div class="detail-code">{{ detailRow.courseCode || '-' }}</div>
-          </div>
-          <div class="detail-header__main">
-            <div class="detail-name">{{ detailRow.courseName || '-' }}</div>
-          </div>
-          <div class="detail-header__tags">
-            <el-tag
-              v-if="requiredText(detailRow)"
-              size="small"
-              class="pill"
-              :type="requiredType(detailRow)"
-              effect="light"
-            >
-              {{ requiredText(detailRow) }}
-            </el-tag>
-            <el-tag v-if="detailRow.subjectType" size="small" class="pill" effect="plain">{{ detailRow.subjectType }}</el-tag>
-            <el-tag v-if="detailRow.courseCategory" size="small" class="pill" effect="plain">{{ detailRow.courseCategory }}</el-tag>
-            <el-tag v-if="detailRow.openDeptName" size="small" class="pill" effect="plain">{{ detailRow.openDeptName }}</el-tag>
-            <el-tag v-if="detailRow.campusName" size="small" class="pill" effect="plain">{{ detailRow.campusName }}</el-tag>
-          </div>
-          <div class="detail-hero__intro">
-            {{ detailIntroText }}
-          </div>
-          <div class="detail-metrics">
-            <div v-for="item in detailMetrics" :key="item.label" class="detail-metric">
-              <div class="detail-metric__label">{{ item.label }}</div>
-              <div class="detail-metric__value">{{ item.value }}</div>
-              <div class="detail-metric__hint">{{ item.hint }}</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="detail-layout">
-          <div v-for="group in detailInfoGroups" :key="group.key" class="detail-panel">
-            <div class="detail-panel__title">{{ group.title }}</div>
-            <div class="detail-grid">
-              <div v-for="item in group.items" :key="item.label" class="detail-item">
-                <div class="detail-item__k">{{ item.label }}</div>
-                <div class="detail-item__v">{{ item.value }}</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="detail-panel detail-panel--wide">
-            <div class="detail-panel__title">上课安排</div>
-            <div v-if="detailScheduleSummaryLines.length" class="detail-schedule-summary">
-              <div class="detail-schedule-summary__title">默认展示</div>
-              <div class="detail-schedule-summary__list">
-                <div v-for="(line, idx) in detailScheduleSummaryLines" :key="`summary-${idx}`" class="detail-schedule-summary__line">
-                  {{ line }}
-                </div>
-              </div>
-            </div>
-            <el-collapse v-if="detailScheduleCards.length" v-model="detailScheduleActiveName" class="detail-schedule-collapse">
-              <el-collapse-item
-                name="schedule-list"
-                class="detail-schedule-accordion"
-              >
-                <template #title>
-                  <div class="detail-schedule-accordion__title">
-                    <span class="detail-schedule-accordion__day">具体排课</span>
-                    <span class="detail-schedule-accordion__section">{{ detailScheduleCards.length }} 条安排</span>
-                    <span class="detail-schedule-accordion__time">点击展开查看明细</span>
-                  </div>
-                </template>
-                <el-scrollbar class="detail-schedule-scroll">
-                  <div class="detail-schedule-list">
-                    <div v-for="(item, idx) in detailScheduleCards" :key="`${item.date}-${idx}`" class="detail-schedule-card">
-                      <div class="detail-schedule-card__head">
-                        <div class="detail-schedule-card__day">{{ item.weekLabel }}</div>
-                        <div class="detail-schedule-card__weeks">{{ item.weeksText }}</div>
-                      </div>
-                      <div class="detail-schedule-card__time">{{ item.sectionText }}<span v-if="item.timeRange"> · {{ item.timeRange }}</span></div>
-                      <div class="detail-schedule-card__place">{{ item.classroom || '待定教室' }}</div>
-                      <div class="detail-schedule-card__date">{{ item.date }}</div>
-                    </div>
-                  </div>
-                </el-scrollbar>
-              </el-collapse-item>
-            </el-collapse>
-            <div v-else-if="!detailScheduleSummaryLines.length" class="detail-empty-panel">
-              当前还没有排课信息。
-            </div>
-          </div>
-
-          <div class="detail-panel detail-panel--wide">
-            <div class="detail-panel__title">补充说明</div>
-            <div class="detail-note">
-              {{ detailNoteText }}
-            </div>
-          </div>
-        </div>
-      </div>
-    </el-dialog>
+    <CourseDetailDialog
+      v-model:visible="showDetailDialog"
+      :row="detailRow"
+      :current-term-label="currentTermLabel"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, isRef, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { ArrowDown, Calendar, Download, Refresh, RefreshRight, Search, Setting, User } from '@element-plus/icons-vue'
 import {
@@ -678,33 +450,16 @@ import {
   listPortalCourseOfferings,
   listPortalTermOptions,
 } from '@/api/portal'
+import type { QueryField, OptionItem } from './composables/useFilterOptions'
+import QueryConfigDialog from './components/course-offerings/QueryConfigDialog.vue'
+import PageSettingsDialog from './components/course-offerings/PageSettingsDialog.vue'
+import type { PageSettings } from './components/course-offerings/PageSettingsDialog.vue'
+import ExportFieldsDialog from './components/course-offerings/ExportFieldsDialog.vue'
+import CourseDetailDialog from './components/course-offerings/CourseDetailDialog.vue'
 
 defineOptions({ name: 'CourseOfferings' })
 
 /* ===================== Query Field Definitions ===================== */
-type OptionItem = { label: string; value: any }
-type FilterOptionKey =
-  | 'termOptions'
-  | 'teacherOptions'
-  | 'openDeptOptions'
-  | 'campusOptions'
-  | 'courseCategoryOptions'
-  | 'businessTypeOptions'
-  | 'majorOptions'
-  | 'assessmentTypeOptions'
-  | 'teachingLanguageOptions'
-  | 'requiredFlagOptions'
-type QueryFieldType = 'input' | 'select' | 'range'
-type QueryField = {
-  key: string
-  label: string
-  type: QueryFieldType
-  placeholder: string
-  clearable?: boolean
-  filterable?: boolean
-  optionKey?: FilterOptionKey
-}
-
 const allQueryFields: QueryField[] = [
   { key: 'termId', label: '学期', type: 'select', placeholder: '请选择学期', clearable: false, optionKey: 'termOptions' },
   { key: 'courseCode', label: '课程代码', type: 'input', placeholder: '请输入课程代码' },
@@ -786,14 +541,6 @@ const allExportFields = [
 ]
 
 /* ===================== Page Settings ===================== */
-interface PageSettings {
-  visibleColumns: string[]
-  showIndex: boolean
-  columnWidth: 'fit' | 'fill'
-  density: 'compact' | 'medium' | 'loose'
-  pageSize: number
-}
-
 function loadPageSettings(): PageSettings {
   const defaults: PageSettings = {
     visibleColumns: allColumns.map(c => c.key),
@@ -830,6 +577,7 @@ function isColumnVisible(key: string) {
 /* ===================== State ===================== */
 const loading = ref(false)
 const exporting = ref(false)
+const filterOptionsLoading = ref(false)
 const termOptions = ref<any[]>([])
 const tableData = ref<any[]>([])
 const total = ref(0)
@@ -876,7 +624,6 @@ const showPageSettingsDialog = ref(false)
 const showExportDialog = ref(false)
 const showDetailDialog = ref(false)
 const detailRow = ref<any>({})
-const detailScheduleActiveName = ref('')
 
 /* ===================== Computed helpers ===================== */
 const currentTermLabel = computed(() => {
@@ -902,31 +649,23 @@ function shouldShowTooltip(value: any, minLength = 14) {
   return text.length > minLength || /[\n;]/.test(text)
 }
 
+const fieldOptionsMap: Record<string, typeof termOptions | OptionItem[]> = {
+  termOptions,
+  teacherOptions,
+  openDeptOptions,
+  campusOptions,
+  courseCategoryOptions,
+  businessTypeOptions,
+  majorOptions,
+  assessmentTypeOptions,
+  teachingLanguageOptions,
+  requiredFlagOptions,
+}
+
 function getFieldOptions(field: QueryField): OptionItem[] {
-  switch (field.optionKey) {
-    case 'termOptions':
-      return termOptions.value
-    case 'teacherOptions':
-      return teacherOptions.value
-    case 'openDeptOptions':
-      return openDeptOptions.value
-    case 'campusOptions':
-      return campusOptions.value
-    case 'courseCategoryOptions':
-      return courseCategoryOptions.value
-    case 'businessTypeOptions':
-      return businessTypeOptions.value
-    case 'majorOptions':
-      return majorOptions.value
-    case 'assessmentTypeOptions':
-      return assessmentTypeOptions.value
-    case 'teachingLanguageOptions':
-      return teachingLanguageOptions.value
-    case 'requiredFlagOptions':
-      return requiredFlagOptions
-    default:
-      return []
-  }
+  if (!field.optionKey) return []
+  const src = fieldOptionsMap[field.optionKey]
+  return isRef(src) ? src.value : (src as OptionItem[])
 }
 
 function getOptionLabel(options: OptionItem[], value: any) {
@@ -971,10 +710,6 @@ const activeFilterTags = computed<ActiveFilterTag[]>(() => {
   return tags
 })
 
-const selectedExportFieldCount = computed(() =>
-  allExportFields.filter(ef => exportFieldSelection[ef.key]).length
-)
-
 type ExportGroup = { key: string; label: string; fields: { key: string; label: string }[] }
 const exportFieldGroups = computed<ExportGroup[]>(() => {
   const byKey = new Map(allExportFields.map(f => [f.key, f]))
@@ -1003,183 +738,46 @@ const exportFieldGroups = computed<ExportGroup[]>(() => {
   ].map(g => ({ ...g, fields: g.fields.filter(Boolean) }))
 })
 
-type DetailMetric = { label: string; value: string; hint: string }
-const detailMetrics = computed<DetailMetric[]>(() => {
-  const r = detailRow.value || {}
-  return [
-    {
-      label: '学分',
-      value: String(r.credits ?? '-'),
-      hint: '课程学分',
-    },
-    {
-      label: '教学班',
-      value: r.teachingClassCode || '-',
-      hint: r.teachingClassName || r.className || '教学班标识',
-    },
-    {
-      label: '总学时',
-      value: String(r.totalHours ?? '-'),
-      hint: `周学时 ${r.weeklyHours ?? '-'}`,
-    },
-    {
-      label: '选课情况',
-      value: r.studentCountText || '-',
-      hint: r.remainingSeats != null ? `剩余名额 ${r.remainingSeats}` : '当前已选人数',
-    },
-  ]
-})
-
-const detailIntroText = computed(() => {
-  const r = detailRow.value || {}
-  return r.intro || '暂无课程简介，建议先查看教学班、教师安排和上课时间地点。'
-})
-
-type DetailInfoItem = { label: string; value: string }
-type DetailInfoGroup = { key: string; title: string; items: DetailInfoItem[] }
-const detailInfoGroups = computed<DetailInfoGroup[]>(() => {
-  const r = detailRow.value || {}
-  return [
-    {
-      key: 'basic',
-      title: '基本信息',
-      items: [
-        { label: '课程类别', value: r.courseCategory || '-' },
-        { label: '课程属性', value: r.subjectType || '-' },
-        { label: '开课部门', value: r.openDeptName || '-' },
-        { label: '上课校区', value: r.campusName || '-' },
-      ],
-    },
-    {
-      key: 'teaching',
-      title: '教学信息',
-      items: [
-        { label: '授课教师', value: r.teacherName || '-' },
-        { label: '授课语言', value: r.teachingLanguage || '-' },
-        { label: '考核方式', value: r.assessmentType || '-' },
-        { label: '教学班名称', value: r.teachingClassName || r.className || '-' },
-      ],
-    },
-    {
-      key: 'requirements',
-      title: '选课与要求',
-      items: [
-        { label: '先修课程', value: r.prerequisiteCourse || '无' },
-        { label: '等级要求', value: r.courseLevelRequirement || '无' },
-        { label: '任务类型', value: r.taskType || '-' },
-        { label: '开课对象', value: r.className || r.major || '-' },
-      ],
-    },
-  ]
-})
-
-type DetailScheduleCard = {
-  date: string
-  weekLabel: string
-  weeksText: string
-  sectionText: string
-  timeRange: string
-  classroom: string
-}
-const detailScheduleCards = computed<DetailScheduleCard[]>(() => {
-  const details = Array.isArray(detailRow.value?.scheduleDetails) ? detailRow.value.scheduleDetails : []
-  return details.slice(0, 12).map((item: any) => ({
-    date: item?.date || '-',
-    weekLabel: item?.weekLabel || '-',
-    weeksText: item?.weeksText || '未配置周次',
-    sectionText: item?.sectionText || '-',
-    timeRange: item?.startTime && item?.endTime ? `${item.startTime}-${item.endTime}` : '',
-    classroom: item?.classroom || item?.classroomName || '-',
-  }))
-})
-
-const detailScheduleSummaryLines = computed(() => {
-  const text = String(detailRow.value?.scheduleText || '').trim()
-  if (!text) return []
-  return splitLines(text)
-})
-
-const detailNoteText = computed(() => {
-  const r = detailRow.value || {}
-  return r.remark || r.classroom || r.scheduleText || '暂无补充说明。'
-})
-
-// Temp state for query config dialog
-const tempActiveQueryKeys = reactive<Record<string, boolean>>({})
-const tempActiveCount = computed(() => Object.values(tempActiveQueryKeys).filter(Boolean).length)
-const tempSelectedFields = computed(() =>
-  allQueryFields.filter(f => tempActiveQueryKeys[f.key])
-)
-const queryConfigKeyword = ref('')
-const filteredAllQueryFields = computed(() => {
-  const kw = queryConfigKeyword.value.trim()
-  if (!kw) return allQueryFields
-  return allQueryFields.filter(f => f.label.includes(kw) || f.key.includes(kw))
-})
-
-// Temp state for page settings dialog
-const tempPageSettings = reactive<PageSettings>({
-  visibleColumns: [],
-  showIndex: false,
-  columnWidth: 'fit',
-  density: 'medium',
-  pageSize: 20,
-})
-
-// Export field selection
-const exportFieldSelection = reactive<Record<string, boolean>>({})
-const tempVisibleColumnCount = computed(() => tempPageSettings.visibleColumns.length)
-
-/* ===================== Watchers for dialog open ===================== */
-function initQueryConfigTemp() {
-  allQueryFields.forEach(f => {
-    tempActiveQueryKeys[f.key] = activeQueryKeys.value.includes(f.key)
-  })
-}
-
-function initPageSettingsTemp() {
-  Object.assign(tempPageSettings, {
-    visibleColumns: [...pageSettings.visibleColumns],
-    showIndex: pageSettings.showIndex,
-    columnWidth: pageSettings.columnWidth,
-    density: pageSettings.density,
-    pageSize: pageSettings.pageSize,
-  })
-}
-
-function initExportFieldSelection() {
-  allExportFields.forEach(ef => {
-    exportFieldSelection[ef.key] = true
-  })
-}
+/* (Detail, QueryConfig, PageSettings, Export dialog state moved to child components) */
 
 /* ===================== Data Loading ===================== */
 async function loadTerms() {
-  const res = await listPortalTermOptions()
-  termOptions.value = (res.data || []).map((item: any) => ({
-    ...item,
-    fullLabel: item.label,
-    label: item.termCode || item.termName || item.label,
-  }))
-  const current = termOptions.value.find((t: any) => t.isCurrent === '1')
-  if (!queryParams.termId && current) {
-    queryParams.termId = current.value
-  } else if (!queryParams.termId && termOptions.value.length) {
-    queryParams.termId = termOptions.value[0].value
+  try {
+    const res = await listPortalTermOptions()
+    termOptions.value = (res.data || []).map((item: any) => ({
+      ...item,
+      fullLabel: item.label,
+      label: item.termCode || item.termName || item.label,
+    }))
+    const current = termOptions.value.find((t: any) => t.isCurrent === '1')
+    if (!queryParams.termId && current) {
+      queryParams.termId = current.value
+    } else if (!queryParams.termId && termOptions.value.length) {
+      queryParams.termId = termOptions.value[0].value
+    }
+  } catch {
+    ElMessage.error('加载学期列表失败')
   }
 }
 
 async function loadCourseOfferingFilterOptions() {
-  const res = await getPortalCourseOfferingFilterOptions({ termId: queryParams.termId })
-  const data = res.data || {}
-  teacherOptions.value = data.teacherOptions || []
-  openDeptOptions.value = data.openDeptOptions || []
-  campusOptions.value = data.campusOptions || []
-  courseCategoryOptions.value = data.courseCategoryOptions || []
-  businessTypeOptions.value = data.businessTypeOptions || []
-  majorOptions.value = data.majorOptions || []
-  assessmentTypeOptions.value = data.assessmentTypeOptions || []
-  teachingLanguageOptions.value = data.teachingLanguageOptions || []
+  filterOptionsLoading.value = true
+  try {
+    const res = await getPortalCourseOfferingFilterOptions({ termId: queryParams.termId })
+    const data = res.data || {}
+    teacherOptions.value = data.teacherOptions || []
+    openDeptOptions.value = data.openDeptOptions || []
+    campusOptions.value = data.campusOptions || []
+    courseCategoryOptions.value = data.courseCategoryOptions || []
+    businessTypeOptions.value = data.businessTypeOptions || []
+    majorOptions.value = data.majorOptions || []
+    assessmentTypeOptions.value = data.assessmentTypeOptions || []
+    teachingLanguageOptions.value = data.teachingLanguageOptions || []
+  } catch {
+    ElMessage.warning('加载筛选选项失败')
+  } finally {
+    filterOptionsLoading.value = false
+  }
 }
 
 async function loadData() {
@@ -1195,6 +793,8 @@ async function loadData() {
     const res = await listPortalCourseOfferings(params)
     tableData.value = res.rows || []
     total.value = res.total || 0
+  } catch {
+    ElMessage.error('加载数据失败，请稍后重试')
   } finally {
     loading.value = false
   }
@@ -1232,13 +832,11 @@ function handleRowClick(row: any, _column: any, event: MouseEvent) {
   if (target?.closest('.course-name-link, .el-checkbox, .el-tag, button, a')) {
     return
   }
-  tableRef.value?.toggleRowSelection(row)
   tableRef.value?.setCurrentRow?.(row)
 }
 
 function openDetail(row: any) {
   detailRow.value = row
-  detailScheduleActiveName.value = ''
   showDetailDialog.value = true
 }
 
@@ -1275,25 +873,8 @@ function requiredType(row: any) {
   return t.includes('必') ? 'danger' : 'success'
 }
 
-/* ===================== Query Config Dialog ===================== */
-function toggleAllQueryFields(val: boolean) {
-  allQueryFields.forEach(f => {
-    if (f.key === 'termId') { tempActiveQueryKeys[f.key] = true; return }
-    tempActiveQueryKeys[f.key] = val
-  })
-}
-
-function invertQueryFields() {
-  allQueryFields.forEach(f => {
-    if (f.key === 'termId') { tempActiveQueryKeys[f.key] = true; return }
-    tempActiveQueryKeys[f.key] = !tempActiveQueryKeys[f.key]
-  })
-}
-
-function saveQueryConfig() {
-  const keys = Array.from(
-    new Set(['termId', ...allQueryFields.filter(f => tempActiveQueryKeys[f.key]).map(f => f.key)])
-  )
+/* ===================== Dialog Handler Callbacks ===================== */
+function handleQueryConfigSave(keys: string[]) {
   activeQueryKeys.value = keys
   if (keys.filter(key => key !== 'termId').length <= MAX_BASE_FILTERS) {
     showAdvancedFilters.value = false
@@ -1302,46 +883,15 @@ function saveQueryConfig() {
   showQueryConfigDialog.value = false
 }
 
-function resetQueryConfigToDefault() {
-  allQueryFields.forEach(f => {
-    tempActiveQueryKeys[f.key] = f.key === 'termId' ? true : defaultQueryKeys.includes(f.key)
-  })
-}
-
-/* ===================== Page Settings Dialog ===================== */
-function getDefaultPageSettings(): PageSettings {
-  return {
-    visibleColumns: allColumns.map(c => c.key),
-    showIndex: false,
-    columnWidth: 'fit',
-    density: 'medium',
-    pageSize: 20,
-  }
-}
-
-function savePageSettings() {
-  Object.assign(pageSettings, tempPageSettings)
-  queryParams.pageSize = tempPageSettings.pageSize
-  localStorage.setItem(STORAGE_KEY_PAGE, JSON.stringify({ ...tempPageSettings }))
+function handlePageSettingsSave(settings: PageSettings) {
+  Object.assign(pageSettings, settings)
+  queryParams.pageSize = settings.pageSize
+  localStorage.setItem(STORAGE_KEY_PAGE, JSON.stringify(settings))
   showPageSettingsDialog.value = false
   loadData()
 }
 
-function resetPageSettingsToDefault() {
-  Object.assign(tempPageSettings, getDefaultPageSettings())
-}
-
-/* ===================== Export ===================== */
-function toggleAllExportFields(val: boolean) {
-  allExportFields.forEach(ef => { exportFieldSelection[ef.key] = val })
-}
-
-function invertExportFields() {
-  allExportFields.forEach(ef => { exportFieldSelection[ef.key] = !exportFieldSelection[ef.key] })
-}
-
-async function handleExport() {
-  const selectedFieldKeys = allExportFields.filter(ef => exportFieldSelection[ef.key]).map(ef => ef.key)
+async function handleExportFields(selectedFieldKeys: string[]) {
   if (!selectedFieldKeys.length) {
     ElMessage.warning('请至少选择一个导出字段')
     return
@@ -1377,17 +927,10 @@ async function handleExport() {
   }
 }
 
-/* ===================== Dialog open hooks ===================== */
-watch(showQueryConfigDialog, (val) => { if (val) initQueryConfigTemp() })
-watch(showPageSettingsDialog, (val) => { if (val) initPageSettingsTemp() })
-watch(showExportDialog, (val) => { if (val) initExportFieldSelection() })
-watch(showQueryConfigDialog, (val) => { if (!val) queryConfigKeyword.value = '' })
-
 /* ===================== Init ===================== */
 onMounted(async () => {
   await loadTerms()
-  await loadCourseOfferingFilterOptions()
-  await loadData()
+  await Promise.all([loadCourseOfferingFilterOptions(), loadData()])
 })
 </script>
 
@@ -1408,89 +951,6 @@ onMounted(async () => {
   --co-radius-card: 10px;
   --co-radius-pill: 6px;
   --co-ease: 0.25s ease;
-}
-
-/* ===================== Header ===================== */
-.co-header {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 18px;
-  margin-bottom: 16px;
-}
-
-.co-header__left {
-  background: #fff;
-  border: 1px solid var(--co-border);
-  border-radius: var(--co-radius-card);
-  padding: 16px 18px;
-}
-
-.co-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--co-bg2);
-  color: var(--co-muted);
-  font-weight: 800;
-  font-size: 12px;
-}
-
-.co-title-row {
-  margin-top: 10px;
-}
-
-.co-title {
-  margin: 0;
-  font-size: 20px;
-  line-height: 1.2;
-  color: var(--co-text);
-  font-weight: 900;
-}
-
-.co-subtitle {
-  margin: 10px 0 0;
-  color: var(--co-muted);
-  font-size: 13px;
-  line-height: 1.65;
-}
-
-.co-header__right {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-
-.co-stat-card {
-  border: 1px solid var(--co-border);
-  border-radius: var(--co-radius-card);
-  padding: 12px 12px;
-  background: #fff;
-  transition: transform var(--co-ease), box-shadow var(--co-ease);
-}
-
-.co-stat-card:hover {
-  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
-}
-
-.co-stat-label {
-  color: var(--co-faint);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.co-stat-value {
-  margin-top: 6px;
-  color: var(--co-text);
-  font-size: 20px;
-  font-weight: 900;
-  letter-spacing: -0.02em;
-}
-
-.co-stat-hint {
-  margin-top: 6px;
-  color: var(--co-muted);
-  font-size: 12px;
 }
 
 /* Search Card */
@@ -1565,7 +1025,7 @@ onMounted(async () => {
 }
 
 .search-grid--primary {
-  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .search-grid--advanced {
@@ -1672,6 +1132,23 @@ onMounted(async () => {
   font-size: 12px;
   line-height: 28px;
   flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.active-tags__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--co-primary);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 0 4px;
 }
 
 .active-tags__list {
@@ -1763,7 +1240,13 @@ onMounted(async () => {
 .course-info-cell {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.course-tags + .course-meta {
+  padding-top: 4px;
+  border-top: 1px solid var(--co-bg2);
 }
 
 .course-info-cell strong {
@@ -1816,36 +1299,11 @@ onMounted(async () => {
 
 .course-meta--secondary {
   color: var(--co-faint);
+  font-size: 11px;
 }
 
 .course-meta .dot {
   color: var(--co-faint);
-}
-
-.capacity {
-  margin-top: 4px;
-  padding: 10px 10px;
-  border-radius: 10px;
-  background: var(--co-bg);
-  border: 1px solid var(--co-bg2);
-}
-
-.capacity__label {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 12px;
-  color: var(--co-muted);
-  margin-bottom: 6px;
-}
-
-.capacity__n {
-  color: var(--co-text);
-  font-weight: 900;
-}
-
-.capacity__bar :deep(.el-progress-bar__inner) {
-  background: var(--co-primary);
 }
 
 .course-name-link {
@@ -2034,6 +1492,38 @@ onMounted(async () => {
   border: 1px solid var(--co-border);
   background: linear-gradient(180deg, #fff, var(--co-bg));
   box-shadow: 0 16px 28px rgba(15, 23, 42, 0.08);
+  z-index: 2;
+}
+
+.empty-illus__dot-sm {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  right: 12px;
+  top: 6px;
+  background: rgba(37, 99, 235, 0.1);
+}
+
+.empty-illus__card-shadow {
+  position: absolute;
+  left: 34px;
+  top: 16px;
+  width: 72px;
+  height: 52px;
+  border-radius: 12px;
+  background: rgba(37, 99, 235, 0.06);
+  z-index: 1;
+}
+
+.empty-illus__icon {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  color: var(--co-faint);
+  opacity: 0.5;
 }
 
 .detail-schedule {
@@ -2065,7 +1555,6 @@ onMounted(async () => {
 
 :deep(.el-table__body tr) {
   position: relative;
-  cursor: pointer;
 }
 
 :deep(.el-table__body tr.current-row > td) {
@@ -2074,88 +1563,6 @@ onMounted(async () => {
 
 :deep(.el-table__body tr:hover) {
   box-shadow: inset 3px 0 0 var(--co-primary);
-}
-
-/* Query Config Dialog */
-.query-config-body {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  min-height: 320px;
-}
-
-.query-config-left,
-.query-config-right {
-  border: 1px solid #e2e8f0;
-  border-radius: var(--co-radius-card);
-  overflow: hidden;
-}
-
-.query-config-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
-  font-size: 13px;
-  font-weight: 600;
-  color: #334155;
-}
-
-.query-config-search {
-  padding: 12px 14px 0;
-}
-
-.query-config-list {
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.query-config-selected {
-  padding: 12px 14px;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-content: start;
-  gap: 10px 12px;
-}
-
-.query-config-scroll {
-  height: 380px;
-}
-
-.selected-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.selected-item :deep(.el-tag) {
-  width: 100%;
-  justify-content: space-between;
-  overflow: hidden;
-}
-
-.selected-item__idx {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(37, 99, 235, 0.12);
-  color: var(--co-primary);
-  font-weight: 900;
-  font-size: 12px;
-}
-
-.empty-hint {
-  color: #94a3b8;
-  font-size: 13px;
-  grid-column: 1 / -1;
 }
 
 .requirements-cell {
@@ -2220,408 +1627,14 @@ onMounted(async () => {
   line-height: 1.6;
 }
 
-/* Export Dialog */
-.export-intro {
-  padding: 12px 14px;
-  border: 1px solid var(--co-border);
-  background: linear-gradient(180deg, rgba(37, 99, 235, 0.06), rgba(37, 99, 235, 0.02));
-  border-radius: var(--co-radius-card);
-  margin-bottom: 14px;
-}
+/* (Export Dialog, Page Settings CSS moved to child components) */
 
-.export-intro__title {
-  font-weight: 900;
-  color: var(--co-text);
-  font-size: 14px;
-}
+/* (Detail CSS moved to CourseDetailDialog.vue) */
 
-.export-intro__desc {
-  margin-top: 6px;
-  color: var(--co-muted);
-  font-size: 12px;
-}
-
-.export-scope {
-  color: var(--co-text);
-  font-weight: 900;
-}
-
-.export-actions-top {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 14px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.export-picked {
-  margin-left: auto;
-  color: var(--co-muted);
-  font-size: 12px;
-}
-
-.export-picked__n {
-  color: var(--co-text);
-  font-weight: 900;
-}
-
-.export-groups {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.export-group__title {
-  font-weight: 900;
-  color: var(--co-text);
-  font-size: 13px;
-  margin: 4px 0 10px;
-}
-
-.export-field-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-}
-
-/* Page Settings */
-.page-settings {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.ps-section {
-  padding: 12px 12px;
-  border: 1px solid var(--co-border);
-  border-radius: var(--co-radius-card);
-  background: #fff;
-}
-
-.ps-title {
-  font-weight: 900;
-  color: var(--co-text);
-  font-size: 14px;
-}
-
-.ps-cols {
-  margin-top: 10px;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px 14px;
-}
-
-.ps-inline {
-  margin-top: 10px;
-}
-
-.ps-radio-group {
-  margin-top: 10px;
-}
-
-.ps-radio-group :deep(.el-radio-button__inner) {
-  min-width: 64px;
-}
-
-.ps-radio-group--sizes :deep(.el-radio-button__inner) {
-  min-width: 52px;
-}
-
-/* Detail */
-.detail-wrap {
-  padding: 2px 2px 4px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.detail-hero {
-  border: 1px solid var(--co-border);
-  border-radius: 14px;
-  padding: 16px 16px;
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(248, 250, 252, 0.96));
-}
-
-.detail-hero__top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.detail-hero__eyebrow {
-  color: var(--co-primary);
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.detail-header__main {
-  margin-top: 10px;
-}
-
-.detail-name {
-  color: var(--co-text);
-  font-weight: 900;
-  font-size: 24px;
-  line-height: 1.2;
-}
-
-.detail-code {
-  color: var(--co-faint);
-  font-weight: 800;
-  font-size: 12px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(226, 232, 240, 0.8);
-}
-
-.detail-header__tags {
-  margin-top: 12px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.detail-hero__intro {
-  margin-top: 12px;
-  color: #475569;
-  font-size: 13px;
-  line-height: 1.7;
-}
-
-.detail-metrics {
-  margin-top: 14px;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.detail-metric {
-  padding: 12px 12px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(226, 232, 240, 0.88);
-}
-
-.detail-metric__label {
-  color: var(--co-faint);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.detail-metric__value {
-  margin-top: 6px;
-  color: var(--co-text);
-  font-size: 18px;
-  font-weight: 900;
-}
-
-.detail-metric__hint {
-  margin-top: 4px;
-  color: #64748b;
-  font-size: 12px;
-}
-
-.detail-layout {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.detail-panel {
-  border: 1px solid var(--co-border);
-  border-radius: 14px;
-  background: #fff;
-  padding: 14px 14px;
-}
-
-.detail-panel--wide {
-  grid-column: 1 / -1;
-}
-
-.detail-panel__title {
-  color: var(--co-text);
-  font-size: 15px;
-  font-weight: 900;
-  margin-bottom: 12px;
-}
-
-.detail-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px 12px;
-}
-
-.detail-item {
-  border: 1px solid var(--co-border);
-  border-radius: 12px;
-  background: #f8fafc;
-  padding: 10px 12px;
-}
-
-.detail-item__k {
-  color: var(--co-faint);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.detail-item__v {
-  margin-top: 6px;
-  color: var(--co-text);
-  font-size: 13px;
-  line-height: 1.55;
-}
-
-.detail-schedule-card {
-  border: 1px solid var(--co-border);
-  border-radius: 14px;
-  padding: 12px 12px;
-  background: linear-gradient(180deg, #fff, #f8fafc);
-}
-
-.detail-schedule-summary {
-  border: 1px solid var(--co-border);
-  border-radius: 14px;
-  background: #f8fafc;
-  padding: 12px 14px;
-}
-
-.detail-schedule-summary__title {
-  color: var(--co-text);
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.detail-schedule-summary__list {
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.detail-schedule-summary__line {
-  color: #475569;
-  font-size: 13px;
-  line-height: 1.7;
-}
-
-.detail-schedule-collapse {
-  margin-top: 12px;
-  border-top: 0;
-}
-
-.detail-schedule-collapse :deep(.el-collapse-item__header) {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--co-text);
-  padding: 0 14px;
-  border-radius: 12px;
-  background: #fff;
-  border: 1px solid var(--co-border);
-}
-
-.detail-schedule-collapse :deep(.el-collapse-item__wrap) {
-  border-bottom: 0;
-  background: transparent;
-}
-
-.detail-schedule-collapse :deep(.el-collapse-item__content) {
-  padding: 10px 0 2px;
-}
-
-.detail-schedule-accordion__title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  min-width: 0;
-}
-
-.detail-schedule-accordion__day {
-  color: var(--co-text);
-  font-weight: 900;
-}
-
-.detail-schedule-accordion__section {
-  color: var(--co-primary);
-  font-weight: 700;
-}
-
-.detail-schedule-accordion__time {
-  color: var(--co-faint);
-  font-size: 12px;
-}
-
-.detail-schedule-scroll {
-  max-height: 320px;
-}
-
-.detail-schedule-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding-right: 4px;
-}
-
-.detail-schedule-card__head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-}
-
-.detail-schedule-card__day {
-  color: var(--co-text);
-  font-weight: 900;
-  font-size: 14px;
-}
-
-.detail-schedule-card__weeks {
-  color: var(--co-primary);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.detail-schedule-card__time {
-  margin-top: 10px;
-  color: var(--co-text);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.detail-schedule-card__place {
-  margin-top: 8px;
-  color: #475569;
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-.detail-schedule-card__date {
-  margin-top: 8px;
-  color: var(--co-faint);
-  font-size: 12px;
-}
-
-.detail-note {
-  border-radius: 12px;
-  background: #f8fafc;
-  border: 1px dashed var(--co-border);
-  padding: 12px 14px;
-  color: #475569;
-  font-size: 13px;
-  line-height: 1.75;
-}
-
-.detail-empty-panel {
-  border-radius: 12px;
-  background: #f8fafc;
-  border: 1px dashed var(--co-border);
-  padding: 16px 14px;
-  color: var(--co-faint);
-  font-size: 13px;
-  text-align: center;
+/* Responsive dialog constraint */
+:deep(.course-offerings-dialog .el-dialog) {
+  max-width: calc(100vw - 32px);
+  margin: 16px auto;
 }
 
 @media (max-width: 960px) {
@@ -2630,43 +1643,18 @@ onMounted(async () => {
   }
 
   .search-grid--primary {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .search-grid--advanced {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
-  .export-field-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .detail-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .detail-metrics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .search-grid--primary,
   .search-grid--advanced {
-    grid-template-columns: 1fr;
-  }
-
-  .query-config-body {
-    grid-template-columns: 1fr;
-  }
-
-  .query-config-selected {
-    grid-template-columns: 1fr;
-  }
-
-  .export-field-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .toolbar-card {
@@ -2687,6 +1675,13 @@ onMounted(async () => {
     width: 100%;
     justify-content: flex-start;
   }
+}
+
+@media (max-width: 480px) {
+  .search-grid--primary,
+  .search-grid--advanced {
+    grid-template-columns: 1fr;
+  }
 
   .search-actions {
     justify-content: stretch;
@@ -2694,14 +1689,6 @@ onMounted(async () => {
 
   .search-actions :deep(.el-button) {
     flex: 1;
-  }
-
-  .detail-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .detail-metrics {
-    grid-template-columns: 1fr;
   }
 }
 </style>

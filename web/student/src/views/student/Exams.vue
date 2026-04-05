@@ -900,7 +900,7 @@ onMounted(async () => {
   grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.8fr);
   gap: 24px;
   padding: 32px;
-  border-radius: 16px;
+  border-radius: 6px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   margin-bottom: 24px;
@@ -916,7 +916,7 @@ onMounted(async () => {
   right: 0;
   height: 4px;
   background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%);
-  border-radius: 16px 16px 0 0;
+  border-radius: 6px 6px 0 0;
 }
 
 .hero-content {
@@ -976,7 +976,7 @@ onMounted(async () => {
 .hero-metric {
   background: #f8fafc;
   padding: 20px;
-  border-radius: 12px;
+  border-radius: 6px;
   border: 1px solid #f1f5f9;
   display: flex;
   flex-direction: column;
@@ -1014,7 +1014,7 @@ onMounted(async () => {
 
 .exam-kpi-card {
   background: #ffffff;
-  border-radius: 12px;
+  border-radius: 6px;
   border: 1px solid #e2e8f0;
   padding: 20px;
   display: flex;
@@ -1062,7 +1062,7 @@ onMounted(async () => {
 
 .exam-section-card {
   background: #ffffff;
-  border-radius: 16px;
+  border-radius: 6px;
   border: 1px solid #e2e8f0;
   padding: 32px;
   box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
@@ -1088,7 +1088,7 @@ onMounted(async () => {
   --el-segmented-item-selected-bg-color: #3b82f6;
   --el-segmented-item-selected-color: #ffffff;
   padding: 4px;
-  border-radius: 8px;
+  border-radius: 6px;
   background-color: #f1f5f9;
 }
 
@@ -1107,14 +1107,14 @@ onMounted(async () => {
 .exam-panel--side {
   align-self: start;
   background: #f8fafc;
-  border-radius: 16px;
+  border-radius: 6px;
   padding: 24px;
   border: 1px solid #f1f5f9;
 }
 
 .exam-ongoing-alert {
   margin-bottom: 24px;
-  border-radius: 12px;
+  border-radius: 6px;
   border: 1px solid #fde68a;
   background-color: #fffbeb;
 }
@@ -1157,7 +1157,7 @@ onMounted(async () => {
 
 .exam-paper-card {
   padding: 24px;
-  border-radius: 16px;
+  border-radius: 6px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   transition: all 0.2s ease;
@@ -1224,7 +1224,7 @@ onMounted(async () => {
   font-size: 14px;
   background: #f8fafc;
   padding: 12px 16px;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid #f1f5f9;
 }
 
@@ -1249,7 +1249,7 @@ onMounted(async () => {
 
 .exam-paper-card__actions .el-button {
   padding: 10px 20px;
-  border-radius: 8px;
+  border-radius: 6px;
   height: auto;
 }
 
@@ -1259,7 +1259,7 @@ onMounted(async () => {
   color: #d97706;
   background: #fffbeb;
   padding: 12px 16px;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid #fef3c7;
   font-weight: 500;
 }
@@ -1271,7 +1271,7 @@ onMounted(async () => {
 
 .exam-runtime-card {
   padding: 24px;
-  border-radius: 12px;
+  border-radius: 6px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   transition: all 0.2s ease;
@@ -1309,7 +1309,7 @@ onMounted(async () => {
   font-size: 14px;
   background: #f8fafc;
   padding: 12px 16px;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid #f1f5f9;
 }
 
@@ -1348,7 +1348,7 @@ onMounted(async () => {
   grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.9fr);
   gap: 20px;
   padding: 22px 24px;
-  border-radius: 12px;
+  border-radius: 6px;
   background: linear-gradient(135deg, #f8fbff 0%, #ffffff 100%);
   border: 1px solid #dbeafe;
 }
@@ -1386,7 +1386,7 @@ onMounted(async () => {
 
 .record-detail-hero__stat {
   padding: 16px;
-  border-radius: 10px;
+  border-radius: 6px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   display: flex;
@@ -1415,7 +1415,7 @@ onMounted(async () => {
 
 .record-detail-insights__card {
   padding: 16px 18px;
-  border-radius: 12px;
+  border-radius: 6px;
   border: 1px solid #e2e8f0;
   background: #ffffff;
   display: flex;
@@ -1443,7 +1443,7 @@ onMounted(async () => {
 
 .record-detail-type-summary__card {
   padding: 14px 16px;
-  border-radius: 12px;
+  border-radius: 6px;
   border: 1px solid #e2e8f0;
   background: #ffffff;
 }
@@ -1477,7 +1477,7 @@ onMounted(async () => {
   grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.9fr);
   gap: 20px;
   padding: 24px;
-  border-radius: 12px;
+  border-radius: 6px;
   background: linear-gradient(135deg, #f8fbff 0%, #ffffff 100%);
   border: 1px solid #dbeafe;
 }
@@ -1515,7 +1515,7 @@ onMounted(async () => {
 
 .exam-preview-stat {
   padding: 16px;
-  border-radius: 10px;
+  border-radius: 6px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   display: flex;
@@ -1551,7 +1551,7 @@ onMounted(async () => {
 
 .exam-preview-outline__card {
   padding: 16px 18px;
-  border-radius: 12px;
+  border-radius: 6px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
@@ -1608,7 +1608,7 @@ onMounted(async () => {
 
 .exam-preview-question {
   padding: 18px 20px;
-  border-radius: 14px;
+  border-radius: 6px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03);
@@ -1656,7 +1656,7 @@ onMounted(async () => {
   align-items: flex-start;
   gap: 10px;
   padding: 12px 14px;
-  border-radius: 10px;
+  border-radius: 6px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
 }
@@ -1689,7 +1689,7 @@ onMounted(async () => {
 .exam-question-card {
   padding: 20px;
   border: 1px solid #ebeef5;
-  border-radius: 8px;
+  border-radius: 6px;
   background: #fff;
 }
 

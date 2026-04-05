@@ -3,19 +3,19 @@ package com.smart.system.domain.campusvo;
 import com.smart.common.annotation.Excel;
 
 public class PortalCourseOfferingExportVo {
-    @Excel(name = "学期", sort = 10)
+    @Excel(name = "学期", sort = 10, width = 16, wrapText = true)
     private String termName;
 
     @Excel(name = "课程名称", sort = 20, width = 24, wrapText = true)
     private String courseName;
 
-    @Excel(name = "课程代码", sort = 30)
+    @Excel(name = "课程代码", sort = 30, width = 16, wrapText = true)
     private String courseCode;
 
     @Excel(name = "教学班", sort = 40, width = 22, wrapText = true)
     private String teachingClassCode;
 
-    @Excel(name = "学分", sort = 50)
+    @Excel(name = "学分", sort = 50, width = 8)
     private String credits;
 
     @Excel(name = "授课教师", sort = 60, width = 18, wrapText = true)
@@ -30,13 +30,13 @@ public class PortalCourseOfferingExportVo {
     @Excel(name = "行政班", sort = 90, width = 20, wrapText = true)
     private String className;
 
-    @Excel(name = "课程类别", sort = 100)
+    @Excel(name = "课程类别", sort = 100, width = 14, wrapText = true)
     private String courseCategory;
 
-    @Excel(name = "必修选修", sort = 110)
+    @Excel(name = "必修选修", sort = 110, width = 10)
     private String requiredLabel;
 
-    @Excel(name = "校区", sort = 120, width = 14)
+    @Excel(name = "校区", sort = 120, width = 14, wrapText = true)
     private String campusName;
 
     @Excel(name = "上课时间地点", sort = 130, width = 44, wrapText = true)
@@ -45,19 +45,19 @@ public class PortalCourseOfferingExportVo {
     @Excel(name = "典型节次", sort = 140, width = 24, wrapText = true)
     private String sectionSummary;
 
-    @Excel(name = "考核方式", sort = 150)
+    @Excel(name = "考核方式", sort = 150, width = 14, wrapText = true)
     private String assessmentType;
 
-    @Excel(name = "教学语言", sort = 160)
+    @Excel(name = "教学语言", sort = 160, width = 14, wrapText = true)
     private String teachingLanguage;
 
-    @Excel(name = "总学时", sort = 170)
+    @Excel(name = "总学时", sort = 170, width = 8)
     private Integer totalHours;
 
-    @Excel(name = "周学时", sort = 180)
+    @Excel(name = "周学时", sort = 180, width = 8)
     private Integer weeklyHours;
 
-    @Excel(name = "选课人数", sort = 190)
+    @Excel(name = "选课人数", sort = 190, width = 14, wrapText = true)
     private String studentCountText;
 
     @Excel(name = "教学材料", sort = 200, width = 28, wrapText = true)

@@ -306,7 +306,7 @@ onMounted(loadData)
   padding: 24px 32px;
   margin-bottom: 24px;
   background: #ffffff;
-  border-radius: 16px;
+  border-radius: 6px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
   position: relative;
@@ -381,13 +381,13 @@ onMounted(loadData)
 .header-actions .el-button {
   padding: 10px 24px;
   font-size: 14px;
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 /* Main Layout */
 .exam-main-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) 360px;
   gap: 24px;
   align-items: start;
 }
@@ -396,7 +396,7 @@ onMounted(loadData)
 .exam-question-sheet {
   padding: 32px;
   background: #ffffff;
-  border-radius: 16px;
+  border-radius: 6px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
   margin-bottom: 24px;
@@ -467,7 +467,7 @@ onMounted(loadData)
   margin: 0 !important;
   padding: 16px 20px;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  border-radius: 6px;
   background: #f8fafc;
   height: auto;
   white-space: normal;
@@ -494,7 +494,7 @@ onMounted(loadData)
 }
 .exam-textarea :deep(.el-textarea__inner) {
   padding: 16px;
-  border-radius: 12px;
+  border-radius: 6px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   box-shadow: none;
@@ -510,7 +510,7 @@ onMounted(loadData)
 .sidebar-card {
   padding: 24px;
   background: #ffffff;
-  border-radius: 16px;
+  border-radius: 6px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
 }
@@ -534,7 +534,7 @@ onMounted(loadData)
 .stat-box {
   background: #f8fafc;
   padding: 16px 8px;
-  border-radius: 12px;
+  border-radius: 6px;
   border: 1px solid #f1f5f9;
 }
 
@@ -579,7 +579,7 @@ onMounted(loadData)
 
 .palette-btn {
   height: 40px;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid #e2e8f0;
   background: #ffffff;
   color: #475569;
@@ -600,7 +600,7 @@ onMounted(loadData)
   margin-bottom: 20px;
   padding: 16px 24px;
   background: #f8fafc;
-  border-radius: 12px;
+  border-radius: 6px;
   border: 1px solid #e2e8f0;
 }
 

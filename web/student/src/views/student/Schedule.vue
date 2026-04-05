@@ -57,8 +57,10 @@
             <span><label>学院：</label><span>{{ printStudentInfo.college }}</span></span>
             <span><label>专业：</label><span>{{ printStudentInfo.major }}</span></span>
             <span><label>班级：</label><span>{{ printStudentInfo.className }}</span></span>
-            <span><label>学号：</label><span>{{ printStudentInfo.studentNo }}</span></span>
-            <span><label>姓名：</label><span>{{ printStudentInfo.name }}</span></span>
+            <template v-if="!isClassMode">
+              <span><label>学号：</label><span>{{ printStudentInfo.studentNo }}</span></span>
+              <span><label>姓名：</label><span>{{ printStudentInfo.name }}</span></span>
+            </template>
           </div>
           <table class="courseTable courseTable--print" cellspacing="0" cellpadding="0">
             <thead>
@@ -209,6 +211,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { ElMessage } from '@/utils/feedback'
 import { getPortalMyClassSchedule, getPortalMySchedule, listPortalTermOptions } from '@/api/portal'
 import { useRoute } from 'vue-router'
 import usePortalUserStore from '@/store/user'
@@ -859,8 +862,8 @@ function buildPrintHtml() {
             <span><label>学院：</label><span>${escapeHtml(info.college)}</span></span>
             <span><label>专业：</label><span>${escapeHtml(info.major)}</span></span>
             <span><label>班级：</label><span>${escapeHtml(info.className)}</span></span>
-            <span><label>学号：</label><span>${escapeHtml(info.studentNo)}</span></span>
-            <span><label>姓名：</label><span>${escapeHtml(info.name)}</span></span>
+            ${isClassMode.value ? '' : `<span><label>学号：</label><span>${escapeHtml(info.studentNo)}</span></span>
+            <span><label>姓名：</label><span>${escapeHtml(info.name)}</span></span>`}
           </div>
           <table class="courseTable">
             <thead>
@@ -903,16 +906,23 @@ function printSchedule() {
     'top=0'
   ].join(',')
   const printWindow = window.open(printUrl, '_blank', features)
-  if (!printWindow) return
+  if (!printWindow) {
+    ElMessage.warning('打印窗口被浏览器拦截，请允许弹出窗口后重试')
+    URL.revokeObjectURL(printUrl)
+    return
+  }
 
-  const prepareWindow = () => {
+  printWindow.onload = () => {
     try {
       printWindow.moveTo(0, 0)
       printWindow.resizeTo(screenWidth, screenHeight)
     } catch {}
     printWindow.focus()
+    // Auto-trigger print dialog after a short delay for rendering
+    setTimeout(() => {
+      printWindow.print()
+    }, 300)
   }
-  printWindow.onload = () => setTimeout(prepareWindow, 150)
   printWindow.onbeforeunload = () => {
     URL.revokeObjectURL(printUrl)
   }

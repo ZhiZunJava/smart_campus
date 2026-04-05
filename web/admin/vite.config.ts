@@ -35,18 +35,27 @@ export default defineConfig(({ mode, command }) => {
       rolldownOptions: {
         checks: {
           pluginTimings: false
+        },
+        output: {
+          chunkFileNames: 'static/js/[name]-[hash].js',
+          entryFileNames: 'static/js/[name]-[hash].js',
+          assetFileNames: (assetInfo: { name?: string }) => {
+            // 图片资源统一放入 img 文件夹
+            if (/\.(png|jpe?g|gif|svg|webp|ico|bmp|tiff?)$/i.test(assetInfo.name ?? '')) {
+              return 'static/img/[name]-[hash][extname]'
+            }
+            // CSS 文件放入 css 文件夹
+            if (/\.css$/i.test(assetInfo.name ?? '')) {
+              return 'static/css/[name]-[hash][extname]'
+            }
+            // 字体等其他资源按扩展名分类
+            return 'static/[ext]/[name]-[hash][extname]'
+          }
         }
       },
       sourcemap: command === 'build' ? false : 'inline',
       outDir: 'dist',
-      assetsDir: 'assets',
-      rollupOptions: {
-        output: {
-          chunkFileNames: 'static/js/[name]-[hash].js',
-          entryFileNames: 'static/js/[name]-[hash].js',
-          assetFileNames: 'static/[ext]/[name]-[hash].[ext]'
-        }
-      }
+      assetsDir: 'static'
     },
     // vite 相关配置
     server: {

@@ -12,28 +12,33 @@
 
     <section class="task-detail-hero">
       <div class="hero-content">
-        <div class="hero-eyebrow">任务详情</div>
+        <div class="hero-eyebrow">{{ taskTypeLabel(taskDetail.taskType) }}</div>
         <div class="hero-title">{{ taskDetail.taskTitle || '未命名任务' }}</div>
         <p class="hero-desc">{{ taskDetail.taskDesc || '请按任务要求完成本次学习任务。' }}</p>
       </div>
       <div class="hero-stats">
         <div class="hero-metric">
-          <span>任务类型</span>
-          <strong>{{ taskTypeLabel(taskDetail.taskType) }}</strong>
+          <span>完成状态</span>
+          <strong :class="completionClass">{{ completionStatusLabel(taskDetail.completionStatus) }}</strong>
         </div>
         <div class="hero-metric">
-          <span>完成状态</span>
-          <strong :class="{'text-success': taskDetail.completionStatus === 'COMPLETED', 'text-warning': taskDetail.completionStatus === 'IN_PROGRESS'}">
-            {{ completionStatusLabel(taskDetail.completionStatus) }}
-          </strong>
+          <span>关联课程</span>
+          <strong>{{ relatedCourseName }}</strong>
+        </div>
+        <div class="hero-metric">
+          <span>开始时间</span>
+          <strong>{{ formatDate(taskDetail.startTime) || '--' }}</strong>
+        </div>
+        <div class="hero-metric">
+          <span>截止时间</span>
+          <strong class="text-danger">{{ formatDate(taskDetail.dueTime) || '--' }}</strong>
         </div>
       </div>
     </section>
 
-    <div class="task-quick-actions mt20">
+    <div class="task-quick-actions">
       <el-button v-if="primaryAction" type="primary" @click="handlePrimaryAction">{{ primaryAction.label }}</el-button>
       <el-button v-if="courseActionVisible" plain @click="openRelatedCourse">查看关联课程</el-button>
-      <el-button v-if="taskDetail.classCourseId" plain @click="openRelatedCourse(true)">打开课程详情</el-button>
     </div>
 
     <div class="portal-grid portal-grid-2 mt20">
@@ -45,12 +50,16 @@
           <div class="task-info-item"><span>任务标题</span><strong>{{ taskDetail.taskTitle || '--' }}</strong></div>
           <div class="task-info-item"><span>任务类型</span><strong>{{ taskTypeLabel(taskDetail.taskType) }}</strong></div>
           <div class="task-info-item"><span>关联课程</span><strong>{{ relatedCourseName }}</strong></div>
-          <div class="task-info-item"><span>最近提交状态</span><strong :class="latestSubmissionStatusClass">{{ latestSubmissionStatus }}</strong></div>
+          <div class="task-info-item">
+            <span>最近提交状态</span>
+            <strong :class="latestSubmissionStatusClass">{{ latestSubmissionStatus }}</strong>
+          </div>
           <div class="task-info-item"><span>开始时间</span><strong>{{ formatDateTime(taskDetail.startTime) || '--' }}</strong></div>
           <div class="task-info-item"><span>截止时间</span><strong class="text-danger">{{ formatDateTime(taskDetail.dueTime) || '--' }}</strong></div>
-          <div class="task-info-item"><span>课程ID</span><strong>{{ taskDetail.courseId || '--' }}</strong></div>
-          <div class="task-info-item"><span>教学班ID</span><strong>{{ taskDetail.classCourseId || '--' }}</strong></div>
-          <div class="task-info-item task-info-item--full"><span>任务描述</span><div class="desc-text">{{ taskDetail.taskDesc || '暂无任务描述' }}</div></div>
+          <div class="task-info-item task-info-item--full" v-if="taskDetail.taskDesc">
+            <span>任务描述</span>
+            <div class="desc-text">{{ taskDetail.taskDesc }}</div>
+          </div>
         </div>
       </div>
 
@@ -73,6 +82,9 @@
               multiple
             >
               <el-button :loading="uploading" plain>选择并上传文件</el-button>
+              <template #tip>
+                <div class="upload-tip">单个文件不超过 20MB</div>
+              </template>
             </el-upload>
           </el-form-item>
           <el-form-item label="附件列表">
@@ -91,7 +103,7 @@
             <div class="task-feedback">{{ taskDetail.submission?.teacherFeedback }}</div>
           </el-form-item>
           <el-form-item>
-            <el-button type="primary" :loading="submitting" @click="submitTask" class="submit-btn">提交任务</el-button>
+            <el-button type="primary" :loading="submitting" @click="confirmSubmit" class="submit-btn">提交任务</el-button>
           </el-form-item>
         </el-form>
       </div>
@@ -101,7 +113,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
 import { getPortalCourseDetail, getPortalTaskDetail, markPortalTaskRead, submitPortalTask, uploadPortalTaskAttachment } from '@/api/portal'
 import usePortalUserStore from '@/store/user'
@@ -135,10 +147,17 @@ const relatedCourseName = computed(() => {
     const className = relatedCourse.value?.className ? ` / ${relatedCourse.value.className}` : ''
     return `${relatedCourse.value.courseName}${className}`
   }
-  if (taskDetail.value.classCourseId) return `教学班 ${taskDetail.value.classCourseId}`
-  if (taskDetail.value.courseId) return `课程 ${taskDetail.value.courseId}`
+  if (taskDetail.value.classCourseId || taskDetail.value.courseId) return '加载中...'
   return '--'
 })
+
+const completionClass = computed(() => {
+  const status = String(taskDetail.value.completionStatus || '')
+  if (status === 'COMPLETED') return 'text-success'
+  if (status === 'IN_PROGRESS') return 'text-warning'
+  return ''
+})
+
 const latestSubmissionStatus = computed(() => {
   const submission = taskDetail.value.submission
   if (!submission) return '尚未提交'
@@ -149,6 +168,7 @@ const latestSubmissionStatus = computed(() => {
   if (submission.submitTime || submission.submitContent || submission.attachmentUrls) return '最近已提交，等待处理'
   return '尚未提交'
 })
+
 const latestSubmissionStatusClass = computed(() => {
   const reviewStatus = String(taskDetail.value.submission?.reviewStatus || '')
   if (reviewStatus === 'REVIEWED') return 'text-success'
@@ -184,6 +204,15 @@ function reviewStatusLabel(value?: string) {
     RETURNED: '需修改',
   }
   return map[String(value || '')] || '待批阅'
+}
+
+function formatDate(value?: string | number | Date | null) {
+  if (!value) return ''
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
+  const month = `${date.getMonth() + 1}`.padStart(2, '0')
+  const day = `${date.getDate()}`.padStart(2, '0')
+  return `${month}-${day}`
 }
 
 function formatDateTime(value?: string | number | Date | null) {
@@ -308,6 +337,39 @@ function removeAttachment(index: number) {
   attachmentList.value.splice(index, 1)
 }
 
+async function confirmSubmit() {
+  if (!String(submitForm.submitContent || '').trim() && !attachmentList.value.length) {
+    ElMessage.warning('请填写提交说明或上传附件')
+    return
+  }
+  try {
+    await ElMessageBox.confirm('确认提交任务？提交后教师将收到通知。', '确认提交', {
+      confirmButtonText: '确认提交',
+      cancelButtonText: '取消',
+      type: 'info',
+    })
+    await submitTask()
+  } catch {
+    // cancelled
+  }
+}
+
+async function submitTask() {
+  const dispatchId = Number(route.params.dispatchId)
+  if (!dispatchId) return
+  submitting.value = true
+  try {
+    await submitPortalTask(dispatchId, {
+      submitContent: submitForm.submitContent,
+      attachmentUrls: stringifyAttachmentUrls(),
+    })
+    ElMessage.success('任务提交成功')
+    await loadData()
+  } finally {
+    submitting.value = false
+  }
+}
+
 async function loadData() {
   const dispatchId = Number(route.params.dispatchId)
   if (!dispatchId) return
@@ -331,26 +393,6 @@ async function loadData() {
     }
   } finally {
     loading.value = false
-  }
-}
-
-async function submitTask() {
-  const dispatchId = Number(route.params.dispatchId)
-  if (!dispatchId) return
-  if (!String(submitForm.submitContent || '').trim() && !attachmentList.value.length) {
-    ElMessage.warning('请填写提交说明或上传附件')
-    return
-  }
-  submitting.value = true
-  try {
-    await submitPortalTask(dispatchId, {
-      submitContent: submitForm.submitContent,
-      attachmentUrls: stringifyAttachmentUrls(),
-    })
-    ElMessage.success('任务提交成功')
-    await loadData()
-  } finally {
-    submitting.value = false
   }
 }
 
@@ -390,7 +432,7 @@ onMounted(loadData)
   grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.8fr);
   gap: 20px;
   padding: 32px;
-  border-radius: 12px;
+  border-radius: 6px;
   background: linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%);
   border: 1px solid #e1edfa;
   margin-bottom: 24px;
@@ -437,8 +479,8 @@ onMounted(loadData)
 
 .hero-metric {
   background: #ffffff;
-  padding: 20px;
-  border-radius: 8px;
+  padding: 16px;
+  border-radius: 6px;
   border: 1px solid #ebeef5;
   display: flex;
   flex-direction: column;
@@ -453,9 +495,10 @@ onMounted(loadData)
 }
 
 .hero-metric strong {
-  font-size: 20px;
+  font-size: 18px;
   color: #303133;
   font-weight: 600;
+  word-break: break-word;
 }
 
 .text-success {
@@ -477,9 +520,22 @@ onMounted(loadData)
   flex-wrap: wrap;
 }
 
+.mt20 {
+  margin-top: 20px;
+}
+
+.portal-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.portal-grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
 .task-section-card {
   background: #fff;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid #ebeef5;
   padding: 24px;
   height: 100%;
@@ -542,6 +598,12 @@ onMounted(loadData)
 
 .submit-form {
   max-width: 100%;
+}
+
+.upload-tip {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 4px;
 }
 
 .task-feedback {
@@ -611,8 +673,8 @@ onMounted(loadData)
   .task-detail-hero {
     grid-template-columns: 1fr;
   }
-  .hero-stats {
-    grid-template-columns: repeat(2, 1fr);
+  .portal-grid-2 {
+    grid-template-columns: 1fr;
   }
 }
 
