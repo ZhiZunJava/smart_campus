@@ -198,4 +198,14 @@ onMounted(loadPovertyDetail)
 .prerequisite-card.is-ready { border-color: #bbf7d0; background: #f0fdf4; }
 .prerequisite-card strong { color: #0f172a; font-size: 18px; }
 .prerequisite-card p { margin: 10px 0 0; color: #667085; }
+
+@media (max-width: 768px) {
+  .prerequisite-card { padding: 16px; border-radius: 14px; }
+}
+
+@media (max-width: 640px) {
+  .prerequisite-card { padding: 14px; border-radius: 10px; }
+  .prerequisite-card strong { font-size: 16px; }
+  .prerequisite-card p { font-size: 13px; }
+}
 </style>

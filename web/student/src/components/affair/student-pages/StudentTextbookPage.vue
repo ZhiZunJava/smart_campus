@@ -415,4 +415,16 @@ function openLedgerRequest(row: any) {
   justify-content: space-between;
   gap: 16px;
 }
+
+@media (max-width: 768px) {
+  .textbook-plan-grid { grid-template-columns: 1fr; }
+  .section-head { flex-direction: column; align-items: flex-start; gap: 8px; }
+}
+
+@media (max-width: 640px) {
+  .textbook-plan-card { padding: 12px; border-radius: 8px; }
+  .textbook-plan-card__head strong { font-size: 14px; }
+  .textbook-plan-card__meta span { font-size: 11px; }
+  .textbook-plan-card__actions { flex-wrap: wrap; }
+}
 </style>

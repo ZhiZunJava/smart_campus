@@ -624,4 +624,205 @@ onMounted(async () => {
     width: 100%;
   }
 }
+
+/* ── Responsive: 768px ── */
+@media (max-width: 768px) {
+  .parent-courses-page {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .parent-courses__hero :deep(.el-card__body) {
+    padding: 18px;
+  }
+
+  .parent-courses__hero-copy h4 {
+    font-size: 20px;
+  }
+
+  .parent-courses__hero-stats {
+    gap: 12px;
+    padding-top: 16px;
+  }
+
+  .parent-courses__hero-stat strong {
+    font-size: 20px;
+  }
+
+  .course-metric-card__body {
+    padding: 12px 16px;
+  }
+
+  .course-metric-card__icon {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    margin-right: 12px;
+  }
+
+  .course-metric-card__value {
+    font-size: 20px;
+  }
+
+  .parent-courses__toolbar,
+  .parent-courses__list-card {
+    padding: 14px 16px;
+  }
+
+  .parent-course-card__header,
+  .parent-course-card__footer {
+    padding: 12px 16px;
+  }
+
+  .parent-course-card__body {
+    padding: 10px 16px 14px;
+  }
+
+  .parent-course-card__body h4 {
+    font-size: 17px;
+  }
+
+  .parent-course-card {
+    min-height: 240px;
+  }
+
+  .course-summary-badge {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+
+  .course-empty {
+    padding: 40px 0;
+  }
+}
+
+/* ── Responsive: 640px ── */
+@media (max-width: 640px) {
+  .parent-courses-page {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .parent-courses__hero :deep(.el-card__body) {
+    padding: 14px;
+  }
+
+  .parent-courses__hero-copy h4 {
+    font-size: 18px;
+    margin-bottom: 6px;
+  }
+
+  .parent-courses__hero-copy p {
+    font-size: 12px;
+    margin-bottom: 12px;
+  }
+
+  .parent-courses__hero-stats {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding-top: 12px;
+  }
+
+  .parent-courses__hero-stat span {
+    font-size: 11px;
+  }
+
+  .parent-courses__hero-stat strong {
+    font-size: 18px;
+  }
+
+  .course-overview__metrics {
+    gap: 8px;
+  }
+
+  .course-metric-card__body {
+    padding: 10px 12px;
+  }
+
+  .course-metric-card__icon {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+    margin-right: 10px;
+    border-radius: 10px;
+  }
+
+  .course-metric-card__value {
+    font-size: 18px;
+  }
+
+  .course-metric-card__label {
+    font-size: 11px;
+  }
+
+  .parent-courses__toolbar,
+  .parent-courses__list-card {
+    padding: 12px;
+  }
+
+  .parent-courses__toolbar {
+    gap: 10px;
+  }
+
+  .parent-courses__toolbar-left,
+  .parent-courses__filters {
+    gap: 8px;
+  }
+
+  .course-summary-badge {
+    font-size: 11px;
+    padding: 5px 8px;
+    gap: 5px;
+  }
+
+  .parent-course-card {
+    min-height: 200px;
+    border-radius: 14px;
+  }
+
+  .parent-course-card__header,
+  .parent-course-card__footer {
+    padding: 10px 14px;
+    gap: 8px;
+  }
+
+  .parent-course-card__body {
+    padding: 8px 14px 12px;
+  }
+
+  .parent-course-card__body h4 {
+    font-size: 16px;
+  }
+
+  .parent-course-card__code {
+    font-size: 12px;
+  }
+
+  .parent-course-card__meta {
+    margin-top: 10px;
+    gap: 6px;
+  }
+
+  .parent-course-card__meta span {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+
+  .parent-course-card__schedule {
+    margin-top: 12px;
+    gap: 6px;
+  }
+
+  .parent-course-card__schedule-item {
+    font-size: 11.5px;
+  }
+
+  .parent-course-card__limit {
+    font-size: 11.5px;
+  }
+
+  .course-empty {
+    padding: 30px 0;
+  }
+}
 </style>

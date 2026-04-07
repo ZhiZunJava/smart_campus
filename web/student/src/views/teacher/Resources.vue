@@ -366,4 +366,76 @@ onMounted(async () => {
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 768px) {
+  .teacher-resources-page {
+    padding: 16px;
+    gap: 14px;
+  }
+
+  .teacher-resources__hero {
+    padding: 18px;
+  }
+
+  .teacher-resources__hero-copy h3 {
+    font-size: 22px;
+  }
+
+  .teacher-resources__hero-stat strong {
+    font-size: 22px;
+  }
+
+  .teacher-resources__toolbar {
+    padding: 14px;
+  }
+
+  .teacher-resources__select,
+  .teacher-resources__select--small,
+  .teacher-resources__input {
+    width: 100%;
+  }
+
+  .teacher-resources__panel {
+    padding: 14px;
+  }
+
+  .teacher-resources__detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .teacher-resources-page {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .teacher-resources__hero {
+    padding: 14px;
+  }
+
+  .teacher-resources__hero-copy h3 {
+    font-size: 18px;
+  }
+
+  .teacher-resources__hero-copy p {
+    font-size: 13px;
+  }
+
+  .teacher-resources__hero-stat {
+    padding: 12px 14px;
+  }
+
+  .teacher-resources__hero-stat strong {
+    font-size: 18px;
+  }
+
+  .teacher-resources__panel {
+    padding: 12px;
+  }
+
+  .teacher-resources__panel-head h4 {
+    font-size: 16px;
+  }
+}
 </style>

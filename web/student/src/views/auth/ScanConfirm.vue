@@ -224,4 +224,18 @@ onMounted(async () => {
   border-radius: 4px;
   font-weight: 700;
 }
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+  .scan-confirm-shell { padding: 16px 12px 24px; }
+  .scan-confirm-card { padding: 22px 18px 20px; }
+  .scan-confirm-card h1 { font-size: 24px; }
+  .scan-confirm-card__logo { height: 56px; }
+}
+
+@media (max-width: 640px) {
+  .scan-confirm-card { padding: 18px 14px 16px; }
+  .scan-confirm-card h1 { font-size: 22px; }
+  .scan-confirm-card__captcha { grid-template-columns: 1fr 90px; }
+}
 </style>

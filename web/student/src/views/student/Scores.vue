@@ -1454,14 +1454,153 @@ onMounted(async () => {
   }
 }
 
+@media (max-width: 768px) {
+  .score-summary-card {
+    padding: 16px;
+  }
+
+  .score-summary-card__intro {
+    padding: 16px;
+  }
+
+  .score-summary-card__intro h4 {
+    font-size: 18px;
+  }
+
+  .score-table-card {
+    padding: 14px 16px;
+    overflow-x: auto;
+  }
+
+  .head-title-wrap strong {
+    font-size: 16px;
+  }
+
+  .score-detail-banner__main h4 {
+    font-size: 20px;
+  }
+
+  .score-summary-metric strong {
+    font-size: 22px;
+  }
+
+  .custom-dialog :deep(.el-dialog) {
+    --el-dialog-width: 100% !important;
+    margin: 0 !important;
+    max-width: 100%;
+    border-radius: 12px 12px 0 0;
+  }
+}
+
 @media (max-width: 640px) {
   .score-summary-card__metrics {
     grid-template-columns: 1fr;
   }
 
+  .score-toolbar-controls {
+    flex-direction: column;
+    width: 100%;
+  }
+
   .score-toolbar-controls .el-select,
   .score-toolbar-controls .el-button {
     width: 100% !important;
+  }
+
+  .score-toolbar-chips {
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .score-toolbar-chip {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .score-summary-card__badge {
+    font-size: 11px;
+    padding: 0 8px;
+    height: 24px;
+  }
+
+  .score-summary-card__intro h4 {
+    font-size: 16px;
+    margin: 10px 0 8px;
+  }
+
+  .score-summary-card__intro p {
+    font-size: 13px;
+  }
+
+  .score-summary-metric {
+    padding: 14px 16px;
+  }
+
+  .score-summary-metric strong {
+    font-size: 20px;
+    margin-top: 8px;
+  }
+
+  .score-table-card {
+    padding: 12px;
+  }
+
+  .score-table-card__head {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .head-title-wrap strong {
+    font-size: 15px;
+  }
+
+  /* Table overflow on mobile */
+  .custom-el-table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .custom-el-table :deep(.el-table) {
+    min-width: 600px;
+  }
+
+  /* Touch targets */
+  .score-total-cell {
+    padding: 5px 10px;
+    min-height: 36px;
+  }
+
+  /* Dialog banner */
+  .score-detail-banner {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .score-detail-banner__main h4 {
+    font-size: 18px;
+  }
+
+  .stat-box {
+    min-width: 70px;
+    padding: 12px;
+  }
+
+  .stat-box strong {
+    font-size: 18px;
+  }
+
+  .score-detail-panel {
+    padding: 14px;
+  }
+
+  .score-exam-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .score-comment .comment-box {
+    padding: 10px 12px;
   }
 }
 </style>

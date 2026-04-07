@@ -781,6 +781,18 @@ onMounted(async () => {
   .steps-track { gap: 0; }
   .step-node__label { font-size: 11px; }
   .done-info { grid-template-columns: 1fr; }
+  .wizard-form { max-width: 100%; }
+  .wizard-field :deep(.el-form-item) { display: block; }
+  .wizard-field :deep(.el-form-item__label) { display: block; text-align: left; padding-bottom: 4px; }
+  .wizard-field :deep(.el-form-item__content) { margin-left: 0 !important; }
+  .wizard-field :deep(.el-input),
+  .wizard-field :deep(.el-select),
+  .wizard-field :deep(.el-date-editor),
+  .wizard-field :deep(.el-textarea) { width: 100% !important; max-width: 100%; }
+  :deep(.el-dialog) { width: 96vw !important; margin: 2vh auto !important; max-height: 96vh; }
+  :deep(.el-drawer) { width: 100% !important; }
+  .step-node__circle { width: 30px; height: 30px; font-size: 12px; }
+  .steps-connector { top: 15px; }
 }
 @media (max-width: 640px) {
   .wizard-form { max-width: 100%; padding: 16px; }
@@ -791,6 +803,19 @@ onMounted(async () => {
   .done-card { padding: 32px 16px; }
   .wizard-footer { padding: 12px 16px; flex-direction: column; gap: 10px; }
   .footer-actions { width: 100%; justify-content: center; }
+  .wizard-title { font-size: 17px; }
+  .wizard-subtitle { font-size: 12px; }
+  .form-card__head h3 { font-size: 14px; }
+  .upload-card__head h3 { font-size: 14px; }
+  .preview-card__head h3 { font-size: 14px; }
+  .upload-dragger__inner { padding: 24px 16px; }
+  .upload-dragger__inner i { font-size: 32px; }
+  .upload-dragger__inner p { font-size: 13px; }
+  .done-card h2 { font-size: 19px; }
+  .done-circle { width: 64px; height: 64px; font-size: 28px; }
+  .apply-wizard { gap: 16px; }
+  .preview-item__label { font-size: 11px; }
+  .preview-item__value { font-size: 13px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }

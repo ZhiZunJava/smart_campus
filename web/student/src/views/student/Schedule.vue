@@ -1306,6 +1306,175 @@ onMounted(async () => {
   }
 }
 
+@media (max-width: 768px) {
+  .schedule-page {
+    padding: 14px;
+  }
+
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-top: 10px;
+  }
+
+  .schedule-filters {
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .schedule-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .schedule-term-date {
+    margin-left: 0;
+    font-size: 12px;
+  }
+
+  .schedule-actions-right {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .courseTable {
+    font-size: 11px;
+  }
+
+  .courseTable > thead > tr > th {
+    padding: 0 4px;
+    height: 34px;
+    font-size: 11px;
+  }
+
+  .td-content {
+    height: 44px;
+  }
+
+  .tdHtml {
+    padding: 3px 5px 4px;
+    min-height: 38px;
+    gap: 2px;
+  }
+
+  .course-name {
+    font-size: 13px;
+  }
+
+  .course-meta-item {
+    font-size: 11px;
+  }
+
+  .course-table-remark {
+    padding: 8px 10px;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  .course-table-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .lab-checkbox {
+    margin-right: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .schedule-page {
+    padding: 10px;
+  }
+
+  .schedule-header-user h3 {
+    font-size: 14px;
+  }
+
+  .schedule-filters {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .schedule-select,
+  .schedule-select--term {
+    width: 100% !important;
+  }
+
+  .schedule-actions {
+    width: 100%;
+  }
+
+  .schedule-actions-right {
+    margin-left: 0;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .courseTable {
+    font-size: 10px;
+  }
+
+  .courseTable > thead > tr > th {
+    padding: 0 2px;
+    height: 30px;
+    font-size: 10px;
+  }
+
+  .td-content {
+    height: 38px;
+  }
+
+  .tdHtml {
+    padding: 2px 3px;
+    min-height: 32px;
+  }
+
+  .course-name {
+    font-size: 12px;
+    margin-bottom: 1px;
+  }
+
+  .course-meta-item {
+    font-size: 10px;
+    gap: 2px;
+  }
+
+  .course-meta-item i,
+  .course-population i {
+    font-size: 11px;
+  }
+
+  .course-footer {
+    gap: 4px;
+  }
+
+  .course-population {
+    padding: 1px 4px;
+    font-size: 10px;
+  }
+
+  .schedule-badge {
+    font-size: 9px;
+    padding: 1px 4px;
+  }
+
+  .course-table-remark {
+    padding: 6px 8px;
+    margin-top: 8px;
+    font-size: 11px;
+  }
+
+  .course-table-remark span {
+    margin-right: 10px;
+    display: inline-block;
+    line-height: 1.6;
+  }
+}
+
 @media print {
   .schedule-page {
     padding: 0;

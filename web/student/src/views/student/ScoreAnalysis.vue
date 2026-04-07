@@ -975,4 +975,59 @@ onMounted(async () => {
     gap: 8px;
   }
 }
+
+@media (max-width: 640px) {
+  .score-analysis-topbar {
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  .score-analysis-topbar__title h1 {
+    font-size: 18px;
+  }
+
+  .score-analysis-topbar__title p {
+    font-size: 12px;
+  }
+
+  .score-analysis-summary__intro h4 {
+    font-size: 20px;
+  }
+
+  .score-metric-card {
+    padding: 14px;
+  }
+
+  .score-metric-card strong {
+    font-size: 24px;
+    margin: 8px 0 6px;
+  }
+
+  .score-analysis-toolbar__chips {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .score-chart-card,
+  .score-insight-card,
+  .score-ai-card {
+    padding: 12px;
+  }
+
+  .score-ai-card__actions {
+    padding: 16px;
+  }
+
+  .score-ai-card__actions h4 {
+    font-size: 16px;
+  }
+
+  .score-structure-panel {
+    padding: 12px;
+  }
+
+  .score-component-legend {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 </style>

@@ -296,4 +296,66 @@ onMounted(async () => {
     width: 100%;
   }
 }
+
+@media (max-width: 768px) {
+  .advisor-score-page {
+    padding: 16px;
+    gap: 14px;
+  }
+
+  .advisor-score-hero {
+    padding: 18px;
+  }
+
+  .advisor-score-hero__copy h3 {
+    font-size: 22px;
+  }
+
+  .advisor-score-hero__stat strong {
+    font-size: 22px;
+  }
+
+  .advisor-score-filter,
+  .advisor-score-table {
+    padding: 14px;
+  }
+
+  .advisor-score-pill {
+    min-width: 48px;
+    padding: 4px 8px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 640px) {
+  .advisor-score-page {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .advisor-score-hero {
+    padding: 14px;
+  }
+
+  .advisor-score-hero__copy h3 {
+    font-size: 18px;
+  }
+
+  .advisor-score-hero__copy p {
+    font-size: 13px;
+  }
+
+  .advisor-score-hero__stat {
+    padding: 12px 14px;
+  }
+
+  .advisor-score-hero__stat strong {
+    font-size: 18px;
+  }
+
+  .advisor-score-filter,
+  .advisor-score-table {
+    padding: 12px;
+  }
+}
 </style>

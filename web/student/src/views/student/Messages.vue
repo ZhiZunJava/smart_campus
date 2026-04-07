@@ -1062,6 +1062,109 @@ onMounted(() => {
   }
 }
 
+@media (max-width: 768px) {
+  .message-center-content {
+    padding: 16px;
+  }
+
+  .content-header {
+    margin-bottom: 16px;
+  }
+
+  .header-title h3 {
+    font-size: 16px;
+  }
+
+  .message-card {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .message-card__title {
+    font-size: 14px;
+  }
+
+  .message-card__summary {
+    font-size: 13px;
+    -webkit-line-clamp: 2;
+  }
+
+  .message-type-filter {
+    gap: 6px;
+  }
+
+  .message-type-chip {
+    padding: 4px 10px;
+    font-size: 11px;
+  }
+
+  .sidebar-item {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+
+  .item-icon-wrapper {
+    width: 30px;
+    height: 30px;
+    margin-right: 8px;
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 640px) {
+  .message-center-content {
+    padding: 12px;
+    min-height: auto;
+  }
+
+  .message-card {
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .message-card__icon {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+
+  .message-card__head {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .message-card__time {
+    font-size: 12px;
+  }
+
+  .filter-pill {
+    padding: 5px 14px;
+    font-size: 13px;
+  }
+
+  .message-list-pagination {
+    padding-top: 20px;
+    padding-bottom: 16px;
+  }
+
+  .sidebar-menu {
+    gap: 0;
+  }
+
+  .sidebar-item {
+    padding: 10px 12px;
+    font-size: 12px;
+    border-left: none;
+    border-bottom: 2px solid transparent;
+  }
+
+  .sidebar-item.is-active {
+    border-left-color: transparent;
+    border-bottom-color: var(--portal-brand);
+  }
+}
+
 /* 详情弹窗样式 */
 .message-detail-dialog-simple :deep(.el-dialog__body) {
   padding: 0 32px 32px;
@@ -1138,5 +1241,61 @@ onMounted(() => {
 }
 .detail-actions-simple .el-button {
   width: 160px;
+}
+
+/* Mobile: dialog responsive */
+@media (max-width: 768px) {
+  .message-detail-dialog-simple :deep(.el-dialog) {
+    width: calc(100vw - 24px) !important;
+    margin: 12px auto !important;
+    max-width: 100%;
+    border-radius: 12px;
+  }
+
+  .message-detail-dialog-simple :deep(.el-dialog__body) {
+    padding: 0 16px 16px;
+  }
+
+  .detail-title-simple {
+    font-size: 18px;
+  }
+
+  .detail-content-simple {
+    padding: 16px 0;
+    max-height: 320px;
+  }
+
+  .text-content,
+  .html-content {
+    font-size: 14px;
+  }
+
+  .detail-actions-simple .el-button {
+    width: 100%;
+  }
+
+  .is-unread-text {
+    font-weight: 600;
+  }
+
+  .message-card__title.is-unread-text {
+    color: #0f172a;
+  }
+}
+
+@media (max-width: 640px) {
+  .message-detail-dialog-simple :deep(.el-dialog) {
+    width: calc(100vw - 16px) !important;
+    margin: 8px auto !important;
+  }
+
+  .detail-header-simple {
+    margin-bottom: 16px;
+  }
+
+  .detail-title-simple {
+    font-size: 16px;
+    margin-bottom: 10px;
+  }
 }
 </style>

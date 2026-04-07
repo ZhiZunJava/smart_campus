@@ -262,4 +262,12 @@ function openRecordDetail(row: any) {
   .level-segment__item { border-right: none; border-bottom: 1px solid #e2e8f0; }
   .level-segment__item:last-child { border-bottom: none; }
 }
+
+@media (max-width: 640px) {
+  .level-segment__item { padding: 12px 14px; }
+  .level-segment__item strong { font-size: 14px; }
+  .level-segment__desc { font-size: 11px; }
+  .level-segment { border-radius: 8px; }
+  .level-empty-hint { font-size: 12px; }
+}
 </style>

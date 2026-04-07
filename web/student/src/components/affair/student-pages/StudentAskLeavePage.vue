@@ -357,4 +357,15 @@ function openRecordDetail(row: any) {
 .ongoing-card__info strong { font-size: 15px; color: #166534; }
 .ongoing-card__info p { margin: 4px 0 0; color: #667085; font-size: 13px; }
 .ongoing-card__trail { flex-shrink: 0; }
+
+@media (max-width: 768px) {
+  .ongoing-card { flex-direction: column; align-items: flex-start; gap: 10px; padding: 14px 16px; }
+  .ongoing-card__trail { align-self: flex-end; }
+}
+
+@media (max-width: 640px) {
+  .ongoing-card { padding: 12px; border-radius: 8px; }
+  .ongoing-card__info strong { font-size: 14px; }
+  .ongoing-card__info p { font-size: 12px; }
+}
 </style>

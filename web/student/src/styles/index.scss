@@ -473,3 +473,136 @@ body {
   font-size: inherit;
   line-height: 1;
 }
+
+/* ============================================================
+   RESPONSIVE INFRASTRUCTURE
+   Breakpoints: 640px (mobile) / 768px (tablet) / 1024px (medium) / 1280px (desktop)
+   ============================================================ */
+
+/* --- Utility: table horizontal scroll on mobile --- */
+.portal-table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* --- Utility: visibility helpers --- */
+@media (max-width: 768px) {
+  .portal-hide-mobile { display: none !important; }
+}
+@media (min-width: 769px) {
+  .portal-hide-desktop { display: none !important; }
+}
+
+/* --- Grid system: tablet (768px) --- */
+@media (max-width: 768px) {
+  .portal-hero,
+  .portal-grid-2,
+  .portal-grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .portal-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .portal-hero {
+    padding: 14px;
+  }
+
+  .portal-hero__title {
+    font-size: 18px;
+  }
+
+  .portal-section-title {
+    gap: 8px;
+  }
+
+  .portal-section-title h3 {
+    font-size: 16px;
+  }
+
+  .portal-surface {
+    padding: 10px 12px;
+  }
+}
+
+/* --- Grid system: mobile (640px) --- */
+@media (max-width: 640px) {
+  .portal-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .portal-hero__metric strong {
+    font-size: 18px;
+  }
+
+  .portal-stat-card .value {
+    font-size: 18px;
+  }
+}
+
+/* --- Element Plus: dialog/drawer mobile fullscreen --- */
+@media (max-width: 768px) {
+  .portal-page :deep(.el-dialog) {
+    width: calc(100vw - 32px) !important;
+    max-width: none;
+    margin: 16px auto;
+  }
+
+  .portal-page :deep(.el-drawer) {
+    width: 100% !important;
+  }
+
+  .portal-page :deep(.el-table) {
+    font-size: 12px;
+  }
+
+  .portal-page :deep(.el-dialog__header),
+  .portal-page :deep(.el-dialog__body),
+  .portal-page :deep(.el-dialog__footer) {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}
+
+/* --- Touch targets: min 40px on mobile --- */
+@media (max-width: 768px) {
+  .portal-page :deep(.el-button) {
+    min-height: 40px;
+    min-width: 40px;
+  }
+
+  .portal-page :deep(.el-input__wrapper),
+  .portal-page :deep(.el-select__wrapper) {
+    min-height: 40px;
+  }
+
+  .portal-page :deep(.el-tabs__item) {
+    height: 38px;
+    padding: 0 14px;
+  }
+
+  .portal-form-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .portal-form-row :deep(.el-input),
+  .portal-form-row :deep(.el-select) {
+    width: 100% !important;
+  }
+
+  /* Fix el-button margin-left when wrapping to vertical on mobile */
+  .portal-page :deep(.el-button + .el-button) {
+    margin-left: 0;
+  }
+
+  /* el-row / el-col: stack columns on mobile */
+  .portal-page :deep(.el-row) {
+    flex-direction: column;
+  }
+  .portal-page :deep(.el-col) {
+    max-width: 100% !important;
+    flex: 0 0 100% !important;
+  }
+}

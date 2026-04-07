@@ -1501,6 +1501,106 @@ onMounted(loadCourses)
   }
 }
 
+@media (max-width: 768px) {
+  .resource-center-page {
+    gap: 12px;
+    padding: 8px 0 4px;
+  }
+
+  .catalog-main-toolbar__title h2 {
+    font-size: 20px;
+  }
+
+  .catalog-main-toolbar__title p {
+    font-size: 13px;
+  }
+
+  .catalog-main-toolbar__stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .catalog-main-toolbar__stat strong {
+    font-size: 15px;
+  }
+
+  .catalog-lesson-card__title-block h3 {
+    font-size: 17px;
+  }
+
+  .catalog-lesson-card__summary {
+    font-size: 13px;
+  }
+
+  .catalog-main-tab {
+    font-size: 13px;
+    min-height: 38px;
+    padding: 6px 12px;
+  }
+
+  .catalog-main-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .main-inner,
+  .sidebar-inner {
+    padding: 14px;
+  }
+}
+
+@media (max-width: 640px) {
+  .resource-center-page {
+    height: auto;
+    min-height: calc(100vh - 100px);
+  }
+
+  .catalog-main-toolbar__title h2 {
+    font-size: 18px;
+  }
+
+  .catalog-main-toolbar__stats {
+    grid-template-columns: 1fr;
+  }
+
+  .catalog-lesson-card__title-block h3 {
+    font-size: 15px;
+  }
+
+  .catalog-lesson-card__meta-pill {
+    min-height: 30px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  .catalog-main-tab {
+    font-size: 12px;
+    min-height: 34px;
+    padding: 4px 10px;
+    border-radius: 8px;
+  }
+
+  .catalog-main-tab em {
+    min-width: 20px;
+    height: 20px;
+    font-size: 11px;
+  }
+
+  .catalog-course-card__meta h2 {
+    font-size: 15px;
+  }
+
+  .main-inner,
+  .sidebar-inner {
+    padding: 12px;
+  }
+
+  .catalog-results-bar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .catalog-course-card,
   .catalog-tree-node,

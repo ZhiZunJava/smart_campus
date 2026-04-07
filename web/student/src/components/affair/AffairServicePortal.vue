@@ -393,6 +393,17 @@ function handleQuickTemplate(item: any) {
   .activity-item { flex-direction: column; align-items: flex-start; gap: 8px; }
   .activity-item__time { align-self: flex-end; }
 }
+@media (max-width: 768px) {
+  .module-block { padding: 16px; border-radius: 16px; }
+  .module-block__cards { grid-template-columns: 1fr; }
+  .category-card { padding: 14px; }
+  .section-header { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .activity-item { padding: 12px 14px; }
+  .stat-card { padding: 14px; }
+  .stat-card strong { font-size: 22px; }
+  .skeleton-stats { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .stat-card, .quick-card, .category-card, .activity-item { transition: none !important; }
   .stat-card:hover, .quick-card:hover, .category-card:hover { translate: none; box-shadow: none; }

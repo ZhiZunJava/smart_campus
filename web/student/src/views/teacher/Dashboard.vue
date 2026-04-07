@@ -319,3 +319,20 @@ function openMessageCenter(tab?: 'todo' | 'message' | 'notice') {
 
 onMounted(loadData)
 </script>
+
+<style scoped>
+/* Responsive overrides — this view delegates to <PortalDashboardShell>,
+   global .portal-hero / .portal-kpis / .portal-grid-* already handle grids. */
+
+@media (max-width: 1024px) {
+  :deep(.portal-dashboard-shell) { padding-left: 12px; padding-right: 12px; }
+}
+
+@media (max-width: 768px) {
+  :deep(.portal-dashboard-shell) { padding-left: 8px; padding-right: 8px; }
+}
+
+@media (max-width: 640px) {
+  :deep(.portal-dashboard-shell) { padding-left: 4px; padding-right: 4px; }
+}
+</style>

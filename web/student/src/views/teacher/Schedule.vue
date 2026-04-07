@@ -1214,4 +1214,263 @@ onMounted(async () => {
     color: #000;
   }
 }
+
+/* ── Responsive: 1024px ── */
+@media (max-width: 1024px) {
+  .schedule-page {
+    padding: 16px;
+  }
+
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .courseTable {
+    min-width: 860px;
+  }
+
+  .courseTable > thead > tr > th {
+    padding: 0 4px;
+    height: 36px;
+    font-size: 11px;
+  }
+
+  .td-content {
+    height: 46px;
+  }
+
+  .tdHtml {
+    padding: 4px 6px 5px;
+    min-height: 40px;
+  }
+
+  .course-name {
+    font-size: 13px;
+  }
+
+  .course-meta-item {
+    font-size: 11px;
+  }
+
+  .course-table-remark {
+    padding: 8px 10px;
+  }
+}
+
+/* ── Responsive: 768px ── */
+@media (max-width: 768px) {
+  .schedule-page {
+    padding: 12px;
+  }
+
+  .schedule-header-user h3 {
+    font-size: 14px;
+  }
+
+  .schedule-filters {
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .schedule-select {
+    width: 120px;
+  }
+
+  .schedule-select--term {
+    width: 160px;
+  }
+
+  .schedule-term-date {
+    font-size: 12px;
+    margin-left: 4px;
+  }
+
+  .schedule-actions-right {
+    gap: 8px;
+  }
+
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-left: -12px;
+    margin-right: -12px;
+    padding: 0 12px;
+  }
+
+  .courseTable {
+    min-width: 780px;
+    font-size: 11px;
+  }
+
+  .courseTable > thead > tr > th {
+    height: 32px;
+    font-size: 10.5px;
+    padding: 0 3px;
+  }
+
+  .td-content {
+    height: 42px;
+  }
+
+  .tdHtml {
+    padding: 3px 5px 4px;
+    min-height: 36px;
+    gap: 2px;
+  }
+
+  .course-name {
+    font-size: 12px;
+    margin-bottom: 2px;
+  }
+
+  .course-meta-item {
+    font-size: 10.5px;
+    gap: 3px;
+  }
+
+  .course-meta-item i,
+  .course-population i {
+    font-size: 11px;
+  }
+
+  .course-population {
+    font-size: 10.5px;
+    padding: 1px 5px;
+  }
+
+  .course-table-remark {
+    margin-top: 8px;
+    padding: 8px;
+    font-size: 12px;
+  }
+
+  .course-table-remark span {
+    margin-right: 10px;
+  }
+
+  .course-table-footer {
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 6px;
+  }
+}
+
+/* ── Responsive: 640px ── */
+@media (max-width: 640px) {
+  .schedule-page {
+    padding: 8px;
+  }
+
+  .schedule-header-user {
+    margin-bottom: 10px;
+  }
+
+  .schedule-header-user h3 {
+    font-size: 13px;
+  }
+
+  .schedule-filters {
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .schedule-select,
+  .schedule-select--term {
+    width: 100%;
+  }
+
+  .schedule-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .schedule-actions-right {
+    width: 100%;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  .schedule-term-date {
+    margin-left: 0;
+    width: 100%;
+    font-size: 11px;
+  }
+
+  .table-container {
+    margin-left: -8px;
+    margin-right: -8px;
+    padding: 0 8px;
+  }
+
+  .courseTable {
+    min-width: 700px;
+    font-size: 10px;
+  }
+
+  .courseTable > thead > tr > th {
+    height: 28px;
+    font-size: 10px;
+    padding: 0 2px;
+  }
+
+  .dayPartUnit {
+    font-size: 10px;
+  }
+
+  .td-content {
+    height: 38px;
+  }
+
+  .tdHtml {
+    padding: 2px 4px 3px;
+    min-height: 32px;
+    gap: 1px;
+  }
+
+  .course-name {
+    font-size: 11px;
+    margin-bottom: 1px;
+  }
+
+  .course-meta-item {
+    font-size: 10px;
+    gap: 2px;
+  }
+
+  .course-meta-item i,
+  .course-population i {
+    font-size: 10px;
+  }
+
+  .course-footer {
+    gap: 4px;
+  }
+
+  .course-population {
+    font-size: 10px;
+    padding: 0 4px;
+  }
+
+  .lesson-name {
+    font-size: 10px;
+  }
+
+  .course-table-remark {
+    margin-top: 6px;
+    padding: 6px;
+    font-size: 11px;
+    line-height: 1.6;
+  }
+
+  .course-table-remark span {
+    margin-right: 8px;
+  }
+
+  .course-table-footer {
+    font-size: 12px;
+    gap: 6px;
+  }
+}
 </style>

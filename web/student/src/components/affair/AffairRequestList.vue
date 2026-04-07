@@ -80,6 +80,10 @@ function filterList() {}
 }
 @media (max-width: 640px) {
   .request-list { gap: 12px; }
+  .list-header h2 { font-size: 17px; }
+  .list-filters { flex-wrap: wrap; gap: 8px; }
+  .list-filters :deep(.el-select),
+  .list-filters :deep(.el-input) { width: 100% !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -352,6 +352,42 @@ onMounted(loadRequests)
   transform: translateX(-16px);
 }
 
+@media (max-width: 768px) {
+  .parent-requests-page {
+    padding: 20px 14px;
+  }
+
+  .page-header h2 {
+    font-size: 18px;
+  }
+
+  .request-card {
+    padding: 14px 16px;
+    gap: 12px;
+  }
+
+  .request-card__icon {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    border-radius: 10px;
+  }
+
+  .request-card__name {
+    font-size: 14px;
+  }
+
+  .request-card__meta {
+    font-size: 12px;
+    gap: 10px;
+  }
+
+  .tab-btn {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+}
+
 @media (max-width: 600px) {
   .request-card {
     flex-direction: column;

@@ -1268,4 +1268,49 @@ onMounted(async () => {
   }
 
 }
+
+@media (max-width: 768px) {
+  .qa-workbench {
+    height: calc(100vh - 80px);
+    max-height: calc(100vh - 80px);
+    border-radius: 0;
+  }
+
+  .qa-composer {
+    padding: 8px 10px 10px;
+  }
+
+  .qa-main__floating-header {
+    top: 6px;
+    left: 8px;
+    right: 8px;
+  }
+
+  .qa-main__pill {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+
+  .qa-main__danger {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .qa-workbench {
+    height: calc(100vh - 64px);
+    max-height: calc(100vh - 64px);
+    border: none;
+    border-radius: 0;
+  }
+
+  .qa-main__title-input :deep(.t-input__inner) {
+    font-size: 13px;
+  }
+
+  .qa-main__actions {
+    gap: 4px;
+  }
+}
 </style>

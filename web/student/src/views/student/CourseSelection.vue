@@ -981,6 +981,46 @@ onBeforeUnmount(() => {
   }
 }
 
+@media (max-width: 768px) {
+  .course-selection-page {
+    padding: 16px;
+  }
+
+  .selection-shell__header {
+    padding: 16px;
+  }
+
+  .selection-shell__title h4 {
+    font-size: 22px;
+  }
+
+  .selection-shell__title p {
+    font-size: 12px;
+  }
+
+  .selection-notice-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .selection-notice-bar__item strong {
+    font-size: 13px;
+  }
+
+  .selection-stat strong {
+    font-size: 17px;
+  }
+
+  .selection-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .selection-view-switch :deep(.el-button) {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}
+
 @media (max-width: 640px) {
   .selection-notice-bar,
   .selection-toolbar,

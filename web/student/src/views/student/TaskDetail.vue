@@ -686,4 +686,63 @@ onMounted(loadData)
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 640px) {
+  .task-detail-page {
+    padding: 14px 12px 28px;
+  }
+
+  .portal-page-title {
+    font-size: 16px;
+  }
+
+  .task-detail-hero {
+    padding: 20px 16px;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .hero-title {
+    font-size: 20px;
+  }
+
+  .hero-desc {
+    font-size: 14px;
+  }
+
+  .hero-metric {
+    padding: 12px;
+  }
+
+  .hero-metric span {
+    font-size: 12px;
+  }
+
+  .hero-metric strong {
+    font-size: 15px;
+  }
+
+  .task-section-card {
+    padding: 16px;
+  }
+
+  .section-title {
+    font-size: 16px;
+  }
+
+  .portal-grid {
+    gap: 14px;
+  }
+
+  .task-attachment-item {
+    padding: 10px 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .submit-btn {
+    width: 100%;
+  }
+}
 </style>

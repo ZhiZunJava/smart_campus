@@ -18,6 +18,9 @@
           </button>
         </div>
 
+        <button type="button" class="portal-topbar__hamburger portal-hide-desktop" @click="mobileMenuVisible = true">
+          <i class="ri-menu-line" />
+        </button>
         <div class="portal-topbar__brand" @click="goHome">
           <div class="portal-topbar__logo">
             <img class="portal-topbar__logo-image portal-topbar__logo-image--full" :src="portalLogo" alt="教务管理信息系统">
@@ -199,7 +202,7 @@
     <el-drawer
       v-model="helpCenterVisible"
       title="帮助中心"
-      size="480px"
+      :size="helpDrawerSize"
       append-to-body
       :with-header="true"
       class="portal-topbar-drawer"
@@ -235,7 +238,7 @@
     <el-drawer
       v-model="noticeVisible"
       title="消息提醒"
-      size="520px"
+      :size="noticeDrawerSize"
       append-to-body
       :with-header="true"
       class="portal-topbar-drawer"
@@ -304,6 +307,49 @@
           </div>
         </div>
       </div>
+    </el-drawer>
+
+    <el-drawer
+      v-model="mobileMenuVisible"
+      direction="ltr"
+      size="280px"
+      :with-header="false"
+      append-to-body
+      class="portal-topbar-mobile-drawer"
+    >
+      <div class="mobile-drawer-header">
+        <img :src="portalLogo" alt="Logo" class="mobile-drawer-logo" />
+        <button type="button" class="mobile-drawer-close" @click="mobileMenuVisible = false">
+          <i class="ri-close-line" />
+        </button>
+      </div>
+      <div v-if="showRoleSwitch && roleOptions.length > 1" class="mobile-drawer-role">
+        <button
+          v-for="item in roleOptions"
+          :key="item.value"
+          type="button"
+          class="mobile-drawer-role-btn"
+          :class="{ 'is-active': item.value === selectedRole }"
+          @click="handleRoleChange(item.value); mobileMenuVisible = false"
+        >
+          {{ item.label }}
+        </button>
+      </div>
+      <el-scrollbar class="mobile-drawer-scroll">
+        <div v-for="group in normalizedGroups" :key="group.key" class="mobile-drawer-group">
+          <h4>{{ group.label }}</h4>
+          <button
+            v-for="item in group.items"
+            :key="item.path"
+            type="button"
+            class="mobile-drawer-link"
+            :class="{ 'is-active': item.path === activePath }"
+            @click="handleNav(item.path); mobileMenuVisible = false"
+          >
+            {{ item.title }}
+          </button>
+        </div>
+      </el-scrollbar>
     </el-drawer>
 
   </header>
@@ -387,6 +433,14 @@ const noticeLoading = ref(false)
 let menuCloseTimer: number | null = null
 const helpSections = ref<Array<{ title: string; description: string; items: Array<{ title: string; content: string }> }>>([])
 const helpContact = ref('')
+const mobileMenuVisible = ref(false)
+
+// Responsive drawer sizing
+const windowWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1200)
+function onWinResize() { windowWidth.value = window.innerWidth }
+const isMobile = computed(() => windowWidth.value <= 768)
+const helpDrawerSize = computed(() => isMobile.value ? '100%' : '480px')
+const noticeDrawerSize = computed(() => isMobile.value ? '100%' : '520px')
 const messages = ref<any[]>([])
 const activeMessage = ref<any>(null)
 const noticeFilter = ref<'unread' | 'read'>('unread')
@@ -688,6 +742,7 @@ function handleClickOutside(event: MouseEvent) {
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+  window.addEventListener('resize', onWinResize)
   try {
     const raw = sessionStorage.getItem('portal-local-read-messages')
     localReadMessageIds.value = raw ? JSON.parse(raw) : []
@@ -708,6 +763,7 @@ watch(filteredMessages, (list) => {
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
+  window.removeEventListener('resize', onWinResize)
 })
 </script>
 
@@ -1751,6 +1807,105 @@ onBeforeUnmount(() => {
   background: var(--portal-surface-bg);
 }
 
+@media (max-width: 768px) {
+  :global(.portal-topbar-drawer) {
+    width: 100% !important;
+    max-width: 100vw !important;
+  }
+  :global(.portal-topbar-drawer .el-drawer__header) { padding: 12px 14px; margin-bottom: 0; padding-bottom: 10px; }
+  :global(.portal-topbar-drawer .el-drawer__body) { padding: 12px 14px; overflow-y: auto; }
+
+  /* Hide hero on mobile — saves vertical space */
+  .portal-topbar__drawer-hero { display: none; }
+
+  /* Reduce gap in body */
+  .portal-topbar__drawer-body { gap: 10px; }
+
+  /* Help section compact */
+  .portal-topbar__help-section { padding: 12px; }
+  .portal-topbar__help-section h3 { font-size: 14px; }
+  .portal-topbar__help-item { margin-top: 8px; padding-top: 8px; }
+  .portal-topbar__help-item strong { font-size: 13px; }
+  .portal-topbar__help-item span { font-size: 12px; }
+  .portal-topbar__help-contact { font-size: 12px; }
+
+  /* Notice filter — full width, centered */
+  .portal-topbar__notice-filter { display: flex; width: 100%; margin-bottom: 8px; }
+  .portal-topbar__notice-filter-btn { flex: 1; text-align: center; padding: 8px 10px; font-size: 13px; }
+
+  /* Notice layout: single column stack */
+  .portal-topbar__notice-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* Notice list: scrollable area */
+  .portal-topbar__notice-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: none;
+  }
+
+  /* Notice items: more compact with better touch targets */
+  .portal-topbar__notice-item {
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 10px;
+    padding: 12px;
+    border-radius: 10px;
+  }
+  .portal-topbar__notice-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    font-size: 16px;
+  }
+  .portal-topbar__notice-head {
+    gap: 6px;
+  }
+  .portal-topbar__notice-head strong { font-size: 13px; }
+  .portal-topbar__notice-head span {
+    min-width: auto;
+    height: 20px;
+    padding: 0 6px;
+    font-size: 10px;
+  }
+  .portal-topbar__notice-item p {
+    font-size: 12px;
+    margin-top: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Detail panel: card style with clear separation */
+  .portal-topbar__notice-detail {
+    border-left: none;
+    border-top: none;
+    padding: 14px;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
+    border: 1px solid var(--portal-border);
+  }
+  .portal-topbar__notice-detail h3 { font-size: 15px; }
+  .portal-topbar__notice-meta {
+    font-size: 11px;
+    display: flex;
+    gap: 10px;
+    margin-top: 6px;
+    color: var(--portal-text-secondary);
+  }
+  .portal-topbar__notice-content {
+    font-size: 13px;
+    line-height: 1.7;
+    margin-top: 10px;
+  }
+  .portal-topbar__form-footer { margin-top: 10px !important; }
+  .portal-topbar__form-footer :deep(.el-button) { width: 100%; }
+}
+
 .portal-menu-overlay-enter-active,
 .portal-menu-overlay-leave-active {
   transition: opacity .18s ease;
@@ -1851,5 +2006,119 @@ onBeforeUnmount(() => {
   .portal-topbar__menu-group {
     flex-basis: 100%;
   }
+}
+
+/* ---- Mobile Responsive ---- */
+.portal-topbar__hamburger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  color: var(--portal-topbar-text, #24486f);
+  font-size: 22px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.portal-topbar__hamburger:hover { background: rgba(0,0,0,0.06); }
+
+@media (max-width: 768px) {
+  .portal-topbar__hamburger { display: flex; }
+  .portal-topbar__menu-trigger-wrapper { display: none; }
+  .portal-topbar__search { display: none !important; }
+  .portal-topbar__logo-image--full { display: none; }
+  .portal-topbar__logo-image--compact { display: block !important; }
+  .portal-topbar__role-pill span { display: none; }
+  .portal-topbar__role-pill { padding: 0 8px; min-width: 36px; justify-content: center; }
+  .portal-topbar__guest-actions { gap: 6px; }
+  .portal-topbar__guest-btn { padding: 6px 12px; font-size: 12px; }
+  .portal-topbar__inner { padding: 0 12px; }
+}
+
+/* ---- Mobile Drawer ---- */
+:global(.portal-topbar-mobile-drawer) {
+  z-index: 6000 !important;
+}
+:global(.portal-topbar-mobile-drawer .el-drawer__body) {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mobile-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e8ecf1;
+}
+.mobile-drawer-logo { height: 28px; width: auto; }
+.mobile-drawer-close {
+  width: 32px; height: 32px;
+  border: none; background: transparent;
+  border-radius: 6px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; color: #667b93;
+}
+.mobile-drawer-close:hover { background: #f1f5f9; }
+
+.mobile-drawer-role {
+  display: flex; gap: 6px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.mobile-drawer-role-btn {
+  flex: 1;
+  height: 34px;
+  border: 1px solid #dce4ee;
+  border-radius: 6px;
+  background: #fff;
+  color: #6a7b90;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.mobile-drawer-role-btn.is-active {
+  background: var(--portal-brand, #2f6bff);
+  border-color: var(--portal-brand, #2f6bff);
+  color: #fff;
+  font-weight: 600;
+}
+
+.mobile-drawer-scroll { flex: 1; overflow: hidden; }
+.mobile-drawer-group { padding: 12px 16px 4px; }
+.mobile-drawer-group h4 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #9aacbf;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.mobile-drawer-link {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 2px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #475569;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.mobile-drawer-link:hover { background: #f5f8ff; color: var(--portal-brand, #2f6bff); }
+.mobile-drawer-link.is-active {
+  background: #ebf1ff;
+  color: var(--portal-brand, #2f6bff);
+  font-weight: 600;
 }
 </style>

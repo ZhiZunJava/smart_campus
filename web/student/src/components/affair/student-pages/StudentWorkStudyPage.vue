@@ -205,4 +205,15 @@ onMounted(loadJobs)
   padding-top: 10px;
   border-top: 1px solid #f1f5f9;
 }
+
+@media (max-width: 768px) {
+  .job-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .job-card { padding: 12px; border-radius: 8px; }
+  .job-card__head strong { font-size: 13px; }
+  .job-card__meta { font-size: 12px; }
+  .job-card__footer { margin-top: 10px; padding-top: 8px; }
+}
 </style>

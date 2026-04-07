@@ -129,4 +129,15 @@
 @media (max-width: 768px) {
   .record-row { flex-wrap: wrap; }
   .record-row__detail { width: 100%; order: 3; }
+  .window-row { gap: 10px; padding: 10px 12px; }
+  .record-row { gap: 10px; padding: 10px 12px; }
+  .section-head h3 { font-size: 14px; }
+}
+
+@media (max-width: 640px) {
+  .window-row { flex-direction: column; align-items: flex-start; gap: 8px; padding: 10px; border-radius: 8px; }
+  .record-row { padding: 8px 10px; border-radius: 8px; }
+  .record-row__main strong { font-size: 13px; }
+  .record-row__time { font-size: 10px; }
+  .no-data-hint { padding: 14px; font-size: 12px; border-radius: 8px; }
 }

@@ -414,14 +414,37 @@ onMounted(() => {
   .category-hero { flex-direction: column; align-items: flex-start; }
 }
 
+@media (max-width: 768px) {
+  .category-hero { padding: 22px; }
+  .category-hero__icon { width: 48px; height: 48px; font-size: 24px; border-radius: 14px; }
+  .category-hero__text h2 { font-size: 20px; }
+  .template-grid { grid-template-columns: 1fr; }
+  .template-card { padding: 16px; }
+  .overview-panels { grid-template-columns: 1fr; }
+  .section-header { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .mini-stat { padding: 10px 14px; }
+  .mini-stat strong { font-size: 18px; }
+  :deep(.el-dialog) { width: 96vw !important; margin: 2vh auto !important; }
+  :deep(.el-drawer) { width: 100% !important; }
+}
+
 @media (max-width: 640px) {
-  .category-hero { padding: 20px; }
+  .category-hero { padding: 16px; gap: 14px; }
   .category-hero__stats { flex-direction: column; }
   .overview-panels { grid-template-columns: 1fr; }
   .template-grid { grid-template-columns: 1fr; }
   .guide-grid { grid-template-columns: 1fr; }
   .metric-grid { grid-template-columns: 1fr 1fr; }
   .record-toolbar { flex-direction: column; align-items: flex-start; }
+  .category-hero__text h2 { font-size: 18px; }
+  .category-hero__eyebrow { font-size: 11px; }
+  .category-hero__text p { font-size: 13px; }
+  .section-header h3 { font-size: 16px; }
+  .template-card__title strong { font-size: 14px; }
+  .template-card p { font-size: 13px; }
+  .overview-card h3 { font-size: 14px; }
+  .pill { padding: 6px 12px; font-size: 13px; }
+  .guide-card strong { font-size: 14px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

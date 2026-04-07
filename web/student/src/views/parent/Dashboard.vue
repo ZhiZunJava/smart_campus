@@ -361,4 +361,23 @@ onMounted(loadData)
 </script>
 
 <style scoped>
+/*
+ * Parent Dashboard — delegates layout entirely to PortalDashboardShell.
+ * Component-specific responsive overrides go here when needed.
+ */
+
+/* 1024px — tablet landscape */
+@media (max-width: 1024px) {
+  /* reserved — add parent-specific tweaks here */
+}
+
+/* 768px — tablet portrait */
+@media (max-width: 768px) {
+  /* reserved */
+}
+
+/* 640px — small mobile */
+@media (max-width: 640px) {
+  /* reserved */
+}
 </style>

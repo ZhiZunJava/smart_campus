@@ -174,8 +174,11 @@ async function submitBatchReview() {
   .batch-bar { flex-wrap: wrap; }
 }
 @media (max-width: 640px) {
-  .batch-bar { padding: 8px 12px; }
+  .batch-bar { padding: 8px 12px; flex-direction: column; align-items: flex-start; }
   .review-panel { gap: 12px; }
+  .panel-title { font-size: 16px; }
+  .review-box__summary { padding: 12px; }
+  .review-box__summary p { font-size: 13px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

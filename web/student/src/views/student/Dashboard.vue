@@ -89,7 +89,7 @@
                     :autoplay="false"
                     arrow="always"
                     indicator-position="outside"
-                    height="214px"
+                    :height="carouselHeight"
                   >
                     <el-carousel-item v-for="course in activeScheduleCourses" :key="course.key">
                       <div class="modern-progress-card modern-progress-card--featured">
@@ -270,7 +270,7 @@
       </div>
     </div>
 
-    <el-drawer v-model="quickDrawerVisible" direction="rtl" size="460px" class="dashboard-quick-drawer" append-to-body>
+    <el-drawer v-model="quickDrawerVisible" direction="rtl" :size="windowWidth <= 768 ? '100%' : '460px'" class="dashboard-quick-drawer" append-to-body>
       <template #header>
         <div class="dashboard-quick-drawer__header">
           <div class="dashboard-quick-drawer__title">{{ drawerTitle }}（{{ drawerCount }}）</div>
@@ -433,7 +433,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -1252,6 +1252,17 @@ async function loadScheduleData() {
 }
 
 const loading = ref(true)
+
+// Responsive carousel height
+const windowWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1200)
+function onResize() { windowWidth.value = window.innerWidth }
+onMounted(() => window.addEventListener('resize', onResize))
+onBeforeUnmount(() => window.removeEventListener('resize', onResize))
+const carouselHeight = computed(() => {
+  if (windowWidth.value <= 640) return '260px'
+  if (windowWidth.value <= 768) return '240px'
+  return '214px'
+})
 
 async function loadData() {
   if (!userStore.user?.userId) return
@@ -2447,6 +2458,11 @@ onMounted(loadData)
     flex-direction: column;
   }
 
+  .dashboard-module {
+    flex: none;
+    min-height: auto;
+  }
+
   .shortcut-panel {
     gap: 10px 16px;
   }
@@ -2521,6 +2537,314 @@ onMounted(loadData)
 @media (max-width: 560px) {
   .shortcut-config__grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ── 1024px: tighten spacing after column switch ── */
+@media (max-width: 1024px) {
+  .dashboard-container {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .hello-wrapper {
+    margin-bottom: 28px;
+  }
+
+  .greetings {
+    font-size: 30px;
+  }
+
+  .hello-other-info {
+    font-size: 16px;
+  }
+
+  .short-wrapper {
+    padding: 20px;
+  }
+
+  .shortcut-panel {
+    gap: 10px 14px;
+  }
+
+  .dashboard-module {
+    padding: 16px;
+    min-height: 240px;
+  }
+
+  .suspension-wrapper {
+    right: 12px;
+  }
+}
+
+/* ── 768px: reduce paddings, font sizes, KPI grids to 2 columns ── */
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 12px;
+    gap: 14px;
+  }
+
+  .hello-wrapper {
+    margin-left: 0;
+    margin-bottom: 20px;
+  }
+
+  .dashboard-modules-wrapper {
+    margin-left: 0;
+    gap: 14px;
+  }
+
+  .dashboard-module {
+    padding: 14px;
+    min-height: auto;
+    flex: none;
+  }
+
+  .short-wrapper {
+    padding: 16px;
+    border-radius: 12px;
+    margin-right: 0;
+  }
+
+  .short-header {
+    font-size: 15px;
+    margin-bottom: 14px;
+  }
+
+  .modern-task-card {
+    padding: 12px;
+  }
+
+  .modern-task-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    margin-right: 12px;
+    border-radius: 10px;
+  }
+
+  .modern-task-actions {
+    margin-left: 10px;
+  }
+
+  .modern-task-actions .el-button {
+    width: 64px;
+  }
+
+  .recent-tabs-container {
+    margin-top: 20px;
+  }
+
+  .suspension-list {
+    padding: 12px 6px;
+    gap: 12px;
+  }
+
+  .icon-wrapper {
+    width: 38px;
+    height: 38px;
+    font-size: 18px;
+  }
+}
+
+/* ── 640px: KPI grids to 1 column, further reduce sizes ── */
+@media (max-width: 640px) {
+  .dashboard-container {
+    padding: 10px;
+    gap: 12px;
+  }
+
+  .greetings {
+    font-size: 24px;
+    letter-spacing: 0.5px;
+  }
+
+  .hello-other-info {
+    font-size: 14px;
+    line-height: 24px;
+  }
+
+  .login-info {
+    gap: 10px;
+    font-size: 11px;
+  }
+
+  .font-size-11 {
+    font-size: 16px;
+  }
+
+  .hello-wrapper {
+    margin-bottom: 16px;
+  }
+
+  .shortcut-panel {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+  }
+
+  .shortcut-item {
+    padding: 12px 6px;
+  }
+
+  .shortcut-item__icon {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    margin-bottom: 8px;
+    border-radius: 12px;
+  }
+
+  .shortcut-item__title {
+    font-size: 12px;
+  }
+
+  .dashboard-module {
+    padding: 12px;
+    min-height: auto;
+    flex: none;
+    border-radius: 10px;
+  }
+
+  .module-header {
+    margin-bottom: 14px;
+  }
+
+  .module-header h3 {
+    font-size: 14px;
+  }
+
+  .short-wrapper {
+    padding: 14px;
+    border-radius: 10px;
+  }
+
+  .short-header {
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+
+  .modern-progress-card {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .modern-progress-pill {
+    min-height: 28px;
+    padding: 0 10px;
+    font-size: 11px;
+  }
+
+  .modern-task-card {
+    padding: 10px;
+    flex-wrap: wrap;
+  }
+
+  .modern-task-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+    margin-right: 10px;
+  }
+
+  .modern-task-title h4 {
+    font-size: 12px;
+  }
+
+  .modern-task-status {
+    font-size: 11px;
+  }
+
+  .modern-task-meta {
+    font-size: 11px;
+    gap: 8px;
+  }
+
+  .modern-task-actions {
+    margin-left: auto;
+    width: 100%;
+    flex-direction: row;
+    justify-content: flex-end;
+    padding-top: 6px;
+  }
+
+  .modern-task-actions .el-button {
+    width: auto;
+  }
+
+  .schedule-carousel {
+    padding: 0 8px 4px;
+  }
+
+  .schedule-carousel :deep(.el-carousel__item) {
+    align-items: flex-start;
+  }
+
+  .modern-progress-card--featured {
+    min-height: auto;
+    height: auto;
+  }
+
+  .schedule-carousel :deep(.el-carousel__arrow) {
+    width: 26px;
+    height: 26px;
+  }
+
+  .schedule-carousel :deep(.el-carousel__arrow--left) {
+    left: -8px;
+  }
+
+  .schedule-carousel :deep(.el-carousel__arrow--right) {
+    right: -8px;
+  }
+
+  .suspension-wrapper {
+    right: 8px;
+    bottom: 12px;
+  }
+
+  .suspension-list {
+    padding: 10px 5px;
+    gap: 10px;
+    border-radius: 18px;
+  }
+
+  .icon-wrapper {
+    width: 34px;
+    height: 34px;
+    font-size: 16px;
+  }
+
+  .icon-text {
+    font-size: 10px;
+  }
+
+  .task-overview-badge {
+    padding: 3px 8px;
+    font-size: 10px;
+  }
+}
+
+/* ── Fix hardcoded el-drawer / el-dialog widths on small screens ── */
+@media (max-width: 768px) {
+  :deep(.dashboard-quick-drawer.el-drawer) {
+    width: 100% !important;
+  }
+
+  :global(.shortcut-config.el-dialog) {
+    --el-dialog-width: 95vw !important;
+    width: 95vw !important;
+    margin: 0 auto;
+  }
+
+  .shortcut-config__selected-chip {
+    padding: 5px 10px 5px 6px;
+    gap: 6px;
+  }
+
+  .shortcut-config__selected-order {
+    width: 18px;
+    height: 18px;
+    font-size: 11px;
   }
 }
 </style>

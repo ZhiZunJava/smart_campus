@@ -307,4 +307,8 @@ onMounted(loadAll)
   display: grid;
   gap: 18px;
 }
+
+@media (max-width: 768px) {
+  .affair-workbench { gap: 12px; }
+}
 </style>

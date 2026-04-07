@@ -253,7 +253,7 @@
       </div>
     </div>
 
-    <el-drawer v-model="quickDrawerVisible" direction="rtl" size="460px" class="dashboard-quick-drawer" append-to-body>
+    <el-drawer v-model="quickDrawerVisible" direction="rtl" :size="windowWidth <= 640 ? '100%' : '460px'" class="dashboard-quick-drawer" append-to-body>
       <template #header>
         <div class="dashboard-quick-drawer__header">
           <div class="dashboard-quick-drawer__title">{{ drawerTitle }}（{{ drawerCount }}）</div>
@@ -327,7 +327,7 @@
     <el-dialog
       v-model="shortcutDialogVisible"
       title="快捷入口设置"
-      width="760px"
+      width="min(760px, 92vw)"
       top="6vh"
       class="shortcut-config"
       destroy-on-close
@@ -419,7 +419,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
@@ -508,6 +508,11 @@ const storedShortcutPaths = ref<string[]>([])
 const editingShortcutPaths = ref<string[]>([])
 const quickDrawerVisible = ref(false)
 const activeDrawerTab = ref<DashboardDrawerTab>('todo')
+const windowWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1024)
+
+function handleResize() { windowWidth.value = window.innerWidth }
+onMounted(() => window.addEventListener('resize', handleResize))
+onBeforeUnmount(() => window.removeEventListener('resize', handleResize))
 
 const activeScheduleMode = computed({
   get: () => props.scheduleMode,
@@ -1927,6 +1932,7 @@ function hexToRgba(hex: string, alpha: number) {
   z-index: 5202 !important;
 }
 
+/* ---------- 1200px — stack to single-column ---------- */
 @media (max-width: 1200px) {
   .dashboard-container {
     flex-direction: column;
@@ -1969,6 +1975,48 @@ function hexToRgba(hex: string, alpha: number) {
 
   .suspension-list {
     border-radius: 22px;
+  }
+}
+
+/* ---------- 1024px — tablet landscape / narrow desktop ---------- */
+@media (max-width: 1024px) {
+  .dashboard-container {
+    padding: 16px;
+    gap: 18px;
+  }
+
+  .hello-wrapper {
+    margin-left: 0;
+    margin-bottom: 28px;
+  }
+
+  .greetings {
+    font-size: 32px;
+    letter-spacing: 1px;
+  }
+
+  .hello-other-info {
+    font-size: 16px;
+  }
+
+  .login-info {
+    gap: 14px;
+  }
+
+  .dashboard-module {
+    padding: 16px;
+    min-height: 240px;
+  }
+
+  .modern-task-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    margin-right: 12px;
+  }
+
+  .dashboard-modules-wrapper {
+    margin-left: 0;
   }
 }
 
@@ -2025,9 +2073,232 @@ function hexToRgba(hex: string, alpha: number) {
   .shortcut-config__selected-chip {
     width: 100%;
   }
+
+  .suspension-list {
+    flex-direction: row;
+    border-radius: 22px;
+    padding: 8px 14px;
+  }
+
+  .dashboard-quick-item {
+    padding: 14px 16px;
+    gap: 12px;
+  }
+
+  .dashboard-quick-item__icon {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+
+  .hello-wrapper {
+    margin-bottom: 24px;
+  }
+
+  .login-info {
+    gap: 10px 16px;
+  }
 }
 
+/* ---------- 640px — small mobile ---------- */
+@media (max-width: 640px) {
+  :deep(.dashboard-quick-drawer.el-drawer) {
+    width: 100% !important;
+  }
+
+  .dashboard-container {
+    padding: 12px;
+    gap: 14px;
+  }
+
+  .hello-wrapper {
+    margin-left: 0;
+    margin-bottom: 18px;
+  }
+
+  .greetings {
+    font-size: 24px;
+    letter-spacing: 0.5px;
+    margin-top: 10px;
+  }
+
+  .hello-other-info {
+    font-size: 13px;
+    line-height: 22px;
+  }
+
+  .login-info {
+    gap: 8px 12px;
+    font-size: 11px;
+  }
+
+  .recent-tabs-container {
+    margin-top: 16px;
+    gap: 8px;
+  }
+
+  .recent-tab-item {
+    padding: 5px 12px;
+    font-size: 12px;
+  }
+
+  .dashboard-modules-wrapper {
+    margin-left: 0;
+    gap: 14px;
+  }
+
+  .dashboard-module {
+    padding: 14px;
+    min-height: 200px;
+    border-radius: 10px;
+  }
+
+  .module-header {
+    margin-bottom: 12px;
+    gap: 8px;
+  }
+
+  .module-header h3 {
+    font-size: 14px;
+  }
+
+  .schedule-preview-summary {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .schedule-preview-summary__title {
+    font-size: 12px;
+  }
+
+  .schedule-preview-summary__desc {
+    font-size: 11px;
+  }
+
+  .schedule-carousel {
+    padding: 0 6px 4px;
+  }
+
+  .schedule-carousel :deep(.el-carousel__arrow) {
+    width: 26px;
+    height: 26px;
+  }
+
+  .schedule-carousel :deep(.el-carousel__arrow--left) {
+    left: -8px;
+  }
+
+  .schedule-carousel :deep(.el-carousel__arrow--right) {
+    right: -8px;
+  }
+
+  .modern-progress-card {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .modern-progress-pill {
+    min-height: 26px;
+    padding: 0 10px;
+    font-size: 10.5px;
+  }
+
+  .modern-progress-fact {
+    padding: 8px 10px;
+  }
+
+  .modern-task-card {
+    padding: 12px;
+    flex-wrap: wrap;
+  }
+
+  .modern-task-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+    margin-right: 10px;
+    border-radius: 10px;
+  }
+
+  .modern-task-title h4 {
+    font-size: 12.5px;
+  }
+
+  .modern-task-actions {
+    margin-left: 0;
+    margin-top: 8px;
+    width: 100%;
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+
+  .modern-task-actions .el-button {
+    width: auto;
+  }
+
+  .short-wrapper {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .short-header {
+    font-size: 15px;
+    margin-bottom: 14px;
+  }
+
+  .shortcut-panel {
+    gap: 8px 12px;
+  }
+
+  .shortcut-item {
+    padding: 12px 6px;
+  }
+
+  .shortcut-item__icon {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    margin-bottom: 8px;
+  }
+
+  .shortcut-item__title {
+    font-size: 12px;
+  }
+
+  .suspension-wrapper {
+    right: 10px;
+    bottom: 10px;
+  }
+
+  .suspension-list {
+    padding: 10px 6px;
+    gap: 10px;
+    border-radius: 18px;
+  }
+
+  .icon-wrapper {
+    width: 38px;
+    height: 38px;
+    font-size: 18px;
+  }
+
+  .icon-text {
+    font-size: 10px;
+  }
+
+  .task-overview-badges {
+    gap: 6px;
+  }
+
+  .task-overview-badge {
+    font-size: 10px;
+    padding: 3px 8px;
+  }
+}
+
+/* ---------- 560px — narrow mobile ---------- */
 @media (max-width: 560px) {
+  .shortcut-panel,
   .shortcut-config__grid {
     grid-template-columns: 1fr;
   }

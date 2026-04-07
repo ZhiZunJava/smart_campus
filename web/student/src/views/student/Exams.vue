@@ -1752,4 +1752,117 @@ onMounted(async () => {
     flex-direction: column;
   }
 }
+
+@media (max-width: 768px) {
+  .exam-page {
+    padding: 16px;
+  }
+
+  .exam-hero {
+    padding: 20px;
+  }
+
+  .hero-title {
+    font-size: 22px;
+  }
+
+  .hero-metric strong {
+    font-size: 22px;
+  }
+
+  .exam-section-card {
+    padding: 20px;
+  }
+
+  .section-title {
+    font-size: 17px;
+  }
+
+  .exam-paper-card {
+    padding: 16px;
+  }
+
+  .exam-paper-card__title {
+    font-size: 16px;
+  }
+
+  .tabs-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .exam-paper-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .record-detail-insights {
+    grid-template-columns: 1fr;
+  }
+
+  .record-detail-hero {
+    padding: 16px;
+  }
+
+  .exam-record-detail-dialog :deep(.el-dialog) {
+    --el-dialog-width: 100% !important;
+    margin: 0 !important;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .exam-page {
+    padding: 12px;
+  }
+
+  .exam-hero {
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .hero-title {
+    font-size: 20px;
+  }
+
+  .hero-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-metric strong {
+    font-size: 20px;
+  }
+
+  .exam-kpis {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .kpi-value {
+    font-size: 22px;
+  }
+
+  .exam-section-card {
+    padding: 14px;
+  }
+
+  .exam-paper-card__actions {
+    flex-direction: column;
+  }
+
+  .exam-paper-card__actions .el-button {
+    width: 100%;
+  }
+
+  .exam-preview-summary__stats {
+    grid-template-columns: 1fr;
+  }
+
+  .preview-head,
+  .exam-dialog-head {
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+  }
+}
 </style>

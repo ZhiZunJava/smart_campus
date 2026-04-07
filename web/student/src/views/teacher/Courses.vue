@@ -477,4 +477,74 @@ onMounted(async () => {
     padding: 20px;
   }
 }
+
+@media (max-width: 768px) {
+  .teacher-courses-page {
+    padding: 16px;
+    gap: 14px;
+  }
+
+  .teacher-courses__hero {
+    padding: 18px;
+  }
+
+  .teacher-courses__hero-copy h4 {
+    font-size: 22px;
+  }
+
+  .teacher-courses__hero-stat strong {
+    font-size: 22px;
+  }
+
+  .teacher-courses__toolbar,
+  .teacher-courses__list-card {
+    padding: 14px;
+  }
+
+  .teacher-courses__select,
+  .teacher-courses__input {
+    width: 100%;
+  }
+
+  .teacher-course-card__body h4 {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .teacher-courses-page {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .teacher-courses__hero {
+    padding: 14px;
+  }
+
+  .teacher-courses__hero-copy h4 {
+    font-size: 18px;
+  }
+
+  .teacher-courses__hero-copy p {
+    font-size: 13px;
+  }
+
+  .teacher-courses__hero-stat {
+    padding: 12px 14px;
+  }
+
+  .teacher-courses__hero-stat strong {
+    font-size: 18px;
+  }
+
+  .teacher-course-card {
+    padding: 12px;
+  }
+
+  .teacher-course-card__footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+}
 </style>

@@ -293,8 +293,16 @@ onMounted(() => { if (props.requestId) loadDetail() })
 }
 @media (max-width: 640px) {
   .detail-hero { padding: 16px; }
-  .detail-card { padding: 16px; }
+  .detail-hero__text h2 { font-size: 18px; }
+  .detail-hero__text p { font-size: 12px; }
+  .detail-card { padding: 14px; }
+  .detail-card h4 { font-size: 14px; }
   .detail-actions { flex-direction: column; }
+  .detail-actions .el-button { width: 100%; }
+  .info-row span { font-size: 12px; min-width: 60px; }
+  .info-row strong { font-size: 13px; }
+  .attachment-chip { padding: 6px 12px; font-size: 12px; }
+  .request-detail { gap: 14px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

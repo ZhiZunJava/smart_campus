@@ -1719,4 +1719,123 @@ watch(displayWrongs, (list) => {
     flex: 1;
   }
 }
+
+@media (max-width: 768px) {
+  .wrongbook-page {
+    padding: 16px 16px 32px;
+  }
+
+  .wrongbook-hero {
+    padding: 20px;
+  }
+
+  .hero-title {
+    font-size: 22px;
+  }
+
+  .hero-desc {
+    font-size: 13px;
+  }
+
+  .hero-metric strong {
+    font-size: 24px;
+  }
+
+  .wrongbook-kpis {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .kpi-card-wide {
+    grid-column: span 1;
+  }
+
+  .kpi-value {
+    font-size: 22px;
+  }
+
+  .wrongbook-section-card {
+    padding: 16px;
+  }
+
+  .section-title {
+    font-size: 16px;
+  }
+
+  .wrongbook-detail-grid {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .custom-table {
+    overflow-x: auto;
+  }
+
+  :deep(.retry-dialog .el-dialog),
+  :deep(.retry-preview-dialog .el-dialog) {
+    --el-dialog-width: 96% !important;
+    margin: 8px auto !important;
+  }
+
+  .retry-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .wrongbook-page {
+    padding: 12px 12px 28px;
+  }
+
+  .wrongbook-hero {
+    padding: 14px;
+  }
+
+  .hero-title {
+    font-size: 20px;
+  }
+
+  .hero-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-metric {
+    padding: 16px 14px;
+  }
+
+  .hero-metric strong {
+    font-size: 22px;
+  }
+
+  .wrongbook-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .wrongbook-section-card {
+    padding: 12px;
+  }
+
+  .wrongbook-filters {
+    padding: 12px 12px 10px;
+  }
+
+  .portal-page-title {
+    font-size: 17px;
+  }
+
+  .wrongbook-actions {
+    flex-direction: column;
+  }
+
+  .wrongbook-actions .el-button {
+    width: 100%;
+  }
+
+  :deep(.retry-dialog .el-dialog),
+  :deep(.retry-preview-dialog .el-dialog) {
+    --el-dialog-width: 100% !important;
+    margin: 0 !important;
+    border-radius: 12px 12px 0 0;
+  }
+}
 </style>

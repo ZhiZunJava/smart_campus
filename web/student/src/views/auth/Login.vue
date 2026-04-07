@@ -81,6 +81,18 @@
           </div>
         </transition>
 
+        <div class="quick-login-divider">
+          <span>快速登录</span>
+        </div>
+        <div class="quick-login-row">
+          <button class="quick-login-btn" @click="quickLogin('zhangsan', '123456')">
+            <i class="ri-user-3-line"></i>学生端
+          </button>
+          <button class="quick-login-btn" @click="quickLogin('lilaoshi', '123456')">
+            <i class="ri-briefcase-4-line"></i>教师端
+          </button>
+        </div>
+
         <div class="auth-card__footer">
           <span>还没有账号？</span>
           <router-link to="/register">立即注册</router-link>
@@ -109,7 +121,7 @@ const scanTicket = ref('')
 const scanQrCode = ref('')
 const scanStatusText = ref('请使用移动设备扫描二维码')
 let scanPollTimer: number | null = null
-const form = reactive({ username: 'admin', password: 'admin123', code: '' })
+const form = reactive({ username: '', password: '', code: '' })
 const topMenus = [
   { title: '智慧校园', path: '/login' },
   { title: '服务专区', path: '/register' },
@@ -183,6 +195,12 @@ function beginScanPolling() {
       scanStatusText.value = '扫码状态获取失败，请重新生成二维码'
     }
   }, 2000)
+}
+
+function quickLogin(username: string, password: string) {
+  form.username = username
+  form.password = password
+  handleLogin()
 }
 
 function handleRoleChange(role: string) {
@@ -450,6 +468,62 @@ onBeforeUnmount(() => {
   font-size: 15px;
   font-weight: 700;
   box-shadow: 0 14px 24px rgba(35, 93, 206, 0.16);
+}
+
+.quick-login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0 12px;
+}
+
+.quick-login-divider::before,
+.quick-login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e4ebf5;
+}
+
+.quick-login-divider span {
+  flex-shrink: 0;
+  color: #9aacbf;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.quick-login-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.quick-login-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  height: 34px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #667b93;
+  border: 1px dashed #dbe6f5;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.quick-login-btn:hover {
+  color: #3f73db;
+  border-color: #a8c4f0;
+  background: #f5f8fe;
+}
+
+.quick-login-btn i {
+  font-size: 14px;
+  line-height: 1;
 }
 
 .scan-panel {

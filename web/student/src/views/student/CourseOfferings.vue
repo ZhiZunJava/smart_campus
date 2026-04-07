@@ -1677,6 +1677,108 @@ onMounted(async () => {
   }
 }
 
+@media (max-width: 640px) {
+  .course-offerings-page {
+    padding: 10px;
+  }
+
+  .search-card {
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+
+  .search-grid--primary,
+  .search-grid--advanced {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .search-head__icon {
+    width: 26px;
+    height: 26px;
+  }
+
+  .search-head__title {
+    font-size: 12px;
+  }
+
+  .search-head__desc {
+    font-size: 11px;
+  }
+
+  .search-field label {
+    font-size: 11px;
+    margin-bottom: 6px;
+  }
+
+  .search-actions {
+    justify-content: stretch;
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+
+  .search-actions :deep(.el-button) {
+    flex: 1;
+  }
+
+  .active-tags {
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+
+  .active-tags__list {
+    gap: 6px;
+  }
+
+  .toolbar-card {
+    padding: 8px 10px;
+  }
+
+  .toolbar-status,
+  .toolbar-total {
+    font-size: 11px;
+  }
+
+  .table-card {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table-card :deep(.el-table) {
+    min-width: 700px;
+  }
+
+  .table-pagination {
+    padding: 12px 10px;
+  }
+
+  .table-pagination :deep(.el-pagination) {
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+  }
+
+  .course-info-cell strong {
+    font-size: 13px;
+  }
+
+  .course-name-link {
+    max-width: 160px;
+  }
+
+  .credit-badge {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+
+  .tooltip-multiline {
+    max-width: 280px;
+  }
+}
+
 @media (max-width: 480px) {
   .search-grid--primary,
   .search-grid--advanced {

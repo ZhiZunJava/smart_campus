@@ -2036,4 +2036,400 @@ onBeforeRouteLeave(async () => {
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 768px) {
+  .exam-header {
+    padding: 16px 20px;
+  }
+
+  .exam-header-eyebrow {
+    font-size: 12px;
+    padding: 4px 10px;
+    margin-bottom: 8px;
+  }
+
+  .exam-title {
+    font-size: 17px;
+    margin-bottom: 8px;
+  }
+
+  .exam-meta {
+    gap: 8px;
+  }
+
+  .meta-item {
+    font-size: 12px;
+    padding: 3px 8px;
+  }
+
+  .exam-timer {
+    padding: 12px 20px;
+    min-width: 160px;
+  }
+
+  .exam-timer .timer-value {
+    font-size: 24px;
+  }
+
+  .exam-timer .timer-label {
+    font-size: 12px;
+  }
+
+  .exam-question-sheet {
+    padding: 20px;
+  }
+
+  .question-stem {
+    font-size: 15px;
+    margin-bottom: 24px;
+  }
+
+  .exam-option-item {
+    padding: 12px 14px;
+  }
+
+  .option-key {
+    font-size: 14px;
+  }
+
+  .option-content {
+    font-size: 14px;
+  }
+
+  .sheet-footer {
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 32px;
+  }
+
+  .sheet-footer .el-button {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+
+  .sheet-footer-center {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Sidebar collapses to bottom bar */
+  .exam-sidebar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .sidebar-card {
+    padding: 16px;
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .sidebar-title {
+    font-size: 14px;
+    margin-bottom: 12px;
+    padding-left: 10px;
+  }
+
+  .palette-grid {
+    grid-template-columns: repeat(8, 1fr);
+    gap: 8px;
+  }
+
+  .palette-btn {
+    height: 34px;
+    font-size: 13px;
+  }
+
+  .palette-legend {
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .progress-stats {
+    gap: 8px;
+  }
+
+  .stat-val {
+    font-size: 20px;
+  }
+
+  .stat-lbl {
+    font-size: 12px;
+  }
+
+  .monitor-stats {
+    font-size: 12px;
+    padding: 10px;
+  }
+
+  /* Result mode */
+  .exam-result-hero {
+    padding: 20px;
+    gap: 20px;
+  }
+
+  .exam-result-hero__title {
+    font-size: 20px;
+    margin: 10px 0 8px;
+  }
+
+  .exam-result-hero__desc {
+    font-size: 13px;
+  }
+
+  .exam-result-hero__stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .exam-result-metric {
+    padding: 14px 8px;
+  }
+
+  .exam-result-metric strong {
+    font-size: 20px;
+  }
+
+  .exam-result-metric span {
+    font-size: 11px;
+  }
+
+  .exam-result-insights {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .exam-result-insights__card {
+    padding: 14px;
+  }
+
+  .exam-result-insights__card strong {
+    font-size: 22px;
+  }
+
+  .exam-result-performance {
+    padding: 16px;
+  }
+
+  .exam-result-performance__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .exam-result-answers {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .exam-result-summary {
+    padding: 16px;
+  }
+
+  .header-actions .el-button {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 640px) {
+  .exam-header {
+    padding: 12px 14px;
+    margin-bottom: 16px;
+  }
+
+  .exam-title {
+    font-size: 15px;
+  }
+
+  .exam-meta {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .exam-timer {
+    width: 100%;
+    padding: 10px 16px;
+    min-width: unset;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .exam-timer .timer-label {
+    margin-bottom: 0;
+    font-size: 11px;
+  }
+
+  .exam-timer .timer-value {
+    font-size: 20px;
+  }
+
+  .exam-question-sheet {
+    padding: 14px;
+  }
+
+  .sheet-header {
+    flex-direction: column;
+    gap: 10px;
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+  }
+
+  .question-index {
+    font-size: 16px;
+  }
+
+  .question-stem {
+    font-size: 14px;
+    line-height: 1.7;
+    margin-bottom: 20px;
+  }
+
+  .exam-option-item {
+    padding: 10px 12px;
+  }
+
+  .exam-options-group {
+    gap: 10px;
+  }
+
+  .option-key {
+    font-size: 13px;
+    width: 24px;
+  }
+
+  .option-content {
+    font-size: 13px;
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .header-actions .el-button {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .draft-status {
+    font-size: 12px;
+    padding: 4px 10px;
+  }
+
+  .sidebar-card {
+    min-width: 100%;
+  }
+
+  .palette-grid {
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+  }
+
+  .palette-btn {
+    height: 30px;
+    font-size: 12px;
+  }
+
+  .palette-group-title {
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+
+  .palette-container {
+    gap: 16px;
+  }
+
+  .subpaper-item {
+    padding: 10px 12px;
+  }
+
+  .subpaper-name {
+    font-size: 13px;
+  }
+
+  .progress-stats {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  .stat-box {
+    padding: 10px 6px;
+  }
+
+  .stat-val {
+    font-size: 18px;
+    margin-bottom: 4px;
+  }
+
+  .stat-lbl {
+    font-size: 11px;
+  }
+
+  /* Result mode compact */
+  .exam-result-hero {
+    padding: 14px;
+    gap: 14px;
+  }
+
+  .exam-result-hero__title {
+    font-size: 17px;
+  }
+
+  .exam-result-hero__stats {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .exam-result-metric {
+    padding: 12px;
+    flex-direction: row;
+    text-align: left;
+  }
+
+  .exam-result-insights {
+    grid-template-columns: 1fr;
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .exam-result-performance__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .exam-result-performance__card {
+    padding: 14px;
+  }
+
+  .result-growth-reward {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .result-meta-item {
+    padding: 10px 12px;
+  }
+
+  .result-meta-item span {
+    font-size: 12px;
+  }
+
+  .result-meta-item strong {
+    font-size: 14px;
+  }
+
+  .answer-box {
+    padding: 12px;
+  }
+
+  .answer-label {
+    font-size: 12px;
+  }
+
+  .answer-content {
+    font-size: 14px;
+  }
+}
 </style>

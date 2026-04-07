@@ -1379,4 +1379,244 @@ onMounted(async () => {
   font-weight: 500;
   color: var(--portal-text, #303133);
 }
+
+@media (max-width: 768px) {
+  .profile-page {
+    padding: 14px;
+  }
+
+  .profile-header-wrapper {
+    padding: 18px;
+    flex-direction: column;
+  }
+
+  .profile-header-content {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .profile-avatar-container {
+    margin-right: 0;
+    margin-bottom: 12px;
+  }
+
+  .profile-header-stats {
+    margin-top: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .stat-item {
+    align-items: center;
+  }
+
+  .stat-value {
+    font-size: 20px;
+  }
+
+  .growth-monthly__bars {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .honor-dialog__summary {
+    grid-template-columns: 1fr;
+  }
+
+  .honor-rule-list {
+    grid-template-columns: 1fr;
+  }
+
+  .growth-stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .points-summary {
+    flex-direction: column;
+  }
+
+  .honor-dialog__stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .profile-page {
+    padding: 10px;
+  }
+
+  .profile-header-wrapper {
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+
+  .profile-avatar {
+    width: 56px;
+    height: 56px;
+    font-size: 22px;
+  }
+
+  .profile-user-info h2 {
+    font-size: 16px;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .profile-header-stats {
+    gap: 12px;
+  }
+
+  .stat-divider {
+    height: 24px;
+  }
+
+  .stat-value {
+    font-size: 18px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+  }
+
+  .profile-descriptions {
+    padding: 12px;
+  }
+
+  .profile-descriptions :deep(.el-descriptions__label) {
+    width: 90px;
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  .profile-descriptions :deep(.el-descriptions__content) {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .learning-profile {
+    padding: 14px;
+  }
+
+  .growth-monthly__bars {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Deep mobile: dialog responsive */
+  .growth-detail-dialog :deep(.el-dialog) {
+    width: calc(100vw - 24px) !important;
+    margin: 12px auto !important;
+    max-width: 100%;
+    border-radius: 12px;
+  }
+
+  .growth-detail-dialog :deep(.el-dialog__body) {
+    max-height: calc(90vh - 100px);
+    padding: 14px;
+  }
+
+  /* Touch-friendly targets */
+  .point-box {
+    min-height: 40px;
+    padding: 14px;
+  }
+
+  .growth-stat-card {
+    padding: 12px 14px;
+    min-height: 40px;
+  }
+
+  .achievement-item {
+    padding: 10px;
+    gap: 10px;
+    min-height: 44px;
+  }
+
+  .honor-record-item {
+    padding: 12px 14px;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .honor-record-item__side {
+    align-items: flex-start;
+    flex-direction: row;
+    gap: 12px;
+  }
+
+  /* Overflow: el-descriptions on narrow screens */
+  .profile-descriptions :deep(.el-descriptions) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .profile-descriptions :deep(.el-descriptions__table) {
+    min-width: 320px;
+  }
+
+  /* Honor dialog score */
+  .honor-dialog__score strong {
+    font-size: 28px;
+  }
+
+  .honor-dialog__stat strong {
+    font-size: 18px;
+  }
+
+  .achievement-detail-item {
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .achievement-detail-item__title {
+    font-size: 15px;
+  }
+
+  .achievement-detail-item__desc {
+    font-size: 13px;
+  }
+
+  .growth-level-panel {
+    margin: 14px 12px 0;
+    padding: 14px;
+  }
+
+  .growth-level-panel__title {
+    font-size: 16px;
+  }
+
+  .growth-level-panel__meta strong {
+    font-size: 18px;
+  }
+
+  .growth-monthly {
+    padding: 14px 12px 0;
+  }
+
+  .growth-monthly__track {
+    height: 72px;
+  }
+
+  .points-summary {
+    padding: 14px 12px 0;
+  }
+
+  .growth-stat-grid {
+    padding: 12px 12px 0;
+  }
+
+  .recent-ledgers {
+    padding: 0 12px 14px;
+  }
+
+  .honor-summary {
+    padding: 14px 12px 0;
+  }
+
+  .achievement-list {
+    padding: 14px;
+    gap: 10px;
+  }
+}
 </style>

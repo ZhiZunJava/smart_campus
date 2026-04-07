@@ -447,4 +447,22 @@ onMounted(loadData)
   display: flex;
   justify-content: center;
 }
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+  .plaza-page { padding: 14px 12px 24px; }
+  .portal-page-header { margin-bottom: 16px; }
+  .portal-page-title { font-size: 17px; gap: 8px; }
+  .plaza-tabs { padding: 0 14px 14px; }
+  .plaza-tabs :deep(.el-tabs__item) { font-size: 14px; }
+  .recommendation-chips { gap: 6px; margin-bottom: 12px; }
+  .recommendation-chip { padding: 5px 10px; font-size: 12px; }
+}
+
+@media (max-width: 640px) {
+  .plaza-page { padding: 10px 8px 20px; }
+  .portal-page-title { font-size: 16px; }
+  .plaza-tabs { padding: 0 10px 10px; }
+  .recommendation-chip { padding: 4px 8px; font-size: 11px; }
+}
 </style>

@@ -430,5 +430,57 @@ void loadData()
     width: 100%;
     height: 180px;
   }
+
+  .header-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .header-actions .el-input,
+  .header-actions .el-select {
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .favorites-page {
+    padding: 12px 0;
+  }
+
+  .page-header {
+    padding: 16px;
+    border-radius: 8px;
+  }
+
+  .header-titles h3 {
+    font-size: 18px;
+  }
+
+  .favorite-card {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .card-cover {
+    height: 150px;
+  }
+
+  .card-title {
+    font-size: 16px;
+  }
+
+  .card-summary {
+    font-size: 13px;
+  }
+
+  .meta-info {
+    font-size: 12px;
+    gap: 8px;
+  }
+
+  .card-footer {
+    margin-top: 12px;
+    padding-top: 12px;
+  }
 }
 </style>

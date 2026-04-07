@@ -742,4 +742,124 @@ onMounted(async () => {
     flex: 0 0 100%;
   }
 }
+
+@media (max-width: 640px) {
+  .settings-page {
+    padding: 14px;
+  }
+
+  .settings-header h2 {
+    font-size: 18px;
+  }
+
+  .settings-header p {
+    font-size: 13px;
+  }
+
+  .settings-sidebar {
+    gap: 4px;
+  }
+
+  .sidebar-item {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .sidebar-item > .el-icon {
+    font-size: 16px;
+    margin-right: 8px;
+  }
+
+  .settings-content {
+    padding: 16px 0 40px 0;
+  }
+
+  .settings-panel-header {
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+  }
+
+  .settings-panel-header h3 {
+    font-size: 17px;
+  }
+
+  .settings-panel-header p {
+    font-size: 13px;
+  }
+
+  .user-overview-card {
+    padding: 14px 16px;
+    gap: 14px;
+  }
+
+  .user-overview-name {
+    font-size: 16px;
+    flex-wrap: wrap;
+  }
+
+  .user-overview-meta {
+    font-size: 12px;
+  }
+
+  .form-card {
+    padding: 14px 16px;
+  }
+
+  .form-card__title {
+    font-size: 14px;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+  }
+
+  .security-status-cards {
+    gap: 12px;
+  }
+
+  .status-card :deep(.el-card__body) {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .status-icon {
+    font-size: 22px;
+  }
+
+  .status-info h4 {
+    font-size: 14px;
+  }
+
+  .status-info p {
+    font-size: 13px;
+  }
+
+  .password-form {
+    max-width: 100%;
+  }
+
+  .password-strength {
+    gap: 8px;
+  }
+
+  .submit-btn {
+    padding: 0 24px;
+    width: 100%;
+  }
+
+  .settings-actions {
+    margin-top: 16px;
+  }
+
+  .my-8 {
+    margin: 20px 0;
+  }
+
+  .mt-8 {
+    margin-top: 20px;
+  }
+
+  .section-title {
+    font-size: 15px;
+    margin-bottom: 16px;
+  }
+}
 </style>

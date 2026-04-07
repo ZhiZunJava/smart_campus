@@ -82,4 +82,17 @@ function actionLabel(action: string) {
   border-radius: 8px;
   border: 1px solid #e2e8f0;
 }
+
+@media (max-width: 768px) {
+  .affair-timeline { padding: 2px 0; }
+  .timeline-node__header { gap: 8px; flex-wrap: wrap; }
+  .timeline-node__comment { padding: 6px 10px; font-size: 13px; }
+  :deep(.el-timeline-item__wrapper) { padding-left: 20px; }
+}
+
+@media (max-width: 640px) {
+  .timeline-node__step { font-size: 11px; }
+  .timeline-node__comment { font-size: 12px; border-radius: 6px; }
+  .timeline-node { gap: 4px; }
+}
 </style>

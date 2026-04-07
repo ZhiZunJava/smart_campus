@@ -246,4 +246,21 @@ onMounted(loadData)
     width: 100%;
   }
 }
+
+@media (max-width: 768px) {
+  .advisor-students-page { padding: 14px; }
+  .advisor-students-hero__copy h3 { font-size: 24px; }
+  .advisor-students-hero__copy p { font-size: 13px; }
+  .advisor-students-hero__stat { padding: 12px 14px; border-radius: 12px; }
+  .advisor-students-hero__stat strong { font-size: 22px; }
+  .advisor-students-filter, .advisor-students-table { padding: 14px; }
+  .advisor-students-table { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
+
+@media (max-width: 640px) {
+  .advisor-students-page { padding: 10px; }
+  .advisor-students-hero__copy h3 { font-size: 20px; }
+  .advisor-students-hero__stat strong { font-size: 18px; }
+  .advisor-students-filter, .advisor-students-table { padding: 10px; }
+}
 </style>

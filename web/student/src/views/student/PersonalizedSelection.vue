@@ -914,6 +914,45 @@ onMounted(async () => {
   }
 }
 
+@media (max-width: 768px) {
+  .personalized-selection-page {
+    padding: 16px;
+  }
+
+  .personalized-shell__header {
+    padding: 16px;
+  }
+
+  .personalized-shell__title h4 {
+    font-size: 22px;
+  }
+
+  .personalized-shell__title p {
+    font-size: 12px;
+  }
+
+  .personalized-notice-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .personalized-notice-bar__item strong {
+    font-size: 13px;
+  }
+
+  .personalized-stat strong {
+    font-size: 17px;
+  }
+
+  .personalized-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .request-target-card strong {
+    font-size: 14px;
+  }
+}
+
 @media (max-width: 640px) {
   .personalized-notice-bar,
   .personalized-toolbar,

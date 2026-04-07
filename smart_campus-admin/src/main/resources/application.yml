@@ -7,7 +7,8 @@ ruoyi:
   # 版权年份
   copyrightYear: 2026
   # 文件路径 示例（ Windows配置D:/ruoyi/uploadPath，Linux配置 /home/ruoyi/uploadPath）
-  profile: D:/smart_campus/uploadPath
+  #profile: D:/smart_campus/uploadPath
+  profile: /home/smart_campus/uploadPath
   # 获取ip地址开关
   addressEnabled: false
   # 验证码类型 math 数字计算 char 字符验证
@@ -147,8 +148,10 @@ office:
   preview:
     enabled: true
     officeHome:
-    workingDir: D:/smart_campus/uploadPath/office-work
-    outputDir: D:/smart_campus/uploadPath/preview
+    #workingDir: D:/smart_campus/uploadPath/office-work
+    #outputDir: D:/smart_campus/uploadPath/preview
+    workingDir: /home/smart_campus/uploadPath/office-work
+    outputDir: /home/smart_campus/uploadPath/preview
 
 ai:
   security:

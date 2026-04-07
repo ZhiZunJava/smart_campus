@@ -964,4 +964,112 @@ async function handleLogout() {
 :global(.el-drawer) {
   z-index: 5002 !important;
 }
+
+/* ============================================================
+   RESPONSIVE LAYOUT
+   ============================================================ */
+@media (max-width: 768px) {
+  .portal-shell {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .portal-main {
+    overflow: visible;
+    min-height: 0;
+  }
+
+  .portal-tabs-wrapper {
+    padding: 0 12px;
+    height: 40px;
+    margin-top: 2px;
+  }
+
+  .portal-tab-item {
+    padding: 0 10px;
+    font-size: 12px;
+    height: 30px;
+    border-radius: 6px;
+  }
+
+  .portal-breadcrumb-wrapper {
+    position: relative;
+    top: auto;
+    margin: 0 12px;
+    padding: 0 12px;
+    height: 36px;
+    border-radius: 6px 6px 0 0;
+  }
+
+  .breadcrumb-label {
+    display: none;
+  }
+
+  .refresh-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .portal-fixed-wrapper {
+    position: relative;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    flex: 1;
+    margin: 0 12px 12px;
+    border-radius: 0 0 6px 6px;
+    min-height: 300px;
+  }
+
+  .portal-fixed-wrapper.is-dashboard {
+    top: auto;
+    margin: 0;
+    min-height: 0;
+  }
+
+  .portal-fixed-wrapper.is-workspace {
+    top: auto;
+    margin: 0;
+    min-height: 0;
+  }
+
+  .portal-stage--white {
+    padding: 12px 12px 20px;
+  }
+
+  .portal-ongoing-banner {
+    margin: 8px 12px 0;
+  }
+
+  .portal-ongoing-banner__content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 640px) {
+  .portal-tabs-wrapper {
+    padding: 0 8px;
+  }
+
+  .portal-tab-item {
+    padding: 0 8px;
+    font-size: 11px;
+  }
+
+  .portal-breadcrumb-wrapper {
+    margin: 0 8px;
+    padding: 0 10px;
+  }
+
+  .portal-fixed-wrapper {
+    margin: 0 8px 8px;
+  }
+
+  .portal-stage--white {
+    padding: 10px 10px 16px;
+  }
+}
 </style>

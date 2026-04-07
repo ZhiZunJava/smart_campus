@@ -598,15 +598,67 @@ onMounted(loadChildren)
   transform: translateX(-16px);
 }
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
+  .child-bind-page {
+    padding: 20px 14px;
+  }
+
+  .page-header h2 {
+    font-size: 18px;
+  }
+
   .child-bind-header {
     flex-direction: column;
+    gap: 14px;
+  }
+
+  .child-card {
+    padding: 14px 16px;
+    gap: 12px;
+  }
+
+  .child-card__icon {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    border-radius: 10px;
+  }
+
+  .child-card__name {
+    font-size: 14px;
+  }
+
+  .child-card__meta {
+    font-size: 12px;
+    gap: 8px;
+  }
+
+  .child-bind-filter {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .empty-state {
+    padding: 40px 16px;
+  }
+
+  .empty-state__icon {
+    width: 64px;
+    height: 64px;
+    font-size: 28px;
+  }
+}
+
+@media (max-width: 600px) {
+  .child-bind-page {
+    padding: 14px 10px;
   }
 
   .child-card {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
+    padding: 12px 14px;
   }
 
   .child-card__meta {
@@ -625,6 +677,10 @@ onMounted(loadChildren)
 
   .filter-summary {
     margin-left: 0;
+  }
+
+  .bind-form :deep(.el-form-item__label) {
+    font-size: 13px;
   }
 }
 </style>

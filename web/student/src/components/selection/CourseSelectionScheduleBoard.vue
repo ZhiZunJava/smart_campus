@@ -1711,8 +1711,8 @@ onBeforeUnmount(() => {
 
 @media (max-width: 960px) {
   .selection-schedule-board {
-    padding-left: 16px;
-    padding-right: 16px;
+    padding-left: 14px;
+    padding-right: 14px;
   }
 
   .selection-schedule-board__stats {
@@ -1736,10 +1736,71 @@ onBeforeUnmount(() => {
   }
 }
 
+@media (max-width: 768px) {
+  .selection-schedule-board {
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-bottom: 14px;
+  }
+
+  .selection-schedule-board__intro h4 {
+    font-size: 20px;
+  }
+
+  .selection-schedule-board__intro p {
+    font-size: 12px;
+  }
+
+  .selection-schedule-board__stat strong {
+    font-size: 20px;
+  }
+
+  .selection-schedule-board__legend {
+    gap: 6px;
+  }
+
+  .selection-schedule-board__legend-chip {
+    padding: 4px 10px;
+    font-size: 11px;
+  }
+
+  .selection-schedule-board__unscheduled {
+    padding: 12px 14px;
+  }
+
+  .selection-schedule-board__unscheduled-head strong {
+    font-size: 14px;
+  }
+
+  .selection-schedule-board__drawer-header strong {
+    font-size: 18px;
+  }
+
+  :deep(.selection-schedule-board__drawer.el-drawer) {
+    width: 100% !important;
+  }
+}
+
 @media (max-width: 640px) {
   .selection-schedule-board__stats,
   .selection-schedule-board__dialog-summary {
     grid-template-columns: 1fr;
+  }
+
+  .selection-schedule-board__intro {
+    padding: 14px;
+  }
+
+  .selection-schedule-board__intro h4 {
+    font-size: 18px;
+  }
+
+  .selection-schedule-board__stat {
+    padding: 12px 14px;
+  }
+
+  .selection-schedule-board__stat strong {
+    font-size: 18px;
   }
 }
 </style>

@@ -133,7 +133,9 @@
       "WebSearch",
       "WebFetch(domain:vite.dev)",
       "WebFetch(domain:rolldown.rs)",
-      "Bash(awk NR>=565 && NR<=620:*)"
+      "Bash(awk NR>=565 && NR<=620:*)",
+      "Bash(awk NR>=376 && NR<=395:*)",
+      "Bash(npx vite:*)"
     ]
   }
 }

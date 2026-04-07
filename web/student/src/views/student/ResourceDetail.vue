@@ -1990,6 +1990,146 @@ onMounted(loadDetail)
   }
 }
 
+@media (max-width: 768px) {
+  .detail-inner {
+    padding: 16px 0;
+  }
+
+  .resource-detail-header {
+    padding: 18px 16px;
+    gap: 16px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+  }
+
+  .resource-detail-header__main h1 {
+    font-size: 22px;
+    max-width: none;
+  }
+
+  .resource-detail-header__subtitle {
+    font-size: 14px;
+  }
+
+  .resource-detail-header__meta {
+    gap: 8px;
+  }
+
+  .meta-pill {
+    padding: 8px 10px;
+    min-height: 38px;
+    font-size: 12px;
+  }
+
+  .resource-detail-body {
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .resource-preview-panel__surface {
+    height: 50vh;
+    min-height: 320px;
+  }
+
+  .resource-asset-sidebar {
+    padding: 18px;
+    gap: 14px;
+  }
+
+  .resource-detail-extra {
+    padding: 0 16px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+  }
+
+  :deep(.el-tabs__item) {
+    font-size: 14px;
+    padding: 0 16px !important;
+    height: 48px;
+    line-height: 48px;
+  }
+
+  .header-action {
+    min-height: 40px;
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+
+  .emoji-picker__grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .detail-inner {
+    padding: 10px 0;
+  }
+
+  .resource-detail-header {
+    padding: 14px 12px;
+    border-radius: 8px;
+  }
+
+  .resource-detail-header__main h1 {
+    font-size: 18px;
+  }
+
+  .resource-detail-header__eyebrow {
+    gap: 6px;
+  }
+
+  .header-kicker {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
+  .resource-summary-card {
+    min-height: 80px;
+    padding: 12px 14px;
+  }
+
+  .resource-summary-card strong {
+    font-size: 22px;
+  }
+
+  .resource-detail-header__actions {
+    gap: 8px;
+  }
+
+  .header-action {
+    min-height: 36px;
+    padding: 6px 12px;
+    font-size: 12px;
+    flex: 1;
+    justify-content: center;
+  }
+
+  .resource-preview-panel__surface {
+    height: 45vh;
+    min-height: 260px;
+  }
+
+  .resource-preview-panel__footer {
+    padding: 12px 16px;
+  }
+
+  .resource-asset-sidebar {
+    padding: 14px;
+  }
+
+  .comment-input-area {
+    padding: 12px;
+  }
+
+  .resource-detail-extra {
+    padding: 0 12px;
+  }
+
+  .emoji-picker__tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .resource-detail-back,
   .header-action,
