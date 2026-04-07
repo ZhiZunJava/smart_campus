@@ -716,36 +716,174 @@ getCode().catch(() => {
   box-shadow: 0 14px 24px rgba(35, 93, 206, 0.16);
 }
 
-@media (max-width: 760px) {
+/* ─── Tablet (768px) ─── */
+@media (max-width: 768px) {
+  .portal-register-page::before {
+    inset: 48px 0 0 0;
+  }
+
   .register-shell {
+    min-height: calc(100dvh - 48px);
     padding: 16px 12px 24px;
-    justify-items: center;
+    align-items: start;
+    padding-top: 20px;
   }
 
   .register-card {
-    padding: 22px 18px 20px;
-    margin-right: 0;
-  }
-
-  .register-card__top h1 {
-    font-size: 28px;
+    width: 100%;
+    max-width: 100%;
+    padding: 20px 16px 18px;
+    border-radius: 10px;
+    box-shadow: 0 16px 48px rgba(16, 34, 66, 0.10);
   }
 
   .register-card__top {
-    gap: 10px;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .register-card__top h1 {
+    font-size: 24px;
+  }
+
+  .register-card__top p {
+    font-size: 12px;
+    line-height: 1.6;
+    margin-top: 6px;
+  }
+
+  .register-card__eyebrow {
+    font-size: 11px;
+  }
+
+  .register-card__link {
+    padding-top: 0;
+    font-size: 13px;
+  }
+
+  .role-tabs {
+    margin-top: 14px;
+  }
+
+  .role-tabs :deep(.el-tabs__item) {
+    height: 36px;
+    font-size: 13px;
+  }
+
+  /* Stepper: horizontal compact on mobile */
+  .stepper {
+    margin-top: 12px;
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+  }
+
+  .stepper-item {
+    flex: 1;
+    grid-template-columns: 26px minmax(0, 1fr);
+    gap: 6px;
+    padding: 8px 6px;
+  }
+
+  .stepper-item__dot {
+    width: 26px;
+    height: 26px;
+    font-size: 12px;
+    border-radius: 50%;
+  }
+
+  .stepper-item__text strong {
+    font-size: 12px;
+  }
+
+  .stepper-item__text span {
+    display: none;
+  }
+
+  .register-card__hint {
+    margin-top: 10px;
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
+  .register-form {
+    margin-top: 10px;
+  }
+
+  .step-panel {
+    min-height: 160px;
+  }
+
+  .register-form :deep(.el-form-item__label) {
+    font-size: 12px;
+    padding-bottom: 4px;
+  }
+
+  .register-form :deep(.el-input__wrapper),
+  .register-form :deep(.el-select__wrapper),
+  .register-form :deep(.el-textarea__inner) {
+    min-height: 42px;
   }
 
   .captcha-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) 90px;
+  }
+
+  .captcha-img {
+    height: 42px;
   }
 
   .register-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .register-actions__ghost,
+  .register-actions__primary {
+    min-width: 0;
+    width: 100%;
+    height: 42px;
   }
 
   .register-actions__primary:only-child {
     grid-column: 1 / -1;
+  }
+}
+
+/* ─── Small mobile (≤420px) ─── */
+@media (max-width: 420px) {
+  .register-shell {
+    padding: 12px 8px 20px;
+  }
+
+  .register-card {
+    padding: 16px 12px 14px;
+    border-radius: 8px;
+  }
+
+  .register-card__top h1 {
+    font-size: 20px;
+  }
+
+  .stepper-item {
+    grid-template-columns: 24px minmax(0, 1fr);
+    gap: 4px;
+    padding: 6px 4px;
+  }
+
+  .stepper-item__dot {
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
+  }
+
+  .stepper-item__text strong {
+    font-size: 11px;
+  }
+
+  .step-panel {
+    min-height: 140px;
   }
 }
 

@@ -27,7 +27,7 @@
           当前将优先进入 {{ currentRoleLabel }}
         </div>
 
-        <div class="auth-mode-tabs" role="tablist" aria-label="登录方式切换">
+        <div v-if="!isMobile" class="auth-mode-tabs" role="tablist" aria-label="登录方式切换">
           <button
             type="button"
             :class="{ active: loginMode === 'account' }"
@@ -115,6 +115,8 @@ import { createScanLoginSession, getScanLoginStatus } from '@/api/auth'
 const router = useRouter()
 const userStore = usePortalUserStore()
 const loading = ref(false)
+const windowWidth = ref(window.innerWidth)
+const isMobile = computed(() => windowWidth.value <= 768)
 const loginMode = ref<'account' | 'scan'>('account')
 const scanLoading = ref(false)
 const scanTicket = ref('')
@@ -233,7 +235,10 @@ async function handleLogin() {
   }
 }
 
+function onResize() { windowWidth.value = window.innerWidth }
+
 onMounted(async () => {
+  window.addEventListener('resize', onResize)
   selectedRole.value = userStore.preferredPortalRole
   await refreshCaptcha()
 })
@@ -247,7 +252,15 @@ watch(loginMode, async (mode) => {
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('resize', onResize)
   stopScanPolling()
+})
+
+// 移动端自动切回账号登录
+watch(isMobile, (mobile) => {
+  if (mobile && loginMode.value === 'scan') {
+    loginMode.value = 'account'
+  }
 })
 </script>
 
@@ -635,34 +648,135 @@ onBeforeUnmount(() => {
   transform: translateY(8px);
 }
 
-@media (max-width: 760px) {
+/* ─── Tablet (768px) ─── */
+@media (max-width: 768px) {
+  .portal-auth-page {
+    grid-template-rows: auto 1fr;
+  }
+
+  .portal-auth-page::before {
+    inset: 48px 0 0 0;
+  }
+
   .portal-auth-shell {
+    min-height: calc(100dvh - 48px);
     padding: 16px 12px 24px;
-    justify-items: center;
+    align-items: start;
+    padding-top: 24px;
   }
 
   .auth-card {
+    width: 100%;
+    max-width: 100%;
     padding: 22px 18px 20px;
-    margin-right: 0;
-  }
-
-  .auth-card__top h1 {
-    font-size: 28px;
+    border-radius: 10px;
+    box-shadow: 0 16px 48px rgba(16, 34, 66, 0.10);
   }
 
   .auth-card__top {
-    gap: 10px;
+    flex-direction: column;
+    gap: 6px;
   }
 
-  .captcha-row,
+  .auth-card__top h1 {
+    font-size: 26px;
+  }
+
+  .auth-card__top p {
+    font-size: 12px;
+    line-height: 1.7;
+    margin-top: 6px;
+  }
+
+  .auth-card__link {
+    padding-top: 0;
+    font-size: 13px;
+  }
+
+  .auth-card__eyebrow {
+    font-size: 11px;
+  }
+
+  .auth-card__hint {
+    margin-top: 14px;
+    margin-bottom: 12px;
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
+  .auth-card__body {
+    margin-top: 14px;
+  }
+
+  .login-form :deep(.el-form-item__label) {
+    font-size: 12px;
+    padding-bottom: 4px;
+  }
+
+  .login-form :deep(.el-input__wrapper) {
+    min-height: 44px;
+  }
+
+  .login-btn {
+    height: 44px;
+    font-size: 15px;
+  }
+
+  .captcha-row {
+    grid-template-columns: minmax(0, 1fr) 90px;
+  }
+
+  .captcha-img {
+    height: 44px;
+  }
+
+  .quick-login-divider {
+    margin: 14px 0 10px;
+  }
+
+  .quick-login-btn {
+    height: 38px;
+    font-size: 13px;
+    gap: 5px;
+    border-radius: 6px;
+  }
+
+  .quick-login-btn i {
+    font-size: 15px;
+  }
+
   .auth-card__footer {
-    grid-template-columns: 1fr;
-    display: grid;
+    margin-top: 12px;
+    font-size: 12px;
+  }
+}
+
+/* ─── Small mobile (≤420px) ─── */
+@media (max-width: 420px) {
+  .portal-auth-shell {
+    padding: 12px 8px 20px;
   }
 
-  .scan-panel__code {
-    width: 208px;
-    height: 208px;
+  .auth-card {
+    padding: 18px 14px 16px;
+    border-radius: 8px;
+  }
+
+  .auth-card__top h1 {
+    font-size: 22px;
+  }
+
+  .auth-card__top p {
+    font-size: 11px;
+  }
+
+  .quick-login-row {
+    gap: 8px;
+  }
+
+  .quick-login-btn {
+    height: 36px;
+    font-size: 12px;
   }
 }
 
