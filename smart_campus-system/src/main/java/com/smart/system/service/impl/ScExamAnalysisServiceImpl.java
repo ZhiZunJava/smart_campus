@@ -27,7 +27,6 @@ import com.smart.system.domain.ScExamRecord;
 import com.smart.system.domain.ScExamSession;
 import com.smart.system.domain.ScExamSessionPaper;
 import com.smart.system.domain.ScKnowledgePoint;
-import com.smart.system.domain.ScQuestionBank;
 import com.smart.system.domain.ScUserPointLedger;
 import com.smart.system.domain.ScWrongQuestionBook;
 import com.smart.system.domain.campusvo.ExamPaperDetailVo;

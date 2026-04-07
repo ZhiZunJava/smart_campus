@@ -1,271 +1,177 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.smart.system.mapper.ScAffairSpecialRecordMapper">
-    <insert id="upsertAskLeaveRecord" parameterType="java.util.Map">
-        insert into sc_affair_ask_leave_record
-        (request_id, request_no, applicant_user_id, template_code, business_type, leave_type, start_date, end_date,
-         destination, emergency_contact, leave_request_no, actual_return_date, cancel_remark, reason, request_status,
-         business_snapshot_json, create_time, update_time)
-        values
-        (#{requestId}, #{requestNo}, #{applicantUserId}, #{templateCode}, #{businessType}, #{leaveType}, #{startDate}, #{endDate},
-         #{destination}, #{emergencyContact}, #{leaveRequestNo}, #{actualReturnDate}, #{cancelRemark}, #{reason}, #{requestStatus},
-         #{businessSnapshotJson}, sysdate(), sysdate())
-        on duplicate key update
-        request_no = values(request_no),
-        applicant_user_id = values(applicant_user_id),
-        template_code = values(template_code),
-        business_type = values(business_type),
-        leave_type = values(leave_type),
-        start_date = values(start_date),
-        end_date = values(end_date),
-        destination = values(destination),
-        emergency_contact = values(emergency_contact),
-        leave_request_no = values(leave_request_no),
-        actual_return_date = values(actual_return_date),
-        cancel_remark = values(cancel_remark),
-        reason = values(reason),
-        request_status = values(request_status),
-        business_snapshot_json = values(business_snapshot_json),
-        update_time = sysdate()
-    </insert>
+    <insert id="upsertAskLeaveRecord" parameterType="java.util.Map"> insert into
+        sc_affair_ask_leave_record (request_id, request_no, applicant_user_id, template_code,
+        business_type, leave_type, start_date, end_date, destination, emergency_contact,
+        leave_request_no, actual_return_date, cancel_remark, reason, request_status,
+        business_snapshot_json, create_time, update_time) values (#{requestId}, #{requestNo},
+        #{applicantUserId}, #{templateCode}, #{businessType}, #{leaveType}, #{startDate},
+        #{endDate}, #{destination}, #{emergencyContact}, #{leaveRequestNo}, #{actualReturnDate},
+        #{cancelRemark}, #{reason}, #{requestStatus}, #{businessSnapshotJson}, sysdate(), sysdate())
+        on duplicate key update request_no = values(request_no), applicant_user_id =
+        values(applicant_user_id), template_code = values(template_code), business_type =
+        values(business_type), leave_type = values(leave_type), start_date = values(start_date),
+        end_date = values(end_date), destination = values(destination), emergency_contact =
+        values(emergency_contact), leave_request_no = values(leave_request_no), actual_return_date =
+        values(actual_return_date), cancel_remark = values(cancel_remark), reason = values(reason),
+        request_status = values(request_status), business_snapshot_json =
+        values(business_snapshot_json), update_time = sysdate() </insert>
 
-    <insert id="upsertLeaveReturnRecord" parameterType="java.util.Map">
-        insert into sc_affair_leave_return_record
-        (request_id, request_no, applicant_user_id, template_code, business_type, leave_school_date, expected_return_date,
-         location, health_status, leave_request_no, return_date, travel_summary, reason, request_status,
-         business_snapshot_json, create_time, update_time)
-        values
-        (#{requestId}, #{requestNo}, #{applicantUserId}, #{templateCode}, #{businessType}, #{leaveSchoolDate}, #{expectedReturnDate},
-         #{location}, #{healthStatus}, #{leaveRequestNo}, #{returnDate}, #{travelSummary}, #{reason}, #{requestStatus},
-         #{businessSnapshotJson}, sysdate(), sysdate())
-        on duplicate key update
-        request_no = values(request_no),
-        applicant_user_id = values(applicant_user_id),
-        template_code = values(template_code),
-        business_type = values(business_type),
-        leave_school_date = values(leave_school_date),
-        expected_return_date = values(expected_return_date),
-        location = values(location),
-        health_status = values(health_status),
-        leave_request_no = values(leave_request_no),
-        return_date = values(return_date),
-        travel_summary = values(travel_summary),
-        reason = values(reason),
-        request_status = values(request_status),
-        business_snapshot_json = values(business_snapshot_json),
-        update_time = sysdate()
-    </insert>
+    <insert id="upsertLeaveReturnRecord" parameterType="java.util.Map"> insert into
+        sc_affair_leave_return_record (request_id, request_no, applicant_user_id, template_code,
+        business_type, leave_school_date, expected_return_date, location, health_status,
+        leave_request_no, return_date, travel_summary, reason, request_status,
+        business_snapshot_json, create_time, update_time) values (#{requestId}, #{requestNo},
+        #{applicantUserId}, #{templateCode}, #{businessType}, #{leaveSchoolDate},
+        #{expectedReturnDate}, #{location}, #{healthStatus}, #{leaveRequestNo}, #{returnDate},
+        #{travelSummary}, #{reason}, #{requestStatus}, #{businessSnapshotJson}, sysdate(),
+        sysdate()) on duplicate key update request_no = values(request_no), applicant_user_id =
+        values(applicant_user_id), template_code = values(template_code), business_type =
+        values(business_type), leave_school_date = values(leave_school_date), expected_return_date =
+        values(expected_return_date), location = values(location), health_status =
+        values(health_status), leave_request_no = values(leave_request_no), return_date =
+        values(return_date), travel_summary = values(travel_summary), reason = values(reason),
+        request_status = values(request_status), business_snapshot_json =
+        values(business_snapshot_json), update_time = sysdate() </insert>
 
-    <insert id="upsertActivityRecord" parameterType="java.util.Map">
-        insert into sc_affair_activity_record
-        (request_id, request_no, applicant_user_id, template_code, activity_name, activity_date, venue,
-         participant_count, mentor_teacher_id, mentor_teacher_name, reason, request_status,
-         business_snapshot_json, create_time, update_time)
-        values
-        (#{requestId}, #{requestNo}, #{applicantUserId}, #{templateCode}, #{activityName}, #{activityDate}, #{venue},
-         #{participantCount}, #{mentorTeacherId}, #{mentorTeacherName}, #{reason}, #{requestStatus},
-         #{businessSnapshotJson}, sysdate(), sysdate())
-        on duplicate key update
-        request_no = values(request_no),
-        applicant_user_id = values(applicant_user_id),
-        template_code = values(template_code),
-        activity_name = values(activity_name),
-        activity_date = values(activity_date),
-        venue = values(venue),
-        participant_count = values(participant_count),
-        mentor_teacher_id = values(mentor_teacher_id),
-        mentor_teacher_name = values(mentor_teacher_name),
-        reason = values(reason),
-        request_status = values(request_status),
-        business_snapshot_json = values(business_snapshot_json),
-        update_time = sysdate()
-    </insert>
+    <insert id="upsertActivityRecord" parameterType="java.util.Map"> insert into
+        sc_affair_activity_record (request_id, request_no, applicant_user_id, template_code,
+        activity_name, activity_date, venue, participant_count, mentor_teacher_id,
+        mentor_teacher_name, reason, request_status, business_snapshot_json, create_time,
+        update_time) values (#{requestId}, #{requestNo}, #{applicantUserId}, #{templateCode},
+        #{activityName}, #{activityDate}, #{venue}, #{participantCount}, #{mentorTeacherId},
+        #{mentorTeacherName}, #{reason}, #{requestStatus}, #{businessSnapshotJson}, sysdate(),
+        sysdate()) on duplicate key update request_no = values(request_no), applicant_user_id =
+        values(applicant_user_id), template_code = values(template_code), activity_name =
+        values(activity_name), activity_date = values(activity_date), venue = values(venue),
+        participant_count = values(participant_count), mentor_teacher_id =
+        values(mentor_teacher_id), mentor_teacher_name = values(mentor_teacher_name), reason =
+        values(reason), request_status = values(request_status), business_snapshot_json =
+        values(business_snapshot_json), update_time = sysdate() </insert>
 
-    <insert id="upsertCompetitionRecord" parameterType="java.util.Map">
-        insert into sc_affair_competition_record
-        (request_id, request_no, applicant_user_id, template_code, competition_name, competition_level,
-         competition_date, mentor_teacher_id, mentor_teacher_name, team_info, reason, request_status,
-         business_snapshot_json, create_time, update_time)
-        values
-        (#{requestId}, #{requestNo}, #{applicantUserId}, #{templateCode}, #{competitionName}, #{competitionLevel},
-         #{competitionDate}, #{mentorTeacherId}, #{mentorTeacherName}, #{teamInfo}, #{reason}, #{requestStatus},
-         #{businessSnapshotJson}, sysdate(), sysdate())
-        on duplicate key update
-        request_no = values(request_no),
-        applicant_user_id = values(applicant_user_id),
-        template_code = values(template_code),
-        competition_name = values(competition_name),
-        competition_level = values(competition_level),
-        competition_date = values(competition_date),
-        mentor_teacher_id = values(mentor_teacher_id),
-        mentor_teacher_name = values(mentor_teacher_name),
-        team_info = values(team_info),
-        reason = values(reason),
-        request_status = values(request_status),
-        business_snapshot_json = values(business_snapshot_json),
-        update_time = sysdate()
-    </insert>
+    <insert id="upsertCompetitionRecord" parameterType="java.util.Map"> insert into
+        sc_affair_competition_record (request_id, request_no, applicant_user_id, template_code,
+        competition_name, competition_level, competition_date, mentor_teacher_id,
+        mentor_teacher_name, team_info, reason, request_status, business_snapshot_json, create_time,
+        update_time) values (#{requestId}, #{requestNo}, #{applicantUserId}, #{templateCode},
+        #{competitionName}, #{competitionLevel}, #{competitionDate}, #{mentorTeacherId},
+        #{mentorTeacherName}, #{teamInfo}, #{reason}, #{requestStatus}, #{businessSnapshotJson},
+        sysdate(), sysdate()) on duplicate key update request_no = values(request_no),
+        applicant_user_id = values(applicant_user_id), template_code = values(template_code),
+        competition_name = values(competition_name), competition_level = values(competition_level),
+        competition_date = values(competition_date), mentor_teacher_id = values(mentor_teacher_id),
+        mentor_teacher_name = values(mentor_teacher_name), team_info = values(team_info), reason =
+        values(reason), request_status = values(request_status), business_snapshot_json =
+        values(business_snapshot_json), update_time = sysdate() </insert>
 
-    <insert id="upsertInnovationRecord" parameterType="java.util.Map">
-        insert into sc_affair_innovation_record
-        (request_id, request_no, applicant_user_id, template_code, project_name, project_type,
-         mentor_teacher_id, mentor_teacher_name, funding_need, reason, request_status,
-         business_snapshot_json, create_time, update_time)
-        values
-        (#{requestId}, #{requestNo}, #{applicantUserId}, #{templateCode}, #{projectName}, #{projectType},
-         #{mentorTeacherId}, #{mentorTeacherName}, #{fundingNeed}, #{reason}, #{requestStatus},
-         #{businessSnapshotJson}, sysdate(), sysdate())
-        on duplicate key update
-        request_no = values(request_no),
-        applicant_user_id = values(applicant_user_id),
-        template_code = values(template_code),
-        project_name = values(project_name),
-        project_type = values(project_type),
-        mentor_teacher_id = values(mentor_teacher_id),
-        mentor_teacher_name = values(mentor_teacher_name),
-        funding_need = values(funding_need),
-        reason = values(reason),
-        request_status = values(request_status),
-        business_snapshot_json = values(business_snapshot_json),
-        update_time = sysdate()
-    </insert>
+    <insert id="upsertInnovationRecord" parameterType="java.util.Map"> insert into
+        sc_affair_innovation_record (request_id, request_no, applicant_user_id, template_code,
+        project_name, project_type, mentor_teacher_id, mentor_teacher_name, funding_need, reason,
+        request_status, business_snapshot_json, create_time, update_time) values (#{requestId},
+        #{requestNo}, #{applicantUserId}, #{templateCode}, #{projectName}, #{projectType},
+        #{mentorTeacherId}, #{mentorTeacherName}, #{fundingNeed}, #{reason}, #{requestStatus},
+        #{businessSnapshotJson}, sysdate(), sysdate()) on duplicate key update request_no =
+        values(request_no), applicant_user_id = values(applicant_user_id), template_code =
+        values(template_code), project_name = values(project_name), project_type =
+        values(project_type), mentor_teacher_id = values(mentor_teacher_id), mentor_teacher_name =
+        values(mentor_teacher_name), funding_need = values(funding_need), reason = values(reason),
+        request_status = values(request_status), business_snapshot_json =
+        values(business_snapshot_json), update_time = sysdate() </insert>
 
-    <insert id="upsertEvaluationRecord" parameterType="java.util.Map">
-        insert into sc_affair_evaluation_record
-        (request_id, request_no, applicant_user_id, template_code, evaluation_term, achievement_summary,
-         volunteer_hours, reason, request_status, business_snapshot_json, create_time, update_time)
-        values
-        (#{requestId}, #{requestNo}, #{applicantUserId}, #{templateCode}, #{evaluationTerm}, #{achievementSummary},
-         #{volunteerHours}, #{reason}, #{requestStatus}, #{businessSnapshotJson}, sysdate(), sysdate())
-        on duplicate key update
-        request_no = values(request_no),
-        applicant_user_id = values(applicant_user_id),
-        template_code = values(template_code),
-        evaluation_term = values(evaluation_term),
-        achievement_summary = values(achievement_summary),
-        volunteer_hours = values(volunteer_hours),
-        reason = values(reason),
-        request_status = values(request_status),
-        business_snapshot_json = values(business_snapshot_json),
-        update_time = sysdate()
-    </insert>
+    <insert id="upsertEvaluationRecord" parameterType="java.util.Map"> insert into
+        sc_affair_evaluation_record (request_id, request_no, applicant_user_id, template_code,
+        evaluation_term, achievement_summary, volunteer_hours, reason, request_status,
+        business_snapshot_json, create_time, update_time) values (#{requestId}, #{requestNo},
+        #{applicantUserId}, #{templateCode}, #{evaluationTerm}, #{achievementSummary},
+        #{volunteerHours}, #{reason}, #{requestStatus}, #{businessSnapshotJson}, sysdate(),
+        sysdate()) on duplicate key update request_no = values(request_no), applicant_user_id =
+        values(applicant_user_id), template_code = values(template_code), evaluation_term =
+        values(evaluation_term), achievement_summary = values(achievement_summary), volunteer_hours
+        = values(volunteer_hours), reason = values(reason), request_status = values(request_status),
+        business_snapshot_json = values(business_snapshot_json), update_time = sysdate() </insert>
 
-    <insert id="upsertTextbookRecord" parameterType="java.util.Map">
-        insert into sc_affair_textbook_record
-        (request_id, request_no, applicant_user_id, template_code, textbook_type, course_name, isbn,
-         quantity, reason, request_status, business_snapshot_json, create_time, update_time)
-        values
-        (#{requestId}, #{requestNo}, #{applicantUserId}, #{templateCode}, #{textbookType}, #{courseName}, #{isbn},
-         #{quantity}, #{reason}, #{requestStatus}, #{businessSnapshotJson}, sysdate(), sysdate())
-        on duplicate key update
-        request_no = values(request_no),
-        applicant_user_id = values(applicant_user_id),
-        template_code = values(template_code),
-        textbook_type = values(textbook_type),
-        course_name = values(course_name),
-        isbn = values(isbn),
-        quantity = values(quantity),
-        reason = values(reason),
-        request_status = values(request_status),
-        business_snapshot_json = values(business_snapshot_json),
-        update_time = sysdate()
-    </insert>
+    <insert id="upsertTextbookRecord" parameterType="java.util.Map"> insert into
+        sc_affair_textbook_record (request_id, request_no, applicant_user_id, template_code,
+        textbook_type, course_name, isbn, quantity, reason, request_status, business_snapshot_json,
+        create_time, update_time) values (#{requestId}, #{requestNo}, #{applicantUserId},
+        #{templateCode}, #{textbookType}, #{courseName}, #{isbn}, #{quantity}, #{reason},
+        #{requestStatus}, #{businessSnapshotJson}, sysdate(), sysdate()) on duplicate key update
+        request_no = values(request_no), applicant_user_id = values(applicant_user_id),
+        template_code = values(template_code), textbook_type = values(textbook_type), course_name =
+        values(course_name), isbn = values(isbn), quantity = values(quantity), reason =
+        values(reason), request_status = values(request_status), business_snapshot_json =
+        values(business_snapshot_json), update_time = sysdate() </insert>
 
-    <insert id="upsertAcademicStatusRecord" parameterType="java.util.Map">
-        insert into sc_affair_academic_status_record
-        (request_id, request_no, applicant_user_id, template_code, effective_date, expected_resume_date,
-         target_major, recovery_proof, guardian_phone, before_status_code, before_status_name, after_status_code,
-         after_status_name, reason, request_status, business_snapshot_json, create_time, update_time)
-        values
-        (#{requestId}, #{requestNo}, #{applicantUserId}, #{templateCode}, #{effectiveDate}, #{expectedResumeDate},
-         #{targetMajor}, #{recoveryProof}, #{guardianPhone}, #{beforeStatusCode}, #{beforeStatusName}, #{afterStatusCode},
-         #{afterStatusName}, #{reason}, #{requestStatus}, #{businessSnapshotJson}, sysdate(), sysdate())
-        on duplicate key update
-        request_no = values(request_no),
-        applicant_user_id = values(applicant_user_id),
-        template_code = values(template_code),
-        effective_date = values(effective_date),
-        expected_resume_date = values(expected_resume_date),
-        target_major = values(target_major),
-        recovery_proof = values(recovery_proof),
-        guardian_phone = values(guardian_phone),
-        before_status_code = values(before_status_code),
-        before_status_name = values(before_status_name),
-        after_status_code = values(after_status_code),
-        after_status_name = values(after_status_name),
-        reason = values(reason),
-        request_status = values(request_status),
-        business_snapshot_json = values(business_snapshot_json),
-        update_time = sysdate()
-    </insert>
+    <insert id="upsertAcademicStatusRecord" parameterType="java.util.Map"> insert into
+        sc_affair_academic_status_record (request_id, request_no, applicant_user_id, template_code,
+        effective_date, expected_resume_date, target_major, recovery_proof, guardian_phone,
+        before_status_code, before_status_name, after_status_code, after_status_name, reason,
+        request_status, business_snapshot_json, create_time, update_time) values (#{requestId},
+        #{requestNo}, #{applicantUserId}, #{templateCode}, #{effectiveDate}, #{expectedResumeDate},
+        #{targetMajor}, #{recoveryProof}, #{guardianPhone}, #{beforeStatusCode},
+        #{beforeStatusName}, #{afterStatusCode}, #{afterStatusName}, #{reason}, #{requestStatus},
+        #{businessSnapshotJson}, sysdate(), sysdate()) on duplicate key update request_no =
+        values(request_no), applicant_user_id = values(applicant_user_id), template_code =
+        values(template_code), effective_date = values(effective_date), expected_resume_date =
+        values(expected_resume_date), target_major = values(target_major), recovery_proof =
+        values(recovery_proof), guardian_phone = values(guardian_phone), before_status_code =
+        values(before_status_code), before_status_name = values(before_status_name),
+        after_status_code = values(after_status_code), after_status_name =
+        values(after_status_name), reason = values(reason), request_status = values(request_status),
+        business_snapshot_json = values(business_snapshot_json), update_time = sysdate() </insert>
 
-    <select id="selectActivityRecordByRequestId" parameterType="long" resultType="java.util.LinkedHashMap">
-        select * from sc_affair_activity_record where request_id = #{requestId} limit 1
-    </select>
+    <select id="selectActivityRecordByRequestId" parameterType="long"
+        resultType="java.util.LinkedHashMap"> select * from sc_affair_activity_record where
+        request_id = #{requestId} limit 1 </select>
 
-    <select id="selectAskLeaveRecordByRequestId" parameterType="long" resultType="java.util.LinkedHashMap">
-        select * from sc_affair_ask_leave_record where request_id = #{requestId} limit 1
-    </select>
+    <select id="selectAskLeaveRecordByRequestId" parameterType="long"
+        resultType="java.util.LinkedHashMap"> select * from sc_affair_ask_leave_record where
+        request_id = #{requestId} limit 1 </select>
 
-    <select id="selectLeaveReturnRecordByRequestId" parameterType="long" resultType="java.util.LinkedHashMap">
-        select * from sc_affair_leave_return_record where request_id = #{requestId} limit 1
-    </select>
+    <select id="selectLeaveReturnRecordByRequestId" parameterType="long"
+        resultType="java.util.LinkedHashMap"> select * from sc_affair_leave_return_record where
+        request_id = #{requestId} limit 1 </select>
 
-    <select id="selectCompetitionRecordByRequestId" parameterType="long" resultType="java.util.LinkedHashMap">
-        select * from sc_affair_competition_record where request_id = #{requestId} limit 1
-    </select>
+    <select id="selectCompetitionRecordByRequestId" parameterType="long"
+        resultType="java.util.LinkedHashMap"> select * from sc_affair_competition_record where
+        request_id = #{requestId} limit 1 </select>
 
-    <select id="selectInnovationRecordByRequestId" parameterType="long" resultType="java.util.LinkedHashMap">
-        select * from sc_affair_innovation_record where request_id = #{requestId} limit 1
-    </select>
+    <select id="selectInnovationRecordByRequestId" parameterType="long"
+        resultType="java.util.LinkedHashMap"> select * from sc_affair_innovation_record where
+        request_id = #{requestId} limit 1 </select>
 
-    <select id="selectEvaluationRecordByRequestId" parameterType="long" resultType="java.util.LinkedHashMap">
-        select * from sc_affair_evaluation_record where request_id = #{requestId} limit 1
-    </select>
+    <select id="selectEvaluationRecordByRequestId" parameterType="long"
+        resultType="java.util.LinkedHashMap"> select * from sc_affair_evaluation_record where
+        request_id = #{requestId} limit 1 </select>
 
-    <select id="selectTextbookRecordByRequestId" parameterType="long" resultType="java.util.LinkedHashMap">
-        select * from sc_affair_textbook_record where request_id = #{requestId} limit 1
-    </select>
+    <select id="selectTextbookRecordByRequestId" parameterType="long"
+        resultType="java.util.LinkedHashMap"> select * from sc_affair_textbook_record where
+        request_id = #{requestId} limit 1 </select>
 
-    <select id="selectAcademicStatusRecordByRequestId" parameterType="long" resultType="java.util.LinkedHashMap">
-        select * from sc_affair_academic_status_record where request_id = #{requestId} limit 1
-    </select>
+    <select id="selectAcademicStatusRecordByRequestId" parameterType="long"
+        resultType="java.util.LinkedHashMap"> select * from sc_affair_academic_status_record where
+        request_id = #{requestId} limit 1 </select>
 
-    <select id="selectTextbookRecordsByApplicantUserId" parameterType="long" resultType="java.util.LinkedHashMap">
-        select *
-        from sc_affair_textbook_record
-        where applicant_user_id = #{applicantUserId}
-        order by update_time desc, record_id desc
-    </select>
+    <select id="selectTextbookRecordsByApplicantUserId" parameterType="long"
+        resultType="java.util.LinkedHashMap"> select * from sc_affair_textbook_record where
+        applicant_user_id = #{applicantUserId} order by update_time desc, record_id desc </select>
 
-    <select id="selectAcademicStatusRecordsByApplicantUserId" parameterType="long" resultType="java.util.LinkedHashMap">
-        select *
-        from sc_affair_academic_status_record
-        where applicant_user_id = #{applicantUserId}
-        order by update_time desc, record_id desc
-    </select>
+    <select id="selectAcademicStatusRecordsByApplicantUserId" parameterType="long"
+        resultType="java.util.LinkedHashMap"> select * from sc_affair_academic_status_record where
+        applicant_user_id = #{applicantUserId} order by update_time desc, record_id desc </select>
 
-    <select id="selectAskLeaveRecordsByApplicantUserId" parameterType="long" resultType="java.util.LinkedHashMap">
-        select *
-        from sc_affair_ask_leave_record
-        where applicant_user_id = #{applicantUserId}
-        order by update_time desc, record_id desc
-    </select>
+    <select id="selectAskLeaveRecordsByApplicantUserId" parameterType="long"
+        resultType="java.util.LinkedHashMap"> select * from sc_affair_ask_leave_record where
+        applicant_user_id = #{applicantUserId} order by update_time desc, record_id desc </select>
 
-    <select id="selectLeaveReturnRecordsByApplicantUserId" parameterType="long" resultType="java.util.LinkedHashMap">
-        select *
-        from sc_affair_leave_return_record
-        where applicant_user_id = #{applicantUserId}
-        order by update_time desc, record_id desc
-    </select>
+    <select id="selectLeaveReturnRecordsByApplicantUserId" parameterType="long"
+        resultType="java.util.LinkedHashMap"> select * from sc_affair_leave_return_record where
+        applicant_user_id = #{applicantUserId} order by update_time desc, record_id desc </select>
 
-    <select id="selectTextbookClaimRecordsByIsbn" parameterType="string" resultType="java.util.LinkedHashMap">
-        select r.*, u.nick_name as applicant_nick_name
-        from sc_affair_textbook_record r
-        left join sys_user u on r.applicant_user_id = u.user_id
-        where r.isbn = #{isbn}
-          and r.request_status = 'APPROVED'
-          and r.textbook_type in ('CLAIM', 'REISSUE')
-        order by r.update_time desc
-    </select>
+    <select id="selectTextbookClaimRecordsByIsbn" parameterType="string"
+        resultType="java.util.LinkedHashMap"> select r.*, u.nick_name as applicant_nick_name from
+        sc_affair_textbook_record r left join sys_user u on r.applicant_user_id = u.user_id where
+        r.isbn = #{isbn} and r.request_status = 'APPROVED' and r.textbook_type in ('CLAIM',
+        'REISSUE') order by r.update_time desc </select>
 </mapper>

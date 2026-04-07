@@ -18,7 +18,6 @@ import com.smart.common.core.controller.BaseController;
 import com.smart.common.core.domain.AjaxResult;
 import com.smart.common.exception.ServiceException;
 import com.smart.common.utils.StringUtils;
-import com.smart.common.utils.StringUtils;
 import com.smart.system.domain.ScExamPaper;
 import com.smart.system.domain.ScExamRecord;
 import com.smart.system.domain.ScQuestionBank;

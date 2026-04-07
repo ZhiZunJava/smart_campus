@@ -17,7 +17,6 @@ import com.smart.common.core.controller.BaseController;
 import com.smart.common.core.domain.AjaxResult;
 import com.smart.common.core.page.TableDataInfo;
 import com.smart.common.enums.BusinessType;
-import com.smart.common.utils.SecurityUtils;
 import com.smart.system.domain.ScVerificationBatch;
 import com.smart.system.domain.ScVerificationRecord;
 import com.smart.system.domain.dto.VerificationBatchCreateDto;

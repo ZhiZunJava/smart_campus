@@ -22,8 +22,9 @@
       refid="selectScAiTaskLogVo" /> where t.task_id = #{taskId}</select>
   <select id="selectScAiTaskLogList" parameterType="ScAiTaskLog" resultMap="ScAiTaskLogResult"><include
       refid="selectScAiTaskLogVo" /><where><if test="bizType != null and bizType != ''">and
-    t.biz_type = #{bizType}</if><if test="bizTypes != null and bizTypes.length > 0">and t.biz_type in
-    <foreach item="item" collection="bizTypes" open="(" separator="," close=")">#{item}</foreach></if><if test="bizId != null">and t.biz_id = #{bizId}</if><if
+    t.biz_type = #{bizType}</if><if test="bizTypes != null and bizTypes.length > 0">and t.biz_type
+    in <foreach item="item" collection="bizTypes" open="(" separator="," close=")">#{item}</foreach></if><if
+        test="bizId != null">and t.biz_id = #{bizId}</if><if
         test="modelId != null">and t.model_id = #{modelId}</if><if
         test="taskStatus != null and taskStatus != ''">and t.task_status = #{taskStatus}</if></where>
     order by t.task_id desc</select>

@@ -28,124 +28,162 @@
         <result property="remark" column="remark" />
     </resultMap>
 
-    <sql id="selectScAffairTemplateVo">
-        select t.template_id, t.category_id, c.category_code, c.category_name, t.template_code,
-               t.template_name, t.business_code, t.business_name, t.audience_roles, t.form_schema_json,
-               t.workflow_schema_json, t.allow_attachment, t.allow_revoke, t.apply_scope_json,
-               t.business_rules_json, t.target_status_code,
-               t.target_status_name, t.sort_order, t.status, t.create_by, t.create_time, t.update_by,
-               t.update_time, t.remark
-        from sc_affair_template t
-        left join sc_affair_category c on c.category_id = t.category_id
-    </sql>
+    <sql id="selectScAffairTemplateVo"> select t.template_id, t.category_id, c.category_code,
+        c.category_name, t.template_code, t.template_name, t.business_code, t.business_name,
+        t.audience_roles, t.form_schema_json, t.workflow_schema_json, t.allow_attachment,
+        t.allow_revoke, t.apply_scope_json, t.business_rules_json, t.target_status_code,
+        t.target_status_name, t.sort_order, t.status, t.create_by, t.create_time, t.update_by,
+        t.update_time, t.remark from sc_affair_template t left join sc_affair_category c on
+        c.category_id = t.category_id </sql>
 
-    <select id="selectScAffairTemplateByTemplateId" parameterType="Long" resultMap="ScAffairTemplateResult">
-        <include refid="selectScAffairTemplateVo" />
-        where t.template_id = #{templateId}
-    </select>
+    <select id="selectScAffairTemplateByTemplateId" parameterType="Long"
+        resultMap="ScAffairTemplateResult">
+        <include refid="selectScAffairTemplateVo" /> where t.template_id = #{templateId} </select>
 
-    <select id="selectScAffairTemplateList" parameterType="ScAffairTemplate" resultMap="ScAffairTemplateResult">
+    <select id="selectScAffairTemplateList" parameterType="ScAffairTemplate"
+        resultMap="ScAffairTemplateResult">
         <include refid="selectScAffairTemplateVo" />
         <where>
             <if test="categoryId != null">and t.category_id = #{categoryId}</if>
-            <if test="categoryCode != null and categoryCode != ''">and c.category_code = #{categoryCode}</if>
-            <if test="templateCode != null and templateCode != ''">and t.template_code like concat('%', #{templateCode}, '%')</if>
-            <if test="templateName != null and templateName != ''">and t.template_name like concat('%', #{templateName}, '%')</if>
-            <if test="businessCode != null and businessCode != ''">and t.business_code = #{businessCode}</if>
-            <if test="businessName != null and businessName != ''">and t.business_name like concat('%', #{businessName}, '%')</if>
-            <if test="audienceRoles != null and audienceRoles != ''">and find_in_set(#{audienceRoles}, replace(t.audience_roles, ' ', ''))</if>
-            <if test="status != null and status != ''">and t.status = #{status}</if>
+            <if
+                test="categoryCode != null and categoryCode != ''">and c.category_code =
+        #{categoryCode}</if>
+            <if test="templateCode != null and templateCode != ''">and
+        t.template_code like concat('%', #{templateCode}, '%')</if>
+            <if
+                test="templateName != null and templateName != ''">and t.template_name like
+        concat('%', #{templateName}, '%')</if>
+            <if test="businessCode != null and businessCode != ''">and
+        t.business_code = #{businessCode}</if>
+            <if test="businessName != null and businessName != ''">and
+        t.business_name like concat('%', #{businessName}, '%')</if>
+            <if
+                test="audienceRoles != null and audienceRoles != ''">and
+        find_in_set(#{audienceRoles}, replace(t.audience_roles, ' ', ''))</if>
+            <if
+                test="status != null and status != ''">and t.status = #{status}</if>
         </where>
-        order by c.sort_order asc, t.sort_order asc, t.template_id asc
-    </select>
+        order by c.sort_order asc, t.sort_order asc, t.template_id asc </select>
 
-    <select id="selectEnabledTemplatesByRole" parameterType="String" resultMap="ScAffairTemplateResult">
-        <include refid="selectScAffairTemplateVo" />
-        where t.status = '0' and c.status = '0'
-          and find_in_set(#{portalRole}, replace(t.audience_roles, ' ', ''))
-        order by c.sort_order asc, t.sort_order asc, t.template_id asc
-    </select>
+    <select id="selectEnabledTemplatesByRole" parameterType="String"
+        resultMap="ScAffairTemplateResult">
+        <include refid="selectScAffairTemplateVo" /> where t.status = '0' and c.status = '0' and
+        find_in_set(#{portalRole}, replace(t.audience_roles, ' ', '')) order by c.sort_order asc,
+        t.sort_order asc, t.template_id asc </select>
 
-    <insert id="insertScAffairTemplate" parameterType="ScAffairTemplate" useGeneratedKeys="true" keyProperty="templateId">
-        insert into sc_affair_template
-        <trim prefix="(" suffix=")" suffixOverrides=",">
+    <insert id="insertScAffairTemplate" parameterType="ScAffairTemplate" useGeneratedKeys="true"
+        keyProperty="templateId"> insert into sc_affair_template <trim prefix="(" suffix=")"
+            suffixOverrides=",">
             <if test="categoryId != null">category_id,</if>
-            <if test="templateCode != null and templateCode != ''">template_code,</if>
-            <if test="templateName != null and templateName != ''">template_name,</if>
-            <if test="businessCode != null">business_code,</if>
-            <if test="businessName != null">business_name,</if>
+            <if
+                test="templateCode != null and templateCode != ''">template_code,</if>
+            <if
+                test="templateName != null and templateName != ''">template_name,</if>
+            <if
+                test="businessCode != null">business_code,</if>
+            <if test="businessName != null">
+        business_name,</if>
             <if test="audienceRoles != null">audience_roles,</if>
-            <if test="formSchemaJson != null">form_schema_json,</if>
-            <if test="workflowSchemaJson != null">workflow_schema_json,</if>
-            <if test="allowAttachment != null">allow_attachment,</if>
-            <if test="allowRevoke != null">allow_revoke,</if>
+            <if
+                test="formSchemaJson != null">form_schema_json,</if>
+            <if
+                test="workflowSchemaJson != null">workflow_schema_json,</if>
+            <if
+                test="allowAttachment != null">allow_attachment,</if>
+            <if test="allowRevoke != null">
+        allow_revoke,</if>
             <if test="applyScopeJson != null">apply_scope_json,</if>
-            <if test="businessRulesJson != null">business_rules_json,</if>
-            <if test="targetStatusCode != null">target_status_code,</if>
-            <if test="targetStatusName != null">target_status_name,</if>
-            <if test="sortOrder != null">sort_order,</if>
+            <if
+                test="businessRulesJson != null">business_rules_json,</if>
+            <if
+                test="targetStatusCode != null">target_status_code,</if>
+            <if
+                test="targetStatusName != null">target_status_name,</if>
+            <if test="sortOrder != null">
+        sort_order,</if>
             <if test="status != null">status,</if>
-            <if test="createBy != null and createBy != ''">create_by,</if>
-            create_time,
-            <if test="remark != null">remark,</if>
+            <if
+                test="createBy != null and createBy != ''">create_by,</if> create_time, <if
+                test="remark != null">remark,</if>
         </trim>
-        <trim prefix="values (" suffix=")" suffixOverrides=",">
+        <trim prefix="values (" suffix=")"
+            suffixOverrides=",">
             <if test="categoryId != null">#{categoryId},</if>
-            <if test="templateCode != null and templateCode != ''">#{templateCode},</if>
-            <if test="templateName != null and templateName != ''">#{templateName},</if>
-            <if test="businessCode != null">#{businessCode},</if>
-            <if test="businessName != null">#{businessName},</if>
+            <if
+                test="templateCode != null and templateCode != ''">#{templateCode},</if>
+            <if
+                test="templateName != null and templateName != ''">#{templateName},</if>
+            <if
+                test="businessCode != null">#{businessCode},</if>
+            <if test="businessName != null">
+        #{businessName},</if>
             <if test="audienceRoles != null">#{audienceRoles},</if>
-            <if test="formSchemaJson != null">#{formSchemaJson},</if>
-            <if test="workflowSchemaJson != null">#{workflowSchemaJson},</if>
-            <if test="allowAttachment != null">#{allowAttachment},</if>
-            <if test="allowRevoke != null">#{allowRevoke},</if>
-            <if test="applyScopeJson != null">#{applyScopeJson},</if>
+            <if
+                test="formSchemaJson != null">#{formSchemaJson},</if>
+            <if
+                test="workflowSchemaJson != null">#{workflowSchemaJson},</if>
+            <if
+                test="allowAttachment != null">#{allowAttachment},</if>
+            <if
+                test="allowRevoke != null">#{allowRevoke},</if>
+            <if test="applyScopeJson != null">
+        #{applyScopeJson},</if>
             <if test="businessRulesJson != null">#{businessRulesJson},</if>
-            <if test="targetStatusCode != null">#{targetStatusCode},</if>
-            <if test="targetStatusName != null">#{targetStatusName},</if>
-            <if test="sortOrder != null">#{sortOrder},</if>
+            <if
+                test="targetStatusCode != null">#{targetStatusCode},</if>
+            <if
+                test="targetStatusName != null">#{targetStatusName},</if>
+            <if
+                test="sortOrder != null">#{sortOrder},</if>
             <if test="status != null">#{status},</if>
-            <if test="createBy != null and createBy != ''">#{createBy},</if>
-            sysdate(),
-            <if test="remark != null">#{remark},</if>
+            <if
+                test="createBy != null and createBy != ''">#{createBy},</if> sysdate(), <if
+                test="remark != null">#{remark},</if>
         </trim>
     </insert>
 
-    <update id="updateScAffairTemplate" parameterType="ScAffairTemplate">
-        update sc_affair_template
-        <set>
+    <update id="updateScAffairTemplate" parameterType="ScAffairTemplate"> update sc_affair_template <set>
             <if test="categoryId != null">category_id = #{categoryId},</if>
-            <if test="templateCode != null and templateCode != ''">template_code = #{templateCode},</if>
-            <if test="templateName != null and templateName != ''">template_name = #{templateName},</if>
-            <if test="businessCode != null">business_code = #{businessCode},</if>
-            <if test="businessName != null">business_name = #{businessName},</if>
-            <if test="audienceRoles != null">audience_roles = #{audienceRoles},</if>
-            <if test="formSchemaJson != null">form_schema_json = #{formSchemaJson},</if>
-            <if test="workflowSchemaJson != null">workflow_schema_json = #{workflowSchemaJson},</if>
-            <if test="allowAttachment != null">allow_attachment = #{allowAttachment},</if>
-            <if test="allowRevoke != null">allow_revoke = #{allowRevoke},</if>
-            <if test="applyScopeJson != null">apply_scope_json = #{applyScopeJson},</if>
-            <if test="businessRulesJson != null">business_rules_json = #{businessRulesJson},</if>
-            <if test="targetStatusCode != null">target_status_code = #{targetStatusCode},</if>
-            <if test="targetStatusName != null">target_status_name = #{targetStatusName},</if>
-            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
-            <if test="status != null">status = #{status},</if>
+            <if
+                test="templateCode != null and templateCode != ''">template_code = #{templateCode},</if>
+            <if
+                test="templateName != null and templateName != ''">template_name = #{templateName},</if>
+            <if
+                test="businessCode != null">business_code = #{businessCode},</if>
+            <if
+                test="businessName != null">business_name = #{businessName},</if>
+            <if
+                test="audienceRoles != null">audience_roles = #{audienceRoles},</if>
+            <if
+                test="formSchemaJson != null">form_schema_json = #{formSchemaJson},</if>
+            <if
+                test="workflowSchemaJson != null">workflow_schema_json = #{workflowSchemaJson},</if>
+            <if
+                test="allowAttachment != null">allow_attachment = #{allowAttachment},</if>
+            <if
+                test="allowRevoke != null">allow_revoke = #{allowRevoke},</if>
+            <if
+                test="applyScopeJson != null">apply_scope_json = #{applyScopeJson},</if>
+            <if
+                test="businessRulesJson != null">business_rules_json = #{businessRulesJson},</if>
+            <if
+                test="targetStatusCode != null">target_status_code = #{targetStatusCode},</if>
+            <if
+                test="targetStatusName != null">target_status_name = #{targetStatusName},</if>
+            <if
+                test="sortOrder != null">sort_order = #{sortOrder},</if>
+            <if test="status != null">status
+        = #{status},</if>
             <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
-            <if test="remark != null">remark = #{remark},</if>
-            update_time = sysdate()
-        </set>
-        where template_id = #{templateId}
-    </update>
+            <if
+                test="remark != null">remark = #{remark},</if> update_time = sysdate() </set> where
+        template_id = #{templateId} </update>
 
-    <delete id="deleteScAffairTemplateByTemplateId" parameterType="Long">
-        delete from sc_affair_template where template_id = #{templateId}
-    </delete>
+    <delete id="deleteScAffairTemplateByTemplateId" parameterType="Long"> delete from
+        sc_affair_template where template_id = #{templateId} </delete>
 
-    <delete id="deleteScAffairTemplateByTemplateIds" parameterType="Long">
-        delete from sc_affair_template where template_id in
-        <foreach item="templateId" collection="array" open="(" separator="," close=")">
-            #{templateId}
-        </foreach>
+    <delete id="deleteScAffairTemplateByTemplateIds" parameterType="Long"> delete from
+        sc_affair_template where template_id in <foreach item="templateId" collection="array"
+            open="(" separator="," close=")"> #{templateId} </foreach>
     </delete>
 </mapper>

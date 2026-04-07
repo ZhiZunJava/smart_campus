@@ -48,15 +48,14 @@
     t.term_name, c.business_type, c.teaching_class_code, c.credits, c.course_category,
     c.open_dept_id, d.dept_name as open_dept_name, c.major, c.campus_name, c.assessment_type,
     c.teaching_language, c.prerequisite_course, c.task_type, c.required_flag,
-    c.selection_option_name,
-    c.selection_group_code, c.selection_group_name, c.selection_group_limit,
-    c.combined_class_code, c.course_level_requirement, c.total_hours, c.required_weeks, c.weekly_hours, c.arranged_hours,
-    c.student_limit, (select count(1) from sc_course_student cs where cs.class_course_id = c.id
-    and cs.status = '0') as actual_student_count, c.status, c.create_by,
-    c.create_time, c.update_by, c.update_time, c.remark from sc_class_course c left join sc_class
-    cls on cls.class_id = c.class_id left join sc_course crs on crs.course_id = c.course_id left
-    join sys_user u on u.user_id = c.teacher_id left join sc_school_term t on t.term_id = c.term_id
-    left join sys_dept d on d.dept_id = c.open_dept_id </sql>
+    c.selection_option_name, c.selection_group_code, c.selection_group_name,
+    c.selection_group_limit, c.combined_class_code, c.course_level_requirement, c.total_hours,
+    c.required_weeks, c.weekly_hours, c.arranged_hours, c.student_limit, (select count(1) from
+    sc_course_student cs where cs.class_course_id = c.id and cs.status = '0') as
+    actual_student_count, c.status, c.create_by, c.create_time, c.update_by, c.update_time, c.remark
+    from sc_class_course c left join sc_class cls on cls.class_id = c.class_id left join sc_course
+    crs on crs.course_id = c.course_id left join sys_user u on u.user_id = c.teacher_id left join
+    sc_school_term t on t.term_id = c.term_id left join sys_dept d on d.dept_id = c.open_dept_id </sql>
   <select id="selectScClassCourseById" parameterType="Long" resultMap="ScClassCourseResult"><include
       refid="selectScClassCourseVo" /> where id = #{id}</select>
   <select id="selectScClassCourseList" parameterType="ScClassCourse" resultMap="ScClassCourseResult">
@@ -73,29 +72,42 @@
       <if test="major != null and major != ''">and c.major =
     #{major}</if>
       <if test="status != null and status != ''">and c.status = #{status}</if>
-      <if test="courseName != null and courseName != ''">and crs.course_name like concat('%', #{courseName}, '%')</if>
-      <if test="courseCategory != null and courseCategory != ''">and c.course_category = #{courseCategory}</if>
-      <if test="campusName != null and campusName != ''">and c.campus_name = #{campusName}</if>
-      <if test="requiredFlag != null and requiredFlag != ''">and c.required_flag = #{requiredFlag}</if>
-      <if test="assessmentType != null and assessmentType != ''">and c.assessment_type = #{assessmentType}</if>
+      <if
+        test="courseName != null and courseName != ''">and crs.course_name like concat('%',
+    #{courseName}, '%')</if>
+      <if test="courseCategory != null and courseCategory != ''">and
+    c.course_category = #{courseCategory}</if>
+      <if test="campusName != null and campusName != ''">and
+    c.campus_name = #{campusName}</if>
+      <if test="requiredFlag != null and requiredFlag != ''">and
+    c.required_flag = #{requiredFlag}</if>
+      <if test="assessmentType != null and assessmentType != ''">and
+    c.assessment_type = #{assessmentType}</if>
       <if test="credits != null">and c.credits = #{credits}</if>
-      <if test="teachingClassCode != null and teachingClassCode != ''">and c.teaching_class_code like concat('%', #{teachingClassCode}, '%')</if>
-      <if test="businessType != null and businessType != ''">and c.business_type = #{businessType}</if>
-      <if test="teachingLanguage != null and teachingLanguage != ''">and c.teaching_language = #{teachingLanguage}</if>
-      <if test="className != null and className != ''">and cls.class_name like concat('%', #{className}, '%')</if>
-    </where>
-    order by c.id desc </select>
+      <if
+        test="teachingClassCode != null and teachingClassCode != ''">and c.teaching_class_code like
+    concat('%', #{teachingClassCode}, '%')</if>
+      <if
+        test="businessType != null and businessType != ''">and c.business_type = #{businessType}</if>
+      <if
+        test="teachingLanguage != null and teachingLanguage != ''">and c.teaching_language =
+    #{teachingLanguage}</if>
+      <if test="className != null and className != ''">and cls.class_name like
+    concat('%', #{className}, '%')</if>
+    </where> order by c.id desc </select>
   <insert id="insertScClassCourse" parameterType="ScClassCourse" useGeneratedKeys="true"
     keyProperty="id">insert into sc_class_course(class_id, course_id, teacher_id, term_id,
     business_type, teaching_class_code, credits, course_category, open_dept_id, major, campus_name,
     assessment_type, teaching_language, prerequisite_course, task_type, required_flag,
-    selection_option_name, selection_group_code, selection_group_name, selection_group_limit, combined_class_code, course_level_requirement, total_hours, required_weeks, weekly_hours, arranged_hours,
-    student_limit, status, create_by, create_time, remark) values(#{classId}, #{courseId},
-    #{teacherId}, #{termId}, #{businessType}, #{teachingClassCode}, #{credits}, #{courseCategory},
-    #{openDeptId}, #{major}, #{campusName}, #{assessmentType}, #{teachingLanguage},
-    #{prerequisiteCourse}, #{taskType}, #{requiredFlag}, #{selectionOptionName}, #{selectionGroupCode}, #{selectionGroupName}, #{selectionGroupLimit}, #{combinedClassCode}, #{courseLevelRequirement}, #{totalHours},
-    #{requiredWeeks}, #{weeklyHours}, #{arrangedHours}, #{studentLimit}, #{status}, #{createBy},
-    sysdate(), #{remark})</insert>
+    selection_option_name, selection_group_code, selection_group_name, selection_group_limit,
+    combined_class_code, course_level_requirement, total_hours, required_weeks, weekly_hours,
+    arranged_hours, student_limit, status, create_by, create_time, remark) values(#{classId},
+    #{courseId}, #{teacherId}, #{termId}, #{businessType}, #{teachingClassCode}, #{credits},
+    #{courseCategory}, #{openDeptId}, #{major}, #{campusName}, #{assessmentType},
+    #{teachingLanguage}, #{prerequisiteCourse}, #{taskType}, #{requiredFlag},
+    #{selectionOptionName}, #{selectionGroupCode}, #{selectionGroupName}, #{selectionGroupLimit},
+    #{combinedClassCode}, #{courseLevelRequirement}, #{totalHours}, #{requiredWeeks},
+    #{weeklyHours}, #{arrangedHours}, #{studentLimit}, #{status}, #{createBy}, sysdate(), #{remark})</insert>
   <update id="updateScClassCourse" parameterType="ScClassCourse">update sc_class_course <set><if
         test="classId != null">class_id = #{classId},</if><if test="courseId != null">course_id =
     #{courseId},</if><if test="teacherId != null">teacher_id = #{teacherId},</if><if
@@ -109,10 +121,14 @@
         test="teachingLanguage != null">teaching_language = #{teachingLanguage},</if><if
         test="prerequisiteCourse != null">prerequisite_course = #{prerequisiteCourse},</if><if
         test="taskType != null">task_type = #{taskType},</if><if test="requiredFlag != null">required_flag
-    = #{requiredFlag},</if><if test="selectionOptionName != null">selection_option_name = #{selectionOptionName},</if><if test="selectionGroupCode != null">selection_group_code = #{selectionGroupCode},</if><if
+    = #{requiredFlag},</if><if test="selectionOptionName != null">selection_option_name =
+    #{selectionOptionName},</if><if test="selectionGroupCode != null">selection_group_code =
+    #{selectionGroupCode},</if><if
         test="selectionGroupName != null">selection_group_name = #{selectionGroupName},</if><if
-        test="selectionGroupLimit != null">selection_group_limit = #{selectionGroupLimit},</if><if test="combinedClassCode != null">combined_class_code = #{combinedClassCode},</if><if test="courseLevelRequirement != null">course_level_requirement =
-    #{courseLevelRequirement},</if><if test="totalHours != null">total_hours = #{totalHours},</if><if
+        test="selectionGroupLimit != null">selection_group_limit = #{selectionGroupLimit},</if><if
+        test="combinedClassCode != null">combined_class_code = #{combinedClassCode},</if><if
+        test="courseLevelRequirement != null">course_level_requirement = #{courseLevelRequirement},</if><if
+        test="totalHours != null">total_hours = #{totalHours},</if><if
         test="requiredWeeks != null">required_weeks = #{requiredWeeks},</if><if
         test="weeklyHours != null">weekly_hours = #{weeklyHours},</if><if
         test="arrangedHours != null">arranged_hours = #{arrangedHours},</if><if
